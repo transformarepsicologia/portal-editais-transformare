@@ -1118,6 +1118,12 @@ const UFS = [
   {sigla:"SP",nome:"São Paulo"},{sigla:"SE",nome:"Sergipe"},{sigla:"TO",nome:"Tocantins"}
 ];
 function ufOptionsHTML(){ return UFS.map(u=>`<option value="${u.sigla}">${u.sigla} — ${u.nome}</option>`).join(''); }
+function parseDate(str){
+  if(!str || typeof str !== 'string') return new Date(NaN);
+  const partes = str.split('/');
+  if(partes.length !== 3) return new Date(str);
+  return new Date(+partes[2], +partes[1]-1, +partes[0]);
+}
 
 let oportunidades = [
   {id:1, edital:"Edital de Credenciamento nº 014/2026", orgao:"Secretaria Municipal de Saúde de Porto Alegre", uf:"RS", tipo:"Credenciamento",
@@ -2746,6 +2752,7 @@ async function init(){
   renderCompareBar();
   renderBell();
   iniciarCicloRadarHome();
+  carregarEditaisSupabase();
 }
 init();
 
@@ -2761,6 +2768,65 @@ const SUPABASE_ANON_KEY = "sb_publishable_nOfG7Stoy-0lO8CSeW-_EQ_QLvDoeGN";
 const _sb = (typeof window !== 'undefined' && window.supabase && !SUPABASE_URL.includes('SEU-PROJETO'))
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
+
+/* ============ Editais reais (aprovados) vindos do Supabase ============
+   Somam-se aos editais de demonstração já existentes no protótipo —
+   não substituem nem apagam nada, só entram na mesma lista/filtros. */
+function formatarDataBR(iso){
+  if(!iso) return 'Não informado';
+  const d = new Date(iso + 'T00:00:00');
+  if(isNaN(d.getTime())) return 'Não informado';
+  return d.toLocaleDateString('pt-BR');
+}
+function mapEditalSupabase(row){
+  const indice = row.indice || 3;
+  return {
+    id: 900000 + row.id,
+    origemSupabase: true,
+    edital: row.edital || 'Credenciamento (PNCP)',
+    orgao: row.orgao || 'Órgão não identificado',
+    uf: row.uf || '—',
+    tipo: row.tipo || 'Credenciamento',
+    profissoes: (row.profissoes && row.profissoes.length) ? row.profissoes : ['Não identificada'],
+    modalidade: row.modalidade || 'Presencial',
+    abrangencia: row.abrangencia || 'Municipal',
+    situacao: row.situacao || 'Aberto',
+    objeto: row.objeto || '',
+    prazo: formatarDataBR(row.prazo),
+    publicacao: formatarDataBR(row.publicacao),
+    indice,
+    indiceLabel: indice >= 4 ? 'Alta oportunidade' : indice === 3 ? 'Oportunidade moderada' : 'Baixa oportunidade',
+    valorAtendimento: row.valor_atendimento || 'Não informado no edital',
+    valorMensal: row.valor_mensal || 'Não informado no edital',
+    valorHora: row.valor_hora || 'Não informado no edital',
+    volume: row.volume_estimado || 'Não informado',
+    valorMaximo: row.valor_maximo || 'Não informado',
+    requisitos: row.requisitos || 'Consulte o edital oficial no PNCP para os requisitos completos.',
+    pontosPositivos: row.pontos_positivos || '',
+    pontosAtencao: row.pontos_atencao || '',
+    documentos: (row.documentos && row.documentos.length) ? row.documentos : ['Consulte o edital oficial'],
+    urlOficial: row.url_oficial || row.url_pncp || 'https://pncp.gov.br/app/editais',
+    urlEdital: row.url_edital || row.url_pncp || 'https://pncp.gov.br/app/editais',
+    urlPncp: row.url_pncp || 'https://pncp.gov.br/app/editais',
+    urlInscricao: row.url_inscricao || row.url_pncp || 'https://pncp.gov.br/app/editais',
+    movimentacoes: Array.isArray(row.movimentacoes) ? row.movimentacoes : []
+  };
+}
+async function carregarEditaisSupabase(){
+  if(!_sb) return;
+  const { data, error } = await _sb
+    .from('editais')
+    .select('*')
+    .order('criado_em', { ascending: false });
+  if(error || !data) return;
+
+  const reais = data.map(mapEditalSupabase);
+  // remove versões antigas dos mesmos editais reais e junta com os de demonstração
+  oportunidades = oportunidades.filter(o => !o.origemSupabase);
+  oportunidades = [...reais, ...oportunidades];
+  populateSelects();
+  applyFilters();
+}
 
 async function renderCaixaEntrada(){
   const lista = document.getElementById('caixa-entrada-lista');
@@ -2817,6 +2883,7 @@ async function aprovarCredenciamento(id){
   if(error){ alert('Erro ao aprovar: ' + error.message); return; }
   toast('Credenciamento aprovado e adicionado ao catálogo');
   renderCaixaEntrada();
+  carregarEditaisSupabase();
 }
 
 async function rejeitarCredenciamento(id){
