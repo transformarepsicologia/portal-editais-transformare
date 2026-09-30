@@ -837,6 +837,16 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div id="caixa-entrada-lista"></div>
   </div>
 
+  <div style="margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <div class="section-title" style="font-size:17px; margin:0;">📋 Diário Oficial — achados (fonte separada do PNCP)</div>
+      <button class="btn-ghost" onclick="buscarDiarioOficialAgora()">🔄 Buscar agora</button>
+    </div>
+    <p class="section-sub" style="margin-bottom:14px;">Credenciamentos publicados no Diário Oficial de prefeituras, via Querido Diário (Open Knowledge Brasil) — cobre casos que às vezes não são replicados no PNCP. Fonte nacional, com busca automática diária. Aprove para que entrem no catálogo de editais.</p>
+    <div id="diario-oficial-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:12px;"></div>
+    <div id="diario-oficial-lista"></div>
+  </div>
+
   <div style="margin-top:28px; border-top:1px solid var(--border-soft); padding-top:20px;">
     <div class="section-title" style="font-size:15px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleTermosBusca()">
       <span>🔍 Palavras-chave de busca no PNCP</span>
@@ -1449,7 +1459,7 @@ function nav(view){
   window.scrollTo({top:0, behavior:'smooth'});
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
-  if(view === 'admin'){ renderAdmin(); renderCaixaEntrada(); }
+  if(view === 'admin'){ renderAdmin(); renderCaixaEntrada(); renderDiarioOficial(); }
   if(view === 'minha-conta') renderMinhaConta();
   if(view === 'perfil') renderPerfil();
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
@@ -3154,6 +3164,96 @@ async function buscarCredenciamentosAgora(){
     toast('Erro ao buscar: ' + e.message);
   }
   renderCaixaEntrada();
+}
+
+/* ================= DIÁRIO OFICIAL (Querido Diário) — fonte separada do PNCP ================= */
+async function renderDiarioOficial(){
+  const lista = document.getElementById('diario-oficial-lista');
+  const status = document.getElementById('diario-oficial-status');
+  if(!lista || !status) return;
+
+  if(!_sb){
+    status.textContent = 'Indisponível: configure o Supabase.';
+    lista.innerHTML = '';
+    return;
+  }
+
+  status.textContent = 'Carregando...';
+  const { data, error } = await _sb
+    .from('diario_oficial_pendentes')
+    .select('*')
+    .eq('status', 'pendente')
+    .order('criado_em', { ascending: false });
+
+  if(error){
+    status.textContent = 'Erro ao carregar: ' + error.message;
+    return;
+  }
+
+  status.textContent = data.length + ' achado(s) aguardando revisão.';
+  lista.innerHTML = '';
+
+  if(data.length === 0){
+    lista.innerHTML = '<div class="empty-state">Nenhum item pendente no momento.</div>';
+    return;
+  }
+
+  data.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'inbox-card';
+    card.innerHTML = `
+      <h5>${esc(item.municipio || 'Município não identificado')} — ${esc(item.uf || '')}</h5>
+      <div class="inbox-meta">Publicado em ${item.data_publicacao || '—'}${item.edicao ? ' · Edição ' + esc(item.edicao) : ''} · Termo: ${esc(item.termo_busca || '')}</div>
+      <p style="font-size:13px; color:var(--ink-muted); margin:0 0 8px;">${esc(item.excerto || '')}</p>
+      <div class="inbox-profs">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}</div>
+      ${item.url_diario ? `<a href="${item.url_diario}" target="_blank" rel="noopener" style="font-size:12px; color:var(--teal);">Ver diário original ↗</a>` : ''}
+      <div class="inbox-actions" style="margin-top:10px;">
+        <button class="inbox-approve" onclick="aprovarDiarioOficial(${item.id})">Aprovar e adicionar ao catálogo</button>
+        <button class="inbox-reject" onclick="rejeitarDiarioOficial(${item.id})">Rejeitar</button>
+      </div>
+    `;
+    lista.appendChild(card);
+  });
+}
+
+async function aprovarDiarioOficial(id){
+  if(!_sb) return;
+  const { error } = await _sb.rpc('aprovar_diario_oficial', { p_id: id, p_revisor: 'admin-portal' });
+  if(error){ alert('Erro ao aprovar: ' + error.message); return; }
+  toast('Achado aprovado e adicionado ao catálogo');
+  renderDiarioOficial();
+  carregarEditaisSupabase();
+}
+
+async function rejeitarDiarioOficial(id){
+  if(!_sb) return;
+  const { error } = await _sb.rpc('rejeitar_diario_oficial', { p_id: id, p_revisor: 'admin-portal' });
+  if(error){ alert('Erro ao rejeitar: ' + error.message); return; }
+  toast('Item rejeitado');
+  renderDiarioOficial();
+}
+
+async function buscarDiarioOficialAgora(){
+  const status = document.getElementById('diario-oficial-status');
+  if(!_sb){
+    if(status) status.textContent = 'Configure o Supabase para usar a busca automática.';
+    return;
+  }
+  status.textContent = 'Buscando novidades no Diário Oficial (pode levar até 1 minuto)...';
+  try{
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/buscar-diario-oficial', {
+      headers: { Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+    });
+    const resultado = await resp.json();
+    if(resultado.erros && resultado.erros.length){
+      toast(`Busca concluída com avisos: ${resultado.novosPendentes || 0} novo(s) item(ns), ${resultado.erros.length} erro(s)`);
+    } else {
+      toast(`Busca concluída: ${resultado.novosPendentes || 0} novo(s) item(ns)`);
+    }
+  }catch(e){
+    toast('Erro ao buscar: ' + e.message);
+  }
+  renderDiarioOficial();
 }
 
 /* ================= PALAVRAS-CHAVE DE BUSCA (profissoes_monitoradas) ================= */
