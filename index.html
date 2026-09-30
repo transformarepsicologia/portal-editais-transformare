@@ -1362,7 +1362,7 @@ function sha256(str){
 // Para dar acesso a mais alguém, crie a conta dela em Supabase > Authentication > Users
 // e adicione o e-mail nesta lista.
 const ADMIN_EMAILS = ['transformarepsicologia1@gmail.com'];
-let adminAuthed = true; // TEMPORÁRIO: acesso liberado sem exigir login enquanto a conta de admin é configurada no Supabase Auth. Troque para "false" para reativar a exigência de login.
+let adminAuthed = false; // exige login (Supabase Auth) para acessar o painel administrativo
 let adminFails = 0, adminLockedUntil = 0;
 
 function setAdminMsg(texto, cor){
