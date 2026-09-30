@@ -402,8 +402,9 @@ input:disabled{opacity:.6; cursor:not-allowed;}
 .bell-item .m{color:var(--ink-dim); font-family:var(--font-mono); font-size:10.5px;}
 
 /* ===== Comparar ===== */
-.compare-btn{background:none; border:none; cursor:pointer; font-size:15px; color:var(--ink-dim); padding:2px;}
-.compare-btn.active{color:var(--teal);}
+.compare-btn{display:inline-flex; align-items:center; gap:5px; background:rgba(47,217,196,0.08); border:1px solid rgba(47,217,196,0.35); border-radius:20px; cursor:pointer; font-size:12px; font-weight:600; color:var(--teal); padding:5px 12px; transition:background .15s, transform .1s;}
+.compare-btn:hover{background:rgba(47,217,196,0.18); transform:translateY(-1px);}
+.compare-btn.active{background:var(--teal); color:#06201d; border-color:var(--teal);}
 .compare-bar{
   position:fixed; bottom:0; left:0; right:0; background:var(--bg-elevated); border-top:1px solid var(--border);
   padding:14px 28px; display:none; align-items:center; justify-content:space-between; gap:14px; z-index:180; flex-wrap:wrap;
@@ -668,6 +669,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="filter-panel">
     <div class="form-row"><label>Profissões de interesse</label><div class="chip-select" id="alert-prof"></div></div>
     <div class="form-row"><label>Estados de interesse</label><div class="chip-select chip-select-uf" id="alert-uf"></div></div>
+    <div class="form-row"><label>Cidade</label><input type="text" id="alert-cidade" placeholder="Ex: Porto Alegre" oninput="onAlertCidadeInput(this.value)"></div>
     <div class="form-row"><label>Modalidade</label><div class="chip-select" id="alert-mod"></div></div>
     <div class="form-actions" style="margin-top:6px;"><button class="btn-ghost" onclick="clearAlertPrefs()">Limpar critérios</button></div>
   </div>
@@ -693,7 +695,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p>Monitoramos continuamente o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, cobrindo inicialmente Psicologia, Nutrição, Fonoaudiologia, Farmácia e Enfermagem — com arquitetura pronta para novas profissões.</p>
     <p>Cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong>: uma leitura objetiva de atratividade considerando facilidade de entrada, abrangência, compatibilidade profissional, complexidade documental e potencial de recorrência. É uma análise da Transformare — não uma informação oficial do órgão responsável.</p>
     <p>Este protótipo usa dados demonstrativos para ilustrar o funcionamento da plataforma. Nenhuma informação aqui deve ser tratada como oficial.</p>
-    <p style="margin-top:24px;"><a href="#" onclick="event.preventDefault(); nav('admin');" style="display:inline-flex; align-items:center; gap:6px; color:var(--ink-muted); font-size:12px; text-decoration:none; border:1px solid var(--border); border-radius:20px; padding:8px 16px;" onmouseover="this.style.borderColor='var(--teal)'; this.style.color='var(--teal)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--ink-muted)';">🔐 Ver painel administrativo (demonstração)</a></p>
+    <div style="background:rgba(47,217,196,0.08); border:1px solid rgba(47,217,196,0.3); border-radius:14px; padding:18px 20px; margin-top:22px;">
+      <p style="color:var(--ink); margin:0 0 6px; font-weight:600;">⇄ Compare oportunidades lado a lado</p>
+      <p style="margin:0;">Encontrou mais de um edital interessante? Clique em "Comparar" nos cards que te chamaram atenção e veja prazo, remuneração, índice de atratividade e requisitos lado a lado — sem precisar abrir cada um separadamente.</p>
+    </div>
+    <p style="margin-top:24px; text-align:center;"><a href="#" onclick="event.preventDefault(); nav('cadastro');" style="display:inline-flex; align-items:center; gap:6px; color:var(--ink-muted); font-size:12px; text-decoration:none; border:1px solid var(--border); border-radius:20px; padding:8px 16px;" onmouseover="this.style.borderColor='var(--teal)'; this.style.color='var(--teal)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--ink-muted)';">✨ Quero criar minha conta</a></p>
   </div>
 </section>
 
@@ -707,8 +713,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="form-actions">
       <button class="btn-primary" style="flex:1;" onclick="userLogin()">Entrar</button>
     </div>
-    <p style="font-size:12.5px; color:var(--ink-dim); margin-top:16px;">Ainda não tem conta? <a style="color:var(--teal); cursor:pointer;" onclick="nav('cadastro')">Criar conta</a></p>
-    <p style="font-size:11px; color:var(--ink-dim); margin-top:14px; line-height:1.5;">Conta de demonstração: fica salva apenas neste navegador/dispositivo. Ainda não há recuperação de senha por e-mail — isso virá com o login definitivo.</p>
+    <p style="font-size:12px; margin-top:12px;"><a style="color:var(--teal); cursor:pointer;" onclick="userForgotPassword()">Esqueci minha senha</a></p>
+    <p style="font-size:12.5px; color:var(--ink-dim); margin-top:10px;">Ainda não tem conta? <a style="color:var(--teal); cursor:pointer;" onclick="nav('cadastro')">Criar conta</a></p>
   </div>
 </section>
 
@@ -736,7 +742,6 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <button class="btn-primary" style="flex:1;" onclick="userSignup()">Criar conta</button>
     </div>
     <p style="font-size:12.5px; color:var(--ink-dim); margin-top:14px;">Já tem conta? <a style="color:var(--teal); cursor:pointer;" onclick="nav('login')">Entrar</a></p>
-    <p style="font-size:11px; color:var(--ink-dim); margin-top:10px; line-height:1.5;">Conta de demonstração: seus dados ficam salvos apenas neste navegador/dispositivo, não em um servidor. Não use uma senha que você usa em outros sites.</p>
   </div>
 </section>
 
@@ -769,7 +774,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </div>
   <div class="form-card" style="max-width:560px; margin-top:18px;">
     <h4 style="font-family:var(--font-display); margin:0 0 8px;">Excluir minha conta</h4>
-    <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.5; margin:0 0 12px;">Remove seu perfil, favoritos, alertas e progresso de documentos deste navegador. Esta ação não pode ser desfeita.</p>
+    <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.5; margin:0 0 12px;">Remove seu perfil, favoritos, alertas e progresso de documentos. Esta ação não pode ser desfeita. Para remover o login (e-mail/senha) por completo, entre em contato com a Transformare.</p>
     <button class="btn-ghost" style="border-color:var(--coral); color:var(--coral);" onclick="deleteAccount()">Excluir minha conta</button>
   </div>
 </section>
@@ -778,39 +783,48 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <section class="view" id="view-admin-login">
   <div class="page-head"><span class="eyebrow">Área restrita</span><h2>Acesso administrativo</h2></div>
   <div class="form-card">
+    <div class="form-row"><label>E-mail</label><input type="email" id="admin-email-input" placeholder="seu@email.com" autocomplete="username"></div>
     <div class="form-row"><label>Senha</label><input type="password" id="admin-pass-input" placeholder="Senha do administrador" autocomplete="current-password"></div>
     <div id="admin-login-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
-    <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="adminLogin()">Acessar painel</button></div>
-    <p style="font-size:11px; color:var(--ink-dim); margin-top:14px;">Bloqueio simples do protótipo: impede o acesso casual, mas não substitui uma autenticação real.</p>
+    <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="adminLogin()">Entrar</button></div>
+    <p style="font-size:12px; margin-top:14px;"><a style="color:var(--teal); cursor:pointer;" onclick="adminForgotPassword()">Esqueci minha senha</a></p>
+  </div>
+</section>
+
+<section class="view" id="view-admin-reset-senha">
+  <div class="page-head"><span class="eyebrow">Área restrita</span><h2>Definir nova senha</h2></div>
+  <div class="form-card">
+    <div class="form-row"><label>Nova senha (mínimo 6 caracteres)</label><input type="password" id="admin-recovery-pass" autocomplete="new-password"></div>
+    <div class="form-row"><label>Confirmar nova senha</label><input type="password" id="admin-recovery-pass2" autocomplete="new-password"></div>
+    <div id="admin-recovery-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
+    <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="salvarNovaSenhaAdmin()">Salvar nova senha</button></div>
   </div>
 </section>
 
 <section class="view" id="view-admin">
-  <div class="page-head"><span class="eyebrow">Área administrativa — protótipo</span><h2>Painel administrativo</h2></div>
+  <div class="page-head"><span class="eyebrow">Área administrativa</span><h2>Painel administrativo</h2></div>
   <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
-    <button class="btn-ghost" onclick="toggleAdminPassPanel()">Alterar senha</button>
+    <button class="btn-ghost" onclick="adminRequestOwnPasswordReset()">Redefinir minha senha</button>
     <button class="btn-ghost" onclick="adminLogout()">Sair do admin</button>
   </div>
-  <div class="panel" id="admin-pass-panel" style="display:none; margin-top:0; margin-bottom:18px; max-width:420px;">
-    <h4><span class="dot"></span>Alterar senha do administrador</h4>
-    <div class="form-row"><label>Nova senha (mínimo 8 caracteres)</label><input type="password" id="admin-new-pass" autocomplete="new-password"></div>
-    <div class="form-row"><label>Confirmar nova senha</label><input type="password" id="admin-new-pass2" autocomplete="new-password"></div>
-    <div class="form-actions"><button class="btn-primary" onclick="saveAdminPassword()">Salvar nova senha</button></div>
-    <p style="font-size:11px; color:var(--ink-dim); margin-top:10px;">A nova senha vale apenas neste navegador.</p>
-  </div>
-  <div class="admin-flag">⚠ Ambiente de demonstração — o acesso é protegido por um bloqueio simples de senha (não é segurança real) e os dados ficam salvos apenas neste navegador, sem banco de dados.</div>
+  <div class="admin-flag">⚠ Área restrita — acesso por login e senha (Supabase Auth), liberado apenas para e-mails autorizados.</div>
 
   <div class="admin-stats" id="admin-stats"></div>
 
-  <div class="section-title" style="font-size:17px; margin-top:8px;">Cadastros auxiliares</div>
+  <div class="section-title" style="font-size:17px; margin-top:8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleCadastrosAuxiliares()">
+    <span>Cadastros auxiliares</span>
+    <span id="cadastros-auxiliares-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
+  </div>
   <p class="section-sub">Profissões disponíveis para oportunidades, alertas e cadastro de profissionais.</p>
-  <div class="panel" style="margin-top:0;">
-    <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-      <input type="text" id="prof-admin-input" placeholder="Nova profissão" style="flex:1; min-width:180px;">
-      <button type="button" class="btn-primary" onclick="addProfissaoAdmin()">+ Adicionar profissão</button>
+  <div id="cadastros-auxiliares-body" style="display:none;">
+    <div class="panel" style="margin-top:0;">
+      <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+        <input type="text" id="prof-admin-input" placeholder="Nova profissão" style="flex:1; min-width:180px;">
+        <button type="button" class="btn-primary" onclick="addProfissaoAdmin()">+ Adicionar profissão</button>
+      </div>
+      <ul class="af-item-list" id="prof-admin-list"></ul>
+      <p style="font-size:11px; color:var(--ink-dim); margin-top:10px;">Desativar uma profissão a remove de novos cadastros, filtros e alertas — oportunidades já cadastradas com ela não são afetadas.</p>
     </div>
-    <ul class="af-item-list" id="prof-admin-list"></ul>
-    <p style="font-size:11px; color:var(--ink-dim); margin-top:10px;">Desativar uma profissão a remove de novos cadastros, filtros e alertas — oportunidades já cadastradas com ela não são afetadas.</p>
   </div>
 
   <div style="margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px;">
@@ -821,6 +835,23 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p class="section-sub" style="margin-bottom:14px;">Achados automáticos no PNCP que combinam com as profissões cadastradas. Aprove para que entrem direto no catálogo de editais. <strong>Funciona apenas quando este arquivo está hospedado fora do link do claude.ai</strong> e com um projeto Supabase configurado — veja o README do pacote de integração.</p>
     <div id="caixa-entrada-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:12px;"></div>
     <div id="caixa-entrada-lista"></div>
+  </div>
+
+  <div style="margin-top:28px; border-top:1px solid var(--border-soft); padding-top:20px;">
+    <div class="section-title" style="font-size:15px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleTermosBusca()">
+      <span>🔍 Palavras-chave de busca no PNCP</span>
+      <span id="termos-busca-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Termos que o robô procura no texto de cada edital para reconhecer a profissão. A busca automática diária (agendada) e o botão "Buscar agora" acima usam exatamente esta lista — ajuste os termos aqui para refinar os resultados.</p>
+    <div id="termos-busca-body" style="display:none;">
+      <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+        <input type="text" id="termo-nome-nova" placeholder="Nome da profissão" style="flex:1; min-width:140px;">
+        <input type="text" id="termo-palavras-nova" placeholder="palavras-chave separadas por vírgula" style="flex:2; min-width:220px;">
+        <button type="button" class="btn-primary" onclick="addTermoBuscaNovo()">+ Adicionar</button>
+      </div>
+      <div id="termos-busca-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <div id="termos-busca-lista"></div>
+    </div>
   </div>
 
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px;">
@@ -857,13 +888,17 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="lead-section-title" style="margin-top:20px;">Informações financeiras</div>
     <div class="two-col">
       <div class="form-row"><label>Valor por atendimento</label><input type="text" id="af-valor-atendimento" placeholder="Ex: R$ 180,00 por atendimento"></div>
-      <div class="form-row"><label>Valor mensal</label><input type="text" id="af-valor-mensal" placeholder="Ex: R$ 4.500,00/mês"></div>
-    </div>
-    <div class="two-col">
-      <div class="form-row"><label>Valor por hora</label><input type="text" id="af-valor-hora" placeholder="Ex: R$ 75,00/hora"></div>
       <div class="form-row"><label>Volume estimado</label><input type="text" id="af-volume" placeholder="Ex: Até 40 atendimentos/mês"></div>
     </div>
-    <div class="form-row"><label>Valor máximo / teto</label><input type="text" id="af-valor-maximo" placeholder="Ex: Até R$ 7.200,00"></div>
+
+    <div class="lead-section-title" style="margin-top:20px;">Remuneração — outras faixas/valores</div>
+    <p class="section-sub" style="margin:-4px 0 10px;">Use quando o edital tiver mais de um valor (ex: um valor por sessão e outro por avaliação psicológica). Aparecem juntos na página do edital.</p>
+    <div class="af-subfield-row">
+      <div></div>
+      <input type="text" id="af-remuneracao-input" placeholder="Ex: R$ 180,00 por avaliação psicológica">
+      <button type="button" class="btn-ghost" onclick="addAfRemuneracao()">+ Adicionar</button>
+    </div>
+    <ul class="af-item-list" id="af-remuneracao-list"></ul>
 
     <div class="lead-section-title" style="margin-top:20px;">Requisitos</div>
     <div class="form-row"><textarea id="af-requisitos" placeholder="Ex: Registro ativo no CRP, disponibilidade mínima de 20h semanais..."></textarea></div>
@@ -928,6 +963,18 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <thead><tr><th>Data</th><th>Nome</th><th>Profissão</th><th>Oportunidade</th><th>Intenção</th><th>Urgência</th><th>Classificação</th><th>Status</th><th>Ações</th></tr></thead>
       <tbody id="leads-tbody"></tbody>
     </table>
+  </div>
+
+  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
+    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleUsuariosCadastrados()">
+      <span>👥 Usuários cadastrados</span>
+      <span id="usuarios-cadastrados-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Contas de profissionais criadas no portal (Supabase Auth). Se alguém esquecer a senha, envie um link de redefinição — a pessoa cria a nova senha sozinha, você nunca vê nem define a senha dela.</p>
+    <div id="usuarios-cadastrados-body" style="display:none;">
+      <div id="usuarios-cadastrados-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <div id="usuarios-cadastrados-lista"></div>
+    </div>
   </div>
 </section>
 
@@ -1256,9 +1303,8 @@ let oportunidades = [
 ];
 
 let favoritos = new Set();
-let alertPrefs = {prof:new Set(), uf:new Set(), mod:new Set()};
-let userProfile = null;   // usuário logado (objeto de `usuarios`) ou null
-let usuarios = [];        // contas locais deste navegador
+let alertPrefs = {prof:new Set(), uf:new Set(), mod:new Set(), cidade:''};
+let userProfile = null;   // usuário logado (perfil vindo do Supabase Auth + usuarios_perfil) ou null
 function ukey(k){ return userProfile && userProfile.id ? 'u_'+userProfile.id+'_'+k : k; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 let docChecks = {};
@@ -1302,50 +1348,93 @@ function sha256(str){
   return h.map(x=>(x>>>0).toString(16).padStart(8,'0')).join('');
 }
 
-const ADMIN_SALT = 'transformare-admin:';
-const ADMIN_DEFAULT_HASH = 'cbdf30e6f884926aabf1d9f04b3f88ba1c53107df75c254530ff139a83fef334';
-let adminAuthed = (function(){ try{ return sessionStorage.getItem('transformare_admin_ok') === '1'; }catch(e){ return false; } })();
+// E-mails autorizados a acessar o painel administrativo (login real via Supabase Auth).
+// Para dar acesso a mais alguém, crie a conta dela em Supabase > Authentication > Users
+// e adicione o e-mail nesta lista.
+const ADMIN_EMAILS = ['transformarepsicologia1@gmail.com'];
+let adminAuthed = true; // TEMPORÁRIO: acesso liberado sem exigir login enquanto a conta de admin é configurada no Supabase Auth. Troque para "false" para reativar a exigência de login.
 let adminFails = 0, adminLockedUntil = 0;
-async function currentAdminHash(){ const custom = await storeGet('adminPassHash'); return custom || ADMIN_DEFAULT_HASH; }
-async function adminLogin(){
+
+function setAdminMsg(texto, cor){
   const msg = document.getElementById('admin-login-msg');
-  const input = document.getElementById('admin-pass-input');
-  const restante = Math.ceil((adminLockedUntil - Date.now())/1000);
-  if(restante > 0){ msg.textContent = 'Muitas tentativas. Aguarde ' + restante + ' s.'; return; }
-  if(sha256(ADMIN_SALT + input.value) === await currentAdminHash()){
-    adminAuthed = true;
-    try{ sessionStorage.setItem('transformare_admin_ok','1'); }catch(e){}
-    adminFails = 0; input.value = ''; msg.textContent = '';
-    nav('admin');
-  } else {
-    adminFails++;
-    if(adminFails >= 5){ adminLockedUntil = Date.now() + 30000; adminFails = 0; msg.textContent = 'Muitas tentativas. Aguarde 30 s.'; }
-    else msg.textContent = 'Senha incorreta.';
-  }
+  if(!msg) return;
+  msg.textContent = texto || '';
+  msg.style.color = cor || 'var(--coral)';
 }
-function adminLogout(){
+
+async function adminLogin(){
+  const emailInput = document.getElementById('admin-email-input');
+  const passInput = document.getElementById('admin-pass-input');
+  const email = emailInput.value.trim();
+  const senha = passInput.value;
+  const restante = Math.ceil((adminLockedUntil - Date.now())/1000);
+  if(restante > 0){ setAdminMsg('Muitas tentativas. Aguarde ' + restante + ' s.'); return; }
+  if(!_sb){ setAdminMsg('Login indisponível: configure SUPABASE_URL/SUPABASE_ANON_KEY neste arquivo.'); return; }
+  if(!email || !senha){ setAdminMsg('Preencha e-mail e senha.'); return; }
+
+  setAdminMsg('Entrando...', 'var(--ink-muted)');
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password: senha });
+
+  if(error || !data.user){
+    adminFails++;
+    if(adminFails >= 5){ adminLockedUntil = Date.now() + 30000; adminFails = 0; setAdminMsg('Muitas tentativas. Aguarde 30 s.'); }
+    else setAdminMsg('E-mail ou senha incorretos.');
+    return;
+  }
+  if(!ADMIN_EMAILS.includes((data.user.email || '').toLowerCase())){
+    await _sb.auth.signOut();
+    setAdminMsg('Este e-mail não tem permissão de administrador.');
+    return;
+  }
+  adminAuthed = true;
+  adminFails = 0; passInput.value = ''; setAdminMsg('');
+  nav('admin');
+}
+
+async function adminForgotPassword(){
+  const email = document.getElementById('admin-email-input').value.trim();
+  if(!_sb){ setAdminMsg('Indisponível: configure SUPABASE_URL/SUPABASE_ANON_KEY neste arquivo.'); return; }
+  if(!email){ setAdminMsg('Digite seu e-mail acima e clique em "Esqueci minha senha" de novo.'); return; }
+  setAdminMsg('Enviando e-mail...', 'var(--ink-muted)');
+  const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+  if(error){ setAdminMsg('Erro ao enviar: ' + error.message); return; }
+  setAdminMsg('Se esse e-mail tiver acesso de administrador, você vai receber um link para redefinir a senha.', 'var(--teal)');
+}
+
+async function adminLogout(){
   adminAuthed = false;
-  try{ sessionStorage.removeItem('transformare_admin_ok'); }catch(e){}
+  if(_sb) await _sb.auth.signOut();
   nav('home');
   toast('Você saiu do painel administrativo');
 }
-function toggleAdminPassPanel(){
-  const p = document.getElementById('admin-pass-panel');
-  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+
+async function adminRequestOwnPasswordReset(){
+  if(!_sb) return;
+  const { data } = await _sb.auth.getUser();
+  const email = data && data.user ? data.user.email : null;
+  if(!email){ toast('Não foi possível identificar seu e-mail de login.'); return; }
+  const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+  toast(error ? ('Erro ao enviar: ' + error.message) : `Link de redefinição enviado para ${email}`);
 }
-async function saveAdminPassword(){
-  const n1 = document.getElementById('admin-new-pass').value;
-  const n2 = document.getElementById('admin-new-pass2').value;
-  if(n1.length < 8){ toast('A senha precisa ter pelo menos 8 caracteres'); return; }
-  if(n1 !== n2){ toast('As senhas não conferem'); return; }
-  await storeSet('adminPassHash', sha256(ADMIN_SALT + n1));
-  document.getElementById('admin-new-pass').value = '';
-  document.getElementById('admin-new-pass2').value = '';
-  document.getElementById('admin-pass-panel').style.display = 'none';
-  toast('Senha alterada (vale neste navegador)');
+
+async function salvarNovaSenhaAdmin(){
+  const n1 = document.getElementById('admin-recovery-pass').value;
+  const n2 = document.getElementById('admin-recovery-pass2').value;
+  const msg = document.getElementById('admin-recovery-msg');
+  if(n1.length < 6){ msg.textContent = 'A senha precisa ter pelo menos 6 caracteres'; return; }
+  if(n1 !== n2){ msg.textContent = 'As senhas não conferem'; return; }
+  if(!_sb){ msg.textContent = 'Indisponível: configure o Supabase.'; return; }
+  const { error } = await _sb.auth.updateUser({ password: n1 });
+  if(error){ msg.textContent = 'Erro: ' + error.message; return; }
+  document.getElementById('admin-recovery-pass').value = '';
+  document.getElementById('admin-recovery-pass2').value = '';
+  toast('Senha atualizada com sucesso — faça login com a nova senha');
+  adminAuthed = false;
+  nav('admin-login');
 }
+
 document.addEventListener('keydown', e=>{
-  if(e.key === 'Enter' && document.activeElement && document.activeElement.id === 'admin-pass-input') adminLogin();
+  if(e.key === 'Enter' && document.activeElement && (document.activeElement.id === 'admin-pass-input' || document.activeElement.id === 'admin-email-input')) adminLogin();
 });
 
 /* ================= NAV ================= */
@@ -1363,7 +1452,7 @@ function nav(view){
   if(view === 'admin'){ renderAdmin(); renderCaixaEntrada(); }
   if(view === 'minha-conta') renderMinhaConta();
   if(view === 'perfil') renderPerfil();
-  if(view === 'admin-login'){ const i=document.getElementById('admin-pass-input'); if(i) setTimeout(()=>i.focus(),50); }
+  if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
 }
 document.getElementById('mainNav').addEventListener('click', e=>{
   if(e.target.dataset.view) nav(e.target.dataset.view);
@@ -1408,7 +1497,7 @@ function renderCard(o){
       </div>
       <div class="op-right">
         <div style="display:flex; gap:4px;">
-          <button class="compare-btn ${isCmp?'active':''}" onclick="toggleCompare(${o.id})" title="Comparar">${isCmp?'✓ ⇄':'⇄'}</button>
+          <button class="compare-btn ${isCmp?'active':''}" onclick="toggleCompare(${o.id})" title="Adicionar à comparação">${isCmp?'✓ Comparando':'⇄ Comparar'}</button>
           <button class="fav-btn ${isFav?'active':''}" onclick="toggleFav(${o.id})" title="Favoritar">${isFav?'★':'☆'}</button>
         </div>
         <span class="badge ${badgeClass(o.situacao)}">${o.situacao}</span>
@@ -1506,8 +1595,7 @@ function openCompare(){
     ['Prazo', o=>o.prazo, o=>maxPrazo!==null && prazoValsMap[o.id]===maxPrazo],
     ['Índice Transformare', o=>`${o.indice}/5 — ${o.indiceLabel}`, o=>indiceDestacavel && o.indice===maxIndice],
     ['Valor por atendimento', o=>o.valorAtendimento, o=>maxRem!==null && tipoRemuneracao(o)==='atendimento' && remValsMap[o.id]===maxRem],
-    ['Valor mensal', o=>o.valorMensal, o=>maxRem!==null && tipoRemuneracao(o)==='mensal' && remValsMap[o.id]===maxRem],
-    ['Valor por hora', o=>o.valorHora, o=>maxRem!==null && tipoRemuneracao(o)==='hora' && remValsMap[o.id]===maxRem],
+    ['Remuneração (outros valores)', o=>(o.remuneracao && o.remuneracao.length) ? o.remuneracao.join(' · ') : '—', ()=>false],
     ['Requisitos', o=>o.requisitos, ()=>false]
   ];
   let html = `<div class="compare-wrap"><table class="compare-table"><thead><tr><th></th>${items.map(o=>`<th>${o.edital}<br><button class="btn-ghost" style="padding:3px 9px; font-size:10.5px; margin-top:6px;" onclick="removeFromCompare(${o.id})">Remover ×</button></th>`).join('')}</tr></thead><tbody>`;
@@ -1539,7 +1627,12 @@ function shareWhatsApp(id){
 }
 
 /* ================= FAVORITOS ================= */
+const MAX_FAVORITOS = 3;
 async function toggleFav(id){
+  if(!favoritos.has(id) && favoritos.size >= MAX_FAVORITOS){
+    toast(`Você já tem ${MAX_FAVORITOS} editais favoritados — remova um para adicionar outro`);
+    return;
+  }
   favoritos.has(id) ? favoritos.delete(id) : favoritos.add(id);
   await storeSet(ukey('favoritos'), [...favoritos]);
   applyFilters();
@@ -1626,7 +1719,7 @@ function renderMinhaConta(){
       <div>
         <div class="account-stats">
           <div class="indicator-card"><div class="num">${favoritos.size}</div><div class="label">Editais acompanhados</div></div>
-          <div class="indicator-card"><div class="num">${alertPrefs.prof.size + alertPrefs.uf.size + alertPrefs.mod.size}</div><div class="label">Critérios de alerta</div></div>
+          <div class="indicator-card"><div class="num">${alertPrefs.prof.size + alertPrefs.uf.size + alertPrefs.mod.size + (alertPrefs.cidade ? 1 : 0)}</div><div class="label">Critérios de alerta</div></div>
           <div class="indicator-card"><div class="num">${historico.length}</div><div class="label">Editais com progresso</div></div>
         </div>
 
@@ -1785,7 +1878,9 @@ function openDetalhe(id){
   const scoreSegs = Array.from({length:5}, (_,i)=>`<div class="seg ${i<o.indice?'on':''}"></div>`).join('');
   const scoreClass = o.indice>=4 ? 'alta' : (o.indice>=3 ? 'media' : 'baixa');
   const checks = docChecks[id] || {};
-  const remuneracaoResumo = o.valorAtendimento && o.valorAtendimento.startsWith('Não') ? (o.valorMensal && !o.valorMensal.startsWith('Não') ? o.valorMensal : 'Não informado no edital') : o.valorAtendimento;
+  const remuneracaoResumo = (o.remuneracao && o.remuneracao.length)
+    ? (o.remuneracao.length > 1 ? `${o.remuneracao[0]} (+${o.remuneracao.length - 1})` : o.remuneracao[0])
+    : (o.valorAtendimento && o.valorAtendimento.startsWith('Não') ? (o.valorMensal && !o.valorMensal.startsWith('Não') ? o.valorMensal : 'Não informado no edital') : o.valorAtendimento);
 
   el.innerHTML = `
     <div class="detail-grid">
@@ -1795,7 +1890,7 @@ function openDetalhe(id){
             <div>
               <div class="op-meta">${o.edital} · ${o.tipo}</div>
               <h3>${o.objeto}</h3>
-              <div class="detail-org">${o.orgao} — ${o.cidade ? o.cidade+'/' : ''}${o.uf} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">site do órgão ↗</a>` : ''}</div>
+              <div class="detail-org">${o.orgao} — ${o.cidade ? o.cidade+'/' : ''}${o.uf} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${o.origemSupabase ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}</div>
             </div>
             <button class="fav-btn ${isFav?'active':''}" style="font-size:24px;" onclick="toggleFav(${o.id})">${isFav?'★':'☆'}</button>
           </div>
@@ -1821,7 +1916,7 @@ function openDetalhe(id){
               : ''}
             <button class="wa-btn" style="padding:11px 18px; font-size:13px;" onclick="shareWhatsApp(${o.id})">↗ Compartilhar no WhatsApp</button>
           </div>
-          <div style="font-family:var(--font-mono); font-size:10px; color:var(--ink-dim); margin-top:8px;">Links demonstrativos — apontam para o portal público do PNCP, não para o edital real.</div>
+          <div style="font-family:var(--font-mono); font-size:10px; color:var(--ink-dim); margin-top:8px;">${o.origemSupabase ? 'Links apontam para a página real do edital no PNCP.' : 'Links demonstrativos — apontam para o portal público do PNCP, não para o edital real.'}</div>
         </div>
 
         <div class="score-hero ${scoreClass}">
@@ -1878,13 +1973,16 @@ function openDetalhe(id){
 
       <div>
         <div class="panel" style="margin-top:0;">
-          <h4><span class="dot"></span>Informações financeiras</h4>
+          <h4><span class="dot"></span>Remuneração</h4>
+          ${(o.remuneracao && o.remuneracao.length) ? `
+          <ul style="list-style:none; padding:0; margin:0 0 14px;">
+            ${o.remuneracao.map(r=>`<li style="background:var(--bg-elevated); border:1px solid var(--border-soft); border-radius:10px; padding:9px 12px; margin-bottom:6px; font-size:13px; color:var(--ink);">💰 ${r}</li>`).join('')}
+          </ul>` : ''}
           <div class="fin-grid">
             <div class="fin-item"><div class="k">Por atendimento</div><div class="v">${o.valorAtendimento}</div></div>
-            <div class="fin-item"><div class="k">Mensal estimado</div><div class="v">${o.valorMensal}</div></div>
-            <div class="fin-item"><div class="k">Por hora</div><div class="v">${o.valorHora}</div></div>
             <div class="fin-item"><div class="k">Volume estimado</div><div class="v">${o.volume}</div></div>
           </div>
+          <p style="font-size:10.5px; color:var(--ink-dim); margin-top:10px;">Valores estimados a partir do edital — não representam garantia de demanda ou volume de atendimentos.</p>
         </div>
 
         <div class="steps-panel">
@@ -2174,16 +2272,25 @@ function renderAlertChips(){
     c.onclick = async ()=>{ alertPrefs.mod.has(m)?alertPrefs.mod.delete(m):alertPrefs.mod.add(m); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
     modBox.appendChild(c);
   });
+
+  const cidadeInput = document.getElementById('alert-cidade');
+  if(cidadeInput && cidadeInput.value !== alertPrefs.cidade) cidadeInput.value = alertPrefs.cidade || '';
+}
+let _alertCidadeTimer = null;
+function onAlertCidadeInput(valor){
+  alertPrefs.cidade = valor.trim();
+  clearTimeout(_alertCidadeTimer);
+  _alertCidadeTimer = setTimeout(async ()=>{ await saveAlertPrefs(); renderAlertas(); }, 350);
 }
 async function saveAlertPrefs(){
-  await storeSet(ukey('alertPrefs'), {prof:[...alertPrefs.prof], uf:[...alertPrefs.uf], mod:[...alertPrefs.mod]});
+  await storeSet(ukey('alertPrefs'), {prof:[...alertPrefs.prof], uf:[...alertPrefs.uf], mod:[...alertPrefs.mod], cidade: alertPrefs.cidade || ''});
   renderBell();
 }
 function renderAlertas(){
   const list = document.getElementById('alert-list');
   const countEl = document.getElementById('alert-count');
   list.innerHTML = '';
-  if(alertPrefs.prof.size===0 && alertPrefs.uf.size===0 && alertPrefs.mod.size===0){
+  if(alertPrefs.prof.size===0 && alertPrefs.uf.size===0 && alertPrefs.mod.size===0 && !alertPrefs.cidade){
     countEl.textContent = '';
     list.innerHTML = `<div class="empty-state">Selecione ao menos um critério acima para ver oportunidades compatíveis.</div>`;
     return;
@@ -2193,7 +2300,8 @@ function renderAlertas(){
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
     const mMod = alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
-    return mProf && mUf && mMod;
+    const mCidade = !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
+    return mProf && mUf && mMod && mCidade;
   });
   countEl.textContent = `${items.length} compatível(is)`;
   if(items.length===0){
@@ -2203,7 +2311,7 @@ function renderAlertas(){
   items.forEach(o=>list.appendChild(renderCard(o)));
 }
 async function clearAlertPrefs(){
-  alertPrefs = {prof:new Set(), uf:new Set(), mod:new Set()};
+  alertPrefs = {prof:new Set(), uf:new Set(), mod:new Set(), cidade:''};
   await saveAlertPrefs();
   renderAlertChips();
   renderAlertas();
@@ -2212,13 +2320,14 @@ async function clearAlertPrefs(){
 
 /* ================= SINO DE NOTIFICAÇÕES ================= */
 function matchedAlertItems(){
-  if(alertPrefs.prof.size===0 && alertPrefs.uf.size===0 && alertPrefs.mod.size===0) return [];
+  if(alertPrefs.prof.size===0 && alertPrefs.uf.size===0 && alertPrefs.mod.size===0 && !alertPrefs.cidade) return [];
   return oportunidades.filter(o=>{
     if(o.situacao==='Encerrado') return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
     const mMod = alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
-    return mProf && mUf && mMod;
+    const mCidade = !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
+    return mProf && mUf && mMod && mCidade;
   });
 }
 function renderBell(){
@@ -2265,7 +2374,7 @@ async function loadUserData(){
   const f = await storeGet(ukey('favoritos'));
   favoritos = new Set(f || []);
   const a = await storeGet(ukey('alertPrefs'));
-  alertPrefs = a ? {prof:new Set(a.prof||[]), uf:new Set(a.uf||[]), mod:new Set(a.mod||[])} : {prof:new Set(), uf:new Set(), mod:new Set()};
+  alertPrefs = a ? {prof:new Set(a.prof||[]), uf:new Set(a.uf||[]), mod:new Set(a.mod||[]), cidade:a.cidade||''} : {prof:new Set(), uf:new Set(), mod:new Set(), cidade:''};
   const d = await storeGet(ukey('docChecks'));
   docChecks = d || {};
   updateNavCta();
@@ -2273,6 +2382,39 @@ async function loadUserData(){
   renderAlertas();
   renderBell();
   applyFilters();
+}
+
+async function carregarPerfilUsuario(authUser){
+  if(!authUser){ userProfile = null; return; }
+  let perfil = null;
+  if(_sb){
+    const { data } = await _sb.from('usuarios_perfil').select('*').eq('id', authUser.id).maybeSingle();
+    perfil = data;
+    if(!perfil){
+      // Conta confirmada agora pela primeira vez: se havia dados de cadastro
+      // guardados localmente (caso de confirmação de e-mail obrigatória), cria
+      // o perfil completo agora que já existe uma sessão autenticada.
+      const pendente = await storeGet('perfil_pendente_' + authUser.email);
+      const base = pendente || { nome:'', whatsapp:'', registro:'', uf:'', profs:[], mods:[] };
+      const { data: criado } = await _sb.from('usuarios_perfil')
+        .upsert({ id: authUser.id, email: authUser.email, ...base, plano:'gratuito' })
+        .select().maybeSingle();
+      perfil = criado || base;
+      if(pendente) await storeRemove('perfil_pendente_' + authUser.email);
+    }
+  }
+  userProfile = {
+    id: authUser.id,
+    email: authUser.email,
+    nome: perfil?.nome || '',
+    whatsapp: perfil?.whatsapp || '',
+    registro: perfil?.registro || '',
+    uf: perfil?.uf || '',
+    profs: perfil?.profs || [],
+    mods: perfil?.mods || [],
+    plano: perfil?.plano || 'gratuito',
+    criadoEm: perfil?.criado_em || null,
+  };
 }
 
 async function userSignup(){
@@ -2287,25 +2429,33 @@ async function userSignup(){
   const profs = [...document.querySelectorAll('#cad-prof .chip-opt.selected')].map(x=>x.textContent);
   const mods = [...document.querySelectorAll('#cad-mod .chip-opt.selected')].map(x=>x.textContent);
 
+  if(!_sb){ msg.textContent = 'Indisponível: configure SUPABASE_URL/SUPABASE_ANON_KEY neste arquivo.'; return; }
   if(!nome){ msg.textContent = 'Informe seu nome.'; return; }
   if(!validEmail(email)){ msg.textContent = 'Informe um e-mail válido.'; return; }
   if(senha.length < 8){ msg.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; return; }
   if(senha !== senha2){ msg.textContent = 'As senhas não conferem.'; return; }
-  if(usuarios.some(u=>u.email === email)){ msg.textContent = 'Já existe uma conta com este e-mail neste navegador. Use "Entrar".'; return; }
-  msg.textContent = '';
+  msg.textContent = 'Criando conta...';
 
-  const salt = novoSalt();
-  const user = {
-    id: 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-    nome, email, whatsapp, registro, uf, profs, mods,
-    plano: 'gratuito',
-    salt, passHash: hashSenhaUsuario(salt, senha),
-    criadoEm: new Date().toISOString()
-  };
-  usuarios.push(user);
-  await storeSet('usuarios', usuarios);
-  userProfile = user;
-  await storeSet('sessao', user.id);
+  const { data, error } = await _sb.auth.signUp({ email, password: senha });
+  if(error){ msg.textContent = traduzErroAuth(error); return; }
+  if(!data.user){ msg.textContent = 'Não foi possível criar a conta. Tente novamente.'; return; }
+  if(!data.session){
+    // Confirmação de e-mail está ativada no projeto: ainda não há sessão autenticada
+    // para gravar o perfil agora (a política exige auth.uid() = id). Guardamos os
+    // dados aqui neste navegador e completamos o perfil no primeiro login, depois
+    // que a pessoa confirmar o e-mail.
+    await storeSet('perfil_pendente_' + email, { nome, whatsapp, registro, uf, profs, mods });
+    msg.style.color = 'var(--teal)';
+    msg.textContent = 'Conta criada! Verifique seu e-mail para confirmar antes de entrar.';
+    return;
+  }
+
+  const { error: erroPerfil } = await _sb.from('usuarios_perfil').upsert({
+    id: data.user.id, nome, email, whatsapp, registro, uf, profs, mods, plano: 'gratuito'
+  });
+  if(erroPerfil){ msg.textContent = 'Conta criada, mas houve um erro ao salvar o perfil: ' + erroPerfil.message; }
+
+  await carregarPerfilUsuario(data.user);
 
   // o que a pessoa já tinha marcado antes de criar a conta (favoritos/alertas/checklist) passa a ser da conta
   profs.forEach(x=>alertPrefs.prof.add(x));
@@ -2317,19 +2467,31 @@ async function userSignup(){
 
   ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2'].forEach(id=>document.getElementById(id).value='');
   document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
+  msg.textContent = '';
   updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
   toast('Conta criada — bem-vindo(a), ' + nome.split(' ')[0]);
   nav('minha-conta');
 }
 
+function traduzErroAuth(error){
+  const m = (error && error.message) || '';
+  if(m.includes('already registered') || m.includes('already exists')) return 'Já existe uma conta com este e-mail. Use "Entrar".';
+  if(m.includes('Password should be')) return 'Senha muito curta ou fraca.';
+  if(m.includes('Invalid login credentials')) return 'E-mail ou senha incorretos.';
+  return m || 'Erro inesperado. Tente novamente.';
+}
+
 async function userLogin(){
   const msg = document.getElementById('login-msg');
+  msg.style.color = 'var(--coral)';
   const email = document.getElementById('login-email').value.trim().toLowerCase();
   const senha = document.getElementById('login-senha').value;
   const restante = Math.ceil((userLockedUntil - Date.now())/1000);
   if(restante > 0){ msg.textContent = 'Muitas tentativas. Aguarde ' + restante + ' s.'; return; }
-  const u = usuarios.find(x=>x.email === email);
-  if(!u || hashSenhaUsuario(u.salt, senha) !== u.passHash){
+  if(!_sb){ msg.textContent = 'Indisponível: configure SUPABASE_URL/SUPABASE_ANON_KEY neste arquivo.'; return; }
+
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password: senha });
+  if(error || !data.user){
     userFails++;
     if(userFails >= 5){ userLockedUntil = Date.now() + 30000; userFails = 0; msg.textContent = 'Muitas tentativas. Aguarde 30 s.'; }
     else msg.textContent = 'E-mail ou senha incorretos.';
@@ -2337,15 +2499,30 @@ async function userLogin(){
   }
   userFails = 0; msg.textContent = '';
   document.getElementById('login-senha').value = '';
-  userProfile = u;
-  await storeSet('sessao', u.id);
+  await carregarPerfilUsuario(data.user);
+  if((data.user.email||'').toLowerCase() && ADMIN_EMAILS.includes(data.user.email.toLowerCase())) adminAuthed = true;
   await loadUserData();
-  toast('Bem-vindo(a) de volta, ' + u.nome.split(' ')[0]);
+  toast('Bem-vindo(a) de volta' + (userProfile.nome ? ', ' + userProfile.nome.split(' ')[0] : ''));
   nav('minha-conta');
 }
 
+async function userForgotPassword(){
+  const msg = document.getElementById('login-msg');
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  if(!_sb){ msg.textContent = 'Indisponível: configure o Supabase.'; return; }
+  if(!validEmail(email)){ msg.textContent = 'Digite seu e-mail acima e clique em "Esqueci minha senha" de novo.'; msg.style.color='var(--coral)'; return; }
+  msg.style.color = 'var(--ink-muted)';
+  msg.textContent = 'Enviando e-mail...';
+  const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+  if(error){ msg.style.color='var(--coral)'; msg.textContent = 'Erro ao enviar: ' + error.message; return; }
+  msg.style.color = 'var(--teal)';
+  msg.textContent = 'Se esse e-mail tiver conta, você vai receber um link para redefinir a senha.';
+}
+
 async function userLogout(){
+  if(_sb) await _sb.auth.signOut();
   userProfile = null;
+  adminAuthed = false;
   await storeRemove('sessao');
   await loadUserData();
   toast('Você saiu da sua conta');
@@ -2399,7 +2576,12 @@ async function saveProfile(){
   u.uf = document.getElementById('perfil-uf').value;
   u.profs = [...document.querySelectorAll('#perfil-prof .chip-opt.selected')].map(x=>x.textContent);
   u.mods = [...document.querySelectorAll('#perfil-mod .chip-opt.selected')].map(x=>x.textContent);
-  await storeSet('usuarios', usuarios);
+  if(_sb){
+    const { error } = await _sb.from('usuarios_perfil').update({
+      nome: u.nome, whatsapp: u.whatsapp, registro: u.registro, uf: u.uf, profs: u.profs, mods: u.mods
+    }).eq('id', u.id);
+    if(error){ toast('Erro ao salvar: ' + error.message); return; }
+  }
   updateNavCta();
   toast('Perfil salvo');
   nav('minha-conta');
@@ -2409,23 +2591,26 @@ async function changeUserPassword(){
   const atual = document.getElementById('perfil-senha-atual').value;
   const n1 = document.getElementById('perfil-senha-nova').value;
   const n2 = document.getElementById('perfil-senha-nova2').value;
-  if(hashSenhaUsuario(u.salt, atual) !== u.passHash){ toast('Senha atual incorreta'); return; }
+  if(!_sb){ toast('Indisponível: configure o Supabase.'); return; }
   if(n1.length < 8){ toast('A nova senha precisa ter pelo menos 8 caracteres'); return; }
   if(n1 !== n2){ toast('As senhas novas não conferem'); return; }
-  u.salt = novoSalt();
-  u.passHash = hashSenhaUsuario(u.salt, n1);
-  await storeSet('usuarios', usuarios);
+  const { error: erroLogin } = await _sb.auth.signInWithPassword({ email: u.email, password: atual });
+  if(erroLogin){ toast('Senha atual incorreta'); return; }
+  const { error } = await _sb.auth.updateUser({ password: n1 });
+  if(error){ toast('Erro ao alterar senha: ' + error.message); return; }
   ['perfil-senha-atual','perfil-senha-nova','perfil-senha-nova2'].forEach(id=>document.getElementById(id).value='');
   toast('Senha alterada');
 }
 async function deleteAccount(){
   const u = userProfile; if(!u) return;
-  if(!confirm('Excluir sua conta e todos os dados dela deste navegador? Esta ação não pode ser desfeita.')) return;
+  if(!confirm('Excluir seu perfil, favoritos, alertas e progresso de documentos? Esta ação não pode ser desfeita.')) return;
   await storeRemove(ukey('favoritos'));
   await storeRemove(ukey('alertPrefs'));
   await storeRemove(ukey('docChecks'));
-  usuarios = usuarios.filter(x=>x.id !== u.id);
-  await storeSet('usuarios', usuarios);
+  if(_sb){
+    await _sb.from('usuarios_perfil').delete().eq('id', u.id);
+    await _sb.auth.signOut();
+  }
   userProfile = null;
   await storeRemove('sessao');
   await loadUserData();
@@ -2485,6 +2670,13 @@ async function editProfissaoAdmin(i){
   toast('Profissão atualizada — oportunidades já cadastradas mantêm o nome anterior');
 }
 
+function toggleCadastrosAuxiliares(){
+  const body = document.getElementById('cadastros-auxiliares-body');
+  const arrow = document.getElementById('cadastros-auxiliares-arrow');
+  const abrir = body.style.display === 'none';
+  body.style.display = abrir ? 'block' : 'none';
+  arrow.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
+}
 function renderAdmin(){
   renderProfissoesAdmin();
   const stats = [
@@ -2530,6 +2722,32 @@ function adminDelete(id){
 /* ---- formulário criar/editar ---- */
 let afDocumentos = [];
 let afMovimentacoes = [];
+let afRemuneracao = [];
+
+function renderAfRemuneracaoList(){
+  const ul = document.getElementById('af-remuneracao-list');
+  ul.innerHTML = afRemuneracao.length
+    ? afRemuneracao.map((r,i)=>`<li class="af-item-row"><span>${r}</span><div><button type="button" class="af-item-btn" onclick="editAfRemuneracao(${i})" title="Editar">✎</button><button type="button" class="af-item-btn del" onclick="removeAfRemuneracao(${i})" title="Remover">×</button></div></li>`).join('')
+    : `<li class="af-item-empty">Nenhum valor adicional adicionado ainda.</li>`;
+}
+function addAfRemuneracao(){
+  const input = document.getElementById('af-remuneracao-input');
+  const val = input.value.trim();
+  if(!val) return;
+  afRemuneracao.push(val);
+  input.value = '';
+  input.focus();
+  renderAfRemuneracaoList();
+}
+function editAfRemuneracao(i){
+  document.getElementById('af-remuneracao-input').value = afRemuneracao[i];
+  afRemuneracao.splice(i,1);
+  renderAfRemuneracaoList();
+}
+function removeAfRemuneracao(i){
+  afRemuneracao.splice(i,1);
+  renderAfRemuneracaoList();
+}
 
 function renderAfDocList(){
   const ul = document.getElementById('af-doc-list');
@@ -2625,10 +2843,7 @@ function openAdminForm(id){
     document.getElementById('af-prazo').value = o.prazo;
     document.getElementById('af-publicacao').value = o.publicacao;
     document.getElementById('af-valor-atendimento').value = (o.valorAtendimento && !o.valorAtendimento.startsWith('Não')) ? o.valorAtendimento : '';
-    document.getElementById('af-valor-mensal').value = (o.valorMensal && !o.valorMensal.startsWith('Não')) ? o.valorMensal : '';
-    document.getElementById('af-valor-hora').value = (o.valorHora && !o.valorHora.startsWith('Não')) ? o.valorHora : '';
     document.getElementById('af-volume').value = (o.volume && !o.volume.startsWith('Não')) ? o.volume : '';
-    document.getElementById('af-valor-maximo').value = (o.valorMaximo && !o.valorMaximo.startsWith('Não')) ? o.valorMaximo : '';
     document.getElementById('af-requisitos').value = o.requisitos || '';
     document.getElementById('af-pontos-positivos').value = o.pontosPositivos || '';
     document.getElementById('af-pontos-atencao').value = (o.pontosAtencao && o.pontosAtencao !== 'Nenhum ponto de atenção informado.') ? o.pontosAtencao : '';
@@ -2639,9 +2854,10 @@ function openAdminForm(id){
     document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(o.profissoes.includes(c.dataset.prof)) c.classList.add('selected'); });
     afDocumentos = [...(o.documentos||[])];
     afMovimentacoes = (o.movimentacoes||[]).map(m=>({...m}));
+    afRemuneracao = [...(o.remuneracao||[])];
   } else {
     ['af-edital','af-orgao','af-objeto','af-prazo','af-publicacao','af-url-inscricao','af-cidade',
-     'af-valor-atendimento','af-valor-mensal','af-valor-hora','af-volume','af-valor-maximo',
+     'af-valor-atendimento','af-volume',
      'af-requisitos','af-pontos-positivos','af-pontos-atencao'].forEach(id2=>document.getElementById(id2).value='');
     document.getElementById('af-url-oficial').value = 'https://www.gov.br/pncp/pt-br';
     document.getElementById('af-url-edital').value = 'https://pncp.gov.br/app/editais';
@@ -2649,9 +2865,11 @@ function openAdminForm(id){
     document.getElementById('af-indice').value = '3';
     afDocumentos = [];
     afMovimentacoes = [];
+    afRemuneracao = [];
   }
   renderAfDocList();
   renderAfMovList();
+  renderAfRemuneracaoList();
   document.getElementById('admin-form-panel').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 function closeAdminForm(){
@@ -2668,10 +2886,7 @@ function saveAdminForm(){
   const labels = {1:'Baixa oportunidade',2:'Baixa oportunidade',3:'Média oportunidade',4:'Alta oportunidade',5:'Alta oportunidade'};
 
   const valorAtendimento = document.getElementById('af-valor-atendimento').value.trim();
-  const valorMensal = document.getElementById('af-valor-mensal').value.trim();
-  const valorHora = document.getElementById('af-valor-hora').value.trim();
   const volume = document.getElementById('af-volume').value.trim();
-  const valorMaximo = document.getElementById('af-valor-maximo').value.trim();
   const requisitos = document.getElementById('af-requisitos').value.trim();
   const pontosPositivos = document.getElementById('af-pontos-positivos').value.trim();
   const pontosAtencao = document.getElementById('af-pontos-atencao').value.trim();
@@ -2689,15 +2904,16 @@ function saveAdminForm(){
     publicacao: document.getElementById('af-publicacao').value.trim() || 'Não informado',
     profissoes: profs.length ? profs : ['Não informado'],
     valorAtendimento: valorAtendimento || 'Não informado',
-    valorMensal: valorMensal || 'Não informado',
-    valorHora: valorHora || 'Não informado',
+    valorMensal: 'Não informado',
+    valorHora: 'Não informado',
     volume: volume || 'Não informado',
-    valorMaximo: valorMaximo || 'Não informado',
+    valorMaximo: 'Não informado',
     requisitos: requisitos || 'Não informado.',
     pontosPositivos: pontosPositivos || '',
     pontosAtencao: pontosAtencao || 'Nenhum ponto de atenção informado.',
     documentos: [...afDocumentos],
     movimentacoes: [...afMovimentacoes],
+    remuneracao: [...afRemuneracao],
     urlOficial: document.getElementById('af-url-oficial').value.trim() || null,
     urlEdital: document.getElementById('af-url-edital').value.trim() || null,
     urlPncp: document.getElementById('af-url-pncp').value.trim() || null,
@@ -2738,10 +2954,9 @@ async function init(){
   renderIndicators();
   applyFilters();
 
-  const savedUsuarios = await storeGet('usuarios');
-  if(savedUsuarios && Array.isArray(savedUsuarios)) usuarios = savedUsuarios;
-  const sessaoId = await storeGet('sessao');
-  if(sessaoId) userProfile = usuarios.find(u=>u.id === sessaoId) || null;
+  // A sessão do usuário (login/senha) agora vive no Supabase Auth — ver
+  // _sb.auth.getSession() mais abaixo, que roda depois que o cliente Supabase
+  // é criado e recarrega o perfil automaticamente se houver sessão válida.
   await loadUserData();
 
   const savedLeads = await storeGet('leads');
@@ -2769,9 +2984,35 @@ const _sb = (typeof window !== 'undefined' && window.supabase && !SUPABASE_URL.i
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
+/* ============ Login do admin via Supabase Auth ============ */
+if(_sb){
+  // Quando a pessoa clica no link de "esqueci minha senha" recebido por e-mail,
+  // o Supabase volta pro site já autenticado nesse modo especial de recuperação.
+  _sb.auth.onAuthStateChange((event) => {
+    if(event === 'PASSWORD_RECOVERY') nav('admin-reset-senha');
+  });
+  // Se a pessoa já tinha uma sessão válida (mesmo navegador, sessão não expirada) —
+  // vale tanto para admin quanto para conta de usuário comum.
+  _sb.auth.getSession().then(async ({ data }) => {
+    const authUser = data && data.session ? data.session.user : null;
+    if(!authUser) return;
+    const email = authUser.email;
+    if(email && ADMIN_EMAILS.includes(email.toLowerCase())) adminAuthed = true;
+    await carregarPerfilUsuario(authUser);
+    await loadUserData();
+    updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
+  });
+}
+
 /* ============ Editais reais (aprovados) vindos do Supabase ============
    Somam-se aos editais de demonstração já existentes no protótipo —
    não substituem nem apagam nada, só entram na mesma lista/filtros. */
+function formatarMoedaBR(v){
+  if(v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  if(isNaN(n)) return null;
+  return n.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+}
 function formatarDataBR(iso){
   if(!iso) return 'Não informado';
   const d = new Date(iso + 'T00:00:00');
@@ -2786,6 +3027,7 @@ function mapEditalSupabase(row){
     edital: row.edital || 'Credenciamento (PNCP)',
     orgao: row.orgao || 'Órgão não identificado',
     uf: row.uf || '—',
+    cidade: row.cidade || '',
     tipo: row.tipo || 'Credenciamento',
     profissoes: (row.profissoes && row.profissoes.length) ? row.profissoes : ['Não identificada'],
     modalidade: row.modalidade || 'Presencial',
@@ -2800,7 +3042,8 @@ function mapEditalSupabase(row){
     valorMensal: row.valor_mensal || 'Não informado no edital',
     valorHora: row.valor_hora || 'Não informado no edital',
     volume: row.volume_estimado || 'Não informado',
-    valorMaximo: row.valor_maximo || 'Não informado',
+    valorMaximo: formatarMoedaBR(row.valor_maximo) ? formatarMoedaBR(row.valor_maximo) + ' (valor total estimado no edital, conforme PNCP)' : (row.valor_maximo || 'Não informado'),
+    remuneracao: (row.remuneracao && row.remuneracao.length) ? row.remuneracao : [],
     requisitos: row.requisitos || 'Consulte o edital oficial no PNCP para os requisitos completos.',
     pontosPositivos: row.pontos_positivos || '',
     pontosAtencao: row.pontos_atencao || '',
@@ -2911,6 +3154,109 @@ async function buscarCredenciamentosAgora(){
     toast('Erro ao buscar: ' + e.message);
   }
   renderCaixaEntrada();
+}
+
+/* ================= PALAVRAS-CHAVE DE BUSCA (profissoes_monitoradas) ================= */
+function toggleTermosBusca(){
+  const body = document.getElementById('termos-busca-body');
+  const arrow = document.getElementById('termos-busca-arrow');
+  const abrir = body.style.display === 'none';
+  body.style.display = abrir ? 'block' : 'none';
+  arrow.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
+  if(abrir) renderTermosBusca();
+}
+
+/* ---- Admin: usuários cadastrados (Supabase Auth) ---- */
+function toggleUsuariosCadastrados(){
+  const body = document.getElementById('usuarios-cadastrados-body');
+  const arrow = document.getElementById('usuarios-cadastrados-arrow');
+  const abrir = body.style.display === 'none';
+  body.style.display = abrir ? 'block' : 'none';
+  arrow.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
+  if(abrir) renderUsuariosAdmin();
+}
+async function renderUsuariosAdmin(){
+  const status = document.getElementById('usuarios-cadastrados-status');
+  const box = document.getElementById('usuarios-cadastrados-lista');
+  if(!_sb){ status.textContent = 'Indisponível: configure o Supabase.'; return; }
+  status.textContent = 'Carregando...';
+  const { data, error } = await _sb.from('usuarios_perfil').select('*').order('criado_em', {ascending:false});
+  if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
+  status.textContent = (data||[]).length + ' usuário(s) cadastrado(s).';
+  box.innerHTML = '';
+  (data||[]).forEach(u=>{
+    const row = document.createElement('div');
+    row.className = 'af-item';
+    row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid var(--border-soft);';
+    row.innerHTML = `
+      <div>
+        <div style="font-weight:600;">${esc(u.nome || '(sem nome)')}</div>
+        <div style="font-size:12px; color:var(--ink-dim);">${esc(u.email)}${u.uf ? ' · ' + esc(u.uf) : ''}</div>
+      </div>
+      <button type="button" class="btn-ghost" style="font-size:12px;" onclick="enviarLinkRedefinicaoUsuario('${esc(u.email)}', this)">🔑 Enviar link de redefinição</button>
+    `;
+    box.appendChild(row);
+  });
+}
+async function enviarLinkRedefinicaoUsuario(email, btn){
+  if(!_sb) return;
+  if(btn){ btn.disabled = true; btn.textContent = 'Enviando...'; }
+  const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+  if(btn){ btn.disabled = false; btn.textContent = '🔑 Enviar link de redefinição'; }
+  if(error){ toast('Erro ao enviar: ' + error.message); return; }
+  toast('Link de redefinição enviado para ' + email);
+}
+
+async function renderTermosBusca(){
+  const status = document.getElementById('termos-busca-status');
+  const lista = document.getElementById('termos-busca-lista');
+  if(!_sb){ status.textContent = 'Indisponível: configure SUPABASE_URL/SUPABASE_ANON_KEY neste arquivo.'; lista.innerHTML=''; return; }
+  status.textContent = 'Carregando...';
+  const { data, error } = await _sb.from('profissoes_monitoradas').select('*').order('nome');
+  if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
+  status.textContent = '';
+  if(!data || data.length === 0){ lista.innerHTML = '<div class="empty-state">Nenhuma profissão cadastrada para busca ainda.</div>'; return; }
+  lista.innerHTML = data.map(p => `
+    <div class="panel" style="margin-top:0; margin-bottom:10px; padding:14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+        <strong style="font-size:13.5px;">${esc(p.nome)}</strong>
+        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-muted); cursor:pointer;">
+          <input type="checkbox" ${p.ativa ? 'checked' : ''} onchange="toggleTermoAtivo(${p.id}, this.checked)"> ativa na busca
+        </label>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="termo-input-${p.id}" value="${esc((p.termos_busca||[]).join(', '))}" placeholder="ex: psicolog, psico" style="flex:1; min-width:200px;">
+        <button type="button" class="btn-ghost" onclick="salvarTermosBusca(${p.id})">Salvar</button>
+      </div>
+      <p style="font-size:10.5px; color:var(--ink-dim); margin-top:6px;">Separe vários termos por vírgula. Use radicais sem acento e minúsculo (ex: "fisioterap" encontra fisioterapeuta e fisioterapia).</p>
+    </div>
+  `).join('');
+}
+
+async function salvarTermosBusca(id){
+  const input = document.getElementById('termo-input-'+id);
+  const termos = input.value.split(',').map(t=>t.trim().toLowerCase()).filter(Boolean);
+  if(termos.length === 0){ toast('Digite ao menos uma palavra-chave'); return; }
+  const { error } = await _sb.from('profissoes_monitoradas').update({ termos_busca: termos }).eq('id', id);
+  toast(error ? ('Erro ao salvar: ' + error.message) : 'Palavras-chave atualizadas');
+}
+
+async function toggleTermoAtivo(id, ativa){
+  const { error } = await _sb.from('profissoes_monitoradas').update({ ativa }).eq('id', id);
+  if(error) toast('Erro ao salvar: ' + error.message);
+}
+
+async function addTermoBuscaNovo(){
+  const nome = document.getElementById('termo-nome-nova').value.trim();
+  const palavras = document.getElementById('termo-palavras-nova').value.split(',').map(t=>t.trim().toLowerCase()).filter(Boolean);
+  if(!nome || palavras.length === 0){ toast('Preencha o nome e ao menos uma palavra-chave'); return; }
+  if(!_sb){ toast('Indisponível: configure o Supabase.'); return; }
+  const { error } = await _sb.from('profissoes_monitoradas').upsert({ nome, termos_busca: palavras, ativa: true }, { onConflict: 'nome' });
+  if(error){ toast('Erro ao adicionar: ' + error.message); return; }
+  document.getElementById('termo-nome-nova').value = '';
+  document.getElementById('termo-palavras-nova').value = '';
+  toast('Palavras-chave adicionadas');
+  renderTermosBusca();
 }
 </script>
 </body>
