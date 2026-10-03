@@ -3510,9 +3510,14 @@ async function saveAdminForm(){
     if(prazoISO !== undefined) payloadSupabase.prazo = prazoISO;
     if(publicacaoISO !== undefined) payloadSupabase.publicacao = publicacaoISO;
 
-    const { error } = await _sb.from('editais').update(payloadSupabase).eq('id', idReal);
+    // .select() depois do update é essencial: sem ele, uma gravação bloqueada por
+    // permissão (RLS) no Supabase não gera "error" nenhum — só devolve 0 linhas
+    // alteradas, e sem checar isso o site mostraria "sucesso" mesmo sem salvar nada.
+    const { data: linhasAtualizadas, error } = await _sb.from('editais').update(payloadSupabase).eq('id', idReal).select('id');
     if(error){
       toast('Atenção: salvou só neste navegador — erro ao gravar no banco (' + error.message + ')');
+    } else if(!linhasAtualizadas || linhasAtualizadas.length === 0){
+      toast('Atenção: NÃO foi gravado no banco (sem permissão ou edital não encontrado) — salvou só neste navegador. Avise o suporte técnico.');
     } else {
       let aviso = 'Oportunidade atualizada e salva no catálogo.';
       if(prazoISO === undefined && document.getElementById('af-prazo').value.trim()) aviso += ' Prazo não gravado no banco (use o formato dd/mm/aaaa).';
