@@ -2201,10 +2201,13 @@ function renderIndicators(){
   ];
   const box = document.getElementById('indicators');
   box.innerHTML = '';
-  const textoFlag = usandoDemo ? 'Dado demonstrativo' : 'Dado real';
   stats.forEach(s=>{
     const el = document.createElement('div'); el.className='indicator-card indicator-card-link';
-    el.innerHTML = `<div class="num">${s.num}</div><div class="label">${s.label}</div><div class="demo-flag">${textoFlag}</div>`;
+    // Com dado real, o próprio nome do indicador vai no selo dourado (no lugar
+    // de "Dado real") — por isso some o texto simples do label nesse caso.
+    el.innerHTML = usandoDemo
+      ? `<div class="num">${s.num}</div><div class="label">${s.label}</div><div class="demo-flag">Dado demonstrativo</div>`
+      : `<div class="num">${s.num}</div><div class="demo-flag" style="margin-top:6px;">${s.label}</div>`;
     el.onclick = ()=> irParaEditaisComFiltro(s.filtro);
     box.appendChild(el);
   });
