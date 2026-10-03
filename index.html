@@ -3256,6 +3256,12 @@ function _extrairSecaoAnaliseIA(texto, inicioRegex, finsRegex){
     const idx = corpo.search(r);
     if(idx !== -1 && idx < corteIdx) corteIdx = idx;
   });
+  // Recua até o início da linha do próximo cabeçalho, pra não deixar sobrar
+  // a numeração/emoji dele (ex.: "3) ⚠" ou "5)") grudada no fim desta seção.
+  if(corteIdx < corpo.length){
+    const inicioLinha = corpo.lastIndexOf('\n', corteIdx);
+    corteIdx = inicioLinha === -1 ? 0 : inicioLinha;
+  }
   return corpo.slice(0, corteIdx).trim();
 }
 function _listaDeBullets(texto){
