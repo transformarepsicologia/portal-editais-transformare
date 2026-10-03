@@ -2112,6 +2112,10 @@ function searchFromHome(){
   applyFilters();
 }
 
+// Filtro ligado pelo quadrado "editais com Índice Transformare" da home — não
+// tem um <select> próprio, então fica num flag à parte (ver irParaEditaisComFiltro).
+let filtroSomenteComIndice = false;
+
 function applyFilters(){
   const busca = document.getElementById('ed-search').value.trim().toLowerCase();
   const prof = document.getElementById('f-prof').value;
@@ -2129,6 +2133,7 @@ function applyFilters(){
     if(abr && o.abrangencia !== abr) return false;
     if(uf && o.uf !== uf) return false;
     if(sit && o.situacao !== sit) return false;
+    if(filtroSomenteComIndice && (o.indice===null || o.indice===undefined)) return false;
     if(busca){
       const alvo = `${o.orgao} ${o.edital} ${o.objeto} ${o.profissoes.join(' ')} ${o.uf}`.toLowerCase();
       if(!alvo.includes(busca)) return false;
@@ -2181,11 +2186,20 @@ function renderFilterChips(){
     chip.querySelector('.fc-x').onclick = ()=>{ d.clear(); applyFilters(); };
     box.appendChild(chip);
   });
+  if(filtroSomenteComIndice){
+    temAtivo = true;
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip';
+    chip.innerHTML = `<span>Somente com Índice Transformare</span><span class="fc-x">✕</span>`;
+    chip.querySelector('.fc-x').onclick = ()=>{ filtroSomenteComIndice = false; applyFilters(); };
+    box.appendChild(chip);
+  }
   document.getElementById('btn-limpar-filtros').style.display = temAtivo ? '' : 'none';
 }
 function clearAllFilters(){
   ['ed-search'].forEach(id=>document.getElementById(id).value='');
   ['f-prof','f-tipo','f-mod','f-abr','f-uf','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
+  filtroSomenteComIndice = false;
   applyFilters();
 }
 
@@ -2224,6 +2238,7 @@ function renderIndicators(){
 function irParaEditaisComFiltro(filtro){
   ['ed-search'].forEach(id=>document.getElementById(id).value='');
   ['f-prof','f-tipo','f-mod','f-abr','f-uf','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
+  filtroSomenteComIndice = (filtro === 'indice');
   if(filtro === 'indice') document.getElementById('f-sort').value = 'indice';
   nav('editais');
 }
