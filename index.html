@@ -161,6 +161,8 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
 .indicator-card{
   background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:20px 22px;
 }
+.indicator-card-link{cursor:pointer; transition:border-color .15s, transform .15s;}
+.indicator-card-link:hover{border-color:var(--teal); transform:translateY(-2px);}
 .indicator-card .num{font-family:var(--font-display); font-size:30px; font-weight:700; color:var(--teal);}
 .indicator-card .label{font-size:12.5px; color:var(--ink-muted); margin-top:4px;}
 .demo-flag{
@@ -2179,22 +2181,38 @@ function clearAllFilters(){
 }
 
 /* ================= INDICADORES ================= */
+// Os números usam só as oportunidades REAIS (vindas do Supabase) assim que elas
+// carregam — por isso renderIndicators() roda de novo depois de
+// carregarEditaisSupabase(). Só volta a mostrar a etiqueta "Dado demonstrativo"
+// quando não há nenhuma oportunidade real carregada ainda (prototipo sem
+// Supabase configurado, ou antes da primeira carga terminar).
 function renderIndicators(){
-  const abertas = oportunidades.filter(o=>o.situacao==='Aberto').length;
-  const orgaos = new Set(oportunidades.map(o=>o.orgao)).size;
+  const reais = oportunidades.filter(o=>o.origemSupabase);
+  const usandoDemo = reais.length === 0;
+  const base = usandoDemo ? oportunidades : reais;
+  const orgaos = new Set(base.map(o=>o.orgao)).size;
+  const comIndice = base.filter(o=>o.indice !== null && o.indice !== undefined).length;
   const stats = [
-    {num:oportunidades.length, label:'oportunidades monitoradas'},
-    {num:orgaos, label:'órgãos e instituições'},
-    {num:profissoesAtivasNomes().length, label:'profissões cobertas'},
-    {num:new Set(oportunidades.map(o=>o.uf)).size, label:'estados com oportunidades'}
+    {num:base.length, label:'oportunidades monitoradas', filtro:null},
+    {num:orgaos, label:'órgãos e instituições', filtro:null},
+    {num:profissoesAtivasNomes().length, label:'profissões cobertas', filtro:null},
+    {num:new Set(base.map(o=>o.uf)).size, label:'estados com oportunidades', filtro:null},
+    {num:comIndice, label:'editais com Índice Transformare', filtro:'indice'}
   ];
   const box = document.getElementById('indicators');
   box.innerHTML = '';
   stats.forEach(s=>{
-    const el = document.createElement('div'); el.className='indicator-card';
-    el.innerHTML = `<div class="num">${s.num}</div><div class="label">${s.label}</div><div class="demo-flag">Dado demonstrativo</div>`;
+    const el = document.createElement('div'); el.className='indicator-card indicator-card-link';
+    el.innerHTML = `<div class="num">${s.num}</div><div class="label">${s.label}</div>${usandoDemo ? '<div class="demo-flag">Dado demonstrativo</div>' : ''}`;
+    el.onclick = ()=> irParaEditaisComFiltro(s.filtro);
     box.appendChild(el);
   });
+}
+function irParaEditaisComFiltro(filtro){
+  ['ed-search'].forEach(id=>document.getElementById(id).value='');
+  ['f-prof','f-tipo','f-mod','f-abr','f-uf','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
+  if(filtro === 'indice') document.getElementById('f-sort').value = 'indice';
+  nav('editais');
 }
 
 /* ================= DETALHE ================= */
@@ -4023,6 +4041,7 @@ async function carregarEditaisSupabase(){
   oportunidades = [...reais, ...oportunidades];
   populateSelects();
   applyFilters();
+  renderIndicators();
 }
 
 async function renderCaixaEntrada(){
