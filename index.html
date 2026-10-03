@@ -656,6 +656,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="filter-field"><label>Modalidade</label><select id="f-mod"><option value="">Todas</option><option>Presencial</option><option>Online</option><option>Híbrido</option></select></div>
       <div class="filter-field"><label>Abrangência</label><select id="f-abr"><option value="">Todas</option><option>Nacional</option><option>Estadual</option><option>Municipal</option></select></div>
       <div class="filter-field"><label>UF</label><select id="f-uf"><option value="">Todas</option></select></div>
+      <div class="filter-field"><label>Órgão</label><select id="f-org"><option value="">Todos</option></select></div>
       <div class="filter-field"><label>Situação</label><select id="f-sit"><option value="">Todas</option><option>Aberto</option><option>Próximo do encerramento</option><option>Em análise</option><option>Retificado</option><option>Suspenso</option><option>Encerrado</option></select></div>
       <div class="filter-field"><label>Ordenar por</label><select id="f-sort"><option value="">Padrão</option><option value="prazo">Prazo mais próximo</option><option value="indice">Maior Índice Transformare</option><option value="recentes">Publicação mais recente</option></select></div>
     </div>
@@ -2091,6 +2092,16 @@ function populateSelects(){
   cu.innerHTML = '';
   cu.insertAdjacentHTML('beforeend', '<option value="">Selecione</option>'+ufOptionsHTML());
 
+  // Lista de órgãos muda conforme os editais reais carregam do Supabase, então
+  // reconstrói sempre que populateSelects() roda — preservando a seleção atual
+  // se o órgão escolhido continuar na lista.
+  const fo = document.getElementById('f-org');
+  const orgaoAtual = fo.value;
+  fo.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
+  const orgaosList = [...new Set(oportunidades.map(o=>o.orgao))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  orgaosList.forEach(nome=>fo.insertAdjacentHTML('beforeend', `<option>${esc(nome)}</option>`));
+  if(orgaosList.includes(orgaoAtual)) fo.value = orgaoAtual;
+
   const chips = document.getElementById('quick-chips');
   chips.innerHTML = '';
   ["Psicologia","Nutrição","Fonoaudiologia","Teleatendimento","Rio Grande do Sul"].forEach(c=>{
@@ -2132,6 +2143,7 @@ function applyFilters(){
   const mod = document.getElementById('f-mod').value;
   const abr = document.getElementById('f-abr').value;
   const uf = document.getElementById('f-uf').value;
+  const org = document.getElementById('f-org').value;
   const sit = document.getElementById('f-sit').value;
   const sort = document.getElementById('f-sort').value;
 
@@ -2141,6 +2153,7 @@ function applyFilters(){
     if(mod && o.modalidade !== mod) return false;
     if(abr && o.abrangencia !== abr) return false;
     if(uf && o.uf !== uf) return false;
+    if(org && o.orgao !== org) return false;
     if(sit && o.situacao !== sit) return false;
     if(filtroSomenteComIndice){
       if(o.indice===null || o.indice===undefined) return false;
@@ -2168,7 +2181,7 @@ function applyFilters(){
   }
   filtradas.forEach(o=>list.appendChild(renderCard(o)));
 }
-['f-prof','f-tipo','f-mod','f-abr','f-uf','f-sit','f-sort'].forEach(id=>document.getElementById(id).addEventListener('change', applyFilters));
+['f-prof','f-tipo','f-mod','f-abr','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).addEventListener('change', applyFilters));
 document.getElementById('ed-search').addEventListener('input', applyFilters);
 
 // Indicador visível de filtro/busca ativo, com "x" para limpar cada um individualmente.
@@ -2182,6 +2195,7 @@ function renderFilterChips(){
     { id:'f-mod',     label:v=>`Modalidade: ${v}`, clear:()=>{ document.getElementById('f-mod').value=''; } },
     { id:'f-abr',     label:v=>`Abrangência: ${v}`, clear:()=>{ document.getElementById('f-abr').value=''; } },
     { id:'f-uf',      label:v=>`UF: ${v}`, clear:()=>{ document.getElementById('f-uf').value=''; } },
+    { id:'f-org',     label:v=>`Órgão: ${v}`, clear:()=>{ document.getElementById('f-org').value=''; } },
     { id:'f-sit',     label:v=>`Situação: ${v}`, clear:()=>{ document.getElementById('f-sit').value=''; } },
     { id:'f-sort',    label:v=>`Ordenar: ${document.getElementById('f-sort').selectedOptions[0].textContent}`, clear:()=>{ document.getElementById('f-sort').value=''; } },
   ];
@@ -2210,7 +2224,7 @@ function renderFilterChips(){
 }
 function clearAllFilters(){
   ['ed-search'].forEach(id=>document.getElementById(id).value='');
-  ['f-prof','f-tipo','f-mod','f-abr','f-uf','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
+  ['f-prof','f-tipo','f-mod','f-abr','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
   filtroSomenteComIndice = false;
   applyFilters();
 }
@@ -2230,7 +2244,7 @@ function renderIndicators(){
   const comIndice = base.filter(o=>o.indice !== null && o.indice !== undefined).length;
   const stats = [
     {num:base.length, label:'oportunidades monitoradas', filtro:null},
-    {num:orgaos, label:'órgãos e instituições', filtro:null},
+    {num:orgaos, label:'órgãos e instituições', filtro:'orgao'},
     {num:profissoesAtivasNomes().length, label:'profissões cobertas', filtro:'profissao'},
     {num:new Set(base.map(o=>o.uf)).size, label:'estados com oportunidades', filtro:'uf'},
     {num:comIndice, label:'editais com Índice Transformare', filtro:'indice'}
@@ -2250,16 +2264,16 @@ function renderIndicators(){
 }
 function irParaEditaisComFiltro(filtro){
   ['ed-search'].forEach(id=>document.getElementById(id).value='');
-  ['f-prof','f-tipo','f-mod','f-abr','f-uf','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
+  ['f-prof','f-tipo','f-mod','f-abr','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
   filtroSomenteComIndice = (filtro === 'indice');
   if(filtro === 'indice') document.getElementById('f-sort').value = 'indice';
   nav('editais');
-  // "Órgãos e instituições" e "profissões/estados" reúnem muitos valores diferentes —
-  // não dá pra filtrar por "um" órgão/profissão/estado com um clique só. Para
-  // profissão e UF, em vez de só navegar, já abre o seletor certo para a pessoa
+  // "Órgãos e instituições", "profissões cobertas" e "estados com oportunidades"
+  // reúnem muitos valores diferentes — não dá pra filtrar por "um" só com um
+  // clique. Em vez de só navegar, já abre o seletor certo para a pessoa
   // escolher na hora qual quer ver.
-  if(filtro === 'profissao' || filtro === 'uf'){
-    const idSelect = filtro === 'profissao' ? 'f-prof' : 'f-uf';
+  if(filtro === 'profissao' || filtro === 'uf' || filtro === 'orgao'){
+    const idSelect = filtro === 'profissao' ? 'f-prof' : (filtro === 'uf' ? 'f-uf' : 'f-org');
     setTimeout(()=>{
       const el = document.getElementById(idSelect);
       if(!el) return;
