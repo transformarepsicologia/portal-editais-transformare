@@ -1165,7 +1165,14 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         </select>
       </div>
     </div>
-    <div class="form-row"><label>Prazo de inscrição (opcional)</label><input type="date" id="aprovar-prazo" oninput="renderAprovarPreview()"></div>
+    <div class="two-col">
+      <div class="form-row"><label>Prazo de inscrição (opcional)</label><input type="date" id="aprovar-prazo" oninput="renderAprovarPreview()"></div>
+      <div class="form-row"><label>Abrangência</label>
+        <select id="aprovar-abrangencia">
+          <option>Municipal</option><option>Estadual</option><option>Nacional</option>
+        </select>
+      </div>
+    </div>
     <div class="form-row"><label>URL — site/órgão oficial</label><input type="text" id="aprovar-url-oficial" placeholder="https://..."></div>
     <div class="two-col">
       <div class="form-row"><label>URL — edital (documento/página)</label><input type="text" id="aprovar-url-edital" placeholder="https://..."></div>
@@ -3801,11 +3808,12 @@ async function renderCaixaEntrada(){
       <summary style="cursor:pointer; list-style:none;">
         <h5 style="display:inline; margin:0;">${esc(item.orgao || 'Órgão não identificado')} — ${esc(item.uf || '')}</h5>
         ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
-        <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao || '—'} · Fonte: ${esc(item.fonte)}</div>
+        <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao || '—'}${item.data_encerramento_proposta ? ` · Prazo: ${formatarDataBR(item.data_encerramento_proposta)}` : ''} · Fonte: ${esc(item.fonte)}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
       </summary>
       <div style="margin-top:10px;">
         <p style="font-size:13px; color:var(--ink-muted); margin:0 0 8px;">${esc(item.resumo || item.objeto || '')}</p>
+        ${item.amparo_legal ? `<p style="font-size:11.5px; color:var(--ink-dim); margin:0 0 8px;">Amparo legal (PNCP): ${esc(item.amparo_legal)}</p>` : ''}
         ${item.link_pncp ? `<a href="${item.link_pncp}" target="_blank" rel="noopener" style="font-size:12px; color:var(--teal);">Ver no PNCP ↗</a>` : ''}
         <div class="inbox-actions" style="margin-top:10px;">
           <button class="inbox-approve" onclick="abrirAprovarModal(${item.id}, 'credenciamento')">Aprovar e adicionar ao catálogo</button>
@@ -3827,6 +3835,7 @@ async function aprovarCredenciamento(id, overrides){
     p_indice: o.indice || null, p_prazo: o.prazo || null,
     p_url_oficial: o.url_oficial || null, p_url_edital: o.url_edital || null,
     p_url_pncp: o.url_pncp || null, p_url_inscricao: o.url_inscricao || null,
+    p_abrangencia: o.abrangencia || null,
   });
   if(error){ alert('Erro ao aprovar: ' + error.message); return; }
   toast('Credenciamento aprovado e adicionado ao catálogo');
@@ -4023,10 +4032,11 @@ function abrirAprovarModal(id, tipo){
   document.getElementById('aprovar-situacao').value = item.situacao || 'Aberto';
   document.getElementById('aprovar-indice').value = '3';
   document.getElementById('aprovar-prazo').value = item.data_encerramento_proposta || '';
+  document.getElementById('aprovar-abrangencia').value = item.abrangencia || 'Municipal';
   document.getElementById('aprovar-url-oficial').value = (tipo === 'diario' ? item.url_diario : item.link_pncp) || '';
   document.getElementById('aprovar-url-edital').value = (tipo === 'diario' ? '' : item.link_pncp) || '';
   document.getElementById('aprovar-url-pncp').value = (tipo === 'diario' ? '' : item.link_pncp) || '';
-  document.getElementById('aprovar-url-inscricao').value = '';
+  document.getElementById('aprovar-url-inscricao').value = (tipo === 'diario' ? '' : item.link_inscricao) || '';
 
   const chipsBox = document.getElementById('motivo-aprovacao-chips');
   chipsBox.innerHTML = _motivosPadrao.aprovacao.map(m =>
@@ -4103,6 +4113,7 @@ async function confirmarAprovacao(){
     url_edital: document.getElementById('aprovar-url-edital').value.trim() || null,
     url_pncp: document.getElementById('aprovar-url-pncp').value.trim() || null,
     url_inscricao: document.getElementById('aprovar-url-inscricao').value.trim() || null,
+    abrangencia: document.getElementById('aprovar-abrangencia').value || null,
   };
 
   const { id, tipo } = _aprovarAlvo;
