@@ -2115,6 +2115,11 @@ function searchFromHome(){
 // Filtro ligado pelo quadrado "editais com Índice Transformare" da home — não
 // tem um <select> próprio, então fica num flag à parte (ver irParaEditaisComFiltro).
 let filtroSomenteComIndice = false;
+// Espelha o "usandoDemo" calculado em renderIndicators(): quando há editais reais,
+// o quadrado só conta os reais com índice, então o filtro precisa excluir também
+// os editais de demonstração do protótipo (que sempre vêm com índice fixo) —
+// senão a lista mostra mais itens do que o número anunciado no quadrado.
+let indicadoresUsandoDemo = false;
 
 function applyFilters(){
   const busca = document.getElementById('ed-search').value.trim().toLowerCase();
@@ -2133,7 +2138,10 @@ function applyFilters(){
     if(abr && o.abrangencia !== abr) return false;
     if(uf && o.uf !== uf) return false;
     if(sit && o.situacao !== sit) return false;
-    if(filtroSomenteComIndice && (o.indice===null || o.indice===undefined)) return false;
+    if(filtroSomenteComIndice){
+      if(o.indice===null || o.indice===undefined) return false;
+      if(!indicadoresUsandoDemo && !o.origemSupabase) return false;
+    }
     if(busca){
       const alvo = `${o.orgao} ${o.edital} ${o.objeto} ${o.profissoes.join(' ')} ${o.uf}`.toLowerCase();
       if(!alvo.includes(busca)) return false;
@@ -2212,6 +2220,7 @@ function clearAllFilters(){
 function renderIndicators(){
   const reais = oportunidades.filter(o=>o.origemSupabase);
   const usandoDemo = reais.length === 0;
+  indicadoresUsandoDemo = usandoDemo;
   const base = usandoDemo ? oportunidades : reais;
   const orgaos = new Set(base.map(o=>o.orgao)).size;
   const comIndice = base.filter(o=>o.indice !== null && o.indice !== undefined).length;
