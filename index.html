@@ -2318,7 +2318,7 @@ function openDetalhe(id){
           </ul>
           ${ocultos>0 ? `
           <div class="checklist-cta" style="margin-top:10px;">
-            <p>+ ${ocultos} outro${ocultos>1?'s':''} documento${ocultos>1?'s':''} exigido${ocultos>1?'s':''} neste edital. A lista completa de documentação faz parte do plano completo da Transformare.</p>
+            <p>+ ${ocultos} outro${ocultos>1?'s':''} documento${ocultos>1?'s':''} exigido${ocultos>1?'s':''} neste edital. A lista completa de documentação pode ser organizada com o apoio da Transformare.</p>
             <button class="btn-ghost" style="width:100%;" onclick="openLeadModal(${o.id},'detalhe_edital','Quero a lista completa de documentos')">Quero ver a lista completa</button>
           </div>` : ''}
           `; })()}
@@ -2373,7 +2373,8 @@ function continuarParaEdital(){
 }
 const DOC_PREVIEW_LIMIT = 5;
 // Mostra apenas os principais documentos no público (gostinho) — a lista
-// completa fica reservada para uma futura modalidade paga da plataforma.
+// completa é tratada como algo a organizar com o apoio da Transformare
+// (sem falar em plano pago por enquanto).
 function docsPreview(documentos){
   return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
 }
