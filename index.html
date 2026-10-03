@@ -2231,8 +2231,8 @@ function renderIndicators(){
   const stats = [
     {num:base.length, label:'oportunidades monitoradas', filtro:null},
     {num:orgaos, label:'órgãos e instituições', filtro:null},
-    {num:profissoesAtivasNomes().length, label:'profissões cobertas', filtro:null},
-    {num:new Set(base.map(o=>o.uf)).size, label:'estados com oportunidades', filtro:null},
+    {num:profissoesAtivasNomes().length, label:'profissões cobertas', filtro:'profissao'},
+    {num:new Set(base.map(o=>o.uf)).size, label:'estados com oportunidades', filtro:'uf'},
     {num:comIndice, label:'editais com Índice Transformare', filtro:'indice'}
   ];
   const box = document.getElementById('indicators');
@@ -2254,6 +2254,20 @@ function irParaEditaisComFiltro(filtro){
   filtroSomenteComIndice = (filtro === 'indice');
   if(filtro === 'indice') document.getElementById('f-sort').value = 'indice';
   nav('editais');
+  // "Órgãos e instituições" e "profissões/estados" reúnem muitos valores diferentes —
+  // não dá pra filtrar por "um" órgão/profissão/estado com um clique só. Para
+  // profissão e UF, em vez de só navegar, já abre o seletor certo para a pessoa
+  // escolher na hora qual quer ver.
+  if(filtro === 'profissao' || filtro === 'uf'){
+    const idSelect = filtro === 'profissao' ? 'f-prof' : 'f-uf';
+    setTimeout(()=>{
+      const el = document.getElementById(idSelect);
+      if(!el) return;
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      if(typeof el.showPicker === 'function'){ try{ el.showPicker(); return; }catch(e){ /* cai pro focus abaixo */ } }
+      el.focus();
+    }, 350);
+  }
 }
 
 /* ================= DETALHE ================= */
