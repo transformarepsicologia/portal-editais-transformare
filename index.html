@@ -982,6 +982,14 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div id="oportunidades-cadastradas-body" style="display:none;">
   <div class="admin-form-panel" id="admin-form-panel">
     <div class="section-title" style="font-size:16px;" id="admin-form-title">Nova oportunidade</div>
+
+    <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
+      <label>Colar análise da IA (Gemini) — preenche Índice, Pontos de destaque, Pontos de atenção, Requisitos e Documentação automaticamente</label>
+      <textarea id="af-analise-ia" rows="4" placeholder="Cole aqui o resultado completo da análise (as 5 seções: Índice Transformare, Pontos de destaque, Ponto de atenção, Requisitos, Documentação necessária)..."></textarea>
+      <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="preencherComAnaliseIA()">⇩ Preencher campos com a análise</button>
+      <div id="af-analise-ia-status" style="font-size:11.5px; color:var(--ink-dim); margin-top:6px;"></div>
+    </div>
+
     <div class="two-col">
       <div class="form-row"><label>Edital</label><input type="text" id="af-edital" placeholder="Ex: Edital nº 050/2026"></div>
       <div class="form-row"><label>Órgão</label><input type="text" id="af-orgao" placeholder="Ex: Secretaria Municipal de Saúde de..."></div>
@@ -3233,6 +3241,83 @@ function removeAfDocumento(i){
   renderAfDocList();
 }
 
+/* ================= PREENCHIMENTO AUTOMÁTICO A PARTIR DA ANÁLISE DA IA (Gemini) =================
+   Lê o texto colado (no formato das 5 seções combinado no prompt do analisador) e preenche os
+   campos do formulário — índice, pontos de destaque, pontos de atenção, requisitos e documentos —
+   sem precisar digitar cada um manualmente. Nunca lê nem envia nada para fora: é só um parser de texto. */
+function _extrairSecaoAnaliseIA(texto, inicioRegex, finsRegex){
+  const mIni = texto.search(inicioRegex);
+  if(mIni === -1) return null;
+  const depoisHeader = texto.slice(mIni).replace(inicioRegex, '');
+  const quebraLinha = depoisHeader.indexOf('\n');
+  let corpo = quebraLinha === -1 ? '' : depoisHeader.slice(quebraLinha + 1);
+  let corteIdx = corpo.length;
+  finsRegex.forEach(r => {
+    const idx = corpo.search(r);
+    if(idx !== -1 && idx < corteIdx) corteIdx = idx;
+  });
+  return corpo.slice(0, corteIdx).trim();
+}
+function _listaDeBullets(texto){
+  if(!texto) return [];
+  return texto.split('\n')
+    .map(l => l.replace(/^[\s>]*[-•*]\s*/, '').trim())
+    .filter(Boolean);
+}
+function parseAnaliseIAEdital(textoOriginal){
+  const t = (textoOriginal || '').replace(/\r\n/g, '\n');
+  const reDestaque = /PONTOS?\s+DE\s+DESTAQUE/i;
+  const reAtencao = /PONTOS?\s+DE\s+ATEN[ÇC][ÃA]O/i;
+  const reRequisitos = /REQUISITOS/i;
+  const reDocumentacao = /DOCUMENTA[ÇC][ÃA]O\s+NECESS[ÁA]RIA/i;
+
+  const resultado = { indice:null, destaques:[], atencao:[], requisitos:'', documentos:[] };
+
+  const mIndice = t.match(/sugerido[:\s]*?(\d)\s*\/\s*5/i) || t.match(/[ÍI]NDICE\s+TRANSFORMARE[^\d]{0,30}?(\d)\s*\/\s*5/i);
+  if(mIndice) resultado.indice = Math.min(5, Math.max(1, parseInt(mIndice[1], 10)));
+
+  const destaqueTxt = _extrairSecaoAnaliseIA(t, reDestaque, [reAtencao, reRequisitos, reDocumentacao]);
+  resultado.destaques = _listaDeBullets(destaqueTxt);
+
+  const atencaoTxt = _extrairSecaoAnaliseIA(t, reAtencao, [reRequisitos, reDocumentacao]);
+  resultado.atencao = _listaDeBullets(atencaoTxt);
+
+  const requisitosTxt = _extrairSecaoAnaliseIA(t, reRequisitos, [reDocumentacao]);
+  if(requisitosTxt) resultado.requisitos = requisitosTxt.replace(/\n+/g, ' ').trim();
+
+  const documentosTxt = _extrairSecaoAnaliseIA(t, reDocumentacao, []);
+  resultado.documentos = _listaDeBullets(documentosTxt);
+
+  return resultado;
+}
+function preencherComAnaliseIA(){
+  const texto = document.getElementById('af-analise-ia').value.trim();
+  const status = document.getElementById('af-analise-ia-status');
+  if(!texto){ toast('Cole o texto da análise primeiro'); return; }
+
+  const r = parseAnaliseIAEdital(texto);
+  const preenchidos = [];
+
+  if(r.indice){ document.getElementById('af-indice').value = String(r.indice); preenchidos.push('Índice'); }
+  if(r.destaques.length){ document.getElementById('af-pontos-positivos').value = r.destaques.join('\n'); preenchidos.push('Pontos de destaque'); }
+  if(r.atencao.length){ document.getElementById('af-pontos-atencao').value = r.atencao.join('\n'); preenchidos.push('Pontos de atenção'); }
+  if(r.requisitos){ document.getElementById('af-requisitos').value = r.requisitos; preenchidos.push('Requisitos'); }
+  if(r.documentos.length){
+    r.documentos.forEach(nome => { if(!afDocumentos.includes(nome)) afDocumentos.push(nome); });
+    renderAfDocList();
+    preenchidos.push('Documentação');
+  }
+
+  if(preenchidos.length === 0){
+    status.textContent = 'Não consegui reconhecer nenhuma das 5 seções nesse texto — confira se colou o resultado completo do analisador.';
+    status.style.color = 'var(--coral)';
+    return;
+  }
+  status.textContent = `Preenchido a partir da análise: ${preenchidos.join(', ')}. Revise os campos antes de salvar.`;
+  status.style.color = 'var(--ink-dim)';
+  toast('Campos preenchidos — revise antes de salvar');
+}
+
 function renderAfMovList(){
   const ul = document.getElementById('af-mov-list');
   ul.innerHTML = afMovimentacoes.length
@@ -3285,6 +3370,8 @@ function openAdminForm(id){
   document.getElementById('af-doc-input').value = '';
   document.getElementById('af-mov-data').value = '';
   document.getElementById('af-mov-texto').value = '';
+  document.getElementById('af-analise-ia').value = '';
+  document.getElementById('af-analise-ia-status').textContent = '';
   refreshAfProfChips(id ? oportunidades.find(x=>x.id===id).profissoes : []);
 
   if(id){
@@ -3335,7 +3422,13 @@ function closeAdminForm(){
   editingId = null;
   document.getElementById('admin-form-panel').classList.remove('open');
 }
-function saveAdminForm(){
+function _dataBRParaISO(valor){
+  const m = (valor || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(!m) return undefined; // texto livre (ex.: "Aberto durante a vigência...") — não dá pra converter com segurança
+  const [, dd, mm, yyyy] = m;
+  return `${yyyy}-${mm}-${dd}`;
+}
+async function saveAdminForm(){
   const edital = document.getElementById('af-edital').value.trim();
   const orgao = document.getElementById('af-orgao').value.trim();
   const objeto = document.getElementById('af-objeto').value.trim();
@@ -3380,16 +3473,50 @@ function saveAdminForm(){
     urlInscricao: document.getElementById('af-url-inscricao').value.trim() || null
   };
 
+  const ehEditalReal = editingId && editingId >= 900000;
+
   if(editingId){
     const idx = oportunidades.findIndex(o=>o.id===editingId);
     oportunidades[idx] = {...oportunidades[idx], ...data};
-    toast('Oportunidade atualizada e salva neste navegador');
   } else {
     const newId = Math.max(0,...oportunidades.map(o=>o.id)) + 1;
     oportunidades.push({ id:newId, ...data });
-    toast('Oportunidade criada e salva neste navegador');
   }
   storeSet('oportunidades', oportunidades);
+
+  if(ehEditalReal && _sb){
+    // Edital real (catálogo publicado via Supabase) — grava de verdade no banco,
+    // não só no navegador, senão a edição some ao recarregar a página.
+    const idReal = editingId - 900000;
+    const payloadSupabase = {
+      edital: data.edital, tipo: data.tipo, orgao: data.orgao, objeto: data.objeto,
+      cidade: data.cidade, uf: data.uf, situacao: data.situacao,
+      profissoes: data.profissoes, modalidade: data.modalidade, abrangencia: data.abrangencia,
+      indice: data.indice,
+      valor_atendimento: data.valorAtendimento, valor_mensal: data.valorMensal, valor_hora: data.valorHora,
+      volume_estimado: data.volume, valor_maximo: data.valorMaximo,
+      requisitos: data.requisitos, pontos_positivos: data.pontosPositivos, pontos_atencao: data.pontosAtencao,
+      documentos: data.documentos, movimentacoes: data.movimentacoes, remuneracao: data.remuneracao,
+      url_oficial: data.urlOficial, url_edital: data.urlEdital, url_pncp: data.urlPncp, url_inscricao: data.urlInscricao,
+    };
+    const prazoISO = _dataBRParaISO(document.getElementById('af-prazo').value);
+    const publicacaoISO = _dataBRParaISO(document.getElementById('af-publicacao').value);
+    if(prazoISO !== undefined) payloadSupabase.prazo = prazoISO;
+    if(publicacaoISO !== undefined) payloadSupabase.publicacao = publicacaoISO;
+
+    const { error } = await _sb.from('editais').update(payloadSupabase).eq('id', idReal);
+    if(error){
+      toast('Atenção: salvou só neste navegador — erro ao gravar no banco (' + error.message + ')');
+    } else {
+      let aviso = 'Oportunidade atualizada e salva no catálogo.';
+      if(prazoISO === undefined && document.getElementById('af-prazo').value.trim()) aviso += ' Prazo não gravado no banco (use o formato dd/mm/aaaa).';
+      if(publicacaoISO === undefined && document.getElementById('af-publicacao').value.trim()) aviso += ' Publicação não gravada no banco (use o formato dd/mm/aaaa).';
+      toast(aviso);
+    }
+  } else {
+    toast(editingId ? 'Oportunidade atualizada e salva neste navegador' : 'Oportunidade criada e salva neste navegador');
+  }
+
   closeAdminForm();
   renderAdmin();
   applyFilters();
