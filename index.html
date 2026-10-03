@@ -719,7 +719,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div style="max-width:640px; font-size:14.5px; line-height:1.75; color:var(--ink-muted);">
     <p style="color:var(--ink);">O edital é a matéria-prima. A Transformare agrega valor ao encontrar, filtrar, organizar, analisar e explicar — conectando cada oportunidade ao profissional certo.</p>
     <p>Monitoramos continuamente o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, cobrindo inicialmente Psicologia, Nutrição, Fonoaudiologia, Farmácia e Enfermagem — com arquitetura pronta para novas profissões.</p>
-    <p>Cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong> de 1,00 a 5,00: a média de quatro notas — retorno financeiro, facilidade de entrada, aderência aos serviços da Transformare e complexidade documental. É um indicador interno, calculado a partir dos dados do PNCP e sempre revisado por um analista da Transformare antes da publicação — não é uma informação oficial do órgão responsável, não representa classificação oficial e não substitui o julgamento previsto no edital.</p>
+    <p>Quando avaliada, cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong> — uma nota de 1 a 5 que leva em conta retorno financeiro, facilidade de entrada, aderência aos serviços da Transformare e complexidade documental. É um indicador interno, atribuído manualmente por um analista da Transformare — não é uma informação oficial do órgão responsável, não representa classificação oficial e não substitui o julgamento previsto no edital. Nem todo edital publicado já foi avaliado; quando ainda não foi, isso fica informado na página do edital, com a opção de solicitar a avaliação.</p>
     <p>Este protótipo usa dados demonstrativos para ilustrar o funcionamento da plataforma. Nenhuma informação aqui deve ser tratada como oficial.</p>
     <div style="background:rgba(47,217,196,0.08); border:1px solid rgba(47,217,196,0.3); border-radius:14px; padding:18px 20px; margin-top:22px;">
       <p style="color:var(--ink); margin:0 0 6px; font-weight:600;">⇄ Compare oportunidades lado a lado</p>
@@ -1179,8 +1179,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
     <div class="two-col">
       <div class="form-row"><label>Situação</label><input type="text" id="aprovar-situacao" placeholder="Ex: Aberto" oninput="renderAprovarPreview()"></div>
-      <div class="form-row"><label>Índice Transformare (1,00–5,00) — opcional</label>
-        <input type="number" id="aprovar-indice" min="1" max="5" step="0.01" value="" placeholder="Deixe em branco se ainda não avaliado"
+      <div class="form-row"><label>Índice Transformare (1 a 5) — opcional</label>
+        <input type="number" id="aprovar-indice" min="1" max="5" step="1" value="" placeholder="Deixe em branco se ainda não avaliado"
                onchange="renderAprovarPreview()" oninput="renderAprovarPreview()">
       </div>
     </div>
@@ -1734,7 +1734,7 @@ function scoreMini(score, label){
   const arredondado = Math.round(Number(score) || 0);
   let bars = '';
   for(let i=1;i<=5;i++) bars += `<div class="bar ${i<=arredondado?'on':''}"></div>`;
-  return `<div class="score-mini"><div class="bars">${bars}</div><span class="txt">${Number(score).toFixed(2)}/5</span></div><div class="score-mini-label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${label||''}</div>`;
+  return `<div class="score-mini"><div class="bars">${bars}</div><span class="txt">${arredondado}/5</span></div><div class="score-mini-label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${label||''}</div>`;
 }
 
 /* ================= CARD ================= */
@@ -1856,7 +1856,7 @@ function openCompare(){
     ['Abrangência', o=>o.abrangencia, o=>abrDestacavel && (abrangenciaRank[o.abrangencia]||0)===maxAbr],
     ['Situação', o=>o.situacao, ()=>false],
     ['Prazo', o=>o.prazo, o=>maxPrazo!==null && prazoValsMap[o.id]===maxPrazo],
-    ['Índice Transformare', o=>(o.indice!=null ? `${Number(o.indice).toFixed(2)}/5 — ${o.indiceLabel}` : 'Ainda não avaliado'), o=>indiceDestacavel && o.indice!=null && o.indice===maxIndice],
+    ['Índice Transformare', o=>(o.indice!=null ? `${Math.round(Number(o.indice))}/5 — ${o.indiceLabel}` : 'Ainda não avaliado'), o=>indiceDestacavel && o.indice!=null && o.indice===maxIndice],
     ['Valor por atendimento', o=>o.valorAtendimento, o=>maxRem!==null && tipoRemuneracao(o)==='atendimento' && remValsMap[o.id]===maxRem],
     ['Remuneração (outros valores)', o=>(o.remuneracao && o.remuneracao.length) ? o.remuneracao.join(' · ') : '—', ()=>false],
     ['Requisitos', o=>o.requisitos, ()=>false]
@@ -2199,7 +2199,7 @@ function openDetalhe(id){
   const el = document.getElementById('detalhe-content');
   const temIndice = o.indice !== null && o.indice !== undefined;
   const scoreSegs = temIndice ? Array.from({length:5}, (_,i)=>`<div class="seg ${i<Math.round(o.indice)?'on':''}"></div>`).join('') : '';
-  const scoreClass = !temIndice ? 'vazio' : (o.indice>=3.5 ? 'alta' : (o.indice>=2.5 ? 'media' : 'baixa'));
+  const scoreClass = !temIndice ? 'vazio' : (o.indice>=4 ? 'alta' : (o.indice>=3 ? 'media' : 'baixa'));
   const checks = docChecks[id] || {};
   const remuneracaoResumo = (o.remuneracao && o.remuneracao.length)
     ? (o.remuneracao.length > 1 ? `${o.remuneracao[0]} (+${o.remuneracao.length - 1})` : o.remuneracao[0])
@@ -2245,7 +2245,7 @@ function openDetalhe(id){
 
         <div class="score-hero ${scoreClass}">
           ${temIndice ? `
-          <div class="score-hero-num">${Number(o.indice).toFixed(2)}<span>/5</span></div>
+          <div class="score-hero-num">${Math.round(Number(o.indice))}<span>/5</span></div>
           <div class="score-hero-body">
             <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${o.indiceLabel}</div>
             <div class="score-gauge" style="margin:6px 0;">${scoreSegs}</div>
@@ -2612,7 +2612,7 @@ function openLeadDetail(id){
         <div class="lead-detail-row"><span class="k">Edital</span><span class="v">${o.edital}</span></div>
         <div class="lead-detail-row"><span class="k">Órgão</span><span class="v">${o.orgao}</span></div>
         <div class="lead-detail-row"><span class="k">Prazo</span><span class="v">${o.prazo}</span></div>
-        <div class="lead-detail-row"><span class="k">Índice Transformare</span><span class="v">${o.indice!=null ? `${Number(o.indice).toFixed(2)}/5 — ${o.indiceLabel}` : 'Ainda não avaliado'}</span></div>
+        <div class="lead-detail-row"><span class="k">Índice Transformare</span><span class="v">${o.indice!=null ? `${Math.round(Number(o.indice))}/5 — ${o.indiceLabel}` : 'Ainda não avaliado'}</span></div>
       `).join('<div style="height:8px;"></div>')}
 
     <div class="lead-section-title">Intenção</div>
@@ -3812,7 +3812,7 @@ function mapEditalSupabase(row){
     prazo: formatarDataBR(row.prazo),
     publicacao: formatarDataBR(row.publicacao),
     indice,
-    indiceLabel: indice==null ? null : (indice >= 3.5 ? 'Alta oportunidade' : indice >= 2.5 ? 'Oportunidade moderada' : 'Baixa oportunidade'),
+    indiceLabel: indice==null ? null : (indice >= 4 ? 'Alta oportunidade' : indice >= 3 ? 'Oportunidade moderada' : 'Baixa oportunidade'),
     valorAtendimento: row.valor_atendimento || 'Não informado no edital',
     valorMensal: row.valor_mensal || 'Não informado no edital',
     valorHora: row.valor_hora || 'Não informado no edital',
@@ -4066,24 +4066,17 @@ let _rejeitarAlvo = null; // { id, tipo }
 let _aprovarAlvo = null;  // { id, tipo }
 
 // =====================================================================
-// ÍNDICE TRANSFORMARE — cálculo automático (regra oficial da Transformare)
+// ÍNDICE TRANSFORMARE — nota inteira de 1 a 5, sempre atribuída manualmente
 //
-// Índice = (Financeiro + Entrada + Aderência + Documentação) ÷ 4, 1,00 a 5,00.
-//
-// Duas das quatro dimensões (Facilidade de entrada e Complexidade documental)
-// só podem ser avaliadas de verdade lendo o edital e seus anexos na íntegra
-// (requisitos de habilitação, lista de documentos exigidos) — informação que
-// os dados estruturados do PNCP não trazem. Seguindo a própria regra ("se não
-// houver dados suficientes, atribuir nota 3 e registrar a ausência"), essas
-// duas ficam fixas em 3 com aviso explícito, até existir leitura do edital
-// completo (ex.: um analisador com IA lendo o PDF).
-// As outras duas (Financeiro e Aderência) são calculadas a partir do que o
-// PNCP e o robô de profissões já capturam.
-//
-// Fase 4 — o índice deixou de ser preenchido automaticamente. O que esta
-// função faz agora é só uma INDICAÇÃO textual (ex.: "tende a nota 4 ou 5")
-// para ajudar o analista a decidir rapidamente, nunca um número fechado.
-// Quem avalia e decide incluir (ou não) o índice é sempre o analista, à mão.
+// O índice nunca é preenchido sozinho. O que as funções abaixo fazem é só
+// uma INDICAÇÃO textual (ex.: "tende a nota 4 ou 5"), baseada no retorno
+// financeiro (valor estimado do PNCP) e na aderência ao perfil da
+// Transformare (profissões/objeto), para ajudar o analista a decidir mais
+// rápido. Facilidade de entrada e complexidade documental não entram nessa
+// indicação automática — exigem ler o edital completo e ficam a cargo do
+// analista. O campo de índice pode ficar em branco (edital publicado como
+// "ainda não avaliado"), e só quando preenchido o edital ganha o Selo
+// Transformare.
 function notaFinanceiroSugerida(valor){
   if(typeof valor !== 'number' || isNaN(valor)){
     return { nota:null, texto:'Valor estimado não informado pelo PNCP — sem indicação de retorno financeiro.' };
@@ -4238,7 +4231,7 @@ function renderAprovarPreview(){
   if(!item){ box.innerHTML = ''; return; }
 
   const indiceRaw = document.getElementById('aprovar-indice').value;
-  const indice = indiceRaw === '' ? null : Number(indiceRaw);
+  const indice = indiceRaw === '' ? null : Math.min(5, Math.max(1, Math.round(Number(indiceRaw))));
   const prazoInput = document.getElementById('aprovar-prazo').value;
   const o = {
     edital: document.getElementById('aprovar-edital').value.trim() || (tipo === 'diario' ? 'DOM' : 'PNCP'),
@@ -4251,7 +4244,7 @@ function renderAprovarPreview(){
     situacao: document.getElementById('aprovar-situacao').value.trim() || 'Aberto',
     prazo: prazoInput ? formatarDataBR(prazoInput) : 'Não informado',
     indice,
-    indiceLabel: indice==null ? null : (indice >= 3.5 ? 'Alta oportunidade' : indice >= 2.5 ? 'Oportunidade moderada' : 'Baixa oportunidade'),
+    indiceLabel: indice==null ? null : (indice >= 4 ? 'Alta oportunidade' : indice >= 3 ? 'Oportunidade moderada' : 'Baixa oportunidade'),
   };
 
   box.innerHTML = `
@@ -4287,7 +4280,7 @@ async function confirmarAprovacao(){
     edital: document.getElementById('aprovar-edital').value.trim() || null,
     tipo: document.getElementById('aprovar-tipo').value || null,
     situacao: document.getElementById('aprovar-situacao').value.trim() || null,
-    indice: (document.getElementById('aprovar-indice').value === '') ? null : Number(document.getElementById('aprovar-indice').value),
+    indice: (document.getElementById('aprovar-indice').value === '') ? null : Math.min(5, Math.max(1, Math.round(Number(document.getElementById('aprovar-indice').value)))),
     prazo: document.getElementById('aprovar-prazo').value || null,
     url_oficial: document.getElementById('aprovar-url-oficial').value.trim() || null,
     url_edital: document.getElementById('aprovar-url-edital').value.trim() || null,
