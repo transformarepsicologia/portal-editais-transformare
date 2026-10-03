@@ -2308,13 +2308,20 @@ function openDetalhe(id){
 
         <div class="panel">
           <h4><span class="dot"></span>Documentação necessária</h4>
-          <div id="doc-progress-${o.id}">${docProgressHTML(o.id, o.documentos, checks)}</div>
+          ${(()=>{ const docsVisiveis = docsPreview(o.documentos); const ocultos = o.documentos.length - docsVisiveis.length; return `
+          <div id="doc-progress-${o.id}">${docProgressHTML(o.id, docsVisiveis, checks)}</div>
           <ul class="doc-list" id="doc-list-${o.id}">
-            ${o.documentos.map((d,i)=>`
+            ${docsVisiveis.map((d,i)=>`
               <li onclick="toggleDoc(${o.id},${i})" class="${checks[i]?'checked-text':''}" id="doc-item-${o.id}-${i}">
                 <span class="doc-check ${checks[i]?'checked':''}" id="doc-check-${o.id}-${i}">${checks[i]?'✓':''}</span>${d}
               </li>`).join('')}
           </ul>
+          ${ocultos>0 ? `
+          <div class="checklist-cta" style="margin-top:10px;">
+            <p>+ ${ocultos} outro${ocultos>1?'s':''} documento${ocultos>1?'s':''} exigido${ocultos>1?'s':''} neste edital. A lista completa de documentação faz parte do plano completo da Transformare.</p>
+            <button class="btn-ghost" style="width:100%;" onclick="openLeadModal(${o.id},'detalhe_edital','Quero a lista completa de documentos')">Quero ver a lista completa</button>
+          </div>` : ''}
+          `; })()}
         </div>
 
         <div class="panel">
@@ -2364,6 +2371,12 @@ function continuarParaEdital(){
   closeModal('credenciar-modal');
   if(o && o.urlInscricao) window.open(o.urlInscricao, '_blank');
 }
+const DOC_PREVIEW_LIMIT = 5;
+// Mostra apenas os principais documentos no público (gostinho) — a lista
+// completa fica reservada para uma futura modalidade paga da plataforma.
+function docsPreview(documentos){
+  return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
+}
 function docProgressHTML(oid, documentos, checks){
   const total = documentos.length;
   if(total===0){
@@ -2393,7 +2406,7 @@ async function toggleDoc(oid, idx){
   item.classList.toggle('checked-text', on);
   const o = oportunidades.find(x=>x.id===oid);
   const progressEl = document.getElementById(`doc-progress-${oid}`);
-  if(progressEl && o) progressEl.innerHTML = docProgressHTML(oid, o.documentos, docChecks[oid]);
+  if(progressEl && o) progressEl.innerHTML = docProgressHTML(oid, docsPreview(o.documentos), docChecks[oid]);
   await storeSet(ukey('docChecks'), docChecks);
 }
 
