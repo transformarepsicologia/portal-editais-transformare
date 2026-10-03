@@ -716,7 +716,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div style="max-width:640px; font-size:14.5px; line-height:1.75; color:var(--ink-muted);">
     <p style="color:var(--ink);">O edital é a matéria-prima. A Transformare agrega valor ao encontrar, filtrar, organizar, analisar e explicar — conectando cada oportunidade ao profissional certo.</p>
     <p>Monitoramos continuamente o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, cobrindo inicialmente Psicologia, Nutrição, Fonoaudiologia, Farmácia e Enfermagem — com arquitetura pronta para novas profissões.</p>
-    <p>Cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong>: uma leitura objetiva de atratividade considerando facilidade de entrada, abrangência, compatibilidade profissional, complexidade documental e potencial de recorrência. É uma análise da Transformare — não uma informação oficial do órgão responsável.</p>
+    <p>Cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong>: uma leitura objetiva de atratividade considerando abrangência, compatibilidade profissional, porte financeiro do certame e prazo até o encerramento das propostas. É uma sugestão calculada a partir dos dados do PNCP, sempre revisada por um analista da Transformare antes da publicação — não é uma informação oficial do órgão responsável.</p>
     <p>Este protótipo usa dados demonstrativos para ilustrar o funcionamento da plataforma. Nenhuma informação aqui deve ser tratada como oficial.</p>
     <div style="background:rgba(47,217,196,0.08); border:1px solid rgba(47,217,196,0.3); border-radius:14px; padding:18px 20px; margin-top:22px;">
       <p style="color:var(--ink); margin:0 0 6px; font-weight:600;">⇄ Compare oportunidades lado a lado</p>
@@ -1160,15 +1160,16 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="two-col">
       <div class="form-row"><label>Situação</label><input type="text" id="aprovar-situacao" placeholder="Ex: Aberto" oninput="renderAprovarPreview()"></div>
       <div class="form-row"><label>Índice Transformare (1-5)</label>
-        <select id="aprovar-indice" onchange="renderAprovarPreview()">
+        <select id="aprovar-indice" onchange="_indiceSugeridoManual=true; renderAprovarPreview()">
           <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
         </select>
+        <div id="aprovar-indice-sugestao" style="font-size:11px; color:var(--ink-dim); margin-top:3px;"></div>
       </div>
     </div>
     <div class="two-col">
-      <div class="form-row"><label>Prazo de inscrição (opcional)</label><input type="date" id="aprovar-prazo" oninput="renderAprovarPreview()"></div>
+      <div class="form-row"><label>Prazo de inscrição (opcional)</label><input type="date" id="aprovar-prazo" oninput="atualizarIndiceSugerido()"></div>
       <div class="form-row"><label>Abrangência</label>
-        <select id="aprovar-abrangencia">
+        <select id="aprovar-abrangencia" onchange="atualizarIndiceSugerido()">
           <option>Municipal</option><option>Estadual</option><option>Nacional</option>
         </select>
       </div>
@@ -2208,7 +2209,7 @@ function openDetalhe(id){
           <div class="score-hero-body">
             <div class="label">Índice Transformare — ${o.indiceLabel}</div>
             <div class="score-gauge" style="margin:6px 0;">${scoreSegs}</div>
-            <div class="caption">Leitura de atratividade da Transformare (financeiro, facilidade de entrada, abrangência e complexidade documental) — não é uma informação oficial do órgão.</div>
+            <div class="caption">Leitura de atratividade da Transformare (abrangência, compatibilidade profissional, porte financeiro e prazo) — não é uma informação oficial do órgão.</div>
           </div>
         </div>
 
@@ -3982,6 +3983,72 @@ let _dataDiarioOficial = [];
 let _motivosPadrao = { aprovacao: [], rejeicao: [] };
 let _rejeitarAlvo = null; // { id, tipo }
 let _aprovarAlvo = null;  // { id, tipo }
+let _indiceSugeridoManual = false;  // true assim que o admin mexe manualmente no Índice
+
+// Sugestão objetiva do Índice Transformare (1-5), a partir de sinais que o
+// próprio PNCP já fornece — o admin sempre pode sobrescrever manualmente.
+// Critérios (cada um soma/subtrai a partir de uma base "3 — Média"):
+//  1) Abrangência — Estadual/Nacional tende a indicar processo mais robusto
+//     e com mais vagas do que um edital puramente municipal.
+//  2) Compatibilidade profissional — quantas profissões monitoradas pela
+//     Transformare o objeto do edital contempla.
+//  3) Porte financeiro do certame — valor total estimado, quando o PNCP
+//     informa (processos maiores tendem a ser mais relevantes/estruturados).
+//  4) Prazo até o encerramento das propostas — prazo muito curto reduz a
+//     nota (pouco tempo pra se organizar); prazo confortável soma um pouco.
+function calcularIndiceSugerido(dados){
+  let pontos = 3;
+
+  if(dados.abrangencia === 'Nacional') pontos += 1;
+  else if(dados.abrangencia === 'Estadual') pontos += 0.5;
+
+  const nProf = (dados.profissoes || []).filter(Boolean).length;
+  if(nProf >= 3) pontos += 1;
+  else if(nProf === 2) pontos += 0.5;
+
+  if(typeof dados.valorEstimado === 'number' && !isNaN(dados.valorEstimado)){
+    if(dados.valorEstimado >= 500000) pontos += 1;
+    else if(dados.valorEstimado >= 100000) pontos += 0.5;
+  }
+
+  if(dados.prazoISO){
+    const hoje = new Date();
+    const prazo = new Date(dados.prazoISO + 'T00:00:00');
+    const dias = Math.round((prazo - hoje) / 86400000);
+    if(!isNaN(dias)){
+      if(dias < 7) pontos -= 1;
+      else if(dias >= 30) pontos += 0.5;
+    }
+  }
+
+  return Math.min(5, Math.max(1, Math.round(pontos)));
+}
+
+// Recalcula e aplica a sugestão no select do modal de aprovação — só quando
+// o admin ainda não mexeu manualmente no campo (senão respeita a escolha dele).
+function atualizarIndiceSugerido(){
+  if(!_aprovarAlvo) return;
+  const { id, tipo } = _aprovarAlvo;
+  const item = acharItem(id, tipo);
+  if(!item) return;
+
+  const abrangencia = document.getElementById('aprovar-abrangencia').value;
+  const prazoISO = document.getElementById('aprovar-prazo').value || item.data_encerramento_proposta || null;
+  const sugerido = calcularIndiceSugerido({
+    abrangencia,
+    profissoes: item.profissoes_detectadas,
+    valorEstimado: (typeof item.valor_estimado === 'number') ? item.valor_estimado : null,
+    prazoISO,
+  });
+
+  const legenda = document.getElementById('aprovar-indice-sugestao');
+  if(legenda) legenda.textContent = `Sugestão automática: ${sugerido} (com base em abrangência, profissões, valor e prazo do PNCP — ajuste se achar necessário)`;
+
+  if(!_indiceSugeridoManual){
+    document.getElementById('aprovar-indice').value = String(sugerido);
+  }
+  renderAprovarPreview();
+}
 
 async function carregarMotivosPadrao(){
   if(!_sb) return;
@@ -4030,13 +4097,15 @@ function abrirAprovarModal(id, tipo){
     : (item.numero_controle_pncp || 'PNCP');
   document.getElementById('aprovar-tipo').value = 'Credenciamento';
   document.getElementById('aprovar-situacao').value = item.situacao || 'Aberto';
-  document.getElementById('aprovar-indice').value = '3';
   document.getElementById('aprovar-prazo').value = item.data_encerramento_proposta || '';
   document.getElementById('aprovar-abrangencia').value = item.abrangencia || 'Municipal';
   document.getElementById('aprovar-url-oficial').value = (tipo === 'diario' ? item.url_diario : item.link_pncp) || '';
   document.getElementById('aprovar-url-edital').value = (tipo === 'diario' ? '' : item.link_pncp) || '';
   document.getElementById('aprovar-url-pncp').value = (tipo === 'diario' ? '' : item.link_pncp) || '';
   document.getElementById('aprovar-url-inscricao').value = (tipo === 'diario' ? '' : item.link_inscricao) || '';
+
+  _indiceSugeridoManual = false;
+  atualizarIndiceSugerido();
 
   const chipsBox = document.getElementById('motivo-aprovacao-chips');
   chipsBox.innerHTML = _motivosPadrao.aprovacao.map(m =>
