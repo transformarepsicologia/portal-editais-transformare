@@ -275,6 +275,9 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .score-hero{background:var(--bg-card); border:2px solid var(--teal); border-radius:14px; padding:22px 24px; margin-top:18px; display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
 .score-hero.media{border-color:var(--amber);}
 .score-hero.baixa{border-color:var(--coral);}
+.score-hero.vazio{border-color:var(--border-soft); border-style:dashed;}
+.score-mini-vazio{font-family:var(--font-mono); font-size:10.5px; color:var(--ink-dim); font-style:italic;}
+.selo-transformare{display:inline-flex; align-items:center; gap:3px; color:var(--teal);}
 .score-hero-num{font-family:var(--font-display); font-size:40px; font-weight:700; color:var(--teal); line-height:1; flex-shrink:0;}
 .score-hero.media .score-hero-num{color:var(--amber);}
 .score-hero.baixa .score-hero-num{color:var(--coral);}
@@ -996,7 +999,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row"><label>Abrangência</label><select id="af-abr"><option>Municipal</option><option>Estadual</option><option>Nacional</option></select></div>
       <div class="form-row"><label>Situação</label><select id="af-sit"><option>Aberto</option><option>Próximo do encerramento</option><option>Em análise</option><option>Retificado</option><option>Suspenso</option><option>Encerrado</option></select></div>
     </div>
-    <div class="form-row"><label>Índice Transformare (1–5)</label><select id="af-indice"><option value="1">1 — Baixa</option><option value="2">2 — Baixa</option><option value="3" selected>3 — Média</option><option value="4">4 — Alta</option><option value="5">5 — Alta</option></select></div>
+    <div class="form-row"><label>Índice Transformare (1–5)</label><select id="af-indice"><option value="" selected>— Ainda não avaliado —</option><option value="1">1 — Baixa</option><option value="2">2 — Baixa</option><option value="3">3 — Média</option><option value="4">4 — Alta</option><option value="5">5 — Alta</option></select></div>
     <div class="two-col">
       <div class="form-row"><label>Prazo</label><input type="text" id="af-prazo" placeholder="dd/mm/aaaa"></div>
       <div class="form-row"><label>Publicação</label><input type="text" id="af-publicacao" placeholder="dd/mm/aaaa"></div>
@@ -1105,6 +1108,23 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div id="usuarios-cadastrados-lista"></div>
     </div>
   </div>
+
+  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
+    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleSolicitacoesIndice()">
+      <span>🛡️ Solicitações de avaliação do Índice</span>
+      <span id="solicitacoes-indice-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Pedidos de interessados para a Transformare avaliar o Índice de um edital que ainda não recebeu nota — use para priorizar quais editais avaliar primeiro.</p>
+    <div id="solicitacoes-indice-body" style="display:none;">
+      <div id="solicitacoes-indice-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table" id="solicitacoes-indice-table">
+          <thead><tr><th>Data</th><th>Edital</th><th>Órgão</th><th>Nome</th><th>Contato</th><th>Mensagem</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="solicitacoes-indice-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </section>
 
 </main>
@@ -1159,9 +1179,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
     <div class="two-col">
       <div class="form-row"><label>Situação</label><input type="text" id="aprovar-situacao" placeholder="Ex: Aberto" oninput="renderAprovarPreview()"></div>
-      <div class="form-row"><label>Índice Transformare (1,00–5,00)</label>
-        <input type="number" id="aprovar-indice" min="1" max="5" step="0.01" value="3.00"
-               onchange="_indiceSugeridoManual=true; renderAprovarPreview()" oninput="_indiceSugeridoManual=true; renderAprovarPreview()">
+      <div class="form-row"><label>Índice Transformare (1,00–5,00) — opcional</label>
+        <input type="number" id="aprovar-indice" min="1" max="5" step="0.01" value="" placeholder="Deixe em branco se ainda não avaliado"
+               onchange="renderAprovarPreview()" oninput="renderAprovarPreview()">
       </div>
     </div>
     <div class="form-row" id="aprovar-indice-detalhe" style="font-size:12px; color:var(--ink-muted); background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:10px; padding:10px 12px;"></div>
@@ -1253,6 +1273,21 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="modal-box" style="max-width:520px;">
     <button class="modal-close" onclick="closeModal('lead-detail-modal')">×</button>
     <div id="lead-detail-content"></div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: solicitar avaliação do Índice Transformare ===================== -->
+<div class="modal-overlay" id="solicitar-indice-modal">
+  <div class="modal-box" style="max-width:480px;">
+    <button class="modal-close" onclick="closeModal('solicitar-indice-modal')">×</button>
+    <h3>Solicitar avaliação do Índice</h3>
+    <p id="solicitar-indice-context">Este edital ainda não foi avaliado pela Transformare. Deixe seus dados e avisaremos quando a avaliação estiver pronta.</p>
+    <div class="two-col">
+      <div class="form-row"><label>Nome</label><input type="text" id="solicitar-indice-nome"></div>
+      <div class="form-row"><label>WhatsApp ou e-mail</label><input type="text" id="solicitar-indice-contato" placeholder="(xx) xxxxx-xxxx ou e-mail"></div>
+    </div>
+    <div class="form-row"><label>Mensagem (opcional)</label><input type="text" id="solicitar-indice-msg" placeholder="Alguma observação?"></div>
+    <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="submitSolicitarIndice()">Enviar solicitação</button></div>
   </div>
 </div>
 
@@ -1693,10 +1728,13 @@ function inscricaoProximaHTML(o){
   return `<span class="badge" style="background:rgba(245,158,11,.16); color:#f59e0b; border:1px solid rgba(245,158,11,.4);">⏰ ${texto}</span>`;
 }
 function scoreMini(score, label){
+  if(score === null || score === undefined){
+    return `<div class="score-mini-vazio">Ainda não avaliado</div>`;
+  }
   const arredondado = Math.round(Number(score) || 0);
   let bars = '';
   for(let i=1;i<=5;i++) bars += `<div class="bar ${i<=arredondado?'on':''}"></div>`;
-  return `<div class="score-mini"><div class="bars">${bars}</div><span class="txt">${Number(score).toFixed(2)}/5</span></div><div class="score-mini-label">${label||''}</div>`;
+  return `<div class="score-mini"><div class="bars">${bars}</div><span class="txt">${Number(score).toFixed(2)}/5</span></div><div class="score-mini-label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${label||''}</div>`;
 }
 
 /* ================= CARD ================= */
@@ -1818,7 +1856,7 @@ function openCompare(){
     ['Abrangência', o=>o.abrangencia, o=>abrDestacavel && (abrangenciaRank[o.abrangencia]||0)===maxAbr],
     ['Situação', o=>o.situacao, ()=>false],
     ['Prazo', o=>o.prazo, o=>maxPrazo!==null && prazoValsMap[o.id]===maxPrazo],
-    ['Índice Transformare', o=>`${Number(o.indice).toFixed(2)}/5 — ${o.indiceLabel}`, o=>indiceDestacavel && o.indice===maxIndice],
+    ['Índice Transformare', o=>(o.indice!=null ? `${Number(o.indice).toFixed(2)}/5 — ${o.indiceLabel}` : 'Ainda não avaliado'), o=>indiceDestacavel && o.indice!=null && o.indice===maxIndice],
     ['Valor por atendimento', o=>o.valorAtendimento, o=>maxRem!==null && tipoRemuneracao(o)==='atendimento' && remValsMap[o.id]===maxRem],
     ['Remuneração (outros valores)', o=>(o.remuneracao && o.remuneracao.length) ? o.remuneracao.join(' · ') : '—', ()=>false],
     ['Requisitos', o=>o.requisitos, ()=>false]
@@ -2159,8 +2197,9 @@ function openDetalhe(id){
   const o = oportunidades.find(x=>x.id===id);
   const isFav = favoritos.has(id);
   const el = document.getElementById('detalhe-content');
-  const scoreSegs = Array.from({length:5}, (_,i)=>`<div class="seg ${i<Math.round(o.indice)?'on':''}"></div>`).join('');
-  const scoreClass = o.indice>=3.5 ? 'alta' : (o.indice>=2.5 ? 'media' : 'baixa');
+  const temIndice = o.indice !== null && o.indice !== undefined;
+  const scoreSegs = temIndice ? Array.from({length:5}, (_,i)=>`<div class="seg ${i<Math.round(o.indice)?'on':''}"></div>`).join('') : '';
+  const scoreClass = !temIndice ? 'vazio' : (o.indice>=3.5 ? 'alta' : (o.indice>=2.5 ? 'media' : 'baixa'));
   const checks = docChecks[id] || {};
   const remuneracaoResumo = (o.remuneracao && o.remuneracao.length)
     ? (o.remuneracao.length > 1 ? `${o.remuneracao[0]} (+${o.remuneracao.length - 1})` : o.remuneracao[0])
@@ -2205,12 +2244,20 @@ function openDetalhe(id){
         </div>
 
         <div class="score-hero ${scoreClass}">
+          ${temIndice ? `
           <div class="score-hero-num">${Number(o.indice).toFixed(2)}<span>/5</span></div>
           <div class="score-hero-body">
-            <div class="label">Índice Transformare — ${o.indiceLabel}</div>
+            <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${o.indiceLabel}</div>
             <div class="score-gauge" style="margin:6px 0;">${scoreSegs}</div>
             <div class="caption">Leitura de atratividade da Transformare (retorno financeiro, facilidade de entrada, aderência e complexidade documental) — não é uma informação oficial do órgão.</div>
           </div>
+          ` : `
+          <div class="score-hero-body" style="flex:1;">
+            <div class="label">Índice Transformare — ainda não avaliado</div>
+            <div class="caption">Este edital ainda não recebeu uma nota da nossa equipe. Se tiver interesse, você pode solicitar a avaliação.</div>
+            <button class="btn-ghost" style="margin-top:10px;" onclick="abrirSolicitarIndiceModal(${o.id})">Solicitar avaliação do Índice</button>
+          </div>
+          `}
         </div>
 
         <details class="panel" style="cursor:pointer;">
@@ -2378,6 +2425,39 @@ function openLeadModalMulti(ids, origin){
 }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
+/* ================= SOLICITAÇÃO DE AVALIAÇÃO DO ÍNDICE (fluxo próprio, separado dos leads) ================= */
+let _solicitarIndiceOppId = null;
+function abrirSolicitarIndiceModal(oppId){
+  _solicitarIndiceOppId = oppId;
+  const o = oportunidades.find(x=>x.id===oppId);
+  document.getElementById('solicitar-indice-context').textContent = o
+    ? `Sobre: ${o.edital} — ${o.orgao}. Este edital ainda não foi avaliado pela Transformare. Deixe seus dados e avisaremos quando a avaliação estiver pronta.`
+    : 'Este edital ainda não foi avaliado pela Transformare. Deixe seus dados e avisaremos quando a avaliação estiver pronta.';
+  document.getElementById('solicitar-indice-nome').value = '';
+  document.getElementById('solicitar-indice-contato').value = '';
+  document.getElementById('solicitar-indice-msg').value = '';
+  document.getElementById('solicitar-indice-modal').classList.add('open');
+}
+async function submitSolicitarIndice(){
+  const nome = document.getElementById('solicitar-indice-nome').value.trim();
+  const contato = document.getElementById('solicitar-indice-contato').value.trim();
+  if(!nome || !contato){ toast('Informe nome e um contato para continuar'); return; }
+  const mensagem = document.getElementById('solicitar-indice-msg').value.trim();
+  const o = oportunidades.find(x=>x.id===_solicitarIndiceOppId);
+
+  if(_sb){
+    const { error } = await _sb.from('solicitacoes_avaliacao_indice').insert({
+      edital_id: _solicitarIndiceOppId || null,
+      edital_nome: o ? o.edital : null,
+      orgao: o ? o.orgao : null,
+      nome, contato, mensagem: mensagem || null,
+    });
+    if(error){ toast('Não foi possível enviar agora. Tente novamente.'); return; }
+  }
+  closeModal('solicitar-indice-modal');
+  toast('Solicitação enviada! Avisaremos quando a avaliação estiver pronta.');
+}
+
 function classificarLead(tipo, doc, urgencia){
   const altaIntencao = ['Quero ajuda para realizar a inscrição','Quero acompanhamento do credenciamento'].includes(tipo);
   const intencaoModerada = tipo === 'Quero verificar minha documentação';
@@ -2532,7 +2612,7 @@ function openLeadDetail(id){
         <div class="lead-detail-row"><span class="k">Edital</span><span class="v">${o.edital}</span></div>
         <div class="lead-detail-row"><span class="k">Órgão</span><span class="v">${o.orgao}</span></div>
         <div class="lead-detail-row"><span class="k">Prazo</span><span class="v">${o.prazo}</span></div>
-        <div class="lead-detail-row"><span class="k">Índice Transformare</span><span class="v">${Number(o.indice).toFixed(2)}/5 — ${o.indiceLabel}</span></div>
+        <div class="lead-detail-row"><span class="k">Índice Transformare</span><span class="v">${o.indice!=null ? `${Number(o.indice).toFixed(2)}/5 — ${o.indiceLabel}` : 'Ainda não avaliado'}</span></div>
       `).join('<div style="height:8px;"></div>')}
 
     <div class="lead-section-title">Intenção</div>
@@ -3218,7 +3298,7 @@ function openAdminForm(id){
     document.getElementById('af-mod').value = o.modalidade;
     document.getElementById('af-abr').value = o.abrangencia;
     document.getElementById('af-sit').value = o.situacao;
-    document.getElementById('af-indice').value = String(Math.min(5, Math.max(1, Math.round(Number(o.indice) || 3))));
+    document.getElementById('af-indice').value = (o.indice==null) ? '' : String(Math.min(5, Math.max(1, Math.round(Number(o.indice)))));
     document.getElementById('af-prazo').value = o.prazo;
     document.getElementById('af-publicacao').value = o.publicacao;
     document.getElementById('af-valor-atendimento').value = (o.valorAtendimento && !o.valorAtendimento.startsWith('Não')) ? o.valorAtendimento : '';
@@ -3241,7 +3321,7 @@ function openAdminForm(id){
     document.getElementById('af-url-oficial').value = 'https://www.gov.br/pncp/pt-br';
     document.getElementById('af-url-edital').value = 'https://pncp.gov.br/app/editais';
     document.getElementById('af-url-pncp').value = 'https://pncp.gov.br/app/editais';
-    document.getElementById('af-indice').value = '3';
+    document.getElementById('af-indice').value = '';
     afDocumentos = [];
     afMovimentacoes = [];
     afRemuneracao = [];
@@ -3261,7 +3341,8 @@ function saveAdminForm(){
   const objeto = document.getElementById('af-objeto').value.trim();
   if(!edital || !orgao || !objeto){ toast('Preencha edital, órgão e objeto'); return; }
   const profs = [...document.querySelectorAll('#af-profs .chip-opt.selected')].map(c=>c.dataset.prof);
-  const indice = parseInt(document.getElementById('af-indice').value,10);
+  const indiceRaw = document.getElementById('af-indice').value;
+  const indice = indiceRaw === '' ? null : parseInt(indiceRaw,10);
   const labels = {1:'Baixa oportunidade',2:'Baixa oportunidade',3:'Média oportunidade',4:'Alta oportunidade',5:'Alta oportunidade'};
 
   const valorAtendimento = document.getElementById('af-valor-atendimento').value.trim();
@@ -3278,7 +3359,7 @@ function saveAdminForm(){
     modalidade: document.getElementById('af-mod').value,
     abrangencia: document.getElementById('af-abr').value,
     situacao: document.getElementById('af-sit').value,
-    indice, indiceLabel: labels[indice],
+    indice, indiceLabel: indice==null ? null : labels[indice],
     prazo: document.getElementById('af-prazo').value.trim() || 'Não informado',
     publicacao: document.getElementById('af-publicacao').value.trim() || 'Não informado',
     profissoes: profs.length ? profs : ['Não informado'],
@@ -3714,7 +3795,7 @@ function formatarDataBR(iso){
   return d.toLocaleDateString('pt-BR');
 }
 function mapEditalSupabase(row){
-  const indice = (row.indice !== null && row.indice !== undefined) ? Number(row.indice) : 3;
+  const indice = (row.indice !== null && row.indice !== undefined) ? Number(row.indice) : null;
   return {
     id: 900000 + row.id,
     origemSupabase: true,
@@ -3731,7 +3812,7 @@ function mapEditalSupabase(row){
     prazo: formatarDataBR(row.prazo),
     publicacao: formatarDataBR(row.publicacao),
     indice,
-    indiceLabel: indice >= 3.5 ? 'Alta oportunidade' : indice >= 2.5 ? 'Oportunidade moderada' : 'Baixa oportunidade',
+    indiceLabel: indice==null ? null : (indice >= 3.5 ? 'Alta oportunidade' : indice >= 2.5 ? 'Oportunidade moderada' : 'Baixa oportunidade'),
     valorAtendimento: row.valor_atendimento || 'Não informado no edital',
     valorMensal: row.valor_mensal || 'Não informado no edital',
     valorHora: row.valor_hora || 'Não informado no edital',
@@ -3983,7 +4064,6 @@ let _dataDiarioOficial = [];
 let _motivosPadrao = { aprovacao: [], rejeicao: [] };
 let _rejeitarAlvo = null; // { id, tipo }
 let _aprovarAlvo = null;  // { id, tipo }
-let _indiceSugeridoManual = false;  // true assim que o admin mexe manualmente no Índice
 
 // =====================================================================
 // ÍNDICE TRANSFORMARE — cálculo automático (regra oficial da Transformare)
@@ -3999,90 +4079,65 @@ let _indiceSugeridoManual = false;  // true assim que o admin mexe manualmente n
 // completo (ex.: um analisador com IA lendo o PDF).
 // As outras duas (Financeiro e Aderência) são calculadas a partir do que o
 // PNCP e o robô de profissões já capturam.
-function calcularIndiceTransformare(dados){
-  const d = dados || {};
-  const detalhe = [];
-
-  // 1) Retorno financeiro — valor total estimado do certame (PNCP).
-  let financeiro, justFinanceiro;
-  const valor = (typeof d.valorEstimado === 'number' && !isNaN(d.valorEstimado)) ? d.valorEstimado : null;
-  if(valor === null){
-    financeiro = 3;
-    justFinanceiro = 'Informação financeira insuficiente no edital.';
-  } else {
-    const fmt = valor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-    if(valor >= 1000000){ financeiro = 5; justFinanceiro = `Valor total estimado pelo PNCP: ${fmt} — potencial financeiro muito favorável.`; }
-    else if(valor >= 300000){ financeiro = 4; justFinanceiro = `Valor total estimado pelo PNCP: ${fmt} — potencial financeiro favorável.`; }
-    else if(valor >= 50000){ financeiro = 3; justFinanceiro = `Valor total estimado pelo PNCP: ${fmt} — potencial financeiro intermediário.`; }
-    else if(valor >= 10000){ financeiro = 2; justFinanceiro = `Valor total estimado pelo PNCP: ${fmt} — potencial financeiro abaixo do intermediário.`; }
-    else { financeiro = 1; justFinanceiro = `Valor total estimado pelo PNCP: ${fmt} — potencial financeiro muito baixo.`; }
+//
+// Fase 4 — o índice deixou de ser preenchido automaticamente. O que esta
+// função faz agora é só uma INDICAÇÃO textual (ex.: "tende a nota 4 ou 5")
+// para ajudar o analista a decidir rapidamente, nunca um número fechado.
+// Quem avalia e decide incluir (ou não) o índice é sempre o analista, à mão.
+function notaFinanceiroSugerida(valor){
+  if(typeof valor !== 'number' || isNaN(valor)){
+    return { nota:null, texto:'Valor estimado não informado pelo PNCP — sem indicação de retorno financeiro.' };
   }
-  detalhe.push({ dim:'Retorno financeiro', nota:financeiro, justificativa:justFinanceiro,
-    insuficiente: valor === null });
-
-  // 2) Facilidade de entrada — depende da leitura dos requisitos de habilitação
-  //    no edital completo (não capturado pelos dados estruturados do PNCP).
-  const entrada = 3;
-  detalhe.push({ dim:'Facilidade de entrada', nota:entrada,
-    justificativa:'Não avaliada automaticamente — depende da leitura dos requisitos de habilitação no edital completo (documentação, atestados, certificações), que os dados estruturados do PNCP não trazem. Nota fixada em 3.',
-    insuficiente: true });
-
-  // 3) Abrangência/Aderência — compatibilidade com os serviços da Transformare
-  //    (psicologia e áreas correlatas), a partir das profissões detectadas e
-  //    de palavras-chave no objeto. Não confundir com o campo geográfico
-  //    "Abrangência" (Municipal/Estadual/Nacional) do cadastro.
-  const profs = (d.profissoes || []).filter(Boolean);
+  const fmt = valor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+  if(valor >= 1000000) return { nota:5, texto:`Valor estimado pelo PNCP: ${fmt} — potencial financeiro muito favorável.` };
+  if(valor >= 300000) return { nota:4, texto:`Valor estimado pelo PNCP: ${fmt} — potencial financeiro favorável.` };
+  if(valor >= 50000) return { nota:3, texto:`Valor estimado pelo PNCP: ${fmt} — potencial financeiro intermediário.` };
+  if(valor >= 10000) return { nota:2, texto:`Valor estimado pelo PNCP: ${fmt} — potencial financeiro abaixo do intermediário.` };
+  return { nota:1, texto:`Valor estimado pelo PNCP: ${fmt} — potencial financeiro baixo.` };
+}
+function notaAderenciaSugerida(profissoes, objeto){
+  const profs = (profissoes || []).filter(Boolean);
   const temPsicologia = profs.includes('Psicologia');
   const correlatas = profs.filter(p => ['Psiquiatria','Terapia Ocupacional','Fonoaudiologia'].includes(p));
-  const textoObjeto = (d.objeto || '').toLowerCase();
+  const textoObjeto = (objeto || '').toLowerCase();
   const sinalPsico = /psicoterap|avalia[cç][aã]o psicol[oó]gica|sa[uú]de mental|acompanhamento psicol[oó]gico|atendimento psicol[oó]gico/.test(textoObjeto);
-  let aderencia, justAderencia;
-  if(temPsicologia && sinalPsico){
-    aderencia = 5;
-    justAderencia = 'Psicologia identificada entre as profissões do edital e o objeto descreve atividade diretamente psicológica (ex.: psicoterapia, avaliação psicológica).';
-  } else if(temPsicologia){
-    aderencia = 4;
-    justAderencia = 'Psicologia identificada entre as profissões contempladas pelo edital.';
-  } else if(correlatas.length > 0){
-    aderencia = 3;
-    justAderencia = `Psicologia não identificada diretamente, mas o edital contempla profissão correlata (${correlatas.join(', ')}).`;
-  } else if(profs.length > 0){
-    aderencia = 2;
-    justAderencia = `Profissões identificadas (${profs.join(', ')}) sem relação direta com Psicologia.`;
+  if(temPsicologia && sinalPsico) return { nota:5, texto:'Psicologia identificada entre as profissões e o objeto descreve atividade diretamente psicológica.' };
+  if(temPsicologia) return { nota:4, texto:'Psicologia identificada entre as profissões contempladas pelo edital.' };
+  if(correlatas.length > 0) return { nota:3, texto:`Profissão correlata identificada (${correlatas.join(', ')}), mas não Psicologia diretamente.` };
+  if(profs.length > 0) return { nota:2, texto:`Profissões identificadas (${profs.join(', ')}) sem relação direta com Psicologia.` };
+  return { nota:null, texto:'Não foi possível identificar profissões no objeto do edital.' };
+}
+// Monta só uma indicação de faixa (ex.: "nota 4 ou 5"), nunca um número fechado.
+// Facilidade de entrada e complexidade documental exigem ler o edital completo
+// e por isso não entram nesse cálculo automático — ficam a cargo do analista.
+function sugerirFaixaIndice(dados){
+  const d = dados || {};
+  const fin = notaFinanceiroSugerida(d.valorEstimado);
+  const ader = notaAderenciaSugerida(d.profissoes, d.objeto);
+  const notas = [fin.nota, ader.nota].filter(n => n !== null);
+  let faixaTexto;
+  if(notas.length === 0){
+    faixaTexto = 'Dados insuficientes para uma indicação automática.';
   } else {
-    aderencia = 3;
-    justAderencia = 'Não foi possível identificar profissões no objeto do edital.';
+    const min = Math.max(1, Math.min(...notas) - 1);
+    const max = Math.min(5, Math.max(...notas) + 1);
+    faixaTexto = (min === max)
+      ? `Indicação automática: este edital tende a nota ${min}.`
+      : `Indicação automática: este edital tende a nota ${min} ou ${max}.`;
   }
-  detalhe.push({ dim:'Abrangência/Aderência', nota:aderencia, justificativa:justAderencia,
-    insuficiente: profs.length === 0 });
-
-  // 4) Complexidade documental — depende da lista de documentos exigidos no
-  //    edital completo (não capturado pelos dados estruturados do PNCP).
-  const documentacao = 3;
-  detalhe.push({ dim:'Complexidade documental', nota:documentacao,
-    justificativa:'Não avaliada automaticamente — depende da lista de documentos, declarações e anexos exigidos no edital completo, que os dados estruturados do PNCP não trazem. Nota fixada em 3.',
-    insuficiente: true });
-
-  const indice = Math.round(((financeiro + entrada + aderencia + documentacao) / 4) * 100) / 100;
-  let faixa;
-  if(indice >= 4.5) faixa = 'Atratividade muito alta';
-  else if(indice >= 3.5) faixa = 'Atratividade alta';
-  else if(indice >= 2.5) faixa = 'Atratividade intermediária';
-  else if(indice >= 1.5) faixa = 'Atratividade baixa';
-  else faixa = 'Atratividade muito baixa';
-
-  return { indice, faixa, detalhe };
+  return { faixaTexto, fin, ader };
 }
 
-// Recalcula e aplica a sugestão no campo do modal de aprovação — só quando o
-// admin ainda não mexeu manualmente no número (senão respeita a escolha dele).
-function atualizarIndiceSugerido(){
+// Mostra a indicação no painel do modal de aprovação — é só apoio para o
+// analista, nunca preenche o campo de índice sozinho (o índice começa e
+// permanece em branco até o analista decidir incluí-lo).
+function atualizarSugestaoIndice(){
   if(!_aprovarAlvo) return;
   const { id, tipo } = _aprovarAlvo;
   const item = acharItem(id, tipo);
   if(!item) return;
 
-  const resultado = calcularIndiceTransformare({
+  const resultado = sugerirFaixaIndice({
     valorEstimado: (typeof item.valor_estimado === 'number') ? item.valor_estimado : null,
     profissoes: item.profissoes_detectadas,
     objeto: item.objeto || item.excerto || '',
@@ -4091,23 +4146,12 @@ function atualizarIndiceSugerido(){
   const painel = document.getElementById('aprovar-indice-detalhe');
   if(painel){
     painel.innerHTML = `
-      <strong>Cálculo automático — ${resultado.indice.toFixed(2)}/5 (${resultado.faixa})</strong>
-      <table style="width:100%; margin-top:6px; border-collapse:collapse;">
-        ${resultado.detalhe.map(d => `
-          <tr style="border-top:1px solid var(--border-soft);">
-            <td style="padding:4px 6px 4px 0; white-space:nowrap; vertical-align:top;">${esc(d.dim)}${d.insuficiente ? ' ⚠️' : ''}</td>
-            <td style="padding:4px 6px; vertical-align:top; font-weight:600;">${d.nota}/5</td>
-            <td style="padding:4px 0; vertical-align:top; color:var(--ink-dim);">${esc(d.justificativa)}</td>
-          </tr>`).join('')}
-      </table>
-      <div style="margin-top:6px; color:var(--ink-dim);">⚠️ = nota fixada em 3 por falta de leitura do edital completo (não é uma avaliação real do critério). Ajuste o número acima manualmente se já conhecer o edital.</div>
+      <strong>${esc(resultado.faixaTexto)}</strong>
+      <div style="margin-top:6px;">• Retorno financeiro: ${esc(resultado.fin.texto)}</div>
+      <div>• Aderência ao perfil: ${esc(resultado.ader.texto)}</div>
+      <div style="margin-top:6px; color:var(--ink-dim);">Esta é apenas uma indicação, não o índice oficial — a Transformare ainda não avaliou facilidade de entrada e complexidade documental (dependem da leitura completa do edital). Favor revisar e incluir o índice manualmente, se desejar. O campo pode ficar em branco: o edital será publicado sem nota, informando que ainda não foi avaliado.</div>
     `;
   }
-
-  if(!_indiceSugeridoManual){
-    document.getElementById('aprovar-indice').value = resultado.indice.toFixed(2);
-  }
-  renderAprovarPreview();
 }
 
 async function carregarMotivosPadrao(){
@@ -4159,13 +4203,19 @@ function abrirAprovarModal(id, tipo){
   document.getElementById('aprovar-situacao').value = item.situacao || 'Aberto';
   document.getElementById('aprovar-prazo').value = item.data_encerramento_proposta || '';
   document.getElementById('aprovar-abrangencia').value = item.abrangencia || 'Municipal';
-  document.getElementById('aprovar-url-oficial').value = (tipo === 'diario' ? item.url_diario : item.link_pncp) || '';
-  document.getElementById('aprovar-url-edital').value = (tipo === 'diario' ? '' : item.link_pncp) || '';
-  document.getElementById('aprovar-url-pncp').value = (tipo === 'diario' ? '' : item.link_pncp) || '';
-  document.getElementById('aprovar-url-inscricao').value = (tipo === 'diario' ? '' : item.link_inscricao) || '';
+  // Cada campo de link recebe apenas o link que genuinamente corresponde a
+  // ele — nunca reaproveitar o mesmo link em vários campos. Se não houver
+  // dado capturado para aquele campo específico, deixar em branco para o
+  // analista preencher (ou manter vazio).
+  document.getElementById('aprovar-url-oficial').value = (tipo === 'diario' ? (item.url_diario || '') : '');
+  document.getElementById('aprovar-url-edital').value = '';
+  document.getElementById('aprovar-url-pncp').value = (tipo === 'diario' ? '' : (item.link_pncp || ''));
+  document.getElementById('aprovar-url-inscricao').value = (tipo === 'diario' ? '' : (item.link_inscricao || ''));
 
-  _indiceSugeridoManual = false;
-  atualizarIndiceSugerido();
+  // Índice começa sempre em branco — a Transformare só avalia quando o
+  // analista decide preencher. A sugestão fica disponível como apoio.
+  document.getElementById('aprovar-indice').value = '';
+  atualizarSugestaoIndice();
 
   const chipsBox = document.getElementById('motivo-aprovacao-chips');
   chipsBox.innerHTML = _motivosPadrao.aprovacao.map(m =>
@@ -4187,7 +4237,8 @@ function renderAprovarPreview(){
   const item = acharItem(id, tipo);
   if(!item){ box.innerHTML = ''; return; }
 
-  const indice = Number(document.getElementById('aprovar-indice').value) || 3;
+  const indiceRaw = document.getElementById('aprovar-indice').value;
+  const indice = indiceRaw === '' ? null : Number(indiceRaw);
   const prazoInput = document.getElementById('aprovar-prazo').value;
   const o = {
     edital: document.getElementById('aprovar-edital').value.trim() || (tipo === 'diario' ? 'DOM' : 'PNCP'),
@@ -4200,7 +4251,7 @@ function renderAprovarPreview(){
     situacao: document.getElementById('aprovar-situacao').value.trim() || 'Aberto',
     prazo: prazoInput ? formatarDataBR(prazoInput) : 'Não informado',
     indice,
-    indiceLabel: indice >= 3.5 ? 'Alta oportunidade' : indice >= 2.5 ? 'Oportunidade moderada' : 'Baixa oportunidade',
+    indiceLabel: indice==null ? null : (indice >= 3.5 ? 'Alta oportunidade' : indice >= 2.5 ? 'Oportunidade moderada' : 'Baixa oportunidade'),
   };
 
   box.innerHTML = `
@@ -4236,7 +4287,7 @@ async function confirmarAprovacao(){
     edital: document.getElementById('aprovar-edital').value.trim() || null,
     tipo: document.getElementById('aprovar-tipo').value || null,
     situacao: document.getElementById('aprovar-situacao').value.trim() || null,
-    indice: Number(document.getElementById('aprovar-indice').value) || null,
+    indice: (document.getElementById('aprovar-indice').value === '') ? null : Number(document.getElementById('aprovar-indice').value),
     prazo: document.getElementById('aprovar-prazo').value || null,
     url_oficial: document.getElementById('aprovar-url-oficial').value.trim() || null,
     url_edital: document.getElementById('aprovar-url-edital').value.trim() || null,
@@ -4324,6 +4375,49 @@ async function enviarLinkRedefinicaoUsuario(email, btn){
   if(btn){ btn.disabled = false; btn.textContent = '🔑 Enviar link de redefinição'; }
   if(error){ toast('Erro ao enviar: ' + error.message); return; }
   toast('Link de redefinição enviado para ' + email);
+}
+
+/* ---- Admin: solicitações de avaliação do Índice Transformare ---- */
+function toggleSolicitacoesIndice(){
+  const body = document.getElementById('solicitacoes-indice-body');
+  const arrow = document.getElementById('solicitacoes-indice-arrow');
+  const abrir = body.style.display === 'none';
+  body.style.display = abrir ? 'block' : 'none';
+  arrow.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
+  if(abrir) renderSolicitacoesIndiceAdmin();
+}
+async function renderSolicitacoesIndiceAdmin(){
+  const status = document.getElementById('solicitacoes-indice-status');
+  const tbody = document.getElementById('solicitacoes-indice-tbody');
+  if(!_sb){ status.textContent = 'Indisponível: configure o Supabase.'; return; }
+  status.textContent = 'Carregando...';
+  const { data, error } = await _sb.from('solicitacoes_avaliacao_indice').select('*').order('criado_em', {ascending:false});
+  if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
+  const pendentes = (data||[]).filter(s=>s.status==='pendente').length;
+  status.textContent = `${(data||[]).length} solicitação(ões) no total — ${pendentes} pendente(s).`;
+  tbody.innerHTML = (data||[]).length === 0
+    ? `<tr><td colspan="8" style="text-align:center; color:var(--ink-dim); padding:18px;">Nenhuma solicitação recebida ainda.</td></tr>`
+    : data.map(s => `
+      <tr>
+        <td>${s.criado_em ? formatarDataBR(s.criado_em.slice(0,10)) : '—'}</td>
+        <td>${esc(s.edital_nome || '—')}</td>
+        <td>${esc(s.orgao || '—')}</td>
+        <td>${esc(s.nome || '—')}</td>
+        <td>${esc(s.contato || '—')}</td>
+        <td style="max-width:220px; white-space:normal;">${esc(s.mensagem || '—')}</td>
+        <td>${esc(s.status || 'pendente')}</td>
+        <td>${s.status==='pendente'
+          ? `<button class="btn-ghost" style="font-size:12px;" onclick="marcarSolicitacaoIndiceAtendida(${s.id})">Marcar como atendida</button>`
+          : '✓ Atendida'}</td>
+      </tr>`).join('');
+}
+async function marcarSolicitacaoIndiceAtendida(id){
+  if(!_sb) return;
+  const { error } = await _sb.from('solicitacoes_avaliacao_indice')
+    .update({ status:'atendida', atendido_em: new Date().toISOString() })
+    .eq('id', id);
+  if(error){ toast('Erro ao atualizar: ' + error.message); return; }
+  renderSolicitacoesIndiceAdmin();
 }
 
 async function renderTermosBusca(){
