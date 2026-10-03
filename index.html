@@ -716,7 +716,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div style="max-width:640px; font-size:14.5px; line-height:1.75; color:var(--ink-muted);">
     <p style="color:var(--ink);">O edital é a matéria-prima. A Transformare agrega valor ao encontrar, filtrar, organizar, analisar e explicar — conectando cada oportunidade ao profissional certo.</p>
     <p>Monitoramos continuamente o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, cobrindo inicialmente Psicologia, Nutrição, Fonoaudiologia, Farmácia e Enfermagem — com arquitetura pronta para novas profissões.</p>
-    <p>Cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong>: uma leitura objetiva de atratividade considerando abrangência, compatibilidade profissional, porte financeiro do certame e prazo até o encerramento das propostas. É uma sugestão calculada a partir dos dados do PNCP, sempre revisada por um analista da Transformare antes da publicação — não é uma informação oficial do órgão responsável.</p>
+    <p>Cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong> de 1,00 a 5,00: a média de quatro notas — retorno financeiro, facilidade de entrada, aderência aos serviços da Transformare e complexidade documental. É um indicador interno, calculado a partir dos dados do PNCP e sempre revisado por um analista da Transformare antes da publicação — não é uma informação oficial do órgão responsável, não representa classificação oficial e não substitui o julgamento previsto no edital.</p>
     <p>Este protótipo usa dados demonstrativos para ilustrar o funcionamento da plataforma. Nenhuma informação aqui deve ser tratada como oficial.</p>
     <div style="background:rgba(47,217,196,0.08); border:1px solid rgba(47,217,196,0.3); border-radius:14px; padding:18px 20px; margin-top:22px;">
       <p style="color:var(--ink); margin:0 0 6px; font-weight:600;">⇄ Compare oportunidades lado a lado</p>
@@ -1159,17 +1159,16 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
     <div class="two-col">
       <div class="form-row"><label>Situação</label><input type="text" id="aprovar-situacao" placeholder="Ex: Aberto" oninput="renderAprovarPreview()"></div>
-      <div class="form-row"><label>Índice Transformare (1-5)</label>
-        <select id="aprovar-indice" onchange="_indiceSugeridoManual=true; renderAprovarPreview()">
-          <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
-        </select>
-        <div id="aprovar-indice-sugestao" style="font-size:11px; color:var(--ink-dim); margin-top:3px;"></div>
+      <div class="form-row"><label>Índice Transformare (1,00–5,00)</label>
+        <input type="number" id="aprovar-indice" min="1" max="5" step="0.01" value="3.00"
+               onchange="_indiceSugeridoManual=true; renderAprovarPreview()" oninput="_indiceSugeridoManual=true; renderAprovarPreview()">
       </div>
     </div>
+    <div class="form-row" id="aprovar-indice-detalhe" style="font-size:12px; color:var(--ink-muted); background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:10px; padding:10px 12px;"></div>
     <div class="two-col">
-      <div class="form-row"><label>Prazo de inscrição (opcional)</label><input type="date" id="aprovar-prazo" oninput="atualizarIndiceSugerido()"></div>
+      <div class="form-row"><label>Prazo de inscrição (opcional)</label><input type="date" id="aprovar-prazo" oninput="renderAprovarPreview()"></div>
       <div class="form-row"><label>Abrangência</label>
-        <select id="aprovar-abrangencia" onchange="atualizarIndiceSugerido()">
+        <select id="aprovar-abrangencia">
           <option>Municipal</option><option>Estadual</option><option>Nacional</option>
         </select>
       </div>
@@ -1694,9 +1693,10 @@ function inscricaoProximaHTML(o){
   return `<span class="badge" style="background:rgba(245,158,11,.16); color:#f59e0b; border:1px solid rgba(245,158,11,.4);">⏰ ${texto}</span>`;
 }
 function scoreMini(score, label){
+  const arredondado = Math.round(Number(score) || 0);
   let bars = '';
-  for(let i=1;i<=5;i++) bars += `<div class="bar ${i<=score?'on':''}"></div>`;
-  return `<div class="score-mini"><div class="bars">${bars}</div><span class="txt">${score}/5</span></div><div class="score-mini-label">${label||''}</div>`;
+  for(let i=1;i<=5;i++) bars += `<div class="bar ${i<=arredondado?'on':''}"></div>`;
+  return `<div class="score-mini"><div class="bars">${bars}</div><span class="txt">${Number(score).toFixed(2)}/5</span></div><div class="score-mini-label">${label||''}</div>`;
 }
 
 /* ================= CARD ================= */
@@ -1818,7 +1818,7 @@ function openCompare(){
     ['Abrangência', o=>o.abrangencia, o=>abrDestacavel && (abrangenciaRank[o.abrangencia]||0)===maxAbr],
     ['Situação', o=>o.situacao, ()=>false],
     ['Prazo', o=>o.prazo, o=>maxPrazo!==null && prazoValsMap[o.id]===maxPrazo],
-    ['Índice Transformare', o=>`${o.indice}/5 — ${o.indiceLabel}`, o=>indiceDestacavel && o.indice===maxIndice],
+    ['Índice Transformare', o=>`${Number(o.indice).toFixed(2)}/5 — ${o.indiceLabel}`, o=>indiceDestacavel && o.indice===maxIndice],
     ['Valor por atendimento', o=>o.valorAtendimento, o=>maxRem!==null && tipoRemuneracao(o)==='atendimento' && remValsMap[o.id]===maxRem],
     ['Remuneração (outros valores)', o=>(o.remuneracao && o.remuneracao.length) ? o.remuneracao.join(' · ') : '—', ()=>false],
     ['Requisitos', o=>o.requisitos, ()=>false]
@@ -2159,8 +2159,8 @@ function openDetalhe(id){
   const o = oportunidades.find(x=>x.id===id);
   const isFav = favoritos.has(id);
   const el = document.getElementById('detalhe-content');
-  const scoreSegs = Array.from({length:5}, (_,i)=>`<div class="seg ${i<o.indice?'on':''}"></div>`).join('');
-  const scoreClass = o.indice>=4 ? 'alta' : (o.indice>=3 ? 'media' : 'baixa');
+  const scoreSegs = Array.from({length:5}, (_,i)=>`<div class="seg ${i<Math.round(o.indice)?'on':''}"></div>`).join('');
+  const scoreClass = o.indice>=3.5 ? 'alta' : (o.indice>=2.5 ? 'media' : 'baixa');
   const checks = docChecks[id] || {};
   const remuneracaoResumo = (o.remuneracao && o.remuneracao.length)
     ? (o.remuneracao.length > 1 ? `${o.remuneracao[0]} (+${o.remuneracao.length - 1})` : o.remuneracao[0])
@@ -2205,11 +2205,11 @@ function openDetalhe(id){
         </div>
 
         <div class="score-hero ${scoreClass}">
-          <div class="score-hero-num">${o.indice}<span>/5</span></div>
+          <div class="score-hero-num">${Number(o.indice).toFixed(2)}<span>/5</span></div>
           <div class="score-hero-body">
             <div class="label">Índice Transformare — ${o.indiceLabel}</div>
             <div class="score-gauge" style="margin:6px 0;">${scoreSegs}</div>
-            <div class="caption">Leitura de atratividade da Transformare (abrangência, compatibilidade profissional, porte financeiro e prazo) — não é uma informação oficial do órgão.</div>
+            <div class="caption">Leitura de atratividade da Transformare (retorno financeiro, facilidade de entrada, aderência e complexidade documental) — não é uma informação oficial do órgão.</div>
           </div>
         </div>
 
@@ -2532,7 +2532,7 @@ function openLeadDetail(id){
         <div class="lead-detail-row"><span class="k">Edital</span><span class="v">${o.edital}</span></div>
         <div class="lead-detail-row"><span class="k">Órgão</span><span class="v">${o.orgao}</span></div>
         <div class="lead-detail-row"><span class="k">Prazo</span><span class="v">${o.prazo}</span></div>
-        <div class="lead-detail-row"><span class="k">Índice Transformare</span><span class="v">${o.indice}/5 — ${o.indiceLabel}</span></div>
+        <div class="lead-detail-row"><span class="k">Índice Transformare</span><span class="v">${Number(o.indice).toFixed(2)}/5 — ${o.indiceLabel}</span></div>
       `).join('<div style="height:8px;"></div>')}
 
     <div class="lead-section-title">Intenção</div>
@@ -3218,7 +3218,7 @@ function openAdminForm(id){
     document.getElementById('af-mod').value = o.modalidade;
     document.getElementById('af-abr').value = o.abrangencia;
     document.getElementById('af-sit').value = o.situacao;
-    document.getElementById('af-indice').value = o.indice;
+    document.getElementById('af-indice').value = String(Math.min(5, Math.max(1, Math.round(Number(o.indice) || 3))));
     document.getElementById('af-prazo').value = o.prazo;
     document.getElementById('af-publicacao').value = o.publicacao;
     document.getElementById('af-valor-atendimento').value = (o.valorAtendimento && !o.valorAtendimento.startsWith('Não')) ? o.valorAtendimento : '';
@@ -3714,7 +3714,7 @@ function formatarDataBR(iso){
   return d.toLocaleDateString('pt-BR');
 }
 function mapEditalSupabase(row){
-  const indice = row.indice || 3;
+  const indice = (row.indice !== null && row.indice !== undefined) ? Number(row.indice) : 3;
   return {
     id: 900000 + row.id,
     origemSupabase: true,
@@ -3731,7 +3731,7 @@ function mapEditalSupabase(row){
     prazo: formatarDataBR(row.prazo),
     publicacao: formatarDataBR(row.publicacao),
     indice,
-    indiceLabel: indice >= 4 ? 'Alta oportunidade' : indice === 3 ? 'Oportunidade moderada' : 'Baixa oportunidade',
+    indiceLabel: indice >= 3.5 ? 'Alta oportunidade' : indice >= 2.5 ? 'Oportunidade moderada' : 'Baixa oportunidade',
     valorAtendimento: row.valor_atendimento || 'Não informado no edital',
     valorMensal: row.valor_mensal || 'Não informado no edital',
     valorHora: row.valor_hora || 'Não informado no edital',
@@ -3985,67 +3985,127 @@ let _rejeitarAlvo = null; // { id, tipo }
 let _aprovarAlvo = null;  // { id, tipo }
 let _indiceSugeridoManual = false;  // true assim que o admin mexe manualmente no Índice
 
-// Sugestão objetiva do Índice Transformare (1-5), a partir de sinais que o
-// próprio PNCP já fornece — o admin sempre pode sobrescrever manualmente.
-// Critérios (cada um soma/subtrai a partir de uma base "3 — Média"):
-//  1) Abrangência — Estadual/Nacional tende a indicar processo mais robusto
-//     e com mais vagas do que um edital puramente municipal.
-//  2) Compatibilidade profissional — quantas profissões monitoradas pela
-//     Transformare o objeto do edital contempla.
-//  3) Porte financeiro do certame — valor total estimado, quando o PNCP
-//     informa (processos maiores tendem a ser mais relevantes/estruturados).
-//  4) Prazo até o encerramento das propostas — prazo muito curto reduz a
-//     nota (pouco tempo pra se organizar); prazo confortável soma um pouco.
-function calcularIndiceSugerido(dados){
-  let pontos = 3;
+// =====================================================================
+// ÍNDICE TRANSFORMARE — cálculo automático (regra oficial da Transformare)
+//
+// Índice = (Financeiro + Entrada + Aderência + Documentação) ÷ 4, 1,00 a 5,00.
+//
+// Duas das quatro dimensões (Facilidade de entrada e Complexidade documental)
+// só podem ser avaliadas de verdade lendo o edital e seus anexos na íntegra
+// (requisitos de habilitação, lista de documentos exigidos) — informação que
+// os dados estruturados do PNCP não trazem. Seguindo a própria regra ("se não
+// houver dados suficientes, atribuir nota 3 e registrar a ausência"), essas
+// duas ficam fixas em 3 com aviso explícito, até existir leitura do edital
+// completo (ex.: um analisador com IA lendo o PDF).
+// As outras duas (Financeiro e Aderência) são calculadas a partir do que o
+// PNCP e o robô de profissões já capturam.
+function calcularIndiceTransformare(dados){
+  const d = dados || {};
+  const detalhe = [];
 
-  if(dados.abrangencia === 'Nacional') pontos += 1;
-  else if(dados.abrangencia === 'Estadual') pontos += 0.5;
-
-  const nProf = (dados.profissoes || []).filter(Boolean).length;
-  if(nProf >= 3) pontos += 1;
-  else if(nProf === 2) pontos += 0.5;
-
-  if(typeof dados.valorEstimado === 'number' && !isNaN(dados.valorEstimado)){
-    if(dados.valorEstimado >= 500000) pontos += 1;
-    else if(dados.valorEstimado >= 100000) pontos += 0.5;
+  // 1) Retorno financeiro — valor total estimado do certame (PNCP).
+  let financeiro, justFinanceiro;
+  const valor = (typeof d.valorEstimado === 'number' && !isNaN(d.valorEstimado)) ? d.valorEstimado : null;
+  if(valor === null){
+    financeiro = 3;
+    justFinanceiro = 'Informação financeira insuficiente no edital.';
+  } else {
+    const fmt = valor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+    if(valor >= 1000000){ financeiro = 5; justFinanceiro = `Valor total estimado pelo PNCP: ${fmt} — potencial financeiro muito favorável.`; }
+    else if(valor >= 300000){ financeiro = 4; justFinanceiro = `Valor total estimado pelo PNCP: ${fmt} — potencial financeiro favorável.`; }
+    else if(valor >= 50000){ financeiro = 3; justFinanceiro = `Valor total estimado pelo PNCP: ${fmt} — potencial financeiro intermediário.`; }
+    else if(valor >= 10000){ financeiro = 2; justFinanceiro = `Valor total estimado pelo PNCP: ${fmt} — potencial financeiro abaixo do intermediário.`; }
+    else { financeiro = 1; justFinanceiro = `Valor total estimado pelo PNCP: ${fmt} — potencial financeiro muito baixo.`; }
   }
+  detalhe.push({ dim:'Retorno financeiro', nota:financeiro, justificativa:justFinanceiro,
+    insuficiente: valor === null });
 
-  if(dados.prazoISO){
-    const hoje = new Date();
-    const prazo = new Date(dados.prazoISO + 'T00:00:00');
-    const dias = Math.round((prazo - hoje) / 86400000);
-    if(!isNaN(dias)){
-      if(dias < 7) pontos -= 1;
-      else if(dias >= 30) pontos += 0.5;
-    }
+  // 2) Facilidade de entrada — depende da leitura dos requisitos de habilitação
+  //    no edital completo (não capturado pelos dados estruturados do PNCP).
+  const entrada = 3;
+  detalhe.push({ dim:'Facilidade de entrada', nota:entrada,
+    justificativa:'Não avaliada automaticamente — depende da leitura dos requisitos de habilitação no edital completo (documentação, atestados, certificações), que os dados estruturados do PNCP não trazem. Nota fixada em 3.',
+    insuficiente: true });
+
+  // 3) Abrangência/Aderência — compatibilidade com os serviços da Transformare
+  //    (psicologia e áreas correlatas), a partir das profissões detectadas e
+  //    de palavras-chave no objeto. Não confundir com o campo geográfico
+  //    "Abrangência" (Municipal/Estadual/Nacional) do cadastro.
+  const profs = (d.profissoes || []).filter(Boolean);
+  const temPsicologia = profs.includes('Psicologia');
+  const correlatas = profs.filter(p => ['Psiquiatria','Terapia Ocupacional','Fonoaudiologia'].includes(p));
+  const textoObjeto = (d.objeto || '').toLowerCase();
+  const sinalPsico = /psicoterap|avalia[cç][aã]o psicol[oó]gica|sa[uú]de mental|acompanhamento psicol[oó]gico|atendimento psicol[oó]gico/.test(textoObjeto);
+  let aderencia, justAderencia;
+  if(temPsicologia && sinalPsico){
+    aderencia = 5;
+    justAderencia = 'Psicologia identificada entre as profissões do edital e o objeto descreve atividade diretamente psicológica (ex.: psicoterapia, avaliação psicológica).';
+  } else if(temPsicologia){
+    aderencia = 4;
+    justAderencia = 'Psicologia identificada entre as profissões contempladas pelo edital.';
+  } else if(correlatas.length > 0){
+    aderencia = 3;
+    justAderencia = `Psicologia não identificada diretamente, mas o edital contempla profissão correlata (${correlatas.join(', ')}).`;
+  } else if(profs.length > 0){
+    aderencia = 2;
+    justAderencia = `Profissões identificadas (${profs.join(', ')}) sem relação direta com Psicologia.`;
+  } else {
+    aderencia = 3;
+    justAderencia = 'Não foi possível identificar profissões no objeto do edital.';
   }
+  detalhe.push({ dim:'Abrangência/Aderência', nota:aderencia, justificativa:justAderencia,
+    insuficiente: profs.length === 0 });
 
-  return Math.min(5, Math.max(1, Math.round(pontos)));
+  // 4) Complexidade documental — depende da lista de documentos exigidos no
+  //    edital completo (não capturado pelos dados estruturados do PNCP).
+  const documentacao = 3;
+  detalhe.push({ dim:'Complexidade documental', nota:documentacao,
+    justificativa:'Não avaliada automaticamente — depende da lista de documentos, declarações e anexos exigidos no edital completo, que os dados estruturados do PNCP não trazem. Nota fixada em 3.',
+    insuficiente: true });
+
+  const indice = Math.round(((financeiro + entrada + aderencia + documentacao) / 4) * 100) / 100;
+  let faixa;
+  if(indice >= 4.5) faixa = 'Atratividade muito alta';
+  else if(indice >= 3.5) faixa = 'Atratividade alta';
+  else if(indice >= 2.5) faixa = 'Atratividade intermediária';
+  else if(indice >= 1.5) faixa = 'Atratividade baixa';
+  else faixa = 'Atratividade muito baixa';
+
+  return { indice, faixa, detalhe };
 }
 
-// Recalcula e aplica a sugestão no select do modal de aprovação — só quando
-// o admin ainda não mexeu manualmente no campo (senão respeita a escolha dele).
+// Recalcula e aplica a sugestão no campo do modal de aprovação — só quando o
+// admin ainda não mexeu manualmente no número (senão respeita a escolha dele).
 function atualizarIndiceSugerido(){
   if(!_aprovarAlvo) return;
   const { id, tipo } = _aprovarAlvo;
   const item = acharItem(id, tipo);
   if(!item) return;
 
-  const abrangencia = document.getElementById('aprovar-abrangencia').value;
-  const prazoISO = document.getElementById('aprovar-prazo').value || item.data_encerramento_proposta || null;
-  const sugerido = calcularIndiceSugerido({
-    abrangencia,
-    profissoes: item.profissoes_detectadas,
+  const resultado = calcularIndiceTransformare({
     valorEstimado: (typeof item.valor_estimado === 'number') ? item.valor_estimado : null,
-    prazoISO,
+    profissoes: item.profissoes_detectadas,
+    objeto: item.objeto || item.excerto || '',
   });
 
-  const legenda = document.getElementById('aprovar-indice-sugestao');
-  if(legenda) legenda.textContent = `Sugestão automática: ${sugerido} (com base em abrangência, profissões, valor e prazo do PNCP — ajuste se achar necessário)`;
+  const painel = document.getElementById('aprovar-indice-detalhe');
+  if(painel){
+    painel.innerHTML = `
+      <strong>Cálculo automático — ${resultado.indice.toFixed(2)}/5 (${resultado.faixa})</strong>
+      <table style="width:100%; margin-top:6px; border-collapse:collapse;">
+        ${resultado.detalhe.map(d => `
+          <tr style="border-top:1px solid var(--border-soft);">
+            <td style="padding:4px 6px 4px 0; white-space:nowrap; vertical-align:top;">${esc(d.dim)}${d.insuficiente ? ' ⚠️' : ''}</td>
+            <td style="padding:4px 6px; vertical-align:top; font-weight:600;">${d.nota}/5</td>
+            <td style="padding:4px 0; vertical-align:top; color:var(--ink-dim);">${esc(d.justificativa)}</td>
+          </tr>`).join('')}
+      </table>
+      <div style="margin-top:6px; color:var(--ink-dim);">⚠️ = nota fixada em 3 por falta de leitura do edital completo (não é uma avaliação real do critério). Ajuste o número acima manualmente se já conhecer o edital.</div>
+    `;
+  }
 
   if(!_indiceSugeridoManual){
-    document.getElementById('aprovar-indice').value = String(sugerido);
+    document.getElementById('aprovar-indice').value = resultado.indice.toFixed(2);
   }
   renderAprovarPreview();
 }
@@ -4140,7 +4200,7 @@ function renderAprovarPreview(){
     situacao: document.getElementById('aprovar-situacao').value.trim() || 'Aberto',
     prazo: prazoInput ? formatarDataBR(prazoInput) : 'Não informado',
     indice,
-    indiceLabel: indice >= 4 ? 'Alta oportunidade' : indice === 3 ? 'Oportunidade moderada' : 'Baixa oportunidade',
+    indiceLabel: indice >= 3.5 ? 'Alta oportunidade' : indice >= 2.5 ? 'Oportunidade moderada' : 'Baixa oportunidade',
   };
 
   box.innerHTML = `
