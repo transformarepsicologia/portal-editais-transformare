@@ -629,8 +629,6 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p>Use os filtros para chegar direto ao que faz sentido para você.</p>
   </div>
 
-  <div id="status-fontes-aviso-publico"></div>
-
   <div class="search-box" style="margin-bottom:16px;">
     <input type="text" id="ed-search" placeholder="Órgão, edital, palavra-chave...">
     <button onclick="applyFilters()">Buscar</button>
@@ -2249,6 +2247,7 @@ function openDetalhe(id){
             <button class="wa-btn" style="padding:11px 18px; font-size:13px;" onclick="shareWhatsApp(${o.id})">↗ Compartilhar no WhatsApp</button>
           </div>
           <div style="font-family:var(--font-mono); font-size:10px; color:var(--ink-dim); margin-top:8px;">${o.origemSupabase ? 'Links apontam para a página real do edital no PNCP.' : 'Links demonstrativos — apontam para o portal público do PNCP, não para o edital real.'}</div>
+          <div id="link-instab-aviso" style="margin-top:10px;">${avisoInstabilidadeLinksHTML()}</div>
         </div>
 
         <div class="score-hero ${scoreClass}">
@@ -3622,11 +3621,24 @@ function statusAvisoBox(fonte){
   return `<div class="status-aviso ${esc(row.status)}"><span class="dot"></span><span>${esc(msg)}</span></div>`;
 }
 
+// Aviso de instabilidade ligado aos links de visualização do edital (não mais
+// um banner geral na listagem): só aparece na página do edital, e só quando
+// a fonte dos links (PNCP / Diário Oficial) está mesmo instável no momento.
+// Sugere salvar nos favoritos como saída enquanto a fonte normaliza.
+function avisoInstabilidadeLinksHTML(){
+  const instaveis = ['pncp','querido_diario'].filter(fonteInstavel);
+  if(instaveis.length === 0) return '';
+  const algumaIndisponivel = instaveis.some(f => _statusFontes[f] && _statusFontes[f].status === 'indisponivel');
+  const classe = algumaIndisponivel ? 'indisponivel' : 'instavel';
+  const nomes = instaveis.map(f => NOME_FONTE[f]).join(' e ');
+  const verbo = instaveis.length > 1 ? 'estão' : 'está';
+  const msg = `${nomes} ${verbo} instável no momento — o link acima pode demorar ou falhar ao abrir. Dica: salve esta oportunidade nos favoritos (★) para não perdê-la enquanto a fonte normaliza.`;
+  return `<div class="status-aviso ${classe}"><span class="dot"></span><span>${esc(msg)}</span></div>`;
+}
+
 function renderStatusPublico(){
-  const box = document.getElementById('status-fontes-aviso-publico');
-  if(!box) return;
-  const avisos = ['pncp','querido_diario'].map(statusAvisoBox).filter(Boolean);
-  box.innerHTML = avisos.join('');
+  const box = document.getElementById('link-instab-aviso');
+  if(box && currentDetailId !== null) box.innerHTML = avisoInstabilidadeLinksHTML();
 }
 
 function renderStatusAdmin(){
