@@ -156,7 +156,7 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
 
 /* ===== Indicators ===== */
 .indicators{
-  display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin:44px 0 56px;
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin:0 0 56px;
 }
 .indicator-card{
   background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:20px 22px;
@@ -602,7 +602,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
   </div>
 
-  <div class="indicators" id="indicators"></div>
+  <div style="margin-top:44px;">
+    <h2 class="section-title" style="margin-bottom:4px;">Números do Radar</h2>
+    <p class="section-sub" style="margin-bottom:18px;">Um retrato rápido do que está sendo monitorado agora.</p>
+    <div class="indicators" id="indicators"></div>
+  </div>
 
   <div class="how-it-works">
     <h2 class="section-title">Como funciona</h2>
