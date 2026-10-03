@@ -3245,54 +3245,69 @@ function removeAfDocumento(i){
    Lê o texto colado (no formato das 5 seções combinado no prompt do analisador) e preenche os
    campos do formulário — índice, pontos de destaque, pontos de atenção, requisitos e documentos —
    sem precisar digitar cada um manualmente. Nunca lê nem envia nada para fora: é só um parser de texto. */
-function _extrairSecaoAnaliseIA(texto, inicioRegex, finsRegex){
-  const mIni = texto.search(inicioRegex);
-  if(mIni === -1) return null;
-  const depoisHeader = texto.slice(mIni).replace(inicioRegex, '');
-  const quebraLinha = depoisHeader.indexOf('\n');
-  let corpo = quebraLinha === -1 ? '' : depoisHeader.slice(quebraLinha + 1);
-  let corteIdx = corpo.length;
-  finsRegex.forEach(r => {
-    const idx = corpo.search(r);
-    if(idx !== -1 && idx < corteIdx) corteIdx = idx;
+/* Localiza, no texto colado, onde cada cabeçalho de seção começa — sem depender
+   de quebra de linha. O Gemini (e outras IAs) às vezes devolvem tudo em um único
+   parágrafo contínuo, com os itens separados por vários espaços em vez de \n. */
+function _posicaoHeadersAnaliseIA(texto, headers){
+  const achados = [];
+  headers.forEach(h => {
+    const m = texto.match(h.regex);
+    if(m && typeof m.index === 'number'){
+      achados.push({ nome: h.nome, inicio: m.index, fimHeader: m.index + m[0].length });
+    }
   });
-  // Recua até o início da linha do próximo cabeçalho, pra não deixar sobrar
-  // a numeração/emoji dele (ex.: "3) ⚠" ou "5)") grudada no fim desta seção.
-  if(corteIdx < corpo.length){
-    const inicioLinha = corpo.lastIndexOf('\n', corteIdx);
-    corteIdx = inicioLinha === -1 ? 0 : inicioLinha;
-  }
-  return corpo.slice(0, corteIdx).trim();
+  achados.sort((a, b) => a.inicio - b.inicio);
+  return achados;
 }
+// Remove, do fim de uma seção, a numeração/emoji do PRÓXIMO cabeçalho que tenha
+// ficado grudada (ex.: "...texto.   3) ⚠ " ou "...texto.   ⚠ ") sem comer um
+// parêntese ou número que faça parte de verdade do conteúdo (ex.: "(pode diluir
+// o rodízio)"), porque só remove sequências de marcador (número+parêntese ou
+// símbolo isolado) separadas por espaço, nunca texto comum entre elas.
+function _removerDebrisDoProximoTitulo(texto){
+  return texto.replace(/(?:\s*(?:\(?\d{1,2}\)|[⚠✓•]))+\s*$/, '');
+}
+function _corpoEntreHeadersAnaliseIA(achados, nome, textoTotal){
+  const idx = achados.findIndex(a => a.nome === nome);
+  if(idx === -1) return '';
+  const inicio = achados[idx].fimHeader;
+  const temProximo = idx + 1 < achados.length;
+  const fimBruto = temProximo ? achados[idx + 1].inicio : textoTotal.length;
+  if(fimBruto <= inicio) return '';
+  let corpo = textoTotal.slice(inicio, fimBruto);
+  if(temProximo) corpo = _removerDebrisDoProximoTitulo(corpo);
+  return corpo.trim();
+}
+// Divide o corpo de uma seção em itens: se tiver quebra de linha de verdade, usa
+// ela; senão (texto colado em um parágrafo só), usa sequências de 2+ espaços,
+// que é como o Gemini costuma separar os itens quando perde a formatação de lista.
 function _listaDeBullets(texto){
   if(!texto) return [];
-  return texto.split('\n')
-    .map(l => l.replace(/^[\s>]*[-•*]\s*/, '').trim())
-    .filter(Boolean);
+  const partes = texto.includes('\n') ? texto.split('\n') : texto.split(/\s{2,}/);
+  return partes.map(l => l.replace(/^[\s>]*[-•*]\s*/, '').trim()).filter(Boolean);
 }
 function parseAnaliseIAEdital(textoOriginal){
-  const t = (textoOriginal || '').replace(/\r\n/g, '\n');
-  const reDestaque = /PONTOS?\s+DE\s+DESTAQUE/i;
-  const reAtencao = /PONTOS?\s+DE\s+ATEN[ÇC][ÃA]O/i;
-  const reRequisitos = /REQUISITOS/i;
-  const reDocumentacao = /DOCUMENTA[ÇC][ÃA]O\s+NECESS[ÁA]RIA/i;
+  const t = (textoOriginal || '').replace(/\r\n/g, '\n').trim();
+  const headers = [
+    { nome:'destaque', regex: /PONTOS?\s+DE\s+DESTAQUE/i },
+    { nome:'atencao', regex: /PONTOS?\s+DE\s+ATEN[ÇC][ÃA]O/i },
+    { nome:'requisitos', regex: /REQUISITOS/i },
+    { nome:'documentacao', regex: /DOCUMENTA[ÇC][ÃA]O\s+NECESS[ÁA]RIA/i },
+  ];
+  const achados = _posicaoHeadersAnaliseIA(t, headers);
 
   const resultado = { indice:null, destaques:[], atencao:[], requisitos:'', documentos:[] };
 
-  const mIndice = t.match(/sugerido[:\s]*?(\d)\s*\/\s*5/i) || t.match(/[ÍI]NDICE\s+TRANSFORMARE[^\d]{0,30}?(\d)\s*\/\s*5/i);
+  const mIndice = t.match(/sugerido[:\s]*?(\d)\s*\/\s*5/i) || t.match(/[ÍI]NDICE\s+TRANSFORMARE[^\d]{0,40}?(\d)\s*\/\s*5/i);
   if(mIndice) resultado.indice = Math.min(5, Math.max(1, parseInt(mIndice[1], 10)));
 
-  const destaqueTxt = _extrairSecaoAnaliseIA(t, reDestaque, [reAtencao, reRequisitos, reDocumentacao]);
-  resultado.destaques = _listaDeBullets(destaqueTxt);
+  resultado.destaques = _listaDeBullets(_corpoEntreHeadersAnaliseIA(achados, 'destaque', t));
+  resultado.atencao = _listaDeBullets(_corpoEntreHeadersAnaliseIA(achados, 'atencao', t));
 
-  const atencaoTxt = _extrairSecaoAnaliseIA(t, reAtencao, [reRequisitos, reDocumentacao]);
-  resultado.atencao = _listaDeBullets(atencaoTxt);
+  const requisitosTxt = _corpoEntreHeadersAnaliseIA(achados, 'requisitos', t);
+  if(requisitosTxt) resultado.requisitos = requisitosTxt.replace(/\s{2,}/g, ' ').replace(/\n+/g, ' ').trim();
 
-  const requisitosTxt = _extrairSecaoAnaliseIA(t, reRequisitos, [reDocumentacao]);
-  if(requisitosTxt) resultado.requisitos = requisitosTxt.replace(/\n+/g, ' ').trim();
-
-  const documentosTxt = _extrairSecaoAnaliseIA(t, reDocumentacao, []);
-  resultado.documentos = _listaDeBullets(documentosTxt);
+  resultado.documentos = _listaDeBullets(_corpoEntreHeadersAnaliseIA(achados, 'documentacao', t));
 
   return resultado;
 }
