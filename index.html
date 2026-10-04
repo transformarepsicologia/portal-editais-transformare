@@ -259,6 +259,9 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .score-mini .txt{font-family:var(--font-mono); font-size:10.5px; color:var(--ink-muted); margin-left:2px;}
 .score-mini-label{font-family:var(--font-mono); font-size:9.5px; color:var(--ink-dim); text-align:right; margin-top:2px;}
 
+.aderencia-faixa{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px; margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed var(--border); font-size:12px; color:var(--ink-muted);}
+.aderencia-pct{font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--teal);}
+.aderencia-motivo{flex-basis:100%; font-family:var(--font-mono); font-size:11px; color:var(--ink-dim);}
 .empty-state{text-align:center; padding:60px 20px; color:var(--ink-dim); font-family:var(--font-mono); font-size:13px;}
 
 /* ===== Detail page ===== */
@@ -791,6 +794,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
     <div class="form-row"><label>Profissão</label><div class="chip-select" id="cad-prof"></div></div>
     <div class="form-row"><label>Modalidade de interesse</label><div class="chip-select" id="cad-mod"></div></div>
+    <div class="two-col">
+      <div class="form-row"><label>Cidade</label><input type="text" id="cad-cidade" placeholder="Ex: Porto Alegre"></div>
+      <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="cad-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="cad-rem-tipo" style="flex:1; min-width:0;"><option value="atendimento">por atendimento</option><option value="hora">por hora</option><option value="mensal">por mês</option></select></div></div>
+    </div>
+    <div class="form-row"><label>Abrangência de interesse</label><div class="chip-select" id="cad-abr"></div></div>
     <div id="cad-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
     <div class="form-actions">
       <button class="btn-primary" style="flex:1;" onclick="userSignup()">Criar conta</button>
@@ -815,6 +823,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
     <div class="form-row"><label>Profissão</label><div class="chip-select" id="perfil-prof"></div></div>
     <div class="form-row"><label>Modalidade de interesse</label><div class="chip-select" id="perfil-mod"></div></div>
+    <div class="two-col">
+      <div class="form-row"><label>Cidade</label><input type="text" id="perfil-cidade" placeholder="Ex: Porto Alegre"></div>
+      <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="perfil-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="perfil-rem-tipo" style="flex:1; min-width:0;"><option value="atendimento">por atendimento</option><option value="hora">por hora</option><option value="mensal">por mês</option></select></div></div>
+    </div>
+    <div class="form-row"><label>Abrangência de interesse</label><div class="chip-select" id="perfil-abr"></div></div>
     <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="saveProfile()">Salvar perfil</button></div>
   </div>
   <div class="form-card" style="max-width:560px; margin-top:18px;">
@@ -2045,6 +2058,74 @@ async function clearFavoritos(){
   toast('Favoritos limpos');
 }
 
+/* ================= PERFIL INTELIGENTE / ADERÊNCIA ================= */
+// Cidade, abrangência e remuneração mínima ficam no localStorage por usuário
+// (storeGet/storeSet + ukey('perfilExtra')) — a tabela usuarios_perfil não muda.
+const REM_TIPOS = {atendimento:'por atendimento', hora:'por hora', mensal:'por mês'};
+function chipsAbrangenciaPerfil(boxId, selecionadas){
+  const box = document.getElementById(boxId); box.innerHTML = '';
+  ['Municipal','Estadual','Nacional'].forEach(a=>{
+    const c = document.createElement('div');
+    c.className = 'chip-opt' + ((selecionadas||[]).includes(a) ? ' selected' : '');
+    c.textContent = a;
+    c.onclick = ()=>c.classList.toggle('selected');
+    box.appendChild(c);
+  });
+}
+function lerPerfilExtraForm(pre){
+  const v = parseFloat(document.getElementById(pre+'-rem-min').value);
+  return {
+    cidade: document.getElementById(pre+'-cidade').value.trim(),
+    abrs: [...document.querySelectorAll('#'+pre+'-abr .chip-opt.selected')].map(x=>x.textContent),
+    remMin: (isNaN(v) || v <= 0) ? null : v,
+    remTipo: document.getElementById(pre+'-rem-tipo').value || 'atendimento',
+  };
+}
+function normTxt(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase(); }
+
+// Aderência edital × perfil. Pesos seguem a prioridade: profissão > localização >
+// modalidade > abrangência > remuneração. Critério que a pessoa não preencheu no
+// perfil fica fora da conta (não pesa contra o edital).
+function calcularAderencia(o, u){
+  let pontos = 0, total = 0;
+  const motivos = [];
+  if((u.profs||[]).length){
+    total += 35;
+    const comuns = (o.profissoes||[]).filter(p=>u.profs.includes(p));
+    if(comuns.length){ pontos += 35; motivos.push(comuns.join('/')); }
+  }
+  if(u.uf){
+    total += 25;
+    const mesmaCidade = u.cidade && o.cidade && normTxt(u.cidade) === normTxt(o.cidade);
+    if(o.uf === u.uf){
+      const outraCidadeMunicipal = u.cidade && o.cidade && !mesmaCidade && o.abrangencia === 'Municipal';
+      pontos += outraCidadeMunicipal ? 18 : 25;
+      motivos.push(mesmaCidade ? `${o.cidade}/${o.uf}` : o.uf);
+    } else if(o.modalidade === 'Online'){
+      pontos += 25; motivos.push('sem deslocamento');
+    } else if(o.abrangencia === 'Nacional'){
+      pontos += 15; motivos.push('válido em todo o país');
+    }
+  }
+  if((u.mods||[]).length){
+    total += 15;
+    if(u.mods.includes(o.modalidade)){ pontos += 15; motivos.push('atendimento ' + String(o.modalidade).toLowerCase()); }
+    else if(o.modalidade === 'Híbrido' && u.mods.some(m=>m==='Presencial' || m==='Online')){ pontos += 10; motivos.push('atendimento híbrido'); }
+  }
+  if((u.abrs||[]).length){
+    total += 15;
+    if(u.abrs.includes(o.abrangencia)){ pontos += 15; motivos.push('abrangência ' + String(o.abrangencia).toLowerCase()); }
+  }
+  if(u.remMin){
+    total += 10;
+    const campo = {atendimento:o.valorAtendimento, hora:o.valorHora, mensal:o.valorMensal}[u.remTipo || 'atendimento'];
+    const valor = parseMoneyValue(campo);
+    if(valor === null) pontos += 5; // edital não informa nesse formato: neutro
+    else if(valor >= u.remMin){ pontos += 10; motivos.push('remuneração compatível'); }
+  }
+  return { pct: total ? Math.round(pontos / total * 100) : null, motivos };
+}
+
 /* ================= MINHA CONTA ================= */
 const PLANOS = {gratuito:'Gratuito'};
 function updateNavCta(){
@@ -2072,6 +2153,12 @@ function renderMinhaConta(){
     return mProf && mUf;
   }).slice(0,4);
   const historico = oportunidades.filter(o=>docChecks[o.id] && Object.values(docChecks[o.id]).some(v=>v));
+  const aderentes = oportunidades
+    .filter(o=>o.situacao !== 'Encerrado')
+    .map(o=>({ o, ad: calcularAderencia(o, u) }))
+    .filter(x=>x.ad.pct !== null && x.ad.pct > 0)
+    .sort((a,b)=>b.ad.pct - a.ad.pct || (b.o.indice||0) - (a.o.indice||0))
+    .slice(0, 6);
   const desde = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : '—';
 
   el.innerHTML = `
@@ -2084,7 +2171,10 @@ function renderMinhaConta(){
           <div class="profile-field"><span class="k">E-mail</span><span class="v">${esc(u.email)}</span></div>
           <div class="profile-field"><span class="k">Estado</span><span class="v">${esc(u.uf) || 'Não informado'}</span></div>
           <div class="profile-field"><span class="k">Registro</span><span class="v">${esc(u.registro) || 'Não informado'}</span></div>
+          <div class="profile-field"><span class="k">Cidade</span><span class="v">${esc(u.cidade) || 'Não informado'}</span></div>
           <div class="profile-field"><span class="k">Modalidade</span><span class="v">${esc((u.mods||[]).join(', ')) || 'Não informado'}</span></div>
+          <div class="profile-field"><span class="k">Abrangência</span><span class="v">${esc((u.abrs||[]).join(', ')) || 'Não informado'}</span></div>
+          <div class="profile-field"><span class="k">Remuneração mínima</span><span class="v">${u.remMin ? esc(formatarMoedaBR(u.remMin) + ' ' + (REM_TIPOS[u.remTipo]||'')) : 'Não informado'}</span></div>
           <div class="profile-field"><span class="k">Conta criada em</span><span class="v">${desde}</span></div>
           <div class="account-quicklinks">
             <button class="btn-ghost" onclick="nav('perfil')">Editar perfil</button>
@@ -2104,7 +2194,11 @@ function renderMinhaConta(){
           <div class="indicator-card"><div class="num">${historico.length}</div><div class="label">Editais com progresso</div></div>
         </div>
 
-        <div class="section-title" style="font-size:17px;">Editais que estou acompanhando</div>
+        <div class="section-title" style="font-size:17px;">Editais mais aderentes ao seu perfil</div>
+        <p class="section-sub" style="margin-bottom:16px;">Calculado pela sua profissão, localização, modalidade, abrangência e remuneração mínima. <a style="color:var(--teal); cursor:pointer;" onclick="nav('perfil')">Ajustar perfil</a></p>
+        <div class="op-grid" id="conta-aderentes"></div>
+
+        <div class="section-title" style="font-size:17px; margin-top:32px;">Editais que estou acompanhando</div>
         <p class="section-sub" style="margin-bottom:16px;">Marque a estrela ☆ em qualquer edital para acompanhá-lo aqui.</p>
         <div class="op-grid" id="conta-acompanhados"></div>
 
@@ -2124,6 +2218,17 @@ function renderMinhaConta(){
       </div>
     </div>
   `;
+
+  const adBox = document.getElementById('conta-aderentes');
+  if(aderentes.length===0){
+    adBox.innerHTML = `<div class="empty-state">Complete seu perfil (profissão, estado, modalidade, abrangência e remuneração) para ver os editais mais aderentes. <a style="color:var(--teal); cursor:pointer;" onclick="nav('perfil')">Editar perfil</a></div>`;
+  } else {
+    aderentes.forEach(({o, ad})=>{
+      const card = renderCard(o);
+      card.insertAdjacentHTML('afterbegin', `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span><span class="aderencia-motivo">${esc(ad.motivos.join(' + ') || 'Poucos critérios em comum com o seu perfil')}</span></div>`);
+      adBox.appendChild(card);
+    });
+  }
 
   const acBox = document.getElementById('conta-acompanhados');
   if(acompanhados.length===0){
@@ -2247,6 +2352,7 @@ function populateSelects(){
     c.onclick = ()=>c.classList.toggle('selected');
     modBox.appendChild(c);
   });
+  chipsAbrangenciaPerfil('cad-abr', []);
 }
 
 function searchFromHome(){
@@ -3036,6 +3142,12 @@ async function carregarPerfilUsuario(authUser){
     plano: perfil?.plano || 'gratuito',
     criadoEm: perfil?.criado_em || null,
   };
+  let extra = await storeGet(ukey('perfilExtra'));
+  if(!extra){
+    extra = await storeGet('perfil_extra_pendente_' + authUser.email);
+    if(extra){ await storeSet(ukey('perfilExtra'), extra); await storeRemove('perfil_extra_pendente_' + authUser.email); }
+  }
+  Object.assign(userProfile, { cidade:'', abrs:[], remMin:null, remTipo:'atendimento' }, extra || {});
 }
 
 async function userSignup(){
@@ -3049,6 +3161,7 @@ async function userSignup(){
   const senha2 = document.getElementById('cad-senha2').value;
   const profs = [...document.querySelectorAll('#cad-prof .chip-opt.selected')].map(x=>x.textContent);
   const mods = [...document.querySelectorAll('#cad-mod .chip-opt.selected')].map(x=>x.textContent);
+  const extra = lerPerfilExtraForm('cad');
 
   if(!_sb){ msg.textContent = 'Indisponível: configure SUPABASE_URL/SUPABASE_ANON_KEY neste arquivo.'; return; }
   if(!nome){ msg.textContent = 'Informe seu nome.'; return; }
@@ -3066,6 +3179,7 @@ async function userSignup(){
     // dados aqui neste navegador e completamos o perfil no primeiro login, depois
     // que a pessoa confirmar o e-mail.
     await storeSet('perfil_pendente_' + email, { nome, whatsapp, registro, uf, profs, mods });
+    await storeSet('perfil_extra_pendente_' + email, extra);
     msg.style.color = 'var(--teal)';
     msg.textContent = 'Conta criada! Verifique seu e-mail para confirmar antes de entrar.';
     return;
@@ -3077,6 +3191,8 @@ async function userSignup(){
   if(erroPerfil){ msg.textContent = 'Conta criada, mas houve um erro ao salvar o perfil: ' + erroPerfil.message; }
 
   await carregarPerfilUsuario(data.user);
+  Object.assign(userProfile, extra);
+  await storeSet(ukey('perfilExtra'), extra);
 
   // o que a pessoa já tinha marcado antes de criar a conta (favoritos/alertas/checklist) passa a ser da conta
   profs.forEach(x=>alertPrefs.prof.add(x));
@@ -3086,8 +3202,8 @@ async function userSignup(){
   await storeSet(ukey('docChecks'), docChecks);
   await saveAlertPrefs();
 
-  ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2'].forEach(id=>document.getElementById(id).value='');
-  document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
+  ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2','cad-cidade','cad-rem-min'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected, #cad-abr .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
   msg.textContent = '';
   updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
   toast('Conta criada — bem-vindo(a), ' + nome.split(' ')[0]);
@@ -3186,6 +3302,10 @@ function renderPerfil(){
     ch.onclick = ()=>ch.classList.toggle('selected');
     modBox.appendChild(ch);
   });
+  document.getElementById('perfil-cidade').value = u.cidade || '';
+  document.getElementById('perfil-rem-min').value = u.remMin || '';
+  document.getElementById('perfil-rem-tipo').value = u.remTipo || 'atendimento';
+  chipsAbrangenciaPerfil('perfil-abr', u.abrs);
 }
 async function saveProfile(){
   const u = userProfile; if(!u) return;
@@ -3203,6 +3323,9 @@ async function saveProfile(){
     }).eq('id', u.id);
     if(error){ toast('Erro ao salvar: ' + error.message); return; }
   }
+  const extra = lerPerfilExtraForm('perfil');
+  Object.assign(u, extra);
+  await storeSet(ukey('perfilExtra'), extra);
   updateNavCta();
   toast('Perfil salvo');
   nav('minha-conta');
