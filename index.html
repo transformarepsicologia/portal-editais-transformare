@@ -358,6 +358,7 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .two-col{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 .chip-select{display:flex; gap:7px; flex-wrap:wrap; width:100%; max-width:100%;}
 .chip-opt{font-size:12.5px; padding:7px 13px; border:1px solid var(--border); border-radius:20px; cursor:pointer; background:var(--bg-elevated); color:var(--ink-muted); flex:0 0 auto;}
+.tag.tag-publico{border-color:var(--teal); color:var(--teal);}
 .chip-opt.selected{background:var(--teal); border-color:var(--teal); color:var(--bg); font-weight:600;}
 .chip-select.chip-select-uf{gap:6px;}
 .chip-select.chip-select-uf .chip-opt{padding:6px 10px; font-size:11.5px; min-width:38px; text-align:center;}
@@ -668,6 +669,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="filter-field"><label>Tipo</label><select id="f-tipo"><option value="">Todos</option></select></div>
       <div class="filter-field"><label>Modalidade</label><select id="f-mod"><option value="">Todas</option></select></div>
       <div class="filter-field"><label>Abrangência</label><select id="f-abr"><option value="">Todas</option></select></div>
+      <div class="filter-field"><label>Para quem é</label><select id="f-pub"><option value="">Todos</option></select></div>
       <div class="filter-field"><label>UF</label><select id="f-uf"><option value="">Todas</option></select></div>
       <div class="filter-field"><label>Órgão</label><select id="f-org"><option value="">Todos</option></select></div>
       <div class="filter-field"><label>Situação</label><select id="f-sit"><option value="">Todas</option></select></div>
@@ -1124,6 +1126,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <div class="form-row"><label>Publicação</label><input type="text" id="af-publicacao" placeholder="dd/mm/aaaa"></div>
       </div>
       <div class="form-row"><label>Profissões contempladas</label><div class="chip-select" id="af-profs"></div></div>
+      <div class="form-row"><label>Para quem é (quem pode se credenciar)</label><div class="chip-select" id="af-publico"></div></div>
 
       <div class="lead-section-title" style="margin-top:20px;">Informações financeiras</div>
       <div class="two-col">
@@ -1487,6 +1490,11 @@ function iniciarCicloRadarHome(){
 const TIPOS = ["Credenciamento","Edital","Chamamento Público","Pregão","Contratação","Convênio","Processo seletivo"];
 const MODALIDADES = ["Presencial","Online","Híbrido"];
 const ABRANGENCIAS = ["Nacional","Estadual","Municipal"];
+// "Para quem é" — que tipo de contratado o edital aceita (coluna aceita_contratacao no Supabase).
+// PF/PJ = o profissional se credencia sozinho (como pessoa física ou com CNPJ próprio);
+// Clínica = o edital exige equipe multidisciplinar, então só uma clínica consegue atender.
+const PUBLICOS = ["Pessoa Física (PF)","Pessoa Jurídica (PJ)","Clínica (equipe multidisciplinar)"];
+function publicoTexto(o){ return (o.aceitaContratacao && o.aceitaContratacao.length) ? o.aceitaContratacao.join(', ') : 'Não informado'; }
 const SITUACOES = ["Aberto","Próximo do encerramento","Em análise","Retificado","Suspenso","Encerrado"];
 const UFS = [
   {sigla:"AC",nome:"Acre"},{sigla:"AL",nome:"Alagoas"},{sigla:"AP",nome:"Amapá"},{sigla:"AM",nome:"Amazonas"},
@@ -1507,7 +1515,7 @@ function parseDate(str){
 
 let oportunidades = [
   {id:1, edital:"Edital de Credenciamento nº 014/2026", orgao:"Secretaria Municipal de Saúde de Porto Alegre", uf:"RS", tipo:"Credenciamento",
-   profissoes:["Psicologia"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Aberto",
+   profissoes:["Psicologia"], aceitaContratacao:["Pessoa Física (PF)","Pessoa Jurídica (PJ)"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Aberto",
    objeto:"Credenciamento de profissionais de Psicologia para atendimento ambulatorial na rede municipal.",
    prazo:"12/09/2026", publicacao:"05/08/2026",
    indice:5, indiceLabel:"Alta oportunidade",
@@ -1523,7 +1531,7 @@ let oportunidades = [
    movimentacoes:[{data:"05/08/2026", texto:"Publicação do edital de credenciamento."},{data:"18/08/2026", texto:"Prorrogação do prazo de inscrição em 15 dias."}]},
 
   {id:2, edital:"Chamamento Público nº 007/2026", orgao:"Governo do Estado de Minas Gerais — SES/MG", uf:"MG", tipo:"Chamamento Público",
-   profissoes:["Nutrição"], modalidade:"Online", abrangencia:"Estadual", situacao:"Aberto",
+   profissoes:["Nutrição"], aceitaContratacao:["Pessoa Física (PF)"], modalidade:"Online", abrangencia:"Estadual", situacao:"Aberto",
    objeto:"Credenciamento de nutricionistas para teleatendimento no programa estadual de atenção primária.",
    prazo:"30/09/2026", publicacao:"22/07/2026",
    indice:4, indiceLabel:"Alta oportunidade",
@@ -1539,7 +1547,7 @@ let oportunidades = [
    movimentacoes:[{data:"22/07/2026", texto:"Abertura do chamamento público."}]},
 
   {id:3, edital:"Edital nº 031/2026", orgao:"Prefeitura de Curitiba — SMS", uf:"PR", tipo:"Edital",
-   profissoes:["Fonoaudiologia"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Em análise",
+   profissoes:["Fonoaudiologia"], aceitaContratacao:["Pessoa Jurídica (PJ)"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Em análise",
    objeto:"Credenciamento de fonoaudiólogos para atendimento em CAPS e unidades básicas de saúde.",
    prazo:"05/09/2026", publicacao:"10/07/2026",
    indice:3, indiceLabel:"Média oportunidade",
@@ -1555,7 +1563,7 @@ let oportunidades = [
    movimentacoes:[{data:"10/07/2026", texto:"Publicação do edital."},{data:"02/08/2026", texto:"Fase de análise documental dos inscritos em andamento."}]},
 
   {id:4, edital:"Credenciamento nº 002/2026", orgao:"Secretaria de Saúde do Distrito Federal", uf:"DF", tipo:"Credenciamento",
-   profissoes:["Medicina"], modalidade:"Online", abrangencia:"Estadual", situacao:"Aberto",
+   profissoes:["Medicina"], aceitaContratacao:["Pessoa Jurídica (PJ)"], modalidade:"Online", abrangencia:"Estadual", situacao:"Aberto",
    objeto:"Credenciamento de médicos generalistas para teleconsulta em unidades remotas do DF.",
    prazo:"20/09/2026", publicacao:"14/08/2026",
    indice:4, indiceLabel:"Alta oportunidade",
@@ -1571,7 +1579,7 @@ let oportunidades = [
    movimentacoes:[{data:"14/08/2026", texto:"Publicação do edital de credenciamento."}]},
 
   {id:5, edital:"Edital nº 019/2026", orgao:"Secretaria Municipal de Saúde de Salvador", uf:"BA", tipo:"Edital",
-   profissoes:["Enfermagem"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Encerrado",
+   profissoes:["Enfermagem"], aceitaContratacao:["Pessoa Física (PF)"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Encerrado",
    objeto:"Credenciamento de enfermeiros para reforço de equipes na atenção básica.",
    prazo:"01/08/2026", publicacao:"15/06/2026",
    indice:2, indiceLabel:"Baixa oportunidade",
@@ -1587,7 +1595,7 @@ let oportunidades = [
    movimentacoes:[{data:"15/06/2026", texto:"Publicação do edital."},{data:"01/08/2026", texto:"Encerramento do prazo de inscrições — resultado em análise."}]},
 
   {id:6, edital:"Chamamento nº 011/2026", orgao:"Governo do Estado do Rio Grande do Sul — SES/RS", uf:"RS", tipo:"Chamamento Público",
-   profissoes:["Farmácia"], modalidade:"Presencial", abrangencia:"Estadual", situacao:"Retificado",
+   profissoes:["Farmácia"], aceitaContratacao:["Pessoa Jurídica (PJ)"], modalidade:"Presencial", abrangencia:"Estadual", situacao:"Retificado",
    objeto:"Credenciamento de farmacêuticos para atuação em farmácias-satélite hospitalares.",
    prazo:"25/09/2026", publicacao:"20/08/2026",
    indice:3, indiceLabel:"Média oportunidade",
@@ -1603,7 +1611,7 @@ let oportunidades = [
    movimentacoes:[{data:"20/08/2026", texto:"Publicação do chamamento público."},{data:"23/08/2026", texto:"Retificação nos requisitos de habilitação."}]},
 
   {id:7, edital:"Edital nº 026/2026", orgao:"Secretaria Municipal de Saúde de Fortaleza", uf:"CE", tipo:"Edital",
-   profissoes:["Psicologia","Nutrição"], modalidade:"Online", abrangencia:"Municipal", situacao:"Aberto",
+   profissoes:["Psicologia","Nutrição"], aceitaContratacao:["Clínica (equipe multidisciplinar)"], modalidade:"Online", abrangencia:"Municipal", situacao:"Aberto",
    objeto:"Credenciamento de psicólogos e nutricionistas para teleatendimento no NASF digital.",
    prazo:"18/09/2026", publicacao:"09/08/2026",
    indice:5, indiceLabel:"Alta oportunidade",
@@ -1619,7 +1627,7 @@ let oportunidades = [
    movimentacoes:[{data:"09/08/2026", texto:"Publicação do edital."},{data:"19/08/2026", texto:"Alteração no valor de referência por sessão."}]},
 
   {id:8, edital:"Edital nº 041/2026", orgao:"Prefeitura de Belo Horizonte — SMSA", uf:"MG", tipo:"Edital",
-   profissoes:["Fonoaudiologia","Enfermagem"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Suspenso",
+   profissoes:["Fonoaudiologia","Enfermagem"], aceitaContratacao:["Pessoa Física (PF)","Pessoa Jurídica (PJ)"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Suspenso",
    objeto:"Credenciamento de fonoaudiólogos e enfermeiros para equipes volantes de visita domiciliar.",
    prazo:"10/09/2026", publicacao:"28/07/2026",
    indice:2, indiceLabel:"Baixa oportunidade",
@@ -1850,6 +1858,7 @@ function renderCard(o){
           ${o.profissoes.map(p=>`<span class="tag">${p}</span>`).join('')}
           <span class="tag">${o.tipo}</span>
           <span class="tag">${o.modalidade}</span>
+          ${(o.aceitaContratacao||[]).map(p=>`<span class="tag tag-publico">${p}</span>`).join('')}
           <span class="tag">Prazo: ${o.prazo}</span>
         </div>
         <div style="margin-top:10px;"><button class="wa-btn" onclick="shareWhatsApp(${o.id})">↗ WhatsApp</button></div>
@@ -1950,6 +1959,7 @@ function openCompare(){
     ['Profissões', o=>o.profissoes.join(', '), ()=>false],
     ['Tipo', o=>o.tipo, ()=>false],
     ['Modalidade', o=>o.modalidade, ()=>false],
+    ['Para quem é', o=>publicoTexto(o), ()=>false],
     ['Abrangência', o=>o.abrangencia, o=>abrDestacavel && (abrangenciaRank[o.abrangencia]||0)===maxAbr],
     ['Situação', o=>o.situacao, ()=>false],
     ['Prazo', o=>o.prazo, o=>maxPrazo!==null && prazoValsMap[o.id]===maxPrazo],
@@ -2192,6 +2202,9 @@ function populateSelects(){
   const fa = document.getElementById('f-abr');
   reconstruirOpcoesSelect(fa, ordenarComPresentes(ABRANGENCIAS, valoresPresentesEmOportunidades(o=>o.abrangencia)));
 
+  const fp = document.getElementById('f-pub');
+  reconstruirOpcoesSelect(fp, ordenarComPresentes(PUBLICOS, valoresPresentesEmOportunidades(o=>o.aceitaContratacao)));
+
   const fs = document.getElementById('f-sit');
   reconstruirOpcoesSelect(fs, ordenarComPresentes(SITUACOES, valoresPresentesEmOportunidades(o=>o.situacao)));
 
@@ -2259,6 +2272,7 @@ function applyFilters(){
   const tipo = document.getElementById('f-tipo').value;
   const mod = document.getElementById('f-mod').value;
   const abr = document.getElementById('f-abr').value;
+  const pub = document.getElementById('f-pub').value;
   const uf = document.getElementById('f-uf').value;
   const org = document.getElementById('f-org').value;
   const sit = document.getElementById('f-sit').value;
@@ -2269,6 +2283,7 @@ function applyFilters(){
     if(tipo && o.tipo !== tipo) return false;
     if(mod && o.modalidade !== mod) return false;
     if(abr && o.abrangencia !== abr) return false;
+    if(pub && !(o.aceitaContratacao||[]).includes(pub)) return false;
     if(uf && o.uf !== uf) return false;
     if(org && o.orgao !== org) return false;
     if(sit && o.situacao !== sit) return false;
@@ -2298,7 +2313,7 @@ function applyFilters(){
   }
   filtradas.forEach(o=>list.appendChild(renderCard(o)));
 }
-['f-prof','f-tipo','f-mod','f-abr','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).addEventListener('change', applyFilters));
+['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).addEventListener('change', applyFilters));
 document.getElementById('ed-search').addEventListener('input', applyFilters);
 
 // Indicador visível de filtro/busca ativo, com "x" para limpar cada um individualmente.
@@ -2311,6 +2326,7 @@ function renderFilterChips(){
     { id:'f-tipo',    label:v=>`Tipo: ${v}`, clear:()=>{ document.getElementById('f-tipo').value=''; } },
     { id:'f-mod',     label:v=>`Modalidade: ${v}`, clear:()=>{ document.getElementById('f-mod').value=''; } },
     { id:'f-abr',     label:v=>`Abrangência: ${v}`, clear:()=>{ document.getElementById('f-abr').value=''; } },
+    { id:'f-pub',     label:v=>`Para quem é: ${v}`, clear:()=>{ document.getElementById('f-pub').value=''; } },
     { id:'f-uf',      label:v=>`UF: ${v}`, clear:()=>{ document.getElementById('f-uf').value=''; } },
     { id:'f-org',     label:v=>`Órgão: ${v}`, clear:()=>{ document.getElementById('f-org').value=''; } },
     { id:'f-sit',     label:v=>`Situação: ${v}`, clear:()=>{ document.getElementById('f-sit').value=''; } },
@@ -2341,7 +2357,7 @@ function renderFilterChips(){
 }
 function clearAllFilters(){
   ['ed-search'].forEach(id=>document.getElementById(id).value='');
-  ['f-prof','f-tipo','f-mod','f-abr','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
+  ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
   filtroSomenteComIndice = false;
   applyFilters();
 }
@@ -2381,7 +2397,7 @@ function renderIndicators(){
 }
 function irParaEditaisComFiltro(filtro){
   ['ed-search'].forEach(id=>document.getElementById(id).value='');
-  ['f-prof','f-tipo','f-mod','f-abr','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
+  ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
   filtroSomenteComIndice = (filtro === 'indice');
   if(filtro === 'indice') document.getElementById('f-sort').value = 'indice';
   nav('editais');
@@ -2439,6 +2455,7 @@ function openDetalhe(id){
           <div class="quick-facts">
             <div class="qf-item"><div class="qf-icon">👤</div><span class="qf-k">Quem pode participar</span><div class="qf-v">${o.profissoes.join(', ')}</div></div>
             <div class="qf-item"><div class="qf-icon">📍</div><span class="qf-k">Onde é o atendimento</span><div class="qf-v">${o.cidade ? o.cidade+' — ' : ''}${o.uf} · ${o.abrangencia}</div></div>
+            <div class="qf-item"><div class="qf-icon">🏢</div><span class="qf-k">Para quem é</span><div class="qf-v">${publicoTexto(o)}</div></div>
             <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}</div></div>
             <div class="qf-item"><div class="qf-icon">💰</div><span class="qf-k">Remuneração</span><div class="qf-v">${remuneracaoResumo}</div></div>
             <div class="qf-item"><div class="qf-icon">⏳</div><span class="qf-k">Prazo</span><div class="qf-v">${o.prazo}</div></div>
@@ -3591,6 +3608,18 @@ function populateAdminFormSelects(){
   const ufSel = document.getElementById('af-uf'); ufSel.insertAdjacentHTML('beforeend', ufOptionsHTML());
   const tipoSel = document.getElementById('af-tipo'); TIPOS.forEach(t=>tipoSel.insertAdjacentHTML('beforeend',`<option>${t}</option>`));
 }
+function refreshAfPublicoChips(selecionados){
+  const box = document.getElementById('af-publico');
+  box.innerHTML = '';
+  const nomes = new Set(PUBLICOS);
+  (selecionados||[]).forEach(n=>nomes.add(n));
+  [...nomes].forEach(p=>{
+    const c = document.createElement('div'); c.className='chip-opt'; c.textContent = p; c.dataset.publico = p;
+    if((selecionados||[]).includes(p)) c.classList.add('selected');
+    c.onclick = ()=>c.classList.toggle('selected');
+    box.appendChild(c);
+  });
+}
 function refreshAfProfChips(extraNomes){
   const box = document.getElementById('af-profs');
   box.innerHTML = '';
@@ -3621,6 +3650,7 @@ function openAdminForm(id){
   document.getElementById('af-analise-ia').value = '';
   document.getElementById('af-analise-ia-status').textContent = '';
   refreshAfProfChips(id ? oportunidades.find(x=>x.id===id).profissoes : []);
+  refreshAfPublicoChips(id ? (oportunidades.find(x=>x.id===id).aceitaContratacao||[]) : []);
 
   if(id){
     const o = oportunidades.find(x=>x.id===id);
@@ -3681,6 +3711,7 @@ async function saveAdminForm(){
   const objeto = document.getElementById('af-objeto').value.trim();
   if(!edital || !orgao || !objeto){ toast('Preencha edital, órgão e objeto'); return; }
   const profs = [...document.querySelectorAll('#af-profs .chip-opt.selected')].map(c=>c.dataset.prof);
+  const publico = [...document.querySelectorAll('#af-publico .chip-opt.selected')].map(c=>c.dataset.publico);
   const indiceRaw = document.getElementById('af-indice').value;
   const indice = indiceRaw === '' ? null : parseInt(indiceRaw,10);
   const labels = {1:'Baixa oportunidade',2:'Baixa oportunidade',3:'Média oportunidade',4:'Alta oportunidade',5:'Alta oportunidade'};
@@ -3703,6 +3734,7 @@ async function saveAdminForm(){
     prazo: document.getElementById('af-prazo').value.trim() || 'Não informado',
     publicacao: document.getElementById('af-publicacao').value.trim() || 'Não informado',
     profissoes: profs.length ? profs : ['Não informado'],
+    aceitaContratacao: publico,
     valorAtendimento: valorAtendimento || 'Não informado',
     valorMensal: 'Não informado',
     valorHora: 'Não informado',
@@ -3741,6 +3773,7 @@ async function saveAdminForm(){
       edital: data.edital, tipo: data.tipo, orgao: data.orgao, objeto: data.objeto,
       cidade: data.cidade, uf: data.uf, situacao: data.situacao,
       profissoes: data.profissoes, modalidade: data.modalidade, abrangencia: data.abrangencia,
+      aceita_contratacao: data.aceitaContratacao,
       indice: data.indice,
       valor_atendimento: data.valorAtendimento, valor_mensal: data.valorMensal, valor_hora: data.valorHora,
       volume_estimado: data.volume, valor_maximo: data.valorMaximo,
@@ -4205,6 +4238,7 @@ function mapEditalSupabase(row){
     profissoes: (row.profissoes && row.profissoes.length) ? row.profissoes : ['Não identificada'],
     modalidade: row.modalidade || 'Presencial',
     abrangencia: row.abrangencia || 'Municipal',
+    aceitaContratacao: Array.isArray(row.aceita_contratacao) ? row.aceita_contratacao : [],
     situacao: row.situacao || 'Aberto',
     objeto: row.objeto || '',
     prazo: formatarDataBR(row.prazo),
