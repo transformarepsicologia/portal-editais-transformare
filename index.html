@@ -272,6 +272,16 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .empresa-box .emp-card{border:1px solid var(--border); border-radius:12px; padding:12px 14px; background:var(--bg-elevated);}
 .empresa-box .emp-card strong{color:var(--ink);}
 .empresa-box .emp-alerta{color:var(--coral);}
+.politica{max-width:760px; font-size:14px; line-height:1.75; color:var(--ink-muted);}
+.politica h3{font-family:var(--font-display); color:var(--ink); font-size:17px; margin:28px 0 8px;}
+.politica strong{color:var(--ink);}
+.politica ul{padding-left:20px; margin:8px 0;}
+.politica li{margin-bottom:6px;}
+.politica a{color:var(--teal);}
+.beta-tag{font-family:var(--font-mono); font-size:9.5px; font-weight:700; letter-spacing:1px; color:var(--teal); border:1px solid rgba(47,217,196,0.45); border-radius:5px; padding:2px 6px; margin-left:8px; cursor:pointer; vertical-align:middle;}
+.footer-links{margin-top:12px; display:flex; gap:14px; justify-content:center; flex-wrap:wrap;}
+.footer-links a{color:var(--ink-muted); text-decoration:none;}
+.footer-links a:hover{color:var(--teal);}
 .empty-state{text-align:center; padding:60px 20px; color:var(--ink-dim); font-family:var(--font-mono); font-size:13px;}
 
 /* ===== Detail page ===== */
@@ -623,6 +633,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <img src="assets/logo-transformare.webp" alt="Transformare" width="34" height="34" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
       </div>
       <div class="logo-text">TRANSFORMARE<span>.</span></div>
+      <span class="beta-tag" title="Versão de testes — clique para enviar sua opinião" onclick="event.stopPropagation(); openFeedbackModal()">BETA</span>
     </div>
     <nav class="main-nav" id="mainNav">
       <button data-view="home" class="active">Início</button>
@@ -811,6 +822,83 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div id="minha-conta-content"></div>
 </section>
 
+<!-- ===================== POLÍTICA DE PRIVACIDADE E SEGURANÇA ===================== -->
+<section class="view" id="view-privacidade">
+  <div class="page-head"><span class="eyebrow">LGPD</span><h2>Política de Privacidade e Segurança</h2><p>Versão 1.0 — vigente desde 4 de outubro de 2026.</p></div>
+  <div class="politica">
+    <p>Esta política explica como a <strong>Transformare Psicologia &amp; Projetos</strong> ("Transformare", "nós") coleta, usa, guarda e protege os dados pessoais de quem usa o <strong>Portal de Editais / Radar Transformare</strong> ("Portal"), em conformidade com a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018 — LGPD).</p>
+
+    <h3>1. Quem é o responsável pelos seus dados</h3>
+    <p>A Transformare é a <strong>controladora</strong> dos dados pessoais tratados no Portal. Para qualquer assunto sobre privacidade, inclusive o exercício dos seus direitos, fale com o nosso <strong>encarregado de dados (DPO)</strong> pelo e-mail <a href="mailto:transformarepsicologia1@gmail.com">transformarepsicologia1@gmail.com</a>.</p>
+
+    <h3>2. Quais dados coletamos</h3>
+    <ul>
+      <li><strong>Cadastro e perfil profissional:</strong> nome, e-mail, WhatsApp, registro profissional (ex.: CRP), estado e cidade, profissão, modalidades e abrangência de interesse, remuneração mínima esperada, nível de instrução, tempo de atuação e forma de atuação (pessoa física e/ou jurídica).</li>
+      <li><strong>Dados da empresa (se você atua como PJ):</strong> CNPJ e as informações públicas desse CNPJ na Receita Federal (razão social, nome fantasia, situação cadastral, CNAEs, município/UF, porte, opção pelo MEI e data de abertura), consultadas automaticamente na BrasilAPI a partir do número informado por você.</li>
+      <li><strong>Pedidos de contato e orientação:</strong> nome, WhatsApp, e-mail, o edital de interesse, o tipo de ajuda, a situação da documentação, a urgência e a mensagem que você escrever.</li>
+      <li><strong>Outras interações:</strong> solicitações de avaliação do Índice Transformare, sugestões de profissão e mensagens de feedback (com a página do Portal e o tipo de navegador, para entendermos problemas técnicos).</li>
+      <li><strong>Dados guardados só no seu navegador:</strong> editais favoritos, critérios de alerta e o checklist de documentos ficam no armazenamento local (localStorage) do seu próprio aparelho e não são enviados para nós.</li>
+    </ul>
+    <p>Não coletamos dados sensíveis (como saúde, religião ou origem racial) e pedimos que você não os inclua em campos de texto livre.</p>
+
+    <h3>3. Para que usamos e com qual base legal</h3>
+    <ul>
+      <li><strong>Criar e manter sua conta e mostrar editais aderentes ao seu perfil</strong> — execução de contrato e de procedimentos preliminares a pedido do titular (art. 7º, V).</li>
+      <li><strong>Responder pedidos de orientação e entrar em contato por WhatsApp ou e-mail</strong> — consentimento, dado no momento do envio (art. 7º, I), que pode ser revogado a qualquer momento.</li>
+      <li><strong>Melhorar o Portal, analisar feedback e manter a segurança</strong> (prevenção a fraudes e abusos) — legítimo interesse (art. 7º, IX), sempre respeitando suas expectativas e direitos.</li>
+      <li><strong>Cumprir obrigações legais ou atender autoridades</strong> — art. 7º, II.</li>
+    </ul>
+    <p>Não vendemos, alugamos nem cedemos seus dados para fins de publicidade de terceiros.</p>
+
+    <h3>4. Informações públicas usadas pelo Portal</h3>
+    <p>Os editais, chamamentos e credenciamentos exibidos vêm de fontes públicas oficiais, como o Portal Nacional de Contratações Públicas (PNCP) e diários oficiais. O Índice Transformare e a aderência ao perfil são análises internas, <strong>não são informações oficiais</strong> dos órgãos e não substituem a leitura do edital oficial.</p>
+
+    <h3>5. Com quem compartilhamos</h3>
+    <p>Usamos fornecedores que tratam dados em nosso nome (operadores), apenas para o funcionamento do Portal:</p>
+    <ul>
+      <li><strong>Supabase</strong> — banco de dados e autenticação (login e senha);</li>
+      <li><strong>GitHub Pages</strong> — hospedagem do site;</li>
+      <li><strong>BrasilAPI</strong> — consulta dos dados públicos do CNPJ informado;</li>
+      <li><strong>Google Fonts</strong> e <strong>jsDelivr</strong> — entrega de fontes e bibliotecas do site (recebem dados técnicos de acesso, como o endereço IP).</li>
+    </ul>
+    <p>Alguns desses fornecedores podem armazenar dados em servidores fora do Brasil. Nesses casos, a transferência internacional ocorre com base no art. 33 da LGPD, com fornecedores que adotam padrões de segurança compatíveis.</p>
+
+    <h3>6. Como protegemos seus dados</h3>
+    <ul>
+      <li>Toda a comunicação com o Portal é criptografada (HTTPS).</li>
+      <li>Sua senha é gerenciada pelo serviço de autenticação e guardada de forma cifrada (hash); <strong>a Transformare nunca vê nem tem acesso à sua senha</strong>.</li>
+      <li>Regras de acesso no próprio banco de dados garantem que cada pessoa só consegue ver e alterar o <strong>próprio perfil</strong>, e que pedidos de contato, feedbacks e solicitações só podem ser lidos pela administração da Transformare.</li>
+      <li>Acesso administrativo restrito a contas autorizadas, com login individual.</li>
+    </ul>
+    <p>Nenhum sistema é 100% invulnerável. Se ocorrer um incidente de segurança que possa trazer risco ou dano relevante, comunicaremos os titulares afetados e a Autoridade Nacional de Proteção de Dados (ANPD), conforme o art. 48 da LGPD.</p>
+
+    <h3>7. Por quanto tempo guardamos</h3>
+    <ul>
+      <li><strong>Dados da conta e do perfil:</strong> enquanto a conta estiver ativa. Ao excluir a conta, o perfil é removido imediatamente do banco de dados.</li>
+      <li><strong>Pedidos de contato, solicitações e feedbacks:</strong> por até 24 meses após o último contato, ou até você pedir a exclusão.</li>
+      <li>Dados podem ser mantidos por mais tempo apenas quando houver obrigação legal ou para exercício de direitos em processos.</li>
+    </ul>
+
+    <h3>8. Seus direitos</h3>
+    <p>Pela LGPD (art. 18), você pode, a qualquer momento: confirmar se tratamos seus dados; acessá-los; corrigir dados incompletos ou desatualizados; pedir anonimização, bloqueio ou eliminação de dados desnecessários; pedir a portabilidade; pedir a eliminação dos dados tratados com base no consentimento; saber com quem compartilhamos; e revogar o consentimento.</p>
+    <p>Você mesmo pode <strong>corrigir seu perfil</strong> em "Minha Conta → Editar perfil" e <strong>excluir sua conta</strong> na mesma tela. Para os demais pedidos, escreva para <a href="mailto:transformarepsicologia1@gmail.com">transformarepsicologia1@gmail.com</a> — respondemos em até 15 dias.</p>
+
+    <h3>9. Cookies e armazenamento local</h3>
+    <p>O Portal não usa cookies de publicidade nem ferramentas de rastreamento de terceiros. Usamos o armazenamento local do navegador apenas para manter sua sessão de login e suas preferências (favoritos, alertas e checklist). Você pode apagar esses dados nas configurações do seu navegador.</p>
+
+    <h3>10. Público</h3>
+    <p>O Portal é destinado a profissionais maiores de 18 anos. Não coletamos intencionalmente dados de crianças ou adolescentes.</p>
+
+    <h3>11. Versão beta</h3>
+    <p>O Portal está em fase de testes (beta). Funcionalidades podem mudar e as informações sobre editais podem conter imprecisões — confira sempre o edital oficial antes de se inscrever. Seu feedback nos ajuda a melhorar.</p>
+
+    <h3>12. Alterações desta política</h3>
+    <p>Podemos atualizar esta política. A versão e a data de vigência ficam sempre no topo desta página; mudanças relevantes serão avisadas no Portal ou por e-mail.</p>
+
+    <p style="margin-top:28px;"><button class="btn-ghost" onclick="history.length > 1 ? history.back() : nav('home')">← Voltar</button></p>
+  </div>
+</section>
+
 <!-- ===================== SOBRE ===================== -->
 <section class="view" id="view-sobre">
   <div class="page-head"><span class="eyebrow">Sobre a Transformare</span><h2>Uma plataforma de inteligência de oportunidades</h2></div>
@@ -818,7 +906,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p style="color:var(--ink);">O edital é a matéria-prima. A Transformare agrega valor ao encontrar, filtrar, organizar, analisar e explicar — conectando cada oportunidade ao profissional certo.</p>
     <p>Monitoramos continuamente o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, cobrindo inicialmente Psicologia, Nutrição, Fonoaudiologia, Farmácia e Enfermagem — com arquitetura pronta para novas profissões.</p>
     <p>Quando avaliada, cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong> — uma nota de 1 a 5 que leva em conta retorno financeiro, facilidade de entrada, aderência aos serviços da Transformare e complexidade documental. É um indicador interno, atribuído manualmente por um analista da Transformare — não é uma informação oficial do órgão responsável, não representa classificação oficial e não substitui o julgamento previsto no edital. Nem todo edital publicado já foi avaliado; quando ainda não foi, isso fica informado na página do edital, com a opção de solicitar a avaliação.</p>
-    <p>Este protótipo usa dados demonstrativos para ilustrar o funcionamento da plataforma. Nenhuma informação aqui deve ser tratada como oficial.</p>
+    <p>O Portal está em versão beta: os editais vêm de fontes públicas oficiais, mas podem conter imprecisões — confira sempre o edital oficial antes de se inscrever. Encontrou algo estranho? <a style="color:var(--teal); cursor:pointer;" onclick="openFeedbackModal()">Envie seu feedback</a>.</p>
     <div style="background:rgba(47,217,196,0.08); border:1px solid rgba(47,217,196,0.3); border-radius:14px; padding:18px 20px; margin-top:22px;">
       <p style="color:var(--ink); margin:0 0 6px; font-weight:600;">⇄ Compare oportunidades lado a lado</p>
       <p style="margin:0;">Encontrou mais de um edital interessante? Clique em "Comparar" nos cards que te chamaram atenção e veja prazo, remuneração, índice de atratividade e requisitos lado a lado — sem precisar abrir cada um separadamente.</p>
@@ -876,6 +964,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row"><label>CNPJ</label><div style="display:flex; gap:6px;"><input type="text" id="cad-cnpj" placeholder="00.000.000/0000-00" inputmode="numeric" maxlength="18" style="flex:1; min-width:0;" oninput="cnpjDigitado('cad')"><button type="button" class="btn-ghost" onclick="buscarCnpjPerfil('cad')">Buscar dados</button></div></div>
       <div id="cad-empresa" class="empresa-box"></div>
     </div>
+    <label style="display:flex; gap:9px; align-items:flex-start; font-size:12.5px; color:var(--ink-muted); line-height:1.5; margin:4px 0 12px; cursor:pointer;">
+      <input type="checkbox" id="cad-aceite" style="margin-top:3px; accent-color:var(--teal);">
+      <span>Li e concordo com a <a href="#privacidade" style="color:var(--teal);" onclick="event.preventDefault(); nav('privacidade')">Política de Privacidade e Segurança</a> e autorizo o tratamento dos meus dados para criar minha conta e receber recomendações de editais.</span>
+    </label>
     <div id="cad-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
     <div class="form-actions">
       <button class="btn-primary" style="flex:1;" onclick="userSignup()">Criar conta</button>
@@ -1137,7 +1229,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
   <div style="display:flex; justify-content:space-between; align-items:center; margin:26px 0 14px; flex-wrap:wrap; gap:10px;">
     <div class="section-title" style="font-size:16px; margin:0;">Todos os leads</div>
-    <button class="btn-ghost" onclick="clearLeadsDemo()">Limpar leads (demonstração)</button>
+    <button class="btn-ghost" onclick="clearLeadsDemo()">↻ Atualizar leads</button>
   </div>
   <div style="overflow-x:auto;">
     <table class="admin-table" id="leads-table">
@@ -1155,6 +1247,23 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div id="usuarios-cadastrados-body" style="display:none;">
       <div id="usuarios-cadastrados-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
       <div id="usuarios-cadastrados-lista"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
+    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleFeedbacksAdmin()">
+      <span>💬 Feedbacks do beta <span id="feedbacks-badge" class="plan-badge" style="display:none;"></span></span>
+      <span id="feedbacks-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Mensagens enviadas pelo botão BETA, pelo rodapé ou pela página Sobre.</p>
+    <div id="feedbacks-body" style="display:none;">
+      <div id="feedbacks-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead><tr><th>Data</th><th>Tipo</th><th>Mensagem</th><th>Quem</th><th>Página</th><th>Status</th></tr></thead>
+          <tbody id="feedbacks-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1201,8 +1310,13 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <span style="color:var(--ink-dim);">×</span>
     <img src="assets/logo-radar.webp" alt="Radar Transformare" width="26" height="26" loading="lazy" style="width:26px; height:26px; border-radius:50%; object-fit:cover;">
   </div>
-  TRANSFORMARE — PORTAL DE EDITAIS · PROTÓTIPO · DADOS DEMONSTRATIVOS
-  <div style="margin-top:14px;"><a href="#" onclick="event.preventDefault(); nav('admin');" style="display:inline-flex; align-items:center; gap:6px; color:var(--ink-muted); font-size:11.5px; letter-spacing:.3px; text-decoration:none; border:1px solid var(--border); border-radius:20px; padding:7px 14px;" onmouseover="this.style.borderColor='var(--teal)'; this.style.color='var(--teal)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--ink-muted)';">🔐 Acesso administrativo (demonstração)</a></div>
+  TRANSFORMARE — PORTAL DE EDITAIS · VERSÃO BETA
+  <div class="footer-links">
+    <a href="#privacidade" onclick="event.preventDefault(); nav('privacidade')">Política de Privacidade e Segurança</a>
+    <a href="#feedback" onclick="event.preventDefault(); openFeedbackModal()">Enviar feedback</a>
+    <a href="mailto:transformarepsicologia1@gmail.com">Contato</a>
+  </div>
+  <div style="margin-top:14px;"><a href="#" onclick="event.preventDefault(); nav('admin');" style="display:inline-flex; align-items:center; gap:6px; color:var(--ink-muted); font-size:11.5px; letter-spacing:.3px; text-decoration:none; border:1px solid var(--border); border-radius:20px; padding:7px 14px;" onmouseover="this.style.borderColor='var(--teal)'; this.style.color='var(--teal)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--ink-muted)';">🔐 Acesso administrativo</a></div>
 </footer>
 
 <!-- ===================== MODAL: formulário de oportunidade (admin) — editar/criar direto de qualquer página ===================== -->
@@ -1417,7 +1531,28 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
     <div class="form-row"><label>Mensagem (opcional)</label><input type="text" id="lead-msg" placeholder="Dúvida ou observação"></div>
     <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="submitLead()">Enviar pedido</button></div>
-    <p style="font-size:10.5px; color:var(--ink-dim); margin-top:12px;">Dados demonstrativos, armazenados apenas neste navegador — não é um CRM real.</p>
+    <p style="font-size:10.5px; color:var(--ink-dim); margin-top:12px;">Ao enviar, você autoriza a Transformare a entrar em contato pelo WhatsApp ou e-mail informados, conforme a <a href="#privacidade" style="color:var(--teal);" onclick="event.preventDefault(); closeModal('lead-modal'); nav('privacidade')">Política de Privacidade</a>.</p>
+  </div>
+</div>
+
+<!-- ===================== MODAL: feedback do beta ===================== -->
+<div class="modal-overlay" id="feedback-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('feedback-modal')">×</button>
+    <h3>Sua opinião sobre o beta</h3>
+    <p>Encontrou um erro, algo confuso ou tem uma ideia? Conte pra gente — leva 1 minuto.</p>
+    <div class="form-row"><label>Tipo</label>
+      <select id="feedback-tipo">
+        <option value="problema">Encontrei um problema / erro</option>
+        <option value="sugestao" selected>Tenho uma sugestão</option>
+        <option value="duvida">Fiquei com uma dúvida</option>
+        <option value="elogio">Elogio</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Mensagem</label><textarea id="feedback-msg" maxlength="4000" placeholder="O que aconteceu, em qual página, o que você esperava..."></textarea></div>
+    <div class="form-row"><label>E-mail para retorno (opcional)</label><input type="email" id="feedback-email" placeholder="seu@email.com"></div>
+    <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="submitFeedback()">Enviar feedback</button></div>
+    <p style="font-size:10.5px; color:var(--ink-dim); margin-top:12px;">Tratado conforme a <a href="#privacidade" style="color:var(--teal);" onclick="event.preventDefault(); closeModal('feedback-modal'); nav('privacidade')">Política de Privacidade</a>.</p>
   </div>
 </div>
 
@@ -1766,6 +1901,8 @@ let oportunidades = [
    urlInscricao:null,
    movimentacoes:[{data:"28/07/2026", texto:"Publicação do edital."},{data:"15/08/2026", texto:"Processo suspenso por decisão administrativa."}]}
 ];
+// ids dos editais de demonstração do protótipo — escondidos quando o banco já tem editais reais.
+const IDS_EDITAIS_DEMO = new Set(oportunidades.map(o=>o.id));
 
 let favoritos = new Set();
 let alertPrefs = {prof:new Set(), uf:new Set(), mod:new Set(), cidade:''};
@@ -1920,7 +2057,7 @@ function nav(view){
   if(view === 'editais') applyFilters();
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
-  if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); }
+  if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); }
   if(view === 'minha-conta') renderMinhaConta();
   if(view === 'perfil') renderPerfil();
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
@@ -3037,6 +3174,32 @@ function openLeadModalMulti(ids, origin){
 }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
+/* ================= FEEDBACK DO BETA ================= */
+const VERSAO_PRIVACIDADE = '1.0';
+function openFeedbackModal(){
+  document.getElementById('feedback-msg').value = '';
+  document.getElementById('feedback-email').value = (userProfile && userProfile.email) || '';
+  document.getElementById('feedback-modal').classList.add('open');
+}
+async function submitFeedback(){
+  const mensagem = document.getElementById('feedback-msg').value.trim();
+  if(mensagem.length < 3){ toast('Escreva sua mensagem'); return; }
+  if(!_sb){ toast('Não foi possível enviar agora. Tente novamente.'); return; }
+  const viewAtiva = document.querySelector('.view.active');
+  const { error } = await _sb.from('feedbacks').insert({
+    tipo: document.getElementById('feedback-tipo').value,
+    mensagem,
+    email: document.getElementById('feedback-email').value.trim() || null,
+    nome: (userProfile && userProfile.nome) || null,
+    usuario_id: (userProfile && userProfile.id) || null,
+    pagina: viewAtiva ? viewAtiva.id.replace('view-','') : null,
+    navegador: (navigator.userAgent || '').slice(0, 300),
+  });
+  if(error){ toast('Não foi possível enviar agora. Tente novamente.'); return; }
+  closeModal('feedback-modal');
+  toast('Obrigado! Seu feedback foi enviado para a equipe Transformare.');
+}
+
 /* ================= SOLICITAÇÃO DE AVALIAÇÃO DO ÍNDICE (fluxo próprio, separado dos leads) ================= */
 let _solicitarIndiceOppId = null;
 function abrirSolicitarIndiceModal(oppId){
@@ -3119,27 +3282,54 @@ async function submitLead(){
     historico: [{data:new Date().toLocaleString('pt-BR'), texto:'Lead criado'}]
   };
 
-  leads.push(lead);
-  await storeSet('leads', leads);
+  if(_sb){
+    // Grava no banco (tabela leads) — só a administração da Transformare consegue ler.
+    const { error } = await _sb.from('leads').insert({
+      usuario_id: lead.usuarioId, nome: lead.nome, whatsapp: lead.whatsapp || null, email: lead.email || null,
+      profissao: lead.profissao, uf: lead.uf, oportunidade_ids: lead.oportunidadeIds,
+      edital: lead.edital, orgao: lead.orgao,
+      tipo_solicitacao: lead.tipoSolicitacao, documentacao: lead.documentacao, urgencia: lead.urgencia,
+      mensagem: lead.mensagem || null, origem: lead.origem, classificacao: lead.classificacao,
+      status: 'Novo', historico: lead.historico,
+    });
+    if(error){ toast('Não foi possível enviar agora. Tente novamente.'); return; }
+  } else {
+    leads.push(lead);
+    await storeSet('leads', leads);
+  }
 
   closeModal('lead-modal');
-  toast('Pedido enviado — nossa equipe vai analisar (fluxo de demonstração)');
+  toast('Pedido enviado! A Transformare vai entrar em contato em breve.');
 }
 
-async function clearLeadsDemo(){
-  if(leads.length===0) return;
-  leads = [];
-  await storeSet('leads', leads);
+// Leads vêm do banco (tabela leads) para a administração; sem Supabase, ficam no navegador.
+async function carregarLeadsAdmin(){
+  if(!_sb){ renderLeadsAdmin(); return; }
+  const { data, error } = await _sb.from('leads').select('*').order('criado_em', { ascending: true });
+  if(error){ toast('Erro ao carregar leads: ' + error.message); return; }
+  leads = (data||[]).map(r=>({
+    id: r.id, criadoEm: new Date(r.criado_em).toLocaleString('pt-BR'),
+    nome: r.nome, whatsapp: r.whatsapp || '', email: r.email || '', usuarioId: r.usuario_id,
+    profissao: r.profissao || 'Não informado', uf: r.uf || 'Não informado',
+    oportunidadeIds: (r.oportunidade_ids||[]).map(Number),
+    edital: r.edital || 'Não vinculado a um edital específico', orgao: r.orgao || '—',
+    tipoSolicitacao: r.tipo_solicitacao || '—', documentacao: r.documentacao || '—', urgencia: r.urgencia || '—',
+    mensagem: r.mensagem || '', origem: r.origem || 'outro', classificacao: r.classificacao || 'inicial',
+    status: r.status || 'Novo', historico: Array.isArray(r.historico) ? r.historico : [],
+  }));
   renderLeadsAdmin();
-  toast('Leads de demonstração limpos');
 }
+async function clearLeadsDemo(){ await carregarLeadsAdmin(); toast('Leads atualizados'); }
 
 async function updateLeadStatus(id, novoStatus){
   const lead = leads.find(l=>l.id===id);
   if(!lead) return;
   lead.status = novoStatus;
   lead.historico.push({data:new Date().toLocaleString('pt-BR'), texto:`Status alterado para "${novoStatus}"`});
-  await storeSet('leads', leads);
+  if(_sb){
+    const { error } = await _sb.from('leads').update({ status: novoStatus, historico: lead.historico }).eq('id', id);
+    if(error){ toast('Erro ao salvar: ' + error.message); return; }
+  } else await storeSet('leads', leads);
   renderLeadsAdmin();
 }
 
@@ -3178,21 +3368,21 @@ function renderLeadsAdmin(){
   const topBox = document.getElementById('top-oportunidades');
   topBox.innerHTML = topOps.length===0
     ? `<span class="lead-empty-cell">Nenhum lead registrado ainda.</span>`
-    : topOps.map(([edital,cnt])=>`<div class="top-op-row"><span>${edital}</span><span class="cnt">${cnt} lead(s)</span></div>`).join('');
+    : topOps.map(([edital,cnt])=>`<div class="top-op-row"><span>${esc(edital)}</span><span class="cnt">${cnt} lead(s)</span></div>`).join('');
 
   const tbody = document.getElementById('leads-tbody');
   if(leads.length===0){
-    tbody.innerHTML = `<tr><td colspan="9" class="lead-empty-cell">Nenhum lead recebido ainda neste protótipo.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="lead-empty-cell">Nenhum lead recebido ainda.</td></tr>`;
     return;
   }
   tbody.innerHTML = [...leads].reverse().map(l=>`
     <tr>
-      <td>${l.criadoEm}</td>
-      <td>${l.nome}</td>
-      <td>${l.profissao}</td>
-      <td>${l.edital}</td>
-      <td>${l.tipoSolicitacao}</td>
-      <td>${l.urgencia}</td>
+      <td>${esc(l.criadoEm)}</td>
+      <td>${esc(l.nome)}</td>
+      <td>${esc(l.profissao)}</td>
+      <td>${esc(l.edital)}</td>
+      <td>${esc(l.tipoSolicitacao)}</td>
+      <td>${esc(l.urgencia)}</td>
       <td>${classBadge(l.classificacao)}</td>
       <td>
         <select class="lead-status-select" onchange="updateLeadStatus(${l.id}, this.value)">
@@ -3209,14 +3399,14 @@ function openLeadDetail(id){
   if(!l) return;
   const opsRelacionadas = oportunidades.filter(o=>l.oportunidadeIds.includes(o.id));
   document.getElementById('lead-detail-content').innerHTML = `
-    <h3 style="margin-bottom:4px;">${l.nome}</h3>
-    <div style="margin-bottom:16px;">${classBadge(l.classificacao)} <span class="badge aberto" style="margin-left:6px;">${l.status}</span></div>
+    <h3 style="margin-bottom:4px;">${esc(l.nome)}</h3>
+    <div style="margin-bottom:16px;">${classBadge(esc(l.classificacao))} <span class="badge aberto" style="margin-left:6px;">${esc(l.status)}</span></div>
 
     <div class="lead-section-title">Dados do profissional</div>
-    <div class="lead-detail-row"><span class="k">WhatsApp</span><span class="v">${l.whatsapp || 'Não informado'}</span></div>
-    <div class="lead-detail-row"><span class="k">E-mail</span><span class="v">${l.email || 'Não informado'}</span></div>
-    <div class="lead-detail-row"><span class="k">Profissão</span><span class="v">${l.profissao}</span></div>
-    <div class="lead-detail-row"><span class="k">UF</span><span class="v">${l.uf}</span></div>
+    <div class="lead-detail-row"><span class="k">WhatsApp</span><span class="v">${esc(l.whatsapp) || 'Não informado'}</span></div>
+    <div class="lead-detail-row"><span class="k">E-mail</span><span class="v">${esc(l.email) || 'Não informado'}</span></div>
+    <div class="lead-detail-row"><span class="k">Profissão</span><span class="v">${esc(l.profissao)}</span></div>
+    <div class="lead-detail-row"><span class="k">UF</span><span class="v">${esc(l.uf)}</span></div>
 
     <div class="lead-section-title">Oportunidade</div>
     ${opsRelacionadas.length===0 ? `<div class="lead-detail-row"><span class="v">Não vinculado a um edital específico</span></div>` :
@@ -3228,14 +3418,14 @@ function openLeadDetail(id){
       `).join('<div style="height:8px;"></div>')}
 
     <div class="lead-section-title">Intenção</div>
-    <div class="lead-detail-row"><span class="k">O que precisa</span><span class="v">${l.tipoSolicitacao}</span></div>
-    <div class="lead-detail-row"><span class="k">Documentação</span><span class="v">${l.documentacao}</span></div>
-    <div class="lead-detail-row"><span class="k">Urgência</span><span class="v">${l.urgencia}</span></div>
-    <div class="lead-detail-row"><span class="k">Mensagem</span><span class="v">${l.mensagem || '—'}</span></div>
-    <div class="lead-detail-row"><span class="k">Origem</span><span class="v">${ORIGIN_LABELS[l.origem]||l.origem}</span></div>
+    <div class="lead-detail-row"><span class="k">O que precisa</span><span class="v">${esc(l.tipoSolicitacao)}</span></div>
+    <div class="lead-detail-row"><span class="k">Documentação</span><span class="v">${esc(l.documentacao)}</span></div>
+    <div class="lead-detail-row"><span class="k">Urgência</span><span class="v">${esc(l.urgencia)}</span></div>
+    <div class="lead-detail-row"><span class="k">Mensagem</span><span class="v">${esc(l.mensagem) || '—'}</span></div>
+    <div class="lead-detail-row"><span class="k">Origem</span><span class="v">${esc(ORIGIN_LABELS[l.origem]||l.origem)}</span></div>
 
     <div class="lead-section-title">Histórico</div>
-    <ul class="timeline" style="margin-top:8px;">${l.historico.map(h=>`<li><span class="date">${h.data}</span>${h.texto}</li>`).join('')}</ul>
+    <ul class="timeline" style="margin-top:8px;">${l.historico.map(h=>`<li><span class="date">${esc(h.data)}</span>${esc(h.texto)}</li>`).join('')}</ul>
   `;
   document.getElementById('lead-detail-modal').classList.add('open');
 }
@@ -3443,6 +3633,8 @@ async function userSignup(){
 
   if(!_sb){ msg.textContent = 'Indisponível: configure SUPABASE_URL/SUPABASE_ANON_KEY neste arquivo.'; return; }
   if(!nome){ msg.textContent = 'Informe seu nome.'; return; }
+  if(!document.getElementById('cad-aceite').checked){ msg.textContent = 'Para criar a conta, é preciso aceitar a Política de Privacidade.'; return; }
+  const aceite = { aceite_privacidade_em: new Date().toISOString(), versao_privacidade: VERSAO_PRIVACIDADE };
   if(!validEmail(email)){ msg.textContent = 'Informe um e-mail válido.'; return; }
   if(senha.length < 8){ msg.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; return; }
   if(senha !== senha2){ msg.textContent = 'As senhas não conferem.'; return; }
@@ -3456,7 +3648,7 @@ async function userSignup(){
     // para gravar o perfil agora (a política exige auth.uid() = id). Guardamos os
     // dados aqui neste navegador e completamos o perfil no primeiro login, depois
     // que a pessoa confirmar o e-mail.
-    await storeSet('perfil_pendente_' + email, { nome, whatsapp, registro, uf, profs, mods });
+    await storeSet('perfil_pendente_' + email, { nome, whatsapp, registro, uf, profs, mods, ...aceite });
     await storeSet('perfil_extra_pendente_' + email, extra);
     if(profOutra) await enviarSugestaoProfissao(profOutra, { email, nome });
     msg.style.color = 'var(--teal)';
@@ -3465,7 +3657,7 @@ async function userSignup(){
   }
 
   const { error: erroPerfil } = await _sb.from('usuarios_perfil').upsert({
-    id: data.user.id, nome, email, whatsapp, registro, uf, profs, mods, plano: 'gratuito', ...perfilExtraParaBanco(extra)
+    id: data.user.id, nome, email, whatsapp, registro, uf, profs, mods, plano: 'gratuito', ...perfilExtraParaBanco(extra), ...aceite
   });
   if(erroPerfil){ msg.textContent = 'Conta criada, mas houve um erro ao salvar o perfil: ' + erroPerfil.message; }
 
@@ -3484,6 +3676,7 @@ async function userSignup(){
 
   ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2','cad-cidade','cad-rem-min','cad-escolaridade','cad-anos-exp','cad-cnpj','cad-prof-outra'].forEach(id=>document.getElementById(id).value='');
   empresaForm.cad = null; chipsAtuacaoPerfil('cad', []); renderEmpresaBox('cad');
+  document.getElementById('cad-aceite').checked = false;
   document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected, #cad-abr .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
   msg.textContent = '';
   updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
@@ -4263,6 +4456,8 @@ async function init(){
   renderCompareBar();
   renderBell();
   iniciarCicloRadarHome();
+  // Link direto para a política (ex.: .../#privacidade em e-mails e mensagens do beta).
+  if(location.hash === '#privacidade') nav('privacidade');
   carregarEditaisSupabase();
   carregarStatusFontes();
 }
@@ -4691,8 +4886,9 @@ async function carregarEditaisSupabase(){
   if(error || !data) return;
 
   const reais = data.map(mapEditalSupabase);
-  // remove versões antigas dos mesmos editais reais e junta com os de demonstração
-  oportunidades = oportunidades.filter(o => !o.origemSupabase);
+  // remove versões antigas dos mesmos editais reais; os editais de demonstração
+  // do protótipo só continuam aparecendo se o banco ainda não tiver nenhum edital real.
+  oportunidades = oportunidades.filter(o => !o.origemSupabase && !(reais.length && IDS_EDITAIS_DEMO.has(o.id)));
   oportunidades = [...reais, ...oportunidades];
   populateSelects();
   applyFilters();
@@ -5271,6 +5467,53 @@ async function enviarLinkRedefinicaoUsuario(email, btn){
   if(btn){ btn.disabled = false; btn.textContent = '🔑 Enviar link de redefinição'; }
   if(error){ toast('Erro ao enviar: ' + error.message); return; }
   toast('Link de redefinição enviado para ' + email);
+}
+
+/* ---- Admin: feedbacks do beta ---- */
+function toggleFeedbacksAdmin(){
+  const body = document.getElementById('feedbacks-body');
+  const arrow = document.getElementById('feedbacks-arrow');
+  const abrir = body.style.display === 'none';
+  body.style.display = abrir ? 'block' : 'none';
+  arrow.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
+  if(abrir) renderFeedbacksAdmin();
+}
+async function avisarFeedbacks(){
+  if(!_sb) return;
+  const { count, error } = await _sb.from('feedbacks').select('id', { count:'exact', head:true }).eq('status','novo');
+  if(error) return;
+  const badge = document.getElementById('feedbacks-badge');
+  badge.style.display = count ? '' : 'none';
+  badge.textContent = count + ' novo(s)';
+}
+async function renderFeedbacksAdmin(){
+  const status = document.getElementById('feedbacks-status');
+  const tbody = document.getElementById('feedbacks-tbody');
+  if(!_sb){ status.textContent = 'Indisponível: configure o Supabase.'; return; }
+  status.textContent = 'Carregando...';
+  const { data, error } = await _sb.from('feedbacks').select('*').order('criado_em', {ascending:false});
+  if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
+  const TIPOS_FB = { problema:'🐞 Problema', sugestao:'💡 Sugestão', duvida:'❓ Dúvida', elogio:'👏 Elogio' };
+  status.textContent = `${(data||[]).length} feedback(s) — ${(data||[]).filter(f=>f.status==='novo').length} novo(s).`;
+  tbody.innerHTML = (data||[]).length === 0
+    ? `<tr><td colspan="6" style="text-align:center; color:var(--ink-dim); padding:18px;">Nenhum feedback recebido ainda.</td></tr>`
+    : data.map(f => `
+      <tr>
+        <td>${new Date(f.criado_em).toLocaleString('pt-BR')}</td>
+        <td>${esc(TIPOS_FB[f.tipo] || f.tipo)}</td>
+        <td style="max-width:320px; white-space:pre-line;">${esc(f.mensagem)}</td>
+        <td>${esc(f.nome || '')}${f.email ? '<br><a style="color:var(--teal);" href="mailto:' + esc(f.email) + '">' + esc(f.email) + '</a>' : ''}</td>
+        <td>${esc(f.pagina || '—')}</td>
+        <td>${f.status === 'novo'
+          ? `<button class="btn-ghost" style="font-size:12px;" onclick="marcarFeedbackLido(${f.id})">Marcar como lido</button>`
+          : '✓ Lido'}</td>
+      </tr>`).join('');
+}
+async function marcarFeedbackLido(id){
+  if(!_sb) return;
+  const { error } = await _sb.from('feedbacks').update({ status:'lido' }).eq('id', id);
+  if(error){ toast('Erro ao atualizar: ' + error.message); return; }
+  renderFeedbacksAdmin(); avisarFeedbacks();
 }
 
 /* ---- Admin: profissões sugeridas pelos profissionais ---- */
