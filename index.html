@@ -542,6 +542,61 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 .inbox-actions button{padding:7px 14px; border-radius:7px; border:none; cursor:pointer; font-weight:600; font-size:12.5px;}
 .inbox-approve{background:var(--teal); color:var(--bg);}
 .inbox-reject{background:none; border:1px solid var(--coral) !important; color:var(--coral);}
+
+/* ===== Versão mobile (só telas até 640px — o layout do computador não muda) =====
+   Mais enxuta: menos respiro, filtros em 2 colunas, ações do card em linha e,
+   na Minha Conta, indicadores e editais aderentes antes do cartão de perfil. */
+@media(max-width:640px){
+  main{padding:0 16px 80px;}
+  .page-head{padding:22px 0 16px;}
+  .page-head h2{font-size:23px;}
+  .page-head p{font-size:13px;}
+  .section-title{font-size:20px;}
+  .section-sub{font-size:13px; margin-bottom:18px;}
+
+  .hero{padding-top:18px; gap:18px;}
+  .hero h1{font-size:25px;}
+  .hero .lead{font-size:14px; margin-bottom:20px;}
+  .radar{width:170px; height:170px;}
+  .indicators{gap:10px; margin-bottom:36px;}
+  .indicators .indicator-card{min-height:0; padding:14px 16px; gap:6px;}
+  .indicator-card .num{font-size:22px;}
+  .how-it-works{margin:40px 0;}
+  .step-card{padding:16px;}
+  .cta-band{padding:22px 18px; margin:40px 0 20px;}
+
+  .filter-panel{padding:12px 14px;}
+  .filter-row{grid-template-columns:1fr 1fr; gap:10px;}
+  .filter-row[style]{display:flex; flex-wrap:wrap;}
+  .filter-field label{font-size:9.5px; margin-bottom:4px;}
+  .filter-field select{padding:8px 9px; font-size:12.5px;}
+
+  .op-card{padding:14px 15px;}
+  .op-card-top{gap:10px;}
+  .op-card-top > div:first-child{min-width:0 !important;}
+  .op-meta{font-size:10px;}
+  .tag{font-size:10.5px; padding:3px 8px;}
+  .op-right{flex-direction:row; flex-wrap:wrap; align-items:center; justify-content:flex-start; width:100%; gap:8px 12px; padding-top:10px; border-top:1px solid var(--border-soft);}
+  .score-mini-label{text-align:left;}
+  .aderencia-pct{font-size:18px;}
+
+  .detail-head{padding:18px 16px;}
+  .detail-head h3{font-size:19px;}
+  .panel{padding:16px; margin-top:14px;}
+  .qf-item{padding:10px 12px;}
+
+  .account-grid{gap:16px;}
+  .account-grid > div:last-child{order:-1;}
+  .account-stats{grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:18px;}
+  .account-stats .indicator-card{padding:12px 10px;}
+  .account-stats .indicator-card .num{font-size:20px;}
+  .account-stats .indicator-card .label{font-size:10.5px; line-height:1.3;}
+  .profile-card{padding:18px 16px;}
+  .form-card{padding:20px 16px;}
+  .lead-box{padding:16px;}
+  .center-empty{padding:48px 12px;}
+  footer.site-footer{padding:22px 16px;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
