@@ -514,6 +514,15 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 /* ===== Caixa de entrada de credenciamentos (PNCP via Supabase) ===== */
 .inbox-card{background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:12px;}
 .inbox-card h5{margin:0 0 6px; font-family:var(--font-display);}
+.inbox-card-prioritario{border-color:var(--amber); box-shadow:0 0 0 1px rgba(245,169,62,0.35), 0 0 18px rgba(245,169,62,0.12);}
+.inbox-prioridade-banner{
+  display:flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:var(--amber);
+  background:rgba(245,169,62,0.1); border:1px solid rgba(245,169,62,0.35); border-radius:8px;
+  padding:7px 11px; margin-bottom:10px;
+}
+.inbox-quick-fields{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-soft);}
+.inbox-quick-fields label{font-size:10.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.5px; font-family:var(--font-mono); display:block; margin-bottom:4px;}
+.inbox-quick-fields select{min-width:150px;}
 .inbox-meta{font-size:12px; color:var(--ink-muted); margin-bottom:8px;}
 .inbox-profs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;}
 .inbox-profs span{font-size:11px; background:rgba(47,217,196,0.12); color:var(--teal); padding:3px 8px; border-radius:12px;}
@@ -4113,6 +4122,41 @@ async function carregarEditaisSupabase(){
   renderIndicators();
 }
 
+// Prioridade máxima: índice sugerido 5 (da análise rápida feita fora do site,
+// ex. Gemini) + abrangência Nacional — perfil que vale analisar/aprovar na hora.
+function ehPrioritarioPendente(item){
+  return item.indice_sugerido === 5 && item.abrangencia === 'Nacional';
+}
+// Campos rápidos (índice sugerido + abrangência) direto no card da Caixa de
+// entrada / Diário Oficial, sem precisar abrir o modal de aprovação — assim o
+// destaque de prioridade já aparece ao preencher, antes de decidir aprovar.
+function camposRapidosPendenteHTML(item, tabela){
+  const indiceOpts = [1,2,3,4,5].map(n=>`<option value="${n}" ${item.indice_sugerido===n?'selected':''}>${n}</option>`).join('');
+  const abrOpts = ['Municipal','Estadual','Nacional'].map(v=>`<option ${item.abrangencia===v?'selected':''}>${v}</option>`).join('');
+  return `
+    <div class="inbox-quick-fields" onclick="event.stopPropagation()">
+      <div>
+        <label>Índice sugerido (sua análise)</label>
+        <select onchange="atualizarCampoPendente(${item.id}, '${tabela}', 'indice_sugerido', this.value ? Number(this.value) : null)">
+          <option value="">—</option>${indiceOpts}
+        </select>
+      </div>
+      <div>
+        <label>Abrangência</label>
+        <select onchange="atualizarCampoPendente(${item.id}, '${tabela}', 'abrangencia', this.value || null)">
+          <option value="">—</option>${abrOpts}
+        </select>
+      </div>
+    </div>`;
+}
+async function atualizarCampoPendente(id, tabela, campo, valor){
+  if(!_sb) return;
+  const { error } = await _sb.from(tabela).update({ [campo]: valor }).eq('id', id);
+  if(error){ toast('Erro ao salvar: ' + error.message); return; }
+  if(tabela === 'credenciamentos_pendentes') renderCaixaEntrada();
+  else renderDiarioOficial();
+}
+
 async function renderCaixaEntrada(){
   const lista = document.getElementById('caixa-entrada-lista');
   const status = document.getElementById('caixa-entrada-status');
@@ -4139,7 +4183,8 @@ async function renderCaixaEntrada(){
 
   const nPendentes = data.filter(i=>i.status==='pendente').length;
   const nAdiados = data.filter(i=>i.status==='mais_tarde').length;
-  status.textContent = `${nPendentes} aguardando revisão${nAdiados ? ` · ${nAdiados} adiado(s) para depois` : ''}.`;
+  const nPrioritarios = data.filter(ehPrioritarioPendente).length;
+  status.textContent = `${nPendentes} aguardando revisão${nPrioritarios ? ` · ⚡ ${nPrioritarios} de alta prioridade` : ''}${nAdiados ? ` · ${nAdiados} adiado(s) para depois` : ''}.`;
   lista.innerHTML = '';
   _dataCaixaEntrada = data;
 
@@ -4148,17 +4193,27 @@ async function renderCaixaEntrada(){
     return;
   }
 
-  data.forEach(item => {
+  // Dentro de cada grupo de status (pendente / adiado), os de alta prioridade
+  // sobem para o topo, pra chamar a atenção primeiro.
+  const pendentesArr = data.filter(i=>i.status==='pendente');
+  const adiadosArr = data.filter(i=>i.status==='mais_tarde');
+  const porPrioridade = arr => [...arr].sort((a,b)=>(ehPrioritarioPendente(b)?1:0)-(ehPrioritarioPendente(a)?1:0));
+  const dataOrdenada = [...porPrioridade(pendentesArr), ...porPrioridade(adiadosArr)];
+
+  dataOrdenada.forEach(item => {
     const adiado = item.status === 'mais_tarde';
+    const prioritario = ehPrioritarioPendente(item);
     const card = document.createElement('details');
-    card.className = 'inbox-card';
+    card.className = 'inbox-card' + (prioritario ? ' inbox-card-prioritario' : '');
     if(adiado) card.style.opacity = '0.75';
     card.innerHTML = `
       <summary style="cursor:pointer; list-style:none;">
+        ${prioritario ? '<div class="inbox-prioridade-banner">⚡ Alta prioridade — Índice 5 e abrangência Nacional: analise e aprove assim que possível</div>' : ''}
         <h5 style="display:inline; margin:0;">${esc(item.orgao || 'Órgão não identificado')} — ${esc(item.uf || '')}</h5>
         ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
         <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao || '—'}${item.data_encerramento_proposta ? ` · Prazo: ${formatarDataBR(item.data_encerramento_proposta)}` : ''} · Fonte: ${esc(item.fonte)}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
+        ${camposRapidosPendenteHTML(item, 'credenciamentos_pendentes')}
       </summary>
       <div style="margin-top:10px;">
         <p style="font-size:13px; color:var(--ink-muted); margin:0 0 8px;">${esc(item.resumo || item.objeto || '')}</p>
@@ -4254,7 +4309,8 @@ async function renderDiarioOficial(){
 
   const nPendentes = data.filter(i=>i.status==='pendente').length;
   const nAdiados = data.filter(i=>i.status==='mais_tarde').length;
-  status.textContent = `${nPendentes} achado(s) aguardando revisão${nAdiados ? ` · ${nAdiados} adiado(s) para depois` : ''}.`;
+  const nPrioritarios = data.filter(ehPrioritarioPendente).length;
+  status.textContent = `${nPendentes} achado(s) aguardando revisão${nPrioritarios ? ` · ⚡ ${nPrioritarios} de alta prioridade` : ''}${nAdiados ? ` · ${nAdiados} adiado(s) para depois` : ''}.`;
   lista.innerHTML = '';
   _dataDiarioOficial = data;
 
@@ -4263,18 +4319,26 @@ async function renderDiarioOficial(){
     return;
   }
 
-  data.forEach(item => {
+  const pendentesArr = data.filter(i=>i.status==='pendente');
+  const adiadosArr = data.filter(i=>i.status==='mais_tarde');
+  const porPrioridade = arr => [...arr].sort((a,b)=>(ehPrioritarioPendente(b)?1:0)-(ehPrioritarioPendente(a)?1:0));
+  const dataOrdenada = [...porPrioridade(pendentesArr), ...porPrioridade(adiadosArr)];
+
+  dataOrdenada.forEach(item => {
     const adiado = item.status === 'mais_tarde';
+    const prioritario = ehPrioritarioPendente(item);
     const card = document.createElement('details');
-    card.className = 'inbox-card';
+    card.className = 'inbox-card' + (prioritario ? ' inbox-card-prioritario' : '');
     if(adiado) card.style.opacity = '0.75';
     const buscaOrgaoUrl = item.municipio ? `https://pncp.gov.br/app/editais?q=${encodeURIComponent(item.municipio)}` : null;
     card.innerHTML = `
       <summary style="cursor:pointer; list-style:none;">
+        ${prioritario ? '<div class="inbox-prioridade-banner">⚡ Alta prioridade — Índice 5 e abrangência Nacional: analise e aprove assim que possível</div>' : ''}
         <h5 style="display:inline; margin:0;">${esc(item.municipio || 'Município não identificado')} — ${esc(item.uf || '')}</h5>
         ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
         <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao || '—'}${item.edicao ? ' · Edição ' + esc(item.edicao) : ''} · Termo: ${esc(item.termo_busca || '')}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
+        ${camposRapidosPendenteHTML(item, 'diario_oficial_pendentes')}
       </summary>
       <div style="margin-top:10px;">
         <p style="font-size:13px; color:var(--ink-muted); margin:0 0 8px;">${esc(item.excerto || '')}</p>
@@ -4472,9 +4536,11 @@ function abrirAprovarModal(id, tipo){
   document.getElementById('aprovar-url-pncp').value = (tipo === 'diario' ? '' : (item.link_pncp || ''));
   document.getElementById('aprovar-url-inscricao').value = (tipo === 'diario' ? '' : (item.link_inscricao || ''));
 
-  // Índice começa sempre em branco — a Transformare só avalia quando o
-  // analista decide preencher. A sugestão fica disponível como apoio.
-  document.getElementById('aprovar-indice').value = '';
+  // Índice começa em branco por padrão — só preenche sozinho quando já existe
+  // um índice sugerido digitado direto no card da Caixa de entrada/Diário
+  // Oficial (ver camposRapidosPendenteHTML), pra não repetir o que a pessoa já
+  // informou ali. Continua possível apagar e deixar sem avaliação.
+  document.getElementById('aprovar-indice').value = item.indice_sugerido || '';
   atualizarSugestaoIndice();
 
   const chipsBox = document.getElementById('motivo-aprovacao-chips');
