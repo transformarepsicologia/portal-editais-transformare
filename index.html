@@ -1491,7 +1491,9 @@ const TIPOS = ["Credenciamento","Edital","Chamamento Público","Pregão","Contra
 const MODALIDADES = ["Presencial","Online","Híbrido"];
 const ABRANGENCIAS = ["Nacional","Estadual","Municipal"];
 // "Para quem é" — que tipo de contratado o edital aceita (coluna aceita_contratacao no Supabase).
-const PUBLICOS = ["Pessoa Física (PF)","Pessoa Jurídica (PJ)","MEI","Clínicas e consultórios","Hospitais","Laboratórios","Cooperativas","Entidades sem fins lucrativos"];
+// PF/PJ = o profissional se credencia sozinho (como pessoa física ou com CNPJ próprio);
+// Clínica = o edital exige equipe multidisciplinar, então só uma clínica consegue atender.
+const PUBLICOS = ["Pessoa Física (PF)","Pessoa Jurídica (PJ)","Clínica (equipe multidisciplinar)"];
 function publicoTexto(o){ return (o.aceitaContratacao && o.aceitaContratacao.length) ? o.aceitaContratacao.join(', ') : 'Não informado'; }
 const SITUACOES = ["Aberto","Próximo do encerramento","Em análise","Retificado","Suspenso","Encerrado"];
 const UFS = [
@@ -1529,7 +1531,7 @@ let oportunidades = [
    movimentacoes:[{data:"05/08/2026", texto:"Publicação do edital de credenciamento."},{data:"18/08/2026", texto:"Prorrogação do prazo de inscrição em 15 dias."}]},
 
   {id:2, edital:"Chamamento Público nº 007/2026", orgao:"Governo do Estado de Minas Gerais — SES/MG", uf:"MG", tipo:"Chamamento Público",
-   profissoes:["Nutrição"], aceitaContratacao:["Pessoa Física (PF)","MEI"], modalidade:"Online", abrangencia:"Estadual", situacao:"Aberto",
+   profissoes:["Nutrição"], aceitaContratacao:["Pessoa Física (PF)"], modalidade:"Online", abrangencia:"Estadual", situacao:"Aberto",
    objeto:"Credenciamento de nutricionistas para teleatendimento no programa estadual de atenção primária.",
    prazo:"30/09/2026", publicacao:"22/07/2026",
    indice:4, indiceLabel:"Alta oportunidade",
@@ -1545,7 +1547,7 @@ let oportunidades = [
    movimentacoes:[{data:"22/07/2026", texto:"Abertura do chamamento público."}]},
 
   {id:3, edital:"Edital nº 031/2026", orgao:"Prefeitura de Curitiba — SMS", uf:"PR", tipo:"Edital",
-   profissoes:["Fonoaudiologia"], aceitaContratacao:["Clínicas e consultórios"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Em análise",
+   profissoes:["Fonoaudiologia"], aceitaContratacao:["Pessoa Jurídica (PJ)"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Em análise",
    objeto:"Credenciamento de fonoaudiólogos para atendimento em CAPS e unidades básicas de saúde.",
    prazo:"05/09/2026", publicacao:"10/07/2026",
    indice:3, indiceLabel:"Média oportunidade",
@@ -1561,7 +1563,7 @@ let oportunidades = [
    movimentacoes:[{data:"10/07/2026", texto:"Publicação do edital."},{data:"02/08/2026", texto:"Fase de análise documental dos inscritos em andamento."}]},
 
   {id:4, edital:"Credenciamento nº 002/2026", orgao:"Secretaria de Saúde do Distrito Federal", uf:"DF", tipo:"Credenciamento",
-   profissoes:["Medicina"], aceitaContratacao:["Pessoa Jurídica (PJ)","Clínicas e consultórios"], modalidade:"Online", abrangencia:"Estadual", situacao:"Aberto",
+   profissoes:["Medicina"], aceitaContratacao:["Pessoa Jurídica (PJ)"], modalidade:"Online", abrangencia:"Estadual", situacao:"Aberto",
    objeto:"Credenciamento de médicos generalistas para teleconsulta em unidades remotas do DF.",
    prazo:"20/09/2026", publicacao:"14/08/2026",
    indice:4, indiceLabel:"Alta oportunidade",
@@ -1593,7 +1595,7 @@ let oportunidades = [
    movimentacoes:[{data:"15/06/2026", texto:"Publicação do edital."},{data:"01/08/2026", texto:"Encerramento do prazo de inscrições — resultado em análise."}]},
 
   {id:6, edital:"Chamamento nº 011/2026", orgao:"Governo do Estado do Rio Grande do Sul — SES/RS", uf:"RS", tipo:"Chamamento Público",
-   profissoes:["Farmácia"], aceitaContratacao:["Pessoa Jurídica (PJ)","Laboratórios"], modalidade:"Presencial", abrangencia:"Estadual", situacao:"Retificado",
+   profissoes:["Farmácia"], aceitaContratacao:["Pessoa Jurídica (PJ)"], modalidade:"Presencial", abrangencia:"Estadual", situacao:"Retificado",
    objeto:"Credenciamento de farmacêuticos para atuação em farmácias-satélite hospitalares.",
    prazo:"25/09/2026", publicacao:"20/08/2026",
    indice:3, indiceLabel:"Média oportunidade",
@@ -1609,7 +1611,7 @@ let oportunidades = [
    movimentacoes:[{data:"20/08/2026", texto:"Publicação do chamamento público."},{data:"23/08/2026", texto:"Retificação nos requisitos de habilitação."}]},
 
   {id:7, edital:"Edital nº 026/2026", orgao:"Secretaria Municipal de Saúde de Fortaleza", uf:"CE", tipo:"Edital",
-   profissoes:["Psicologia","Nutrição"], aceitaContratacao:["Clínicas e consultórios","Entidades sem fins lucrativos"], modalidade:"Online", abrangencia:"Municipal", situacao:"Aberto",
+   profissoes:["Psicologia","Nutrição"], aceitaContratacao:["Clínica (equipe multidisciplinar)"], modalidade:"Online", abrangencia:"Municipal", situacao:"Aberto",
    objeto:"Credenciamento de psicólogos e nutricionistas para teleatendimento no NASF digital.",
    prazo:"18/09/2026", publicacao:"09/08/2026",
    indice:5, indiceLabel:"Alta oportunidade",
@@ -1625,7 +1627,7 @@ let oportunidades = [
    movimentacoes:[{data:"09/08/2026", texto:"Publicação do edital."},{data:"19/08/2026", texto:"Alteração no valor de referência por sessão."}]},
 
   {id:8, edital:"Edital nº 041/2026", orgao:"Prefeitura de Belo Horizonte — SMSA", uf:"MG", tipo:"Edital",
-   profissoes:["Fonoaudiologia","Enfermagem"], aceitaContratacao:["Pessoa Jurídica (PJ)","Cooperativas"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Suspenso",
+   profissoes:["Fonoaudiologia","Enfermagem"], aceitaContratacao:["Pessoa Física (PF)","Pessoa Jurídica (PJ)"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Suspenso",
    objeto:"Credenciamento de fonoaudiólogos e enfermeiros para equipes volantes de visita domiciliar.",
    prazo:"10/09/2026", publicacao:"28/07/2026",
    indice:2, indiceLabel:"Baixa oportunidade",
