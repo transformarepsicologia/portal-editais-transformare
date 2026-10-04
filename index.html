@@ -456,8 +456,8 @@ input:disabled{opacity:.6; cursor:not-allowed;}
 .wa-btn:hover{border-color:#25D366; color:#25D366;}
 
 /* ===== Admin form ===== */
-.admin-form-panel{background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:22px 24px; margin-bottom:22px; display:none;}
-.admin-form-panel.open{display:block;}
+.admin-form-panel{background:transparent; padding:0;}
+#admin-form-modalbox{max-height:90vh; overflow-y:auto;}
 .af-item-list{list-style:none; margin:0 0 4px; padding:0; display:flex; flex-direction:column; gap:6px;}
 .af-item-row{display:flex; justify-content:space-between; align-items:center; gap:10px; background:var(--bg-elevated); border:1px solid var(--border-soft); border-radius:7px; padding:8px 12px; font-size:13px;}
 .af-item-row span{flex:1;}
@@ -1007,93 +1007,6 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </div>
 
   <div id="oportunidades-cadastradas-body" style="display:none;">
-  <div class="admin-form-panel" id="admin-form-panel">
-    <div class="section-title" style="font-size:16px;" id="admin-form-title">Nova oportunidade</div>
-
-    <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
-      <label>Colar análise da IA (Gemini) — preenche Índice, Pontos de destaque, Pontos de atenção, Requisitos e Documentação automaticamente</label>
-      <textarea id="af-analise-ia" rows="4" placeholder="Cole aqui o resultado completo da análise (as 5 seções: Índice Transformare, Pontos de destaque, Ponto de atenção, Requisitos, Documentação necessária)..."></textarea>
-      <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="preencherComAnaliseIA()">⇩ Preencher campos com a análise</button>
-      <div id="af-analise-ia-status" style="font-size:11.5px; color:var(--ink-dim); margin-top:6px;"></div>
-    </div>
-
-    <div class="two-col">
-      <div class="form-row"><label>Edital</label><input type="text" id="af-edital" placeholder="Ex: Edital nº 050/2026"></div>
-      <div class="form-row"><label>Órgão</label><input type="text" id="af-orgao" placeholder="Ex: Secretaria Municipal de Saúde de..."></div>
-    </div>
-    <div class="form-row"><label>Objeto</label><input type="text" id="af-objeto" placeholder="Descreva a oportunidade"></div>
-    <div class="two-col">
-      <div class="form-row"><label>UF</label><select id="af-uf"></select></div>
-      <div class="form-row"><label>Cidade</label><input type="text" id="af-cidade" placeholder="Ex: Porto Alegre"></div>
-    </div>
-    <div class="two-col">
-      <div class="form-row"><label>Tipo</label><select id="af-tipo"></select></div>
-      <div class="form-row"><label>Modalidade</label><select id="af-mod"><option>Presencial</option><option>Online</option><option>Híbrido</option></select></div>
-    </div>
-    <div class="two-col">
-      <div class="form-row"><label>Abrangência</label><select id="af-abr"><option>Municipal</option><option>Estadual</option><option>Nacional</option></select></div>
-      <div class="form-row"><label>Situação</label><select id="af-sit"><option>Aberto</option><option>Próximo do encerramento</option><option>Em análise</option><option>Retificado</option><option>Suspenso</option><option>Encerrado</option></select></div>
-    </div>
-    <div class="form-row"><label>Índice Transformare (1–5)</label><select id="af-indice"><option value="" selected>— Ainda não avaliado —</option><option value="1">1 — Baixa</option><option value="2">2 — Baixa</option><option value="3">3 — Média</option><option value="4">4 — Alta</option><option value="5">5 — Alta</option></select></div>
-    <div class="two-col">
-      <div class="form-row"><label>Prazo</label><input type="text" id="af-prazo" placeholder="dd/mm/aaaa"></div>
-      <div class="form-row"><label>Publicação</label><input type="text" id="af-publicacao" placeholder="dd/mm/aaaa"></div>
-    </div>
-    <div class="form-row"><label>Profissões contempladas</label><div class="chip-select" id="af-profs"></div></div>
-
-    <div class="lead-section-title" style="margin-top:20px;">Informações financeiras</div>
-    <div class="two-col">
-      <div class="form-row"><label>Valor por atendimento</label><input type="text" id="af-valor-atendimento" placeholder="Ex: R$ 180,00 por atendimento"></div>
-      <div class="form-row"><label>Volume estimado</label><input type="text" id="af-volume" placeholder="Ex: Até 40 atendimentos/mês"></div>
-    </div>
-
-    <div class="lead-section-title" style="margin-top:20px;">Remuneração — outras faixas/valores</div>
-    <p class="section-sub" style="margin:-4px 0 10px;">Use quando o edital tiver mais de um valor (ex: um valor por sessão e outro por avaliação psicológica). Aparecem juntos na página do edital.</p>
-    <div class="af-subfield-row">
-      <div></div>
-      <input type="text" id="af-remuneracao-input" placeholder="Ex: R$ 180,00 por avaliação psicológica">
-      <button type="button" class="btn-ghost" onclick="addAfRemuneracao()">+ Adicionar</button>
-    </div>
-    <ul class="af-item-list" id="af-remuneracao-list"></ul>
-
-    <div class="lead-section-title" style="margin-top:20px;">Requisitos</div>
-    <div class="form-row"><textarea id="af-requisitos" placeholder="Ex: Registro ativo no CRP, disponibilidade mínima de 20h semanais..."></textarea></div>
-
-    <div class="lead-section-title" style="margin-top:20px;">Avaliação Transformare</div>
-    <div class="form-row"><label>Pontos de destaque</label><textarea id="af-pontos-positivos" placeholder="Ex: Boa remuneração por atendimento."></textarea></div>
-    <div class="form-row"><label>Pontos de atenção</label><textarea id="af-pontos-atencao" placeholder="Ex: Prazo curto para inscrição."></textarea></div>
-
-    <div class="lead-section-title" style="margin-top:20px;">Documentação necessária</div>
-    <div class="af-subfield-row">
-      <div></div>
-      <input type="text" id="af-doc-input" placeholder="Nome do documento (ex: Registro profissional)">
-      <button type="button" class="btn-ghost" onclick="addAfDocumento()">+ Adicionar</button>
-    </div>
-    <ul class="af-item-list" id="af-doc-list"></ul>
-
-    <div class="lead-section-title" style="margin-top:20px;">Histórico de movimentações</div>
-    <div class="af-subfield-row">
-      <input type="text" id="af-mov-data" placeholder="dd/mm/aaaa">
-      <input type="text" id="af-mov-texto" placeholder="Descrição do evento">
-      <button type="button" class="btn-ghost" onclick="addAfMovimentacao()">+ Adicionar</button>
-    </div>
-    <ul class="af-item-list" id="af-mov-list"></ul>
-
-    <div class="lead-section-title" style="margin-top:20px;">Links oficiais</div>
-    <div class="two-col">
-      <div class="form-row"><label>URL oficial (site do órgão)</label><input type="text" id="af-url-oficial" placeholder="https://..."></div>
-      <div class="form-row"><label>URL do edital</label><input type="text" id="af-url-edital" placeholder="https://..."></div>
-    </div>
-    <div class="two-col">
-      <div class="form-row"><label>URL no PNCP</label><input type="text" id="af-url-pncp" placeholder="https://..."></div>
-      <div class="form-row"><label>URL de inscrição (opcional)</label><input type="text" id="af-url-inscricao" placeholder="Deixe em branco se não houver"></div>
-    </div>
-    <div class="form-actions">
-      <button class="btn-primary" onclick="saveAdminForm()">Salvar oportunidade</button>
-      <button class="btn-ghost" onclick="closeAdminForm()">Cancelar</button>
-    </div>
-    <p style="font-size:11px; color:var(--ink-dim); margin-top:12px;">Cadastro salvo neste navegador (localStorage) — protótipo de homologação, não é um banco de dados de produção.</p>
-  </div>
 
   <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
     <input type="text" id="admin-filtro-busca" placeholder="Buscar por edital, órgão ou objeto..." style="flex:1; min-width:200px;" oninput="adminFiltroMudou()">
@@ -1173,6 +1086,100 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   TRANSFORMARE — PORTAL DE EDITAIS · PROTÓTIPO · DADOS DEMONSTRATIVOS
   <div style="margin-top:14px;"><a href="#" onclick="event.preventDefault(); nav('admin');" style="display:inline-flex; align-items:center; gap:6px; color:var(--ink-muted); font-size:11.5px; letter-spacing:.3px; text-decoration:none; border:1px solid var(--border); border-radius:20px; padding:7px 14px;" onmouseover="this.style.borderColor='var(--teal)'; this.style.color='var(--teal)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--ink-muted)';">🔐 Acesso administrativo (demonstração)</a></div>
 </footer>
+
+<!-- ===================== MODAL: formulário de oportunidade (admin) — editar/criar direto de qualquer página ===================== -->
+<div class="modal-overlay" id="admin-form-modal">
+  <div class="modal-box" id="admin-form-modalbox" style="max-width:760px;">
+    <button class="modal-close" onclick="closeAdminForm()">×</button>
+    <div class="admin-form-panel" id="admin-form-panel">
+      <div class="section-title" style="font-size:16px;" id="admin-form-title">Nova oportunidade</div>
+
+      <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
+        <label>Colar análise da IA (Gemini) — preenche Índice, Pontos de destaque, Pontos de atenção, Requisitos e Documentação automaticamente</label>
+        <textarea id="af-analise-ia" rows="4" placeholder="Cole aqui o resultado completo da análise (as 5 seções: Índice Transformare, Pontos de destaque, Ponto de atenção, Requisitos, Documentação necessária)..."></textarea>
+        <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="preencherComAnaliseIA()">⇩ Preencher campos com a análise</button>
+        <div id="af-analise-ia-status" style="font-size:11.5px; color:var(--ink-dim); margin-top:6px;"></div>
+      </div>
+
+      <div class="two-col">
+        <div class="form-row"><label>Edital</label><input type="text" id="af-edital" placeholder="Ex: Edital nº 050/2026"></div>
+        <div class="form-row"><label>Órgão</label><input type="text" id="af-orgao" placeholder="Ex: Secretaria Municipal de Saúde de..."></div>
+      </div>
+      <div class="form-row"><label>Objeto</label><input type="text" id="af-objeto" placeholder="Descreva a oportunidade"></div>
+      <div class="two-col">
+        <div class="form-row"><label>UF</label><select id="af-uf"></select></div>
+        <div class="form-row"><label>Cidade</label><input type="text" id="af-cidade" placeholder="Ex: Porto Alegre"></div>
+      </div>
+      <div class="two-col">
+        <div class="form-row"><label>Tipo</label><select id="af-tipo"></select></div>
+        <div class="form-row"><label>Modalidade</label><select id="af-mod"><option>Presencial</option><option>Online</option><option>Híbrido</option></select></div>
+      </div>
+      <div class="two-col">
+        <div class="form-row"><label>Abrangência</label><select id="af-abr"><option>Municipal</option><option>Estadual</option><option>Nacional</option></select></div>
+        <div class="form-row"><label>Situação</label><select id="af-sit"><option>Aberto</option><option>Próximo do encerramento</option><option>Em análise</option><option>Retificado</option><option>Suspenso</option><option>Encerrado</option></select></div>
+      </div>
+      <div class="form-row"><label>Índice Transformare (1–5)</label><select id="af-indice"><option value="" selected>— Ainda não avaliado —</option><option value="1">1 — Baixa</option><option value="2">2 — Baixa</option><option value="3">3 — Média</option><option value="4">4 — Alta</option><option value="5">5 — Alta</option></select></div>
+      <div class="two-col">
+        <div class="form-row"><label>Prazo</label><input type="text" id="af-prazo" placeholder="dd/mm/aaaa"></div>
+        <div class="form-row"><label>Publicação</label><input type="text" id="af-publicacao" placeholder="dd/mm/aaaa"></div>
+      </div>
+      <div class="form-row"><label>Profissões contempladas</label><div class="chip-select" id="af-profs"></div></div>
+
+      <div class="lead-section-title" style="margin-top:20px;">Informações financeiras</div>
+      <div class="two-col">
+        <div class="form-row"><label>Valor por atendimento</label><input type="text" id="af-valor-atendimento" placeholder="Ex: R$ 180,00 por atendimento"></div>
+        <div class="form-row"><label>Volume estimado</label><input type="text" id="af-volume" placeholder="Ex: Até 40 atendimentos/mês"></div>
+      </div>
+
+      <div class="lead-section-title" style="margin-top:20px;">Remuneração — outras faixas/valores</div>
+      <p class="section-sub" style="margin:-4px 0 10px;">Use quando o edital tiver mais de um valor (ex: um valor por sessão e outro por avaliação psicológica). Aparecem juntos na página do edital.</p>
+      <div class="af-subfield-row">
+        <div></div>
+        <input type="text" id="af-remuneracao-input" placeholder="Ex: R$ 180,00 por avaliação psicológica">
+        <button type="button" class="btn-ghost" onclick="addAfRemuneracao()">+ Adicionar</button>
+      </div>
+      <ul class="af-item-list" id="af-remuneracao-list"></ul>
+
+      <div class="lead-section-title" style="margin-top:20px;">Requisitos</div>
+      <div class="form-row"><textarea id="af-requisitos" placeholder="Ex: Registro ativo no CRP, disponibilidade mínima de 20h semanais..."></textarea></div>
+
+      <div class="lead-section-title" style="margin-top:20px;">Avaliação Transformare</div>
+      <div class="form-row"><label>Pontos de destaque</label><textarea id="af-pontos-positivos" placeholder="Ex: Boa remuneração por atendimento."></textarea></div>
+      <div class="form-row"><label>Pontos de atenção</label><textarea id="af-pontos-atencao" placeholder="Ex: Prazo curto para inscrição."></textarea></div>
+
+      <div class="lead-section-title" style="margin-top:20px;">Documentação necessária</div>
+      <div class="af-subfield-row">
+        <div></div>
+        <input type="text" id="af-doc-input" placeholder="Nome do documento (ex: Registro profissional)">
+        <button type="button" class="btn-ghost" onclick="addAfDocumento()">+ Adicionar</button>
+      </div>
+      <ul class="af-item-list" id="af-doc-list"></ul>
+
+      <div class="lead-section-title" style="margin-top:20px;">Histórico de movimentações</div>
+      <div class="af-subfield-row">
+        <input type="text" id="af-mov-data" placeholder="dd/mm/aaaa">
+        <input type="text" id="af-mov-texto" placeholder="Descrição do evento">
+        <button type="button" class="btn-ghost" onclick="addAfMovimentacao()">+ Adicionar</button>
+      </div>
+      <ul class="af-item-list" id="af-mov-list"></ul>
+
+      <div class="lead-section-title" style="margin-top:20px;">Links oficiais</div>
+      <div class="two-col">
+        <div class="form-row"><label>URL oficial (site do órgão)</label><input type="text" id="af-url-oficial" placeholder="https://..."></div>
+        <div class="form-row"><label>URL do edital</label><input type="text" id="af-url-edital" placeholder="https://..."></div>
+      </div>
+      <div class="two-col">
+        <div class="form-row"><label>URL no PNCP</label><input type="text" id="af-url-pncp" placeholder="https://..."></div>
+        <div class="form-row"><label>URL de inscrição (opcional)</label><input type="text" id="af-url-inscricao" placeholder="Deixe em branco se não houver"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="saveAdminForm()">Salvar oportunidade</button>
+        <button class="btn-ghost" onclick="closeAdminForm()">Cancelar</button>
+      </div>
+      <p style="font-size:11px; color:var(--ink-dim); margin-top:12px;">Cadastro salvo neste navegador (localStorage) — protótipo de homologação, não é um banco de dados de produção.</p>
+    </div>
+  </div>
+</div>
 
 <!-- ===================== MODAL: rejeitar achado (admin) ===================== -->
 <div class="modal-overlay" id="motivo-rejeicao-modal">
@@ -3598,15 +3605,15 @@ function refreshAfProfChips(extraNomes){
   });
 }
 // Atalho pro admin editar um edital direto da página de detalhe (menu
-// Editais), sem precisar ir até o Painel administrativo e procurar a
-// linha certa na tabela.
+// Editais), sem sair de onde está — o formulário abre como uma janela por
+// cima da própria página, não leva pro Painel administrativo.
 function editarDoDetalhe(id){
-  nav('admin');
   openAdminForm(id);
 }
 function openAdminForm(id){
   editingId = id;
-  document.getElementById('admin-form-panel').classList.add('open');
+  document.getElementById('admin-form-modal').classList.add('open');
+  document.getElementById('admin-form-modalbox').scrollTop = 0;
   document.getElementById('admin-form-title').textContent = id ? 'Editar oportunidade' : 'Nova oportunidade';
   document.getElementById('af-doc-input').value = '';
   document.getElementById('af-mov-data').value = '';
@@ -3657,11 +3664,10 @@ function openAdminForm(id){
   renderAfDocList();
   renderAfMovList();
   renderAfRemuneracaoList();
-  document.getElementById('admin-form-panel').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 function closeAdminForm(){
   editingId = null;
-  document.getElementById('admin-form-panel').classList.remove('open');
+  document.getElementById('admin-form-modal').classList.remove('open');
 }
 function _dataBRParaISO(valor){
   const m = (valor || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -3715,6 +3721,7 @@ async function saveAdminForm(){
   };
 
   const ehEditalReal = editingId && editingId >= 900000;
+  let idSalvo = editingId;
 
   if(editingId){
     const idx = oportunidades.findIndex(o=>o.id===editingId);
@@ -3722,6 +3729,7 @@ async function saveAdminForm(){
   } else {
     const newId = Math.max(0,...oportunidades.map(o=>o.id)) + 1;
     oportunidades.push({ id:newId, ...data });
+    idSalvo = newId;
   }
   storeSet('oportunidades', oportunidades);
 
@@ -3767,6 +3775,10 @@ async function saveAdminForm(){
   renderAdmin();
   applyFilters();
   renderIndicators();
+  // Se a edição foi feita direto da página de detalhe do próprio edital
+  // (botão "✎ Editar (admin)"), atualiza o que está na tela na hora, sem
+  // precisar sair e voltar pra ver a mudança.
+  if(document.getElementById('view-detalhe').classList.contains('active') && currentDetailId === idSalvo) openDetalhe(idSalvo);
 }
 
 /* ================= INIT ================= */
