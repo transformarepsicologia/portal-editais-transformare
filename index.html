@@ -662,11 +662,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="filter-row">
       <div class="filter-field"><label>Profissão</label><select id="f-prof"><option value="">Todas</option></select></div>
       <div class="filter-field"><label>Tipo</label><select id="f-tipo"><option value="">Todos</option></select></div>
-      <div class="filter-field"><label>Modalidade</label><select id="f-mod"><option value="">Todas</option><option>Presencial</option><option>Online</option><option>Híbrido</option></select></div>
-      <div class="filter-field"><label>Abrangência</label><select id="f-abr"><option value="">Todas</option><option>Nacional</option><option>Estadual</option><option>Municipal</option></select></div>
+      <div class="filter-field"><label>Modalidade</label><select id="f-mod"><option value="">Todas</option></select></div>
+      <div class="filter-field"><label>Abrangência</label><select id="f-abr"><option value="">Todas</option></select></div>
       <div class="filter-field"><label>UF</label><select id="f-uf"><option value="">Todas</option></select></div>
       <div class="filter-field"><label>Órgão</label><select id="f-org"><option value="">Todos</option></select></div>
-      <div class="filter-field"><label>Situação</label><select id="f-sit"><option value="">Todas</option><option>Aberto</option><option>Próximo do encerramento</option><option>Em análise</option><option>Retificado</option><option>Suspenso</option><option>Encerrado</option></select></div>
+      <div class="filter-field"><label>Situação</label><select id="f-sit"><option value="">Todas</option></select></div>
       <div class="filter-field"><label>Ordenar por</label><select id="f-sort"><option value="">Padrão</option><option value="prazo">Prazo mais próximo</option><option value="indice">Maior Índice Transformare</option><option value="recentes">Publicação mais recente</option></select></div>
     </div>
     <div class="filter-row" style="margin-top:10px; align-items:center;">
@@ -1422,6 +1422,9 @@ function iniciarCicloRadarHome(){
 }
 
 const TIPOS = ["Credenciamento","Edital","Chamamento Público","Pregão","Contratação","Convênio","Processo seletivo"];
+const MODALIDADES = ["Presencial","Online","Híbrido"];
+const ABRANGENCIAS = ["Nacional","Estadual","Municipal"];
+const SITUACOES = ["Aberto","Próximo do encerramento","Em análise","Retificado","Suspenso","Encerrado"];
 const UFS = [
   {sigla:"AC",nome:"Acre"},{sigla:"AL",nome:"Alagoas"},{sigla:"AP",nome:"Amapá"},{sigla:"AM",nome:"Amazonas"},
   {sigla:"BA",nome:"Bahia"},{sigla:"CE",nome:"Ceará"},{sigla:"DF",nome:"Distrito Federal"},{sigla:"ES",nome:"Espírito Santo"},
@@ -2073,10 +2076,37 @@ function renderMinhaConta(){
 }
 
 /* ================= FILTROS EDITAIS ================= */
+// Os seletores da busca de Editais só mostram as opções que existem de fato
+// nas oportunidades carregadas (ex.: só os estados que têm algum edital) — em
+// vez da lista fixa inteira, que deixava escolher um filtro sem nenhum
+// resultado (como UF=AP sem editais no Amapá).
+function valoresPresentesEmOportunidades(getter){
+  const presentes = new Set();
+  oportunidades.forEach(o=>{
+    const v = getter(o);
+    if(Array.isArray(v)) v.forEach(x=>{ if(x) presentes.add(x); });
+    else if(v) presentes.add(v);
+  });
+  return presentes;
+}
+// Mantém a ordem "canônica" (a mesma de sempre) para quem está presente, e
+// acrescenta no fim, em ordem alfabética, qualquer valor fora dela (ex. uma
+// profissão desativada que ainda aparece em algum edital já cadastrado).
+function ordenarComPresentes(ordemCanonica, presentes){
+  const ordenado = ordemCanonica.filter(v=>presentes.has(v));
+  const extras = [...presentes].filter(v=>!ordemCanonica.includes(v)).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  return [...ordenado, ...extras];
+}
+function reconstruirOpcoesSelect(select, opcoes){
+  const atual = select.value;
+  select.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
+  opcoes.forEach(v=>select.insertAdjacentHTML('beforeend', `<option>${esc(v)}</option>`));
+  if(opcoes.includes(atual)) select.value = atual;
+}
 function refreshProfFilterSelect(){
   const fp = document.getElementById('f-prof');
-  fp.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
-  profissoesAtivasNomes().forEach(p=>fp.insertAdjacentHTML('beforeend',`<option>${p}</option>`));
+  const opcoes = ordenarComPresentes(profissoesAtivasNomes(), valoresPresentesEmOportunidades(o=>o.profissoes));
+  reconstruirOpcoesSelect(fp, opcoes);
 }
 function refreshCadProfChips(){
   const box = document.getElementById('cad-prof');
@@ -2089,14 +2119,29 @@ function refreshCadProfChips(){
 }
 function populateSelects(){
   refreshProfFilterSelect();
+
   const ft = document.getElementById('f-tipo');
-  ft.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
-  TIPOS.forEach(t=>ft.insertAdjacentHTML('beforeend',`<option>${t}</option>`));
+  reconstruirOpcoesSelect(ft, ordenarComPresentes(TIPOS, valoresPresentesEmOportunidades(o=>o.tipo)));
+
+  const fm = document.getElementById('f-mod');
+  reconstruirOpcoesSelect(fm, ordenarComPresentes(MODALIDADES, valoresPresentesEmOportunidades(o=>o.modalidade)));
+
+  const fa = document.getElementById('f-abr');
+  reconstruirOpcoesSelect(fa, ordenarComPresentes(ABRANGENCIAS, valoresPresentesEmOportunidades(o=>o.abrangencia)));
+
+  const fs = document.getElementById('f-sit');
+  reconstruirOpcoesSelect(fs, ordenarComPresentes(SITUACOES, valoresPresentesEmOportunidades(o=>o.situacao)));
 
   const fu = document.getElementById('f-uf');
+  const ufAtual = fu.value;
   fu.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
-  fu.insertAdjacentHTML('beforeend', ufOptionsHTML());
+  const ufsPresentes = valoresPresentesEmOportunidades(o=>o.uf);
+  const ufsOrdenadas = UFS.filter(u=>ufsPresentes.has(u.sigla));
+  fu.insertAdjacentHTML('beforeend', ufsOrdenadas.map(u=>`<option value="${u.sigla}">${u.sigla} — ${u.nome}</option>`).join(''));
+  if(ufsPresentes.has(ufAtual)) fu.value = ufAtual;
 
+  // O UF do cadastro/alertas é sobre onde a PESSOA está, não sobre quais
+  // editais existem — continua com a lista completa de estados.
   const cu = document.getElementById('cad-uf');
   cu.innerHTML = '';
   cu.insertAdjacentHTML('beforeend', '<option value="">Selecione</option>'+ufOptionsHTML());
