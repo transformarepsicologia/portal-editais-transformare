@@ -123,7 +123,7 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
 .radar-ring-outer{position:absolute; inset:0; border:1px solid var(--border-soft); border-radius:50%;}
 .radar-sweep{
   position:absolute; inset:0; border-radius:50%; overflow:hidden;
-  animation:spin 4.5s linear infinite;
+  animation:spin 9s linear infinite;
 }
 .radar-sweep::before{
   content:""; position:absolute; inset:0;
@@ -139,9 +139,10 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
 .blip .blip-label{
   position:absolute; top:14px; left:50%; transform:translateX(-50%) translateY(0); font-family:var(--font-mono); font-size:9.5px;
   color:var(--ink-muted); white-space:nowrap;
-  transition:opacity .8s ease, transform .8s ease;
+  opacity:0;
+  transition:opacity .35s ease;
 }
-.blip .blip-label.fading{opacity:0; transform:translateX(-50%) translateY(3px);}
+.blip .blip-label.lit{opacity:1;}
 @keyframes blip-pulse{0%,100%{transform:scale(1); opacity:1;} 50%{transform:scale(1.3); opacity:.7;}}
 .radar-center{
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:8px;height:8px; border-radius:50%;
@@ -1397,6 +1398,10 @@ function iniciarCicloRadarHome(){
     if(nomes.length <= blips.length) return;
 
     const i = proximoBlip % blips.length;
+    const labelAtual = blips[i].querySelector('.blip-label');
+    // a luz do radar está passando por esse ponto agora — espera ela passar
+    // pra não trocar o nome bem na hora em que ele fica visível
+    if(labelAtual && labelAtual.classList.contains('lit')) return;
     proximoBlip = (proximoBlip + 1) % blips.length;
 
     const outrosNomes = atuais.filter((_, idx) => idx !== i);
@@ -1409,16 +1414,48 @@ function iniciarCicloRadarHome(){
     if(!candidato || candidato === atuais[i]) return;
 
     atuais[i] = candidato;
-    const label = blips[i].querySelector('.blip-label');
-    if(!label) return;
-    label.classList.add('fading');
-    setTimeout(() => {
-      label.textContent = candidato;
-      label.classList.remove('fading');
-    }, 800);
+    // o rótulo está invisível nesse momento (fora do alcance da luz), então
+    // a troca de texto pode ser direta, sem necessidade de fade.
+    if(labelAtual) labelAtual.textContent = candidato;
   };
 
   setInterval(trocarUmBlip, 4200);
+
+  // Só revela o nome da profissão no instante em que a luz do radar passa
+  // por cima do ponto. O ângulo de cada ponto é medido a partir da posição
+  // real na tela (funciona em qualquer tamanho de radar, incluindo mobile).
+  const radarEl = document.querySelector('.radar');
+  let angulos = blips.map(() => 0);
+  function medirAngulosRadar(){
+    if(!radarEl) return;
+    const rect = radarEl.getBoundingClientRect();
+    if(rect.width === 0) return; // radar ainda não visível (ex.: outra aba)
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    angulos = blips.map(blip => {
+      const r = blip.getBoundingClientRect();
+      const bx = r.left + r.width / 2, by = r.top + r.height / 2;
+      const dx = bx - cx, dy = by - cy;
+      // 0° apontando para cima, crescendo em sentido horário — mesma
+      // referência do conic-gradient da luz do radar (".radar-sweep::before").
+      return (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+    });
+  }
+  medirAngulosRadar();
+  window.addEventListener('resize', medirAngulosRadar);
+
+  const DURACAO_VOLTA_MS = 9000; // combina com ".radar-sweep{animation:spin 9s ...}"
+  const LARGURA_LUZ_GRAUS = 55;  // combina com o conic-gradient em ".radar-sweep::before"
+  const inicioVolta = performance.now();
+  setInterval(() => {
+    const decorrido = (performance.now() - inicioVolta) % DURACAO_VOLTA_MS;
+    const anguloAtualDaLuz = (decorrido / DURACAO_VOLTA_MS) * 360;
+    blips.forEach((blip, i) => {
+      const label = blip.querySelector('.blip-label');
+      if(!label) return;
+      const distancia = (angulos[i] - anguloAtualDaLuz + 360) % 360;
+      label.classList.toggle('lit', distancia <= LARGURA_LUZ_GRAUS);
+    });
+  }, 60);
 }
 
 const TIPOS = ["Credenciamento","Edital","Chamamento Público","Pregão","Contratação","Convênio","Processo seletivo"];
