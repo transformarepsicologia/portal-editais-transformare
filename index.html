@@ -799,6 +799,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="cad-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="cad-rem-tipo" style="flex:1; min-width:0;"><option value="atendimento">por atendimento</option><option value="hora">por hora</option><option value="mensal">por mês</option></select></div></div>
     </div>
     <div class="form-row"><label>Abrangência de interesse</label><div class="chip-select" id="cad-abr"></div></div>
+    <div class="two-col">
+      <div class="form-row"><label>Nível de instrução</label><select id="cad-escolaridade"><option value="">Selecione</option><option value="Graduação">Graduação</option><option value="Especialização / Residência">Especialização / Residência</option><option value="Mestrado">Mestrado</option><option value="Doutorado">Doutorado</option></select></div>
+      <div class="form-row"><label>Tempo de atuação na profissão (anos)</label><input type="number" id="cad-anos-exp" min="0" max="60" step="1" placeholder="Ex: 5"></div>
+    </div>
     <div id="cad-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
     <div class="form-actions">
       <button class="btn-primary" style="flex:1;" onclick="userSignup()">Criar conta</button>
@@ -828,6 +832,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="perfil-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="perfil-rem-tipo" style="flex:1; min-width:0;"><option value="atendimento">por atendimento</option><option value="hora">por hora</option><option value="mensal">por mês</option></select></div></div>
     </div>
     <div class="form-row"><label>Abrangência de interesse</label><div class="chip-select" id="perfil-abr"></div></div>
+    <div class="two-col">
+      <div class="form-row"><label>Nível de instrução</label><select id="perfil-escolaridade"><option value="">Selecione</option><option value="Graduação">Graduação</option><option value="Especialização / Residência">Especialização / Residência</option><option value="Mestrado">Mestrado</option><option value="Doutorado">Doutorado</option></select></div>
+      <div class="form-row"><label>Tempo de atuação na profissão (anos)</label><input type="number" id="perfil-anos-exp" min="0" max="60" step="1" placeholder="Ex: 5"></div>
+    </div>
     <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="saveProfile()">Salvar perfil</button></div>
   </div>
   <div class="form-card" style="max-width:560px; margin-top:18px;">
@@ -1156,6 +1164,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <ul class="af-item-list" id="af-remuneracao-list"></ul>
 
       <div class="lead-section-title" style="margin-top:20px;">Requisitos</div>
+      <div class="two-col">
+        <div class="form-row"><label>Instrução mínima exigida</label><select id="af-escolaridade"><option value="">Não exige / não informado</option><option value="Graduação">Graduação</option><option value="Especialização / Residência">Especialização / Residência</option><option value="Mestrado">Mestrado</option><option value="Doutorado">Doutorado</option></select></div>
+        <div class="form-row"><label>Experiência mínima (anos)</label><input type="number" id="af-exp-anos" min="0" max="60" step="1" placeholder="Deixe vazio se não exigir"></div>
+      </div>
       <div class="form-row"><textarea id="af-requisitos" placeholder="Ex: Registro ativo no CRP, disponibilidade mínima de 20h semanais..."></textarea></div>
 
       <div class="lead-section-title" style="margin-top:20px;">Avaliação Transformare</div>
@@ -1527,7 +1539,7 @@ function parseDate(str){
 
 let oportunidades = [
   {id:1, edital:"Edital de Credenciamento nº 014/2026", orgao:"Secretaria Municipal de Saúde de Porto Alegre", uf:"RS", tipo:"Credenciamento",
-   profissoes:["Psicologia"], aceitaContratacao:["Pessoa Física (PF)","Pessoa Jurídica (PJ)"], modalidade:"Presencial", abrangencia:"Municipal", situacao:"Aberto",
+   profissoes:["Psicologia"], aceitaContratacao:["Pessoa Física (PF)","Pessoa Jurídica (PJ)"], experienciaMinimaAnos:2, modalidade:"Presencial", abrangencia:"Municipal", situacao:"Aberto",
    objeto:"Credenciamento de profissionais de Psicologia para atendimento ambulatorial na rede municipal.",
    prazo:"12/09/2026", publicacao:"05/08/2026",
    indice:5, indiceLabel:"Alta oportunidade",
@@ -1623,7 +1635,7 @@ let oportunidades = [
    movimentacoes:[{data:"20/08/2026", texto:"Publicação do chamamento público."},{data:"23/08/2026", texto:"Retificação nos requisitos de habilitação."}]},
 
   {id:7, edital:"Edital nº 026/2026", orgao:"Secretaria Municipal de Saúde de Fortaleza", uf:"CE", tipo:"Edital",
-   profissoes:["Psicologia","Nutrição"], aceitaContratacao:["Clínica (equipe multidisciplinar)"], modalidade:"Online", abrangencia:"Municipal", situacao:"Aberto",
+   profissoes:["Psicologia","Nutrição"], aceitaContratacao:["Clínica (equipe multidisciplinar)"], escolaridadeMinima:"Especialização / Residência", modalidade:"Online", abrangencia:"Municipal", situacao:"Aberto",
    objeto:"Credenciamento de psicólogos e nutricionistas para teleatendimento no NASF digital.",
    prazo:"18/09/2026", publicacao:"09/08/2026",
    indice:5, indiceLabel:"Alta oportunidade",
@@ -2062,6 +2074,7 @@ async function clearFavoritos(){
 // Cidade, abrangência e remuneração mínima ficam na tabela usuarios_perfil
 // (colunas cidade, abrangencias, rem_min, rem_tipo) e também no localStorage
 // (storeSet + ukey('perfilExtra')) como cópia local / reserva sem Supabase.
+const ESCOLARIDADES = ['Graduação','Especialização / Residência','Mestrado','Doutorado'];
 const REM_TIPOS = {atendimento:'por atendimento', hora:'por hora', mensal:'por mês'};
 function chipsAbrangenciaPerfil(boxId, selecionadas){
   const box = document.getElementById(boxId); box.innerHTML = '';
@@ -2080,10 +2093,13 @@ function lerPerfilExtraForm(pre){
     abrs: [...document.querySelectorAll('#'+pre+'-abr .chip-opt.selected')].map(x=>x.textContent),
     remMin: (isNaN(v) || v <= 0) ? null : v,
     remTipo: document.getElementById(pre+'-rem-tipo').value || 'atendimento',
+    escolaridade: document.getElementById(pre+'-escolaridade').value || '',
+    anosExp: (()=>{ const n = parseInt(document.getElementById(pre+'-anos-exp').value, 10); return isNaN(n) || n < 0 ? null : n; })(),
   };
 }
 function perfilExtraParaBanco(e){
-  return { cidade: e.cidade || null, abrangencias: e.abrs || [], rem_min: e.remMin, rem_tipo: e.remTipo || 'atendimento' };
+  return { cidade: e.cidade || null, abrangencias: e.abrs || [], rem_min: e.remMin, rem_tipo: e.remTipo || 'atendimento',
+           escolaridade: e.escolaridade || null, anos_experiencia: e.anosExp ?? null };
 }
 function normTxt(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase(); }
 
@@ -2127,7 +2143,28 @@ function calcularAderencia(o, u){
     if(valor === null) pontos += 5; // edital não informa nesse formato: neutro
     else if(valor >= u.remMin){ pontos += 10; motivos.push('remuneração compatível'); }
   }
-  return { pct: total ? Math.round(pontos / total * 100) : null, motivos };
+  // Instrução e tempo de atuação só entram quando o edital exige algo. São
+  // requisitos de habilitação: se o perfil não atende, a aderência fica limitada
+  // a 40% e a justificativa avisa; se o perfil não informou, só avisa.
+  let naoAtende = false;
+  if(o.escolaridadeMinima){
+    const exigido = ESCOLARIDADES.indexOf(o.escolaridadeMinima);
+    if(u.escolaridade){
+      total += 15;
+      if(ESCOLARIDADES.indexOf(u.escolaridade) >= exigido){ pontos += 15; motivos.push(o.escolaridadeMinima.split(' /')[0].toLowerCase() + ' ok'); }
+      else { naoAtende = true; motivos.push('⚠ exige ' + o.escolaridadeMinima.toLowerCase()); }
+    } else motivos.push('⚠ exige ' + o.escolaridadeMinima.toLowerCase());
+  }
+  if(o.experienciaMinimaAnos){
+    if(u.anosExp != null){
+      total += 15;
+      if(u.anosExp >= o.experienciaMinimaAnos){ pontos += 15; motivos.push(o.experienciaMinimaAnos + '+ anos de experiência'); }
+      else { naoAtende = true; motivos.push('⚠ exige ' + o.experienciaMinimaAnos + ' anos de experiência'); }
+    } else motivos.push('⚠ exige ' + o.experienciaMinimaAnos + ' anos de experiência');
+  }
+  let pct = total ? Math.round(pontos / total * 100) : null;
+  if(naoAtende && pct !== null) pct = Math.min(pct, 40);
+  return { pct, motivos };
 }
 
 /* ================= MINHA CONTA ================= */
@@ -2178,6 +2215,8 @@ function renderMinhaConta(){
           <div class="profile-field"><span class="k">Cidade</span><span class="v">${esc(u.cidade) || 'Não informado'}</span></div>
           <div class="profile-field"><span class="k">Modalidade</span><span class="v">${esc((u.mods||[]).join(', ')) || 'Não informado'}</span></div>
           <div class="profile-field"><span class="k">Abrangência</span><span class="v">${esc((u.abrs||[]).join(', ')) || 'Não informado'}</span></div>
+          <div class="profile-field"><span class="k">Instrução</span><span class="v">${esc(u.escolaridade) || 'Não informado'}</span></div>
+          <div class="profile-field"><span class="k">Tempo de atuação</span><span class="v">${u.anosExp != null ? u.anosExp + ' ano(s)' : 'Não informado'}</span></div>
           <div class="profile-field"><span class="k">Remuneração mínima</span><span class="v">${u.remMin ? esc(formatarMoedaBR(u.remMin) + ' ' + (REM_TIPOS[u.remTipo]||'')) : 'Não informado'}</span></div>
           <div class="profile-field"><span class="k">Conta criada em</span><span class="v">${desde}</span></div>
           <div class="account-quicklinks">
@@ -2199,7 +2238,7 @@ function renderMinhaConta(){
         </div>
 
         <div class="section-title" style="font-size:17px;">Editais mais aderentes ao seu perfil</div>
-        <p class="section-sub" style="margin-bottom:16px;">Calculado pela sua profissão, localização, modalidade, abrangência e remuneração mínima. <a style="color:var(--teal); cursor:pointer;" onclick="nav('perfil')">Ajustar perfil</a></p>
+        <p class="section-sub" style="margin-bottom:16px;">Calculado pela sua profissão, localização, modalidade, abrangência, remuneração mínima, instrução e tempo de atuação. <a style="color:var(--teal); cursor:pointer;" onclick="nav('perfil')">Ajustar perfil</a></p>
         <div class="op-grid" id="conta-aderentes"></div>
 
         <div class="section-title" style="font-size:17px; margin-top:32px;">Editais que estou acompanhando</div>
@@ -2568,6 +2607,7 @@ function openDetalhe(id){
             <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}</div></div>
             <div class="qf-item"><div class="qf-icon">💰</div><span class="qf-k">Remuneração</span><div class="qf-v">${remuneracaoResumo}</div></div>
             <div class="qf-item"><div class="qf-icon">⏳</div><span class="qf-k">Prazo</span><div class="qf-v">${o.prazo}</div></div>
+            ${(o.escolaridadeMinima || o.experienciaMinimaAnos) ? `<div class="qf-item"><div class="qf-icon">🎓</div><span class="qf-k">Exigência mínima</span><div class="qf-v">${esc([o.escolaridadeMinima, o.experienciaMinimaAnos ? o.experienciaMinimaAnos + ' ano(s) de experiência' : ''].filter(Boolean).join(' · '))}</div></div>` : ''}
           </div>
 
           <div class="link-row">
@@ -3146,8 +3186,9 @@ async function carregarPerfilUsuario(authUser){
     plano: perfil?.plano || 'gratuito',
     criadoEm: perfil?.criado_em || null,
   };
-  const doBanco = (perfil && (perfil.cidade || (perfil.abrangencias||[]).length || perfil.rem_min != null))
-    ? { cidade: perfil.cidade || '', abrs: perfil.abrangencias || [], remMin: perfil.rem_min != null ? Number(perfil.rem_min) : null, remTipo: perfil.rem_tipo || 'atendimento' }
+  const doBanco = (perfil && (perfil.cidade || (perfil.abrangencias||[]).length || perfil.rem_min != null || perfil.escolaridade || perfil.anos_experiencia != null))
+    ? { cidade: perfil.cidade || '', abrs: perfil.abrangencias || [], remMin: perfil.rem_min != null ? Number(perfil.rem_min) : null, remTipo: perfil.rem_tipo || 'atendimento',
+        escolaridade: perfil.escolaridade || '', anosExp: perfil.anos_experiencia ?? null }
     : null;
   let extra = doBanco;
   if(!extra){
@@ -3162,7 +3203,7 @@ async function carregarPerfilUsuario(authUser){
     }
   }
   if(extra) await storeSet(ukey('perfilExtra'), extra);
-  Object.assign(userProfile, { cidade:'', abrs:[], remMin:null, remTipo:'atendimento' }, extra || {});
+  Object.assign(userProfile, { cidade:'', abrs:[], remMin:null, remTipo:'atendimento', escolaridade:'', anosExp:null }, extra || {});
 }
 
 async function userSignup(){
@@ -3217,7 +3258,7 @@ async function userSignup(){
   await storeSet(ukey('docChecks'), docChecks);
   await saveAlertPrefs();
 
-  ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2','cad-cidade','cad-rem-min'].forEach(id=>document.getElementById(id).value='');
+  ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2','cad-cidade','cad-rem-min','cad-escolaridade','cad-anos-exp'].forEach(id=>document.getElementById(id).value='');
   document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected, #cad-abr .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
   msg.textContent = '';
   updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
@@ -3320,6 +3361,8 @@ function renderPerfil(){
   document.getElementById('perfil-cidade').value = u.cidade || '';
   document.getElementById('perfil-rem-min').value = u.remMin || '';
   document.getElementById('perfil-rem-tipo').value = u.remTipo || 'atendimento';
+  document.getElementById('perfil-escolaridade').value = u.escolaridade || '';
+  document.getElementById('perfil-anos-exp').value = u.anosExp ?? '';
   chipsAbrangenciaPerfil('perfil-abr', u.abrs);
 }
 async function saveProfile(){
@@ -3807,6 +3850,8 @@ function openAdminForm(id){
     document.getElementById('af-valor-atendimento').value = (o.valorAtendimento && !o.valorAtendimento.startsWith('Não')) ? o.valorAtendimento : '';
     document.getElementById('af-volume').value = (o.volume && !o.volume.startsWith('Não')) ? o.volume : '';
     document.getElementById('af-requisitos').value = o.requisitos || '';
+    document.getElementById('af-escolaridade').value = o.escolaridadeMinima || '';
+    document.getElementById('af-exp-anos').value = o.experienciaMinimaAnos || '';
     document.getElementById('af-pontos-positivos').value = o.pontosPositivos || '';
     document.getElementById('af-pontos-atencao').value = (o.pontosAtencao && o.pontosAtencao !== 'Nenhum ponto de atenção informado.') ? o.pontosAtencao : '';
     document.getElementById('af-url-oficial').value = o.urlOficial || '';
@@ -3820,7 +3865,7 @@ function openAdminForm(id){
   } else {
     ['af-edital','af-orgao','af-objeto','af-prazo','af-publicacao','af-url-inscricao','af-cidade',
      'af-valor-atendimento','af-volume',
-     'af-requisitos','af-pontos-positivos','af-pontos-atencao'].forEach(id2=>document.getElementById(id2).value='');
+     'af-requisitos','af-pontos-positivos','af-pontos-atencao','af-escolaridade','af-exp-anos'].forEach(id2=>document.getElementById(id2).value='');
     document.getElementById('af-url-oficial').value = 'https://www.gov.br/pncp/pt-br';
     document.getElementById('af-url-edital').value = 'https://pncp.gov.br/app/editais';
     document.getElementById('af-url-pncp').value = 'https://pncp.gov.br/app/editais';
@@ -3873,6 +3918,8 @@ async function saveAdminForm(){
     publicacao: document.getElementById('af-publicacao').value.trim() || 'Não informado',
     profissoes: profs.length ? profs : ['Não informado'],
     aceitaContratacao: publico,
+    escolaridadeMinima: document.getElementById('af-escolaridade').value || null,
+    experienciaMinimaAnos: parseInt(document.getElementById('af-exp-anos').value, 10) || null,
     valorAtendimento: valorAtendimento || 'Não informado',
     valorMensal: 'Não informado',
     valorHora: 'Não informado',
@@ -3912,6 +3959,7 @@ async function saveAdminForm(){
       cidade: data.cidade, uf: data.uf, situacao: data.situacao,
       profissoes: data.profissoes, modalidade: data.modalidade, abrangencia: data.abrangencia,
       aceita_contratacao: data.aceitaContratacao,
+      escolaridade_minima: data.escolaridadeMinima, experiencia_minima_anos: data.experienciaMinimaAnos,
       indice: data.indice,
       valor_atendimento: data.valorAtendimento, valor_mensal: data.valorMensal, valor_hora: data.valorHora,
       volume_estimado: data.volume, valor_maximo: data.valorMaximo,
@@ -4377,6 +4425,8 @@ function mapEditalSupabase(row){
     modalidade: row.modalidade || 'Presencial',
     abrangencia: row.abrangencia || 'Municipal',
     aceitaContratacao: Array.isArray(row.aceita_contratacao) ? row.aceita_contratacao : [],
+    escolaridadeMinima: row.escolaridade_minima || null,
+    experienciaMinimaAnos: row.experiencia_minima_anos || null,
     situacao: row.situacao || 'Aberto',
     objeto: row.objeto || '',
     prazo: formatarDataBR(row.prazo),
