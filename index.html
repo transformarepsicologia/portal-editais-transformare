@@ -2336,12 +2336,17 @@ function renderMinhaConta(){
     return mProf && mUf;
   }).slice(0,4);
   const historico = oportunidades.filter(o=>docChecks[o.id] && Object.values(docChecks[o.id]).some(v=>v));
-  const aderentes = oportunidades
+  const todasAderencias = oportunidades
     .filter(o=>o.situacao !== 'Encerrado')
     .map(o=>({ o, ad: calcularAderencia(o, u) }))
     .filter(x=>x.ad.pct !== null && x.ad.pct > 0)
-    .sort((a,b)=>b.ad.pct - a.ad.pct || (b.o.indice||0) - (a.o.indice||0))
-    .slice(0, 6);
+    .sort((a,b)=>b.ad.pct - a.ad.pct || (b.o.indice||0) - (a.o.indice||0));
+  const aderentes = todasAderencias.slice(0, 6);
+  // Indicadores do topo: alta aderência (70%+), melhor % e quanto do perfil está preenchido.
+  const altaAderencia = todasAderencias.filter(x=>x.ad.pct >= 70).length;
+  const melhorAderencia = todasAderencias.length ? todasAderencias[0].ad.pct : null;
+  const camposPerfil = [(u.profs||[]).length, u.uf, u.cidade, (u.mods||[]).length, (u.abrs||[]).length, u.remMin, u.escolaridade, u.anosExp != null, (u.atuacao||[]).length];
+  const perfilPct = Math.round(camposPerfil.filter(Boolean).length / camposPerfil.length * 100);
   const desde = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : '—';
 
   el.innerHTML = `
@@ -2378,9 +2383,9 @@ function renderMinhaConta(){
       </div>
       <div>
         <div class="account-stats">
-          <div class="indicator-card"><div class="num">${favoritos.size}</div><div class="label">Editais acompanhados</div></div>
-          <div class="indicator-card"><div class="num">${alertPrefs.prof.size + alertPrefs.uf.size + alertPrefs.mod.size + (alertPrefs.cidade ? 1 : 0)}</div><div class="label">Critérios de alerta</div></div>
-          <div class="indicator-card"><div class="num">${historico.length}</div><div class="label">Editais com progresso</div></div>
+          <div class="indicator-card"><div class="num">${altaAderencia}</div><div class="label">Editais com alta aderência (70%+)</div></div>
+          <div class="indicator-card"><div class="num">${melhorAderencia !== null ? melhorAderencia + '%' : '—'}</div><div class="label">Maior aderência ao seu perfil</div></div>
+          <div class="indicator-card" style="cursor:pointer;" onclick="nav('perfil')" title="Completar perfil"><div class="num">${perfilPct}%</div><div class="label">Perfil preenchido${perfilPct < 100 ? ' — completar ›' : ''}</div></div>
         </div>
 
         <div class="section-title" style="font-size:17px;">Editais mais aderentes ao seu perfil</div>
