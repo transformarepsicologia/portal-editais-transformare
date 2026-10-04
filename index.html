@@ -2418,7 +2418,10 @@ function openDetalhe(id){
               <h3>${o.objeto}</h3>
               <div class="detail-org">${o.orgao} — ${o.cidade ? o.cidade+'/' : ''}${o.uf} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${o.origemSupabase ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}</div>
             </div>
-            <button class="fav-btn ${isFav?'active':''}" style="font-size:24px;" onclick="toggleFav(${o.id})">${isFav?'★':'☆'}</button>
+            <div style="display:flex; align-items:center; gap:10px;">
+              ${adminAuthed ? `<button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap;" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button>` : ''}
+              <button class="fav-btn ${isFav?'active':''}" style="font-size:24px;" onclick="toggleFav(${o.id})">${isFav?'★':'☆'}</button>
+            </div>
           </div>
           <div class="op-tags" style="margin-top:14px;">
             <span class="badge ${badgeClass(o.situacao)}">${o.situacao}</span>
@@ -3593,6 +3596,13 @@ function refreshAfProfChips(extraNomes){
     c.onclick = ()=>c.classList.toggle('selected');
     box.appendChild(c);
   });
+}
+// Atalho pro admin editar um edital direto da página de detalhe (menu
+// Editais), sem precisar ir até o Painel administrativo e procurar a
+// linha certa na tabela.
+function editarDoDetalhe(id){
+  nav('admin');
+  openAdminForm(id);
 }
 function openAdminForm(id){
   editingId = id;
