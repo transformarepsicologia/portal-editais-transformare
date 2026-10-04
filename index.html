@@ -123,7 +123,7 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
 .radar-ring-outer{position:absolute; inset:0; border:1px solid var(--border-soft); border-radius:50%;}
 .radar-sweep{
   position:absolute; inset:0; border-radius:50%; overflow:hidden;
-  animation:spin 9s linear infinite;
+  animation:spin 6s linear infinite;
 }
 .radar-sweep::before{
   content:""; position:absolute; inset:0;
@@ -1443,7 +1443,7 @@ function iniciarCicloRadarHome(){
   medirAngulosRadar();
   window.addEventListener('resize', medirAngulosRadar);
 
-  const DURACAO_VOLTA_MS = 9000; // combina com ".radar-sweep{animation:spin 9s ...}"
+  const DURACAO_VOLTA_MS = 6000; // combina com ".radar-sweep{animation:spin 6s ...}"
   const LARGURA_LUZ_GRAUS = 55;  // combina com o conic-gradient em ".radar-sweep::before"
   const inicioVolta = performance.now();
   setInterval(() => {
