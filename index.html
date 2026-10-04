@@ -2059,8 +2059,9 @@ async function clearFavoritos(){
 }
 
 /* ================= PERFIL INTELIGENTE / ADERÊNCIA ================= */
-// Cidade, abrangência e remuneração mínima ficam no localStorage por usuário
-// (storeGet/storeSet + ukey('perfilExtra')) — a tabela usuarios_perfil não muda.
+// Cidade, abrangência e remuneração mínima ficam na tabela usuarios_perfil
+// (colunas cidade, abrangencias, rem_min, rem_tipo) e também no localStorage
+// (storeSet + ukey('perfilExtra')) como cópia local / reserva sem Supabase.
 const REM_TIPOS = {atendimento:'por atendimento', hora:'por hora', mensal:'por mês'};
 function chipsAbrangenciaPerfil(boxId, selecionadas){
   const box = document.getElementById(boxId); box.innerHTML = '';
@@ -2080,6 +2081,9 @@ function lerPerfilExtraForm(pre){
     remMin: (isNaN(v) || v <= 0) ? null : v,
     remTipo: document.getElementById(pre+'-rem-tipo').value || 'atendimento',
   };
+}
+function perfilExtraParaBanco(e){
+  return { cidade: e.cidade || null, abrangencias: e.abrs || [], rem_min: e.remMin, rem_tipo: e.remTipo || 'atendimento' };
 }
 function normTxt(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase(); }
 
@@ -3142,11 +3146,22 @@ async function carregarPerfilUsuario(authUser){
     plano: perfil?.plano || 'gratuito',
     criadoEm: perfil?.criado_em || null,
   };
-  let extra = await storeGet(ukey('perfilExtra'));
+  const doBanco = (perfil && (perfil.cidade || (perfil.abrangencias||[]).length || perfil.rem_min != null))
+    ? { cidade: perfil.cidade || '', abrs: perfil.abrangencias || [], remMin: perfil.rem_min != null ? Number(perfil.rem_min) : null, remTipo: perfil.rem_tipo || 'atendimento' }
+    : null;
+  let extra = doBanco;
   if(!extra){
-    extra = await storeGet('perfil_extra_pendente_' + authUser.email);
-    if(extra){ await storeSet(ukey('perfilExtra'), extra); await storeRemove('perfil_extra_pendente_' + authUser.email); }
+    // Ainda não está no banco: usa o que estiver salvo neste navegador (cadastro
+    // pendente de confirmação ou perfil preenchido antes das colunas existirem)
+    // e já grava no Supabase, para acompanhar a pessoa em outros aparelhos.
+    const pendenteKey = 'perfil_extra_pendente_' + authUser.email;
+    extra = await storeGet(ukey('perfilExtra')) || await storeGet(pendenteKey);
+    if(extra && _sb){
+      const { error } = await _sb.from('usuarios_perfil').update(perfilExtraParaBanco(extra)).eq('id', authUser.id);
+      if(!error) await storeRemove(pendenteKey);
+    }
   }
+  if(extra) await storeSet(ukey('perfilExtra'), extra);
   Object.assign(userProfile, { cidade:'', abrs:[], remMin:null, remTipo:'atendimento' }, extra || {});
 }
 
@@ -3186,7 +3201,7 @@ async function userSignup(){
   }
 
   const { error: erroPerfil } = await _sb.from('usuarios_perfil').upsert({
-    id: data.user.id, nome, email, whatsapp, registro, uf, profs, mods, plano: 'gratuito'
+    id: data.user.id, nome, email, whatsapp, registro, uf, profs, mods, plano: 'gratuito', ...perfilExtraParaBanco(extra)
   });
   if(erroPerfil){ msg.textContent = 'Conta criada, mas houve um erro ao salvar o perfil: ' + erroPerfil.message; }
 
@@ -3319,7 +3334,8 @@ async function saveProfile(){
   u.mods = [...document.querySelectorAll('#perfil-mod .chip-opt.selected')].map(x=>x.textContent);
   if(_sb){
     const { error } = await _sb.from('usuarios_perfil').update({
-      nome: u.nome, whatsapp: u.whatsapp, registro: u.registro, uf: u.uf, profs: u.profs, mods: u.mods
+      nome: u.nome, whatsapp: u.whatsapp, registro: u.registro, uf: u.uf, profs: u.profs, mods: u.mods,
+      ...perfilExtraParaBanco(lerPerfilExtraForm('perfil'))
     }).eq('id', u.id);
     if(error){ toast('Erro ao salvar: ' + error.message); return; }
   }
