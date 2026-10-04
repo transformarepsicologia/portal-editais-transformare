@@ -527,9 +527,6 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   background:rgba(47,217,196,0.12); border:1px solid rgba(47,217,196,0.4); border-radius:999px;
   padding:2px 9px; margin-left:8px; vertical-align:middle;
 }
-.inbox-quick-fields{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-soft);}
-.inbox-quick-fields label{font-size:10.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.5px; font-family:var(--font-mono); display:block; margin-bottom:4px;}
-.inbox-quick-fields select{min-width:150px;}
 .inbox-meta{font-size:12px; color:var(--ink-muted); margin-bottom:8px;}
 .inbox-profs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;}
 .inbox-profs span{font-size:11px; background:rgba(47,217,196,0.12); color:var(--teal); padding:3px 8px; border-radius:12px;}
@@ -1244,6 +1241,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="form-row"><label>Nota (opcional)</label><textarea id="motivo-aprovacao-texto" rows="2"></textarea></div>
     <div style="display:flex; gap:10px; margin-top:10px;">
       <button class="btn-ghost" onclick="closeModal('aprovar-modal')" style="flex:1;">Cancelar</button>
+      <button class="inbox-reject" onclick="rejeitarDaRevisao()" style="padding:11px 18px; border-radius:9px; cursor:pointer; font-weight:600; font-size:13px; white-space:nowrap;">Rejeitar</button>
       <button class="inbox-approve" onclick="confirmarAprovacao()" style="flex:1;">Confirmar e publicar no catálogo</button>
     </div>
   </div>
@@ -4238,18 +4236,6 @@ function ehPrioritarioPendente(item){
 // análise/aprovação); quando já existe um valor (ex.: vindo de uma
 // análise externa), ele só aparece como sinalização em destaque, sem
 // campo pra editar, via badgeIndiceSugeridoHTML().
-function camposRapidosPendenteHTML(item, tabela){
-  const abrOpts = ['Municipal','Estadual','Nacional'].map(v=>`<option ${item.abrangencia===v?'selected':''}>${v}</option>`).join('');
-  return `
-    <div class="inbox-quick-fields" onclick="event.stopPropagation()">
-      <div>
-        <label>Abrangência</label>
-        <select onchange="atualizarCampoPendente(${item.id}, '${tabela}', 'abrangencia', this.value || null)">
-          <option value="">—</option>${abrOpts}
-        </select>
-      </div>
-    </div>`;
-}
 // Sinalização passiva (não editável) de que já existe um índice sugerido
 // pra esse pendente — chama atenção pra avaliar, sem virar um campo de
 // formulário no meio do card.
@@ -4257,14 +4243,6 @@ function badgeIndiceSugeridoHTML(item){
   if(item.indice_sugerido === null || item.indice_sugerido === undefined) return '';
   return `<span class="badge-indice-sugerido" title="Índice sugerido para avaliação">🎯 Índice sugerido: ${item.indice_sugerido}</span>`;
 }
-async function atualizarCampoPendente(id, tabela, campo, valor){
-  if(!_sb) return;
-  const { error } = await _sb.from(tabela).update({ [campo]: valor }).eq('id', id);
-  if(error){ toast('Erro ao salvar: ' + error.message); return; }
-  if(tabela === 'credenciamentos_pendentes') renderCaixaEntrada();
-  else renderDiarioOficial();
-}
-
 async function renderCaixaEntrada(){
   const lista = document.getElementById('caixa-entrada-lista');
   const status = document.getElementById('caixa-entrada-status');
@@ -4322,7 +4300,6 @@ async function renderCaixaEntrada(){
         ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
         <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao || '—'}${item.data_encerramento_proposta ? ` · Prazo: ${formatarDataBR(item.data_encerramento_proposta)}` : ''} · Fonte: ${esc(item.fonte)}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
-        ${camposRapidosPendenteHTML(item, 'credenciamentos_pendentes')}
       </summary>
       <div style="margin-top:10px;">
         <p style="font-size:13px; color:var(--ink-muted); margin:0 0 8px;">${esc(item.resumo || item.objeto || '')}</p>
@@ -4448,7 +4425,6 @@ async function renderDiarioOficial(){
         ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
         <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao || '—'}${item.edicao ? ' · Edição ' + esc(item.edicao) : ''} · Termo: ${esc(item.termo_busca || '')}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
-        ${camposRapidosPendenteHTML(item, 'diario_oficial_pendentes')}
       </summary>
       <div style="margin-top:10px;">
         <p style="font-size:13px; color:var(--ink-muted); margin:0 0 8px;">${esc(item.excerto || '')}</p>
@@ -4624,6 +4600,15 @@ async function confirmarRejeicao(){
   _rejeitarAlvo = null;
 }
 
+// Rejeitar direto da tela de revisão/aprovação — sem precisar fechar o
+// modal, voltar pra lista e procurar o card de novo.
+function rejeitarDaRevisao(){
+  if(!_aprovarAlvo) return;
+  const { id, tipo } = _aprovarAlvo;
+  closeModal('aprovar-modal');
+  abrirRejeitarModal(id, tipo);
+}
+
 /* --- Aprovação (com revisão de campos/links) --- */
 function abrirAprovarModal(id, tipo){
   const item = acharItem(id, tipo);
@@ -4647,9 +4632,8 @@ function abrirAprovarModal(id, tipo){
   document.getElementById('aprovar-url-inscricao').value = (tipo === 'diario' ? '' : (item.link_inscricao || ''));
 
   // Índice começa em branco por padrão — só preenche sozinho quando já existe
-  // um índice sugerido digitado direto no card da Caixa de entrada/Diário
-  // Oficial (ver camposRapidosPendenteHTML), pra não repetir o que a pessoa já
-  // informou ali. Continua possível apagar e deixar sem avaliação.
+  // um índice sugerido (ex.: vindo de uma análise externa, sinalizado no card
+  // como badge). Continua possível apagar e deixar sem avaliação.
   document.getElementById('aprovar-indice').value = item.indice_sugerido || '';
   atualizarSugestaoIndice();
 
