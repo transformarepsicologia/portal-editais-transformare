@@ -797,7 +797,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row"><label>Estado</label><select id="cad-uf"></select></div>
       <div class="form-row"><label>Registro profissional</label><input type="text" id="cad-registro" placeholder="Ex: CRP 07/00000"></div>
     </div>
-    <div class="form-row"><label>Profissão</label><div class="chip-select" id="cad-prof"></div></div>
+    <div class="form-row"><label>Profissão</label><div class="chip-select" id="cad-prof"></div>
+      <input type="text" id="cad-prof-outra" maxlength="80" placeholder="Não encontrou a sua? Escreva aqui sua profissão" style="margin-top:8px;"></div>
     <div class="form-row"><label>Modalidade de interesse</label><div class="chip-select" id="cad-mod"></div></div>
     <div class="two-col">
       <div class="form-row"><label>Cidade</label><input type="text" id="cad-cidade" placeholder="Ex: Porto Alegre"></div>
@@ -835,7 +836,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row"><label>Estado</label><select id="perfil-uf"></select></div>
       <div class="form-row"><label>Registro profissional</label><input type="text" id="perfil-registro"></div>
     </div>
-    <div class="form-row"><label>Profissão</label><div class="chip-select" id="perfil-prof"></div></div>
+    <div class="form-row"><label>Profissão</label><div class="chip-select" id="perfil-prof"></div>
+      <input type="text" id="perfil-prof-outra" maxlength="80" placeholder="Não encontrou a sua? Escreva aqui sua profissão" style="margin-top:8px;"></div>
     <div class="form-row"><label>Modalidade de interesse</label><div class="chip-select" id="perfil-mod"></div></div>
     <div class="two-col">
       <div class="form-row"><label>Cidade</label><input type="text" id="perfil-cidade" placeholder="Ex: Porto Alegre"></div>
@@ -1091,6 +1093,23 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div id="usuarios-cadastrados-body" style="display:none;">
       <div id="usuarios-cadastrados-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
       <div id="usuarios-cadastrados-lista"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
+    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleSugestoesProfissao()">
+      <span>🆕 Profissões sugeridas <span id="sugestoes-prof-badge" class="plan-badge" style="display:none;"></span></span>
+      <span id="sugestoes-prof-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Profissões que profissionais escreveram no cadastro ou no perfil por não estarem na lista. Adicione à lista de profissões ou ignore.</p>
+    <div id="sugestoes-prof-body" style="display:none;">
+      <div id="sugestoes-prof-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead><tr><th>Data</th><th>Profissão sugerida</th><th>Quem sugeriu</th><th>E-mail</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="sugestoes-prof-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1835,7 +1854,7 @@ function nav(view){
   if(view === 'editais') applyFilters();
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
-  if(view === 'admin'){ renderAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); }
+  if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); }
   if(view === 'minha-conta') renderMinhaConta();
   if(view === 'perfil') renderPerfil();
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
@@ -2101,6 +2120,22 @@ function chipsAbrangenciaPerfil(boxId, selecionadas){
     c.textContent = a;
     c.onclick = ()=>c.classList.toggle('selected');
     box.appendChild(c);
+  });
+}
+// Profissão digitada no campo "outra": entra no perfil e vira sugestão para o
+// admin (tabela sugestoes_profissao, vista no Painel administrativo).
+function lerProfissaoOutra(pre, profsMarcadas){
+  const input = document.getElementById(pre+'-prof-outra');
+  const nome = input.value.trim().replace(/\s+/g,' ');
+  if(nome.length < 2) return null;
+  const existente = [...profissoesAtivasNomes(), ...profsMarcadas].find(p=>normTxt(p) === normTxt(nome));
+  if(existente){ if(!profsMarcadas.includes(existente)) profsMarcadas.push(existente); return null; }
+  return nome.charAt(0).toUpperCase() + nome.slice(1);
+}
+async function enviarSugestaoProfissao(nome, usuario){
+  if(!_sb || !nome) return;
+  await _sb.from('sugestoes_profissao').insert({
+    nome, usuario_id: usuario?.id || null, email: usuario?.email || null, nome_usuario: usuario?.nome || null
   });
 }
 const ATUACOES = [{v:'PF', label:'Pessoa Física (PF)'}, {v:'PJ', label:'Pessoa Jurídica (PJ)'}];
@@ -3332,6 +3367,8 @@ async function userSignup(){
   const profs = [...document.querySelectorAll('#cad-prof .chip-opt.selected')].map(x=>x.textContent);
   const mods = [...document.querySelectorAll('#cad-mod .chip-opt.selected')].map(x=>x.textContent);
   const extra = lerPerfilExtraForm('cad');
+  const profOutra = lerProfissaoOutra('cad', profs);
+  if(profOutra) profs.push(profOutra);
 
   if(!_sb){ msg.textContent = 'Indisponível: configure SUPABASE_URL/SUPABASE_ANON_KEY neste arquivo.'; return; }
   if(!nome){ msg.textContent = 'Informe seu nome.'; return; }
@@ -3350,6 +3387,7 @@ async function userSignup(){
     // que a pessoa confirmar o e-mail.
     await storeSet('perfil_pendente_' + email, { nome, whatsapp, registro, uf, profs, mods });
     await storeSet('perfil_extra_pendente_' + email, extra);
+    if(profOutra) await enviarSugestaoProfissao(profOutra, { email, nome });
     msg.style.color = 'var(--teal)';
     msg.textContent = 'Conta criada! Verifique seu e-mail para confirmar antes de entrar.';
     return;
@@ -3362,6 +3400,7 @@ async function userSignup(){
 
   await carregarPerfilUsuario(data.user);
   Object.assign(userProfile, extra);
+  if(profOutra) await enviarSugestaoProfissao(profOutra, userProfile);
   await storeSet(ukey('perfilExtra'), extra);
 
   // o que a pessoa já tinha marcado antes de criar a conta (favoritos/alertas/checklist) passa a ser da conta
@@ -3372,7 +3411,7 @@ async function userSignup(){
   await storeSet(ukey('docChecks'), docChecks);
   await saveAlertPrefs();
 
-  ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2','cad-cidade','cad-rem-min','cad-escolaridade','cad-anos-exp','cad-cnpj'].forEach(id=>document.getElementById(id).value='');
+  ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2','cad-cidade','cad-rem-min','cad-escolaridade','cad-anos-exp','cad-cnpj','cad-prof-outra'].forEach(id=>document.getElementById(id).value='');
   empresaForm.cad = null; chipsAtuacaoPerfil('cad', []); renderEmpresaBox('cad');
   document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected, #cad-abr .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
   msg.textContent = '';
@@ -3493,6 +3532,8 @@ async function saveProfile(){
   u.registro = document.getElementById('perfil-registro').value.trim();
   u.uf = document.getElementById('perfil-uf').value;
   u.profs = [...document.querySelectorAll('#perfil-prof .chip-opt.selected')].map(x=>x.textContent);
+  const profOutra = lerProfissaoOutra('perfil', u.profs);
+  if(profOutra) u.profs.push(profOutra);
   u.mods = [...document.querySelectorAll('#perfil-mod .chip-opt.selected')].map(x=>x.textContent);
   if(_sb){
     const { error } = await _sb.from('usuarios_perfil').update({
@@ -3503,6 +3544,7 @@ async function saveProfile(){
   }
   const extra = lerPerfilExtraForm('perfil');
   Object.assign(u, extra);
+  if(profOutra){ await enviarSugestaoProfissao(profOutra, u); document.getElementById('perfil-prof-outra').value = ''; }
   await storeSet(ukey('perfilExtra'), extra);
   updateNavCta();
   toast('Perfil salvo');
@@ -5158,6 +5200,70 @@ async function enviarLinkRedefinicaoUsuario(email, btn){
   if(btn){ btn.disabled = false; btn.textContent = '🔑 Enviar link de redefinição'; }
   if(error){ toast('Erro ao enviar: ' + error.message); return; }
   toast('Link de redefinição enviado para ' + email);
+}
+
+/* ---- Admin: profissões sugeridas pelos profissionais ---- */
+function toggleSugestoesProfissao(){
+  const body = document.getElementById('sugestoes-prof-body');
+  const arrow = document.getElementById('sugestoes-prof-arrow');
+  const abrir = body.style.display === 'none';
+  body.style.display = abrir ? 'block' : 'none';
+  arrow.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
+  if(abrir) renderSugestoesProfissaoAdmin();
+}
+// Aviso ao abrir o painel: contador na seção + toast quando há pendentes.
+let _sugestoesProfAvisadas = -1;
+async function avisarSugestoesProfissao(){
+  if(!_sb) return;
+  const { count, error } = await _sb.from('sugestoes_profissao').select('id', { count:'exact', head:true }).eq('status','pendente');
+  if(error) return;
+  const badge = document.getElementById('sugestoes-prof-badge');
+  badge.style.display = count ? '' : 'none';
+  badge.textContent = count + ' pendente(s)';
+  if(count && count !== _sugestoesProfAvisadas) toast(`🆕 ${count} profissão(ões) sugerida(s) por profissionais aguardando sua análise`);
+  _sugestoesProfAvisadas = count;
+}
+async function renderSugestoesProfissaoAdmin(){
+  const status = document.getElementById('sugestoes-prof-status');
+  const tbody = document.getElementById('sugestoes-prof-tbody');
+  if(!_sb){ status.textContent = 'Indisponível: configure o Supabase.'; return; }
+  status.textContent = 'Carregando...';
+  const { data, error } = await _sb.from('sugestoes_profissao').select('*').order('criado_em', {ascending:false});
+  if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
+  const pendentes = (data||[]).filter(s=>s.status==='pendente').length;
+  status.textContent = `${(data||[]).length} sugestão(ões) no total — ${pendentes} pendente(s).`;
+  tbody.innerHTML = (data||[]).length === 0
+    ? `<tr><td colspan="6" style="text-align:center; color:var(--ink-dim); padding:18px;">Nenhuma profissão sugerida ainda.</td></tr>`
+    : data.map(s => `
+      <tr>
+        <td>${s.criado_em ? formatarDataBR(s.criado_em.slice(0,10)) : '—'}</td>
+        <td><strong>${esc(s.nome)}</strong></td>
+        <td>${esc(s.nome_usuario || '—')}</td>
+        <td>${esc(s.email || '—')}</td>
+        <td>${esc(s.status)}</td>
+        <td>${s.status==='pendente'
+          ? `<button class="btn-ghost" style="font-size:12px;" onclick="resolverSugestaoProfissao(${s.id}, 'adicionada')">Adicionar à lista</button>
+             <button class="btn-ghost" style="font-size:12px;" onclick="resolverSugestaoProfissao(${s.id}, 'ignorada')">Ignorar</button>`
+          : (s.status==='adicionada' ? '✓ Adicionada' : 'Ignorada')}</td>
+      </tr>`).join('');
+}
+async function resolverSugestaoProfissao(id, novoStatus){
+  if(!_sb) return;
+  const { data, error } = await _sb.from('sugestoes_profissao')
+    .update({ status: novoStatus, resolvido_em: new Date().toISOString() }).eq('id', id).select('nome');
+  if(error || !data || !data.length){ toast('Erro ao atualizar' + (error ? ': ' + error.message : '')); return; }
+  if(novoStatus === 'adicionada'){
+    // Reaproveita o cadastro de profissões do painel (Cadastros auxiliares).
+    const nome = data[0].nome;
+    if(!profissoes.some(p=>normTxt(p.nome) === normTxt(nome))){
+      profissoes.push({ nome, ativa:true });
+      await persistProfissoes();
+      afterProfissoesChanged();
+    }
+    toast(`"${nome}" adicionada à lista de profissões`);
+  } else toast('Sugestão ignorada');
+  renderSugestoesProfissaoAdmin();
+  avisarSugestoesProfissao();
 }
 
 /* ---- Admin: solicitações de avaliação do Índice Transformare ---- */
