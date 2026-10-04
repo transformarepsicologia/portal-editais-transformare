@@ -522,6 +522,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   background:rgba(245,169,62,0.12); border:1px solid rgba(245,169,62,0.4); border-radius:999px;
   padding:2px 9px; margin-left:8px; vertical-align:middle;
 }
+.badge-indice-sugerido{
+  display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:var(--teal);
+  background:rgba(47,217,196,0.12); border:1px solid rgba(47,217,196,0.4); border-radius:999px;
+  padding:2px 9px; margin-left:8px; vertical-align:middle;
+}
 .inbox-quick-fields{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-soft);}
 .inbox-quick-fields label{font-size:10.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.5px; font-family:var(--font-mono); display:block; margin-bottom:4px;}
 .inbox-quick-fields select{min-width:150px;}
@@ -4228,17 +4233,15 @@ function ehPrioritarioPendente(item){
 // Campos rápidos (índice sugerido + abrangência) direto no card da Caixa de
 // entrada / Diário Oficial, sem precisar abrir o modal de aprovação — assim o
 // destaque de prioridade já aparece ao preencher, antes de decidir aprovar.
+// Só a Abrangência fica como campo rápido editável aqui — o Índice
+// sugerido não é mais escolhido neste select (volta a ser definido na
+// análise/aprovação); quando já existe um valor (ex.: vindo de uma
+// análise externa), ele só aparece como sinalização em destaque, sem
+// campo pra editar, via badgeIndiceSugeridoHTML().
 function camposRapidosPendenteHTML(item, tabela){
-  const indiceOpts = [1,2,3,4,5].map(n=>`<option value="${n}" ${item.indice_sugerido===n?'selected':''}>${n}</option>`).join('');
   const abrOpts = ['Municipal','Estadual','Nacional'].map(v=>`<option ${item.abrangencia===v?'selected':''}>${v}</option>`).join('');
   return `
     <div class="inbox-quick-fields" onclick="event.stopPropagation()">
-      <div>
-        <label>Índice sugerido (sua análise)</label>
-        <select onchange="atualizarCampoPendente(${item.id}, '${tabela}', 'indice_sugerido', this.value ? Number(this.value) : null)">
-          <option value="">—</option>${indiceOpts}
-        </select>
-      </div>
       <div>
         <label>Abrangência</label>
         <select onchange="atualizarCampoPendente(${item.id}, '${tabela}', 'abrangencia', this.value || null)">
@@ -4246,6 +4249,13 @@ function camposRapidosPendenteHTML(item, tabela){
         </select>
       </div>
     </div>`;
+}
+// Sinalização passiva (não editável) de que já existe um índice sugerido
+// pra esse pendente — chama atenção pra avaliar, sem virar um campo de
+// formulário no meio do card.
+function badgeIndiceSugeridoHTML(item){
+  if(item.indice_sugerido === null || item.indice_sugerido === undefined) return '';
+  return `<span class="badge-indice-sugerido" title="Índice sugerido para avaliação">🎯 Índice sugerido: ${item.indice_sugerido}</span>`;
 }
 async function atualizarCampoPendente(id, tabela, campo, valor){
   if(!_sb) return;
@@ -4308,6 +4318,7 @@ async function renderCaixaEntrada(){
       <summary style="cursor:pointer; list-style:none;">
         <h5 style="display:inline; margin:0;">${esc(item.orgao || 'Órgão não identificado')} — ${esc(item.uf || '')}</h5>
         ${prioritario ? '<span class="badge-prioridade" title="Índice 5 e abrangência Nacional — avaliar com prioridade">⚡ Avaliar com prioridade</span>' : ''}
+        ${badgeIndiceSugeridoHTML(item)}
         ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
         <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao || '—'}${item.data_encerramento_proposta ? ` · Prazo: ${formatarDataBR(item.data_encerramento_proposta)}` : ''} · Fonte: ${esc(item.fonte)}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
@@ -4433,6 +4444,7 @@ async function renderDiarioOficial(){
       <summary style="cursor:pointer; list-style:none;">
         <h5 style="display:inline; margin:0;">${esc(item.municipio || 'Município não identificado')} — ${esc(item.uf || '')}</h5>
         ${prioritario ? '<span class="badge-prioridade" title="Índice 5 e abrangência Nacional — avaliar com prioridade">⚡ Avaliar com prioridade</span>' : ''}
+        ${badgeIndiceSugeridoHTML(item)}
         ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
         <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao || '—'}${item.edicao ? ' · Edição ' + esc(item.edicao) : ''} · Termo: ${esc(item.termo_busca || '')}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
