@@ -432,6 +432,9 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .hoje-lista .linha{display:flex; justify-content:space-between; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid var(--border-soft);}
 .hoje-lista .linha:last-child{border-bottom:none;}
 .btn-editar-adm{background:none; border:1px dashed var(--amber); color:var(--amber); border-radius:8px; font-size:12px; padding:4px 10px; cursor:pointer; margin-left:6px;}
+.af-link-acoes{display:flex; gap:6px; margin-top:6px;}
+.af-link-acoes .btn-ghost{font-size:12px; padding:4px 10px;}
+#af-portais a.btn-ghost{text-decoration:none; font-size:12.5px; padding:6px 12px;}
 .diff-tabela{width:100%; border-collapse:collapse; font-size:13px; margin:12px 0;}
 .diff-tabela th, .diff-tabela td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top; word-break:break-word;}
 .diff-antes{color:var(--coral); text-decoration:line-through;}
@@ -1405,7 +1408,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
 
       <div class="two-col">
-        <div class="form-row"><label>Edital</label><input type="text" id="af-edital" placeholder="Ex: Edital nº 050/2026"></div>
+        <div class="form-row"><label>Edital</label><input type="text" id="af-edital" oninput="atualizarLinksPortais()" placeholder="Ex: Edital nº 050/2026"></div>
         <div class="form-row"><label>Órgão</label><input type="text" id="af-orgao" placeholder="Ex: Secretaria Municipal de Saúde de..."></div>
       </div>
       <div class="form-row"><label>Objeto</label><input type="text" id="af-objeto" placeholder="Descreva a oportunidade"></div>
@@ -1423,7 +1426,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
       <div class="form-row"><label>Índice Transformare (1–5)</label><select id="af-indice"><option value="" selected>— Ainda não avaliado —</option><option value="1">1 — Baixa</option><option value="2">2 — Baixa</option><option value="3">3 — Média</option><option value="4">4 — Alta</option><option value="5">5 — Alta</option></select></div>
       <div class="two-col">
-        <div class="form-row"><label>Prazo</label><input type="text" id="af-prazo" placeholder="dd/mm/aaaa"></div>
+        <div class="form-row"><label>Prazo</label><input type="text" id="af-prazo" placeholder="dd/mm/aaaa">
+          <label style="display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--ink-muted); margin-top:6px; cursor:pointer;"><input type="checkbox" id="af-prazo-confirmado"> Prazo conferido no edital (use para prazos longos, de 2030 em diante)</label></div>
         <div class="form-row"><label>Publicação</label><input type="text" id="af-publicacao" placeholder="dd/mm/aaaa"></div>
       </div>
       <div class="form-row"><label>Profissões contempladas</label><div class="chip-select" id="af-profs"></div></div>
@@ -1473,12 +1477,25 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
       <div class="lead-section-title" style="margin-top:20px;">Links oficiais</div>
       <div class="two-col">
-        <div class="form-row"><label>URL oficial (site do órgão)</label><input type="text" id="af-url-oficial" placeholder="https://..."></div>
-        <div class="form-row"><label>URL do edital</label><input type="text" id="af-url-edital" placeholder="https://..."></div>
+        <div class="form-row" id="af-portais" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px;">
+          <label>Portais para consultar (abrem em nova aba — copie o link e cole nos campos abaixo)</label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+            <a class="btn-ghost" id="af-portal-edital-pncp" href="https://pncp.gov.br/app/editais" target="_blank" rel="noopener">Este edital no PNCP ↗</a>
+            <a class="btn-ghost" href="https://pncp.gov.br/app/editais" target="_blank" rel="noopener">Consulta de editais (PNCP) ↗</a>
+            <a class="btn-ghost" href="https://queridodiario.ok.org.br/" target="_blank" rel="noopener">Diários Oficiais (Querido Diário) ↗</a>
+            <a class="btn-ghost" id="af-portal-google" href="https://www.google.com/search?q=edital" target="_blank" rel="noopener">Buscar no Google ↗</a>
+          </div>
+        </div>
+        <div class="form-row"><label>URL oficial (site do órgão)</label><input type="text" id="af-url-oficial" placeholder="https://...">
+          <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-oficial')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-oficial')">Copiar</button></div></div>
+        <div class="form-row"><label>URL do edital</label><input type="text" id="af-url-edital" placeholder="https://...">
+          <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-edital')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-edital')">Copiar</button></div></div>
       </div>
       <div class="two-col">
-        <div class="form-row"><label>URL no PNCP</label><input type="text" id="af-url-pncp" placeholder="https://..."></div>
-        <div class="form-row"><label>URL de inscrição (opcional)</label><input type="text" id="af-url-inscricao" placeholder="Deixe em branco se não houver"></div>
+        <div class="form-row"><label>URL no PNCP</label><input type="text" id="af-url-pncp" placeholder="https://...">
+          <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-pncp')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-pncp')">Copiar</button></div></div>
+        <div class="form-row"><label>URL de inscrição (opcional)</label><input type="text" id="af-url-inscricao" placeholder="Deixe em branco se não houver">
+          <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-inscricao')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-inscricao')">Copiar</button></div></div>
       </div>
       <div class="form-actions">
         <button class="btn-primary" onclick="saveAdminForm()">Salvar oportunidade</button>
@@ -1825,7 +1842,7 @@ const ABRANGENCIAS = ["Nacional","Estadual","Municipal"];
 // Clínica = o edital exige equipe multidisciplinar, então só uma clínica consegue atender.
 const PUBLICOS = ["Pessoa Física (PF)","Pessoa Jurídica (PJ)","Clínica (equipe multidisciplinar)"];
 function publicoTexto(o){ return (o.aceitaContratacao && o.aceitaContratacao.length) ? o.aceitaContratacao.join(', ') : 'Não informado'; }
-const SITUACOES = ["Aberto","Próximo do encerramento","Em análise","Retificado","Suspenso","Encerrado","Prazo não informado"];
+const SITUACOES = ["Aberto","Próximo do encerramento","Em análise","Retificado","Suspenso","Encerrado","Prazo não informado","Prazo a confirmar"];
 // "Divulgada no PNCP" só diz que o edital foi publicado — não significa que está aberto.
 // A situação exibida sai do prazo: vencido = Encerrado; até 7 dias = Próximo do encerramento;
 // prazo futuro = Aberto; sem prazo válido = Prazo não informado. Situações manuais
@@ -1834,7 +1851,9 @@ function situacaoExibida(o){
   const s = o.situacao || '';
   if(['Em análise','Retificado','Suspenso'].includes(s)) return s;
   const d = parseDate(o.prazo);
-  if(!isNaN(d.getTime()) && d.getFullYear() < 2030){
+  // Prazo de 2030 em diante só vale depois que o analista confirma (credenciamentos longos existem).
+  if(!isNaN(d.getTime()) && d.getFullYear() >= 2030 && !o.prazoConfirmado) return 'Prazo a confirmar';
+  if(!isNaN(d.getTime())){
     const hoje = new Date(); hoje.setHours(0,0,0,0);
     const dias = Math.round((d - hoje)/86400000);
     if(dias < 0) return 'Encerrado';
@@ -2165,7 +2184,7 @@ function toast(msg){
 
 /* ================= BADGES / SCORE ================= */
 function badgeClass(s){
-  return {"Aberto":"aberto","Próximo do encerramento":"encerrando","Em análise":"analise","Retificado":"retificado","Encerrado":"encerrado","Suspenso":"suspenso","Prazo não informado":"divulgada"}[s] || "aberto";
+  return {"Aberto":"aberto","Próximo do encerramento":"encerrando","Em análise":"analise","Retificado":"retificado","Encerrado":"encerrado","Suspenso":"suspenso","Prazo não informado":"divulgada","Prazo a confirmar":"divulgada"}[s] || "aberto";
 }
 // "Inscrições próximas": prazo dentro dos próximos 7 dias (e ainda não vencido).
 const DIAS_INSCRICAO_PROXIMA = 7;
@@ -4365,6 +4384,7 @@ function openAdminForm(id){
     document.getElementById('af-sit').value = o.situacao;
     document.getElementById('af-indice').value = (o.indice==null) ? '' : String(Math.min(5, Math.max(1, Math.round(Number(o.indice)))));
     document.getElementById('af-prazo').value = o.prazo;
+    document.getElementById('af-prazo-confirmado').checked = !!o.prazoConfirmado;
     document.getElementById('af-publicacao').value = o.publicacao;
     document.getElementById('af-valor-atendimento').value = (o.valorAtendimento && !o.valorAtendimento.startsWith('Não')) ? o.valorAtendimento : '';
     document.getElementById('af-volume').value = (o.volume && !o.volume.startsWith('Não')) ? o.volume : '';
@@ -4392,7 +4412,9 @@ function openAdminForm(id){
     afDocumentos = [];
     afMovimentacoes = [];
     afRemuneracao = [];
+    document.getElementById('af-prazo-confirmado').checked = false;
   }
+  atualizarLinksPortais();
   renderAfDocList();
   renderAfMovList();
   renderAfRemuneracaoList();
@@ -4434,6 +4456,7 @@ async function saveAdminForm(){
     situacao: document.getElementById('af-sit').value,
     indice, indiceLabel: indice==null ? null : labels[indice],
     prazo: document.getElementById('af-prazo').value.trim() || 'Não informado',
+    prazoConfirmado: document.getElementById('af-prazo-confirmado').checked,
     publicacao: document.getElementById('af-publicacao').value.trim() || 'Não informado',
     profissoes: profs.length ? profs : ['Não informado'],
     aceitaContratacao: publico,
@@ -4497,6 +4520,7 @@ async function saveAdminForm(){
     };
     const prazoISO = _dataBRParaISO(document.getElementById('af-prazo').value);
     const publicacaoISO = _dataBRParaISO(document.getElementById('af-publicacao').value);
+    payloadSupabase.prazo_confirmado = data.prazoConfirmado;
     if(prazoISO !== undefined) payloadSupabase.prazo = prazoISO;
     if(publicacaoISO !== undefined) payloadSupabase.publicacao = publicacaoISO;
 
@@ -4575,7 +4599,7 @@ function renderHoje(){
   const ck = document.getElementById('cfg-confirmar-edicao'); if(ck) ck.checked = confirmarEdicaoAtiva();
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   const prazoDe = o => _prazoParaDate(o.prazo);
-  const suspeitos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d.getFullYear() >= 2030; });
+  const suspeitos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d.getFullYear() >= 2030 && !o.prazoConfirmado; });
   const vencidos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d < hoje && d.getFullYear() < 2030 && o.situacao === 'Aberto'; }); // só situação manual "Aberto" com prazo vencido
   const semPrazo = oportunidades.filter(o=>situacaoExibida(o)==='Prazo não informado');
   const semSituacao = oportunidades.filter(o=>!o.situacao || o.situacao === 'Não informado');
@@ -4599,11 +4623,11 @@ function renderHoje(){
     el.onclick = c.ir; box.appendChild(el);
   });
   const linhas = [
-    ['Prazo suspeito (ano 2030 ou depois)', suspeitos], ['Prazo vencido e ainda "Aberto"', vencidos],
+    ['Prazo de 2030 em diante a confirmar', suspeitos], ['Prazo vencido e ainda "Aberto"', vencidos],
     ['Sem prazo definido', semPrazo], ['Sem situação', semSituacao],
   ];
   document.getElementById('hoje-problemas').innerHTML = '<div class="hoje-lista">' + linhas.map(([t,arr])=>
-    `<div class="linha"><span>${t}</span><span style="display:flex; gap:8px; align-items:center;"><strong style="color:${arr.length?'var(--coral)':'var(--teal)'};">${arr.length}</strong>${arr.length?`<button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="abrirEditalProblema(${arr[0].id})">Corrigir o 1º</button>`:''}</span></div>`).join('') + '</div>';
+    `<div class="linha"><span>${t}</span><span style="display:flex; gap:8px; align-items:center;"><strong style="color:${arr.length?'var(--coral)':'var(--teal)'};">${arr.length}</strong>${arr.length?`<button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="abrirEditalProblema(${arr[0].id})">Corrigir o 1º</button>`:''}</span></div>`).join('') + (suspeitos.length ? '<div class="hoje-lista" style="margin-top:12px;"><div style="font-size:12px; color:var(--ink-dim);">Prazos longos podem estar certos. Confira no edital e confirme:</div>' + suspeitos.map(o=>`<div class="linha"><span>${esc(o.edital)} — prazo <strong style="color:var(--amber);">${esc(o.prazo)}</strong></span><span style="display:flex; gap:6px;"><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="confirmarPrazoEdital(${o.id})">✓ Confirmar prazo</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openAdminForm(${o.id})">Editar</button></span></div>`).join('') + '</div>' : '');
   document.getElementById('hoje-encerrando').innerHTML = encerrando.length
     ? '<div class="hoje-lista">' + encerrando.map(o=>`<div class="linha"><span>${esc(o.edital)} — ${esc(o.orgao)} (${esc(o.uf)})</span><span style="display:flex; gap:8px; align-items:center;"><span style="color:var(--amber);">${esc(o.prazo)}</span><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openDetalhe(${o.id})">Ver</button></span></div>`).join('') + '</div>'
     : '<span style="font-size:13px; color:var(--ink-dim);">Nenhum edital encerrando nos próximos 15 dias.</span>';
@@ -4613,12 +4637,52 @@ function renderHoje(){
 }
 function abrirEditalProblema(id){ openAdminForm(id); }
 
+/* ---- Links dos portais na edição + confirmação de prazo ---- */
+function linkPncpDoEdital(numero){
+  const m = (numero||'').trim().match(/^(\d{14})-\d+-0*(\d+)\/(\d{4})$/);
+  return m ? `https://pncp.gov.br/app/editais/${m[1]}/${m[3]}/${m[2]}` : null;
+}
+function atualizarLinksPortais(){
+  const num = (document.getElementById('af-edital').value || '').trim();
+  const a = document.getElementById('af-portal-edital-pncp');
+  const direto = linkPncpDoEdital(num);
+  a.href = direto || ('https://pncp.gov.br/app/editais' + (num ? '?q=' + encodeURIComponent(num) : ''));
+  a.textContent = direto ? 'Abrir este edital no PNCP ↗' : 'Buscar este edital no PNCP ↗';
+  const org = (document.getElementById('af-orgao').value || '').trim();
+  document.getElementById('af-portal-google').href = 'https://www.google.com/search?q=' + encodeURIComponent((num + ' ' + org + ' edital credenciamento').trim());
+  const pncp = document.getElementById('af-url-pncp');
+  if(direto && !pncp.value.trim()) pncp.placeholder = direto;
+}
+function abrirCampoLink(id){
+  const v = (document.getElementById(id).value || '').trim();
+  if(!/^https?:\/\//i.test(v)){ toast('Esse campo ainda não tem um link válido'); return; }
+  window.open(v, '_blank', 'noopener');
+}
+async function copiarCampoLink(id){
+  const v = (document.getElementById(id).value || '').trim();
+  if(!v){ toast('Campo vazio'); return; }
+  try{ await navigator.clipboard.writeText(v); toast('Link copiado'); }
+  catch(e){ const i = document.getElementById(id); i.select(); toast('Selecionado — use Ctrl+C para copiar'); }
+}
+async function confirmarPrazoEdital(id){
+  const o = oportunidades.find(x=>x.id===id); if(!o) return;
+  if(!confirm(`Confirmar que o prazo ${o.prazo} do edital ${o.edital} está correto?`)) return;
+  o.prazoConfirmado = true;
+  storeSet('oportunidades', oportunidades);
+  if(_sb && id >= 900000){
+    const { data, error } = await _sb.from('editais').update({ prazo_confirmado:true }).eq('id', id-900000).select('id');
+    if(error || !data || !data.length){ toast('Confirmado só neste navegador — não gravou no banco' + (error ? ' ('+error.message+')' : '')); }
+    else toast('Prazo confirmado e salvo no catálogo');
+  } else toast('Prazo confirmado neste navegador');
+  renderAdmin(); applyFilters();
+}
+
 /* ---- Edição fora do painel: confirmação antes → depois ---- */
 let _confirmEdicaoOk = false;
 let _editAntes = null;
 const _CAMPOS_EDICAO = {
   edital:'Edital', orgao:'Órgão', objeto:'Objeto', uf:'UF', cidade:'Cidade', tipo:'Tipo', modalidade:'Modalidade',
-  abrangencia:'Abrangência', situacao:'Situação', indice:'Índice', prazo:'Prazo', publicacao:'Publicação',
+  abrangencia:'Abrangência', situacao:'Situação', indice:'Índice', prazo:'Prazo', prazoConfirmado:'Prazo conferido', publicacao:'Publicação',
   profissoes:'Profissões', aceitaContratacao:'Aceita contratação', escolaridadeMinima:'Escolaridade mínima',
   experienciaMinimaAnos:'Experiência mínima (anos)', valorAtendimento:'Valor por atendimento', volume:'Volume',
   requisitos:'Requisitos', pontosPositivos:'Pontos positivos', pontosAtencao:'Pontos de atenção',
@@ -5092,6 +5156,7 @@ function mapEditalSupabase(row){
     situacao: row.situacao || 'Aberto',
     objeto: row.objeto || '',
     prazo: formatarDataBR(row.prazo),
+    prazoConfirmado: !!row.prazo_confirmado,
     publicacao: formatarDataBR(row.publicacao),
     indice,
     indiceLabel: indice==null ? null : (indice >= 4 ? 'Alta oportunidade' : indice >= 3 ? 'Oportunidade moderada' : 'Baixa oportunidade'),
