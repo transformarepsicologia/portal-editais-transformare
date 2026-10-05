@@ -1092,7 +1092,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p class="section-sub">Contagens ao vivo. Clique em um cartão para ir direto à tarefa.</p>
     <div class="admin-stats" id="hoje-cards"></div>
     <div class="section-title" style="font-size:15px; margin-top:8px;">Editais com problema</div>
-    <p class="section-sub" style="margin-bottom:0;">Prazo suspeito (ano 2030 ou depois), prazo vencido ainda listado, sem prazo e sem situação.</p>
+    <p class="section-sub" style="margin-bottom:0;">Prazo suspeito (ano 2040 ou depois), prazo vencido ainda listado, sem prazo e sem situação.</p>
     <div class="panel" id="hoje-problemas" style="margin-top:8px;"></div>
     <div class="section-title" style="font-size:15px; margin-top:22px;">Encerrando em 15 dias</div>
     <div class="panel" id="hoje-encerrando" style="margin-top:8px;"></div>
@@ -1369,7 +1369,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="modal-box" style="max-width:520px;">
     <button class="modal-close" onclick="cancelarPrazoLongo()">×</button>
     <div class="section-title" style="font-size:17px;">⚠ Confirmar este prazo?</div>
-    <p class="section-sub" style="margin-bottom:10px;">O prazo <strong id="confirm-prazo-texto" style="color:var(--amber);"></strong> está muito distante (2030 em diante). Alguns credenciamentos têm vigência longa, mas também pode ser erro de digitação ou do PNCP. Confira no edital antes de salvar.</p>
+    <p class="section-sub" style="margin-bottom:10px;">O prazo <strong id="confirm-prazo-texto" style="color:var(--amber);"></strong> está muito distante (2040 em diante). Alguns credenciamentos têm vigência longa, mas também pode ser erro de digitação ou do PNCP. Confira no edital antes de salvar.</p>
     <div class="form-actions" style="display:flex; gap:8px;">
       <button class="btn-primary" style="flex:1;" onclick="confirmarPrazoLongo()">Sim, o prazo está correto</button>
       <button class="btn-ghost" onclick="cancelarPrazoLongo()">Voltar e corrigir</button>
@@ -1862,8 +1862,8 @@ function situacaoExibida(o){
   const s = o.situacao || '';
   if(['Em análise','Retificado','Suspenso'].includes(s)) return s;
   const d = parseDate(o.prazo);
-  // Prazo de 2030 em diante só vale depois que o analista confirma (credenciamentos longos existem).
-  if(!isNaN(d.getTime()) && d.getFullYear() >= 2030 && !o.prazoConfirmado) return 'Prazo a confirmar';
+  // Prazo de 2040 em diante só vale depois que o analista confirma (credenciamentos longos existem).
+  if(!isNaN(d.getTime()) && d.getFullYear() >= 2040 && !o.prazoConfirmado) return 'Prazo a confirmar';
   if(!isNaN(d.getTime())){
     const hoje = new Date(); hoje.setHours(0,0,0,0);
     const dias = Math.round((d - hoje)/86400000);
@@ -4489,9 +4489,9 @@ async function saveAdminForm(){
     urlInscricao: document.getElementById('af-url-inscricao').value.trim() || null
   };
 
-  // Prazo de 2030 em diante: avisa e pede confirmação antes de salvar.
+  // Prazo de 2040 em diante: avisa e pede confirmação antes de salvar.
   const _dPrazo = parseDate(data.prazo);
-  const _longo = !isNaN(_dPrazo.getTime()) && _dPrazo.getFullYear() >= 2030;
+  const _longo = !isNaN(_dPrazo.getTime()) && _dPrazo.getFullYear() >= 2040;
   const _jaConf = !!(_editAntes && _editAntes.prazoConfirmado && _editAntes.prazo === data.prazo);
   if(_longo && !_jaConf && !_prazoLongoOk){
     document.getElementById('confirm-prazo-texto').textContent = data.prazo;
@@ -4621,12 +4621,12 @@ function renderHoje(){
   const ck = document.getElementById('cfg-confirmar-edicao'); if(ck) ck.checked = confirmarEdicaoAtiva();
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   const prazoDe = o => _prazoParaDate(o.prazo);
-  const suspeitos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d.getFullYear() >= 2030 && !o.prazoConfirmado; });
-  const vencidos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d < hoje && d.getFullYear() < 2030 && o.situacao === 'Aberto'; }); // só situação manual "Aberto" com prazo vencido
+  const suspeitos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d.getFullYear() >= 2040 && !o.prazoConfirmado; });
+  const vencidos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d < hoje && d.getFullYear() < 2040 && o.situacao === 'Aberto'; }); // só situação manual "Aberto" com prazo vencido
   const semPrazo = oportunidades.filter(o=>situacaoExibida(o)==='Prazo não informado');
   const semSituacao = oportunidades.filter(o=>!o.situacao || o.situacao === 'Não informado');
   const semIndice = oportunidades.filter(o=>o.indice == null);
-  const encerrando = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d >= hoje && (d-hoje)/86400000 <= 15 && d.getFullYear() < 2030; })
+  const encerrando = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d >= hoje && (d-hoje)/86400000 <= 15 && d.getFullYear() < 2040; })
                                    .sort((a,b)=>prazoDe(a)-prazoDe(b));
   const problemas = suspeitos.length + vencidos.length + semPrazo.length + semSituacao.length;
   const fmt = n => n == null ? '—' : n;
@@ -4645,7 +4645,7 @@ function renderHoje(){
     el.onclick = c.ir; box.appendChild(el);
   });
   const linhas = [
-    ['Prazo de 2030 em diante a confirmar', suspeitos], ['Prazo vencido e ainda "Aberto"', vencidos],
+    ['Prazo de 2040 em diante a confirmar', suspeitos], ['Prazo vencido e ainda "Aberto"', vencidos],
     ['Sem prazo definido', semPrazo], ['Sem situação', semSituacao],
   ];
   document.getElementById('hoje-problemas').innerHTML = '<div class="hoje-lista">' + linhas.map(([t,arr])=>
