@@ -1365,6 +1365,18 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 </main>
 
+<div class="modal-overlay" id="confirm-prazo-modal" style="z-index:1250;">
+  <div class="modal-box" style="max-width:520px;">
+    <button class="modal-close" onclick="cancelarPrazoLongo()">×</button>
+    <div class="section-title" style="font-size:17px;">⚠ Confirmar este prazo?</div>
+    <p class="section-sub" style="margin-bottom:10px;">O prazo <strong id="confirm-prazo-texto" style="color:var(--amber);"></strong> está muito distante (2030 em diante). Alguns credenciamentos têm vigência longa, mas também pode ser erro de digitação ou do PNCP. Confira no edital antes de salvar.</p>
+    <div class="form-actions" style="display:flex; gap:8px;">
+      <button class="btn-primary" style="flex:1;" onclick="confirmarPrazoLongo()">Sim, o prazo está correto</button>
+      <button class="btn-ghost" onclick="cancelarPrazoLongo()">Voltar e corrigir</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="confirm-edicao-modal" style="z-index:1200;">
   <div class="modal-box" style="max-width:640px;">
     <button class="modal-close" onclick="cancelarConfirmEdicao()">×</button>
@@ -1426,8 +1438,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
       <div class="form-row"><label>Índice Transformare (1–5)</label><select id="af-indice"><option value="" selected>— Ainda não avaliado —</option><option value="1">1 — Baixa</option><option value="2">2 — Baixa</option><option value="3">3 — Média</option><option value="4">4 — Alta</option><option value="5">5 — Alta</option></select></div>
       <div class="two-col">
-        <div class="form-row"><label>Prazo</label><input type="text" id="af-prazo" placeholder="dd/mm/aaaa">
-          <label style="display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--ink-muted); margin-top:6px; cursor:pointer;"><input type="checkbox" id="af-prazo-confirmado"> Prazo conferido no edital (use para prazos longos, de 2030 em diante)</label></div>
+        <div class="form-row"><label>Prazo</label><input type="text" id="af-prazo" placeholder="dd/mm/aaaa"></div>
         <div class="form-row"><label>Publicação</label><input type="text" id="af-publicacao" placeholder="dd/mm/aaaa"></div>
       </div>
       <div class="form-row"><label>Profissões contempladas</label><div class="chip-select" id="af-profs"></div></div>
@@ -4359,6 +4370,7 @@ function openAdminForm(id){
   editingId = id;
   adminFormOrigemFora = (currentView !== 'admin');
   _confirmEdicaoOk = false;
+  _prazoLongoOk = false;
   _editAntes = id ? JSON.parse(JSON.stringify(oportunidades.find(x=>x.id===id)||null)) : null;
   document.getElementById('admin-form-modal').classList.add('open');
   document.getElementById('admin-form-modalbox').scrollTop = 0;
@@ -4384,7 +4396,6 @@ function openAdminForm(id){
     document.getElementById('af-sit').value = o.situacao;
     document.getElementById('af-indice').value = (o.indice==null) ? '' : String(Math.min(5, Math.max(1, Math.round(Number(o.indice)))));
     document.getElementById('af-prazo').value = o.prazo;
-    document.getElementById('af-prazo-confirmado').checked = !!o.prazoConfirmado;
     document.getElementById('af-publicacao').value = o.publicacao;
     document.getElementById('af-valor-atendimento').value = (o.valorAtendimento && !o.valorAtendimento.startsWith('Não')) ? o.valorAtendimento : '';
     document.getElementById('af-volume').value = (o.volume && !o.volume.startsWith('Não')) ? o.volume : '';
@@ -4412,7 +4423,6 @@ function openAdminForm(id){
     afDocumentos = [];
     afMovimentacoes = [];
     afRemuneracao = [];
-    document.getElementById('af-prazo-confirmado').checked = false;
   }
   atualizarLinksPortais();
   renderAfDocList();
@@ -4456,7 +4466,7 @@ async function saveAdminForm(){
     situacao: document.getElementById('af-sit').value,
     indice, indiceLabel: indice==null ? null : labels[indice],
     prazo: document.getElementById('af-prazo').value.trim() || 'Não informado',
-    prazoConfirmado: document.getElementById('af-prazo-confirmado').checked,
+    prazoConfirmado: false,
     publicacao: document.getElementById('af-publicacao').value.trim() || 'Não informado',
     profissoes: profs.length ? profs : ['Não informado'],
     aceitaContratacao: publico,
@@ -4478,6 +4488,18 @@ async function saveAdminForm(){
     urlPncp: document.getElementById('af-url-pncp').value.trim() || null,
     urlInscricao: document.getElementById('af-url-inscricao').value.trim() || null
   };
+
+  // Prazo de 2030 em diante: avisa e pede confirmação antes de salvar.
+  const _dPrazo = parseDate(data.prazo);
+  const _longo = !isNaN(_dPrazo.getTime()) && _dPrazo.getFullYear() >= 2030;
+  const _jaConf = !!(_editAntes && _editAntes.prazoConfirmado && _editAntes.prazo === data.prazo);
+  if(_longo && !_jaConf && !_prazoLongoOk){
+    document.getElementById('confirm-prazo-texto').textContent = data.prazo;
+    document.getElementById('confirm-prazo-modal').classList.add('open');
+    return;
+  }
+  data.prazoConfirmado = _longo;
+  _prazoLongoOk = false;
 
   // Edição feita fora do Painel administrativo: mostra antes → depois e pede confirmação.
   if(editingId && adminFormOrigemFora && confirmarEdicaoAtiva() && !_confirmEdicaoOk){
@@ -4679,6 +4701,9 @@ async function confirmarPrazoEdital(id){
 
 /* ---- Edição fora do painel: confirmação antes → depois ---- */
 let _confirmEdicaoOk = false;
+let _prazoLongoOk = false;
+function cancelarPrazoLongo(){ document.getElementById('confirm-prazo-modal').classList.remove('open'); }
+function confirmarPrazoLongo(){ document.getElementById('confirm-prazo-modal').classList.remove('open'); _prazoLongoOk = true; saveAdminForm(); }
 let _editAntes = null;
 const _CAMPOS_EDICAO = {
   edital:'Edital', orgao:'Órgão', objeto:'Objeto', uf:'UF', cidade:'Cidade', tipo:'Tipo', modalidade:'Modalidade',
