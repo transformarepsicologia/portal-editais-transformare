@@ -415,6 +415,26 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .status-aviso.indisponivel{background:rgba(240,101,78,0.1); border:1px solid rgba(240,101,78,0.35); color:#F5978A;}
 .status-aviso .dot{width:7px;height:7px;border-radius:50%; background:currentColor; flex-shrink:0;}
 .inbox-actions .btn-ghost.destaque-adiar{border-color:var(--amber) !important; color:var(--amber) !important; font-weight:700; box-shadow:0 0 0 1px rgba(245,169,62,0.25);}
+.admin-tabs{display:flex; gap:4px; flex-wrap:wrap; border-bottom:1px solid var(--border-soft); margin:6px 0 20px;}
+.admin-tab{background:none; border:none; border-bottom:2px solid transparent; color:var(--ink-muted); font:inherit; font-weight:600; font-size:14px; padding:10px 14px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; margin-bottom:-1px;}
+.admin-tab:hover{color:var(--ink);}
+.admin-tab.active{color:var(--teal); border-bottom-color:var(--teal);}
+.admin-tab-badge{background:var(--coral); color:#fff; font-size:11px; font-weight:700; border-radius:10px; padding:1px 7px; line-height:1.5;}
+.admin-tab-badge.neutral{background:var(--border); color:var(--ink-muted);}
+.admin-tabpanel{display:none;}
+.admin-tabpanel.active{display:block;}
+.admin-stats .indicator-card.clicavel{cursor:pointer; transition:border-color .15s, transform .15s;}
+.admin-stats .indicator-card.clicavel:hover{border-color:var(--teal); transform:translateY(-2px);}
+.indicator-card .num.alerta{color:var(--amber);}
+.indicator-card .num.perigo{color:var(--coral);}
+.hoje-lista{display:flex; flex-direction:column; gap:6px; font-size:13px;}
+.hoje-lista .linha{display:flex; justify-content:space-between; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid var(--border-soft);}
+.hoje-lista .linha:last-child{border-bottom:none;}
+.btn-editar-adm{background:none; border:1px dashed var(--amber); color:var(--amber); border-radius:8px; font-size:12px; padding:4px 10px; cursor:pointer; margin-left:6px;}
+.diff-tabela{width:100%; border-collapse:collapse; font-size:13px; margin:12px 0;}
+.diff-tabela th, .diff-tabela td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top; word-break:break-word;}
+.diff-antes{color:var(--coral); text-decoration:line-through;}
+.diff-depois{color:var(--teal);}
 .admin-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:26px;}
 table.admin-table{width:100%; border-collapse:collapse; font-size:13px;}
 table.admin-table th{text-align:left; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; color:var(--ink-dim); padding:10px 12px; border-bottom:1px solid var(--border);}
@@ -1055,24 +1075,28 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </div>
   <div class="admin-flag">⚠ Área restrita — acesso por login e senha (Supabase Auth), liberado apenas para e-mails autorizados.</div>
 
+  <div class="admin-tabs" id="admin-tabs" role="tablist">
+    <button class="admin-tab active" data-tab="hoje" onclick="adminTab('hoje')">Hoje</button>
+    <button class="admin-tab" data-tab="triagem" onclick="adminTab('triagem')">Triagem<span class="admin-tab-badge" id="tabbadge-triagem" style="display:none;"></span></button>
+    <button class="admin-tab" data-tab="editais" onclick="adminTab('editais')">Editais<span class="admin-tab-badge neutral" id="tabbadge-editais" style="display:none;"></span></button>
+    <button class="admin-tab" data-tab="leads" onclick="adminTab('leads')">Leads e usuários<span class="admin-tab-badge" id="tabbadge-leads" style="display:none;"></span></button>
+    <button class="admin-tab" data-tab="config" onclick="adminTab('config')">Configurações</button>
+  </div>
+
+  <div class="admin-tabpanel active" id="admin-tab-hoje">
+    <div class="section-title" style="font-size:17px; margin-top:4px;">O que precisa da sua atenção</div>
+    <p class="section-sub">Contagens ao vivo. Clique em um cartão para ir direto à tarefa.</p>
+    <div class="admin-stats" id="hoje-cards"></div>
+    <div class="section-title" style="font-size:15px; margin-top:8px;">Editais com problema</div>
+    <p class="section-sub" style="margin-bottom:0;">Prazo suspeito (ano 2030 ou depois), prazo vencido ainda listado, sem prazo e sem situação.</p>
+    <div class="panel" id="hoje-problemas" style="margin-top:8px;"></div>
+    <div class="section-title" style="font-size:15px; margin-top:22px;">Encerrando em 15 dias</div>
+    <div class="panel" id="hoje-encerrando" style="margin-top:8px;"></div>
+    <div class="section-title" style="font-size:15px; margin-top:22px;">Números gerais</div>
   <div class="admin-stats" id="admin-stats"></div>
-
-  <div class="section-title" style="font-size:17px; margin-top:8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleCadastrosAuxiliares()">
-    <span>Cadastros auxiliares</span>
-    <span id="cadastros-auxiliares-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
-  </div>
-  <p class="section-sub">Profissões disponíveis para oportunidades, alertas e cadastro de profissionais.</p>
-  <div id="cadastros-auxiliares-body" style="display:none;">
-    <div class="panel" style="margin-top:0;">
-      <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-        <input type="text" id="prof-admin-input" placeholder="Nova profissão" style="flex:1; min-width:180px;">
-        <button type="button" class="btn-primary" onclick="addProfissaoAdmin()">+ Adicionar profissão</button>
-      </div>
-      <ul class="af-item-list" id="prof-admin-list"></ul>
-      <p style="font-size:11px; color:var(--ink-dim); margin-top:10px;">Desativar uma profissão a remove de novos cadastros, filtros e alertas — oportunidades já cadastradas com ela não são afetadas.</p>
-    </div>
   </div>
 
+  <div class="admin-tabpanel" id="admin-tab-triagem">
   <div style="margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; cursor:pointer; user-select:none;" onclick="toggleSecaoAdmin('caixa-entrada-body','caixa-entrada-arrow')">
       <div class="section-title" style="font-size:17px; margin:0; display:flex; align-items:center; gap:8px;">
@@ -1082,7 +1106,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <button class="btn-ghost" onclick="event.stopPropagation(); buscarCredenciamentosAgora()">🔄 Buscar agora</button>
     </div>
     <div id="caixa-entrada-body">
-      <p class="section-sub" style="margin-bottom:10px;">Achados automáticos no PNCP que combinam com as profissões cadastradas. Aprove para que entrem direto no catálogo de editais. <strong>Funciona apenas quando este arquivo está hospedado fora do link do claude.ai</strong> e com um projeto Supabase configurado — veja o README do pacote de integração.</p>
+      <p class="section-sub" style="margin-bottom:10px;">Achados automáticos no PNCP que combinam com as profissões cadastradas. Aprove para que entrem direto no catálogo de editais.</p>
       <div id="status-fontes-aviso-pncp"></div>
       <div id="caixa-entrada-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:12px;"></div>
       <div id="caixa-entrada-lista"></div>
@@ -1115,6 +1139,141 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div id="status-fontes-aviso-diario"></div>
       <div id="diario-oficial-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:12px;"></div>
       <div id="diario-oficial-lista"></div>
+    </div>
+  </div>
+
+  </div>
+
+  <div class="admin-tabpanel" id="admin-tab-editais">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px; cursor:pointer; user-select:none;" onclick="toggleSecaoAdmin('oportunidades-cadastradas-body','oportunidades-cadastradas-arrow')">
+    <div class="section-title" style="font-size:17px; margin:0; display:flex; align-items:center; gap:8px;">
+      <span>Oportunidades cadastradas</span>
+      <span id="oportunidades-cadastradas-arrow" style="transition:transform .2s; display:inline-block; transform:rotate(180deg);">▾</span>
+    </div>
+    <button class="btn-primary" onclick="event.stopPropagation(); openAdminForm(null)">+ Nova oportunidade</button>
+  </div>
+
+  <div id="oportunidades-cadastradas-body" style="display:block;">
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+    <input type="text" id="admin-filtro-busca" placeholder="Buscar por edital, órgão ou objeto..." style="flex:1; min-width:200px;" oninput="adminFiltroMudou()">
+    <select id="admin-filtro-uf" style="min-width:110px;" onchange="adminFiltroMudou()"><option value="">Todas as UFs</option></select>
+    <select id="admin-filtro-profissao" style="min-width:160px;" onchange="adminFiltroMudou()"><option value="">Todas as profissões</option></select>
+    <select id="admin-filtro-situacao" style="min-width:150px;" onchange="adminFiltroMudou()"><option value="">Todas as situações</option></select>
+    <button class="btn-ghost" onclick="limparFiltrosAdmin()">Limpar filtros</button>
+  </div>
+  <div id="admin-filtro-contagem" style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;"></div>
+
+  <div style="overflow-x:auto;">
+    <table class="admin-table" id="admin-table">
+      <thead><tr><th>Edital</th><th>Órgão</th><th>Profissão</th><th>Situação</th><th>Ações</th></tr></thead>
+      <tbody id="admin-tbody"></tbody>
+    </table>
+  </div>
+  <div id="admin-paginacao" style="display:flex; justify-content:center; align-items:center; gap:14px; margin-top:14px;"></div>
+  </div>
+
+  </div>
+
+  <div class="admin-tabpanel" id="admin-tab-leads">
+  <div class="section-title" style="font-size:19px; margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">Leads recebidos</div>
+  <p class="section-sub">Pedidos de orientação enviados pelo portal, com classificação comercial automática.</p>
+
+  <div class="admin-stats" id="leads-stats"></div>
+
+  <div class="lead-section-title" style="margin-top:6px;">Oportunidades que mais geraram leads</div>
+  <div class="panel" id="top-oportunidades" style="margin-top:8px;"></div>
+
+  <div style="display:flex; justify-content:space-between; align-items:center; margin:26px 0 14px; flex-wrap:wrap; gap:10px;">
+    <div class="section-title" style="font-size:16px; margin:0;">Todos os leads</div>
+    <button class="btn-ghost" onclick="clearLeadsDemo()">↻ Atualizar leads</button>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="admin-table" id="leads-table">
+      <thead><tr><th>Data</th><th>Nome</th><th>Profissão</th><th>Oportunidade</th><th>Intenção</th><th>Urgência</th><th>Classificação</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody id="leads-tbody"></tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
+    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleUsuariosCadastrados()">
+      <span>👥 Usuários cadastrados</span>
+      <span id="usuarios-cadastrados-arrow" style="transition:transform .2s; display:inline-block; transform:rotate(180deg);">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Contas de profissionais criadas no portal (Supabase Auth). Se alguém esquecer a senha, envie um link de redefinição — a pessoa cria a nova senha sozinha, você nunca vê nem define a senha dela.</p>
+    <div id="usuarios-cadastrados-body" style="display:block;">
+      <div id="usuarios-cadastrados-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <div id="usuarios-cadastrados-lista"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
+    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleFeedbacksAdmin()">
+      <span>💬 Feedbacks do beta <span id="feedbacks-badge" class="plan-badge" style="display:none;"></span></span>
+      <span id="feedbacks-arrow" style="transition:transform .2s; display:inline-block; transform:rotate(180deg);">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Mensagens enviadas pelo botão BETA, pelo rodapé ou pela página Sobre.</p>
+    <div id="feedbacks-body" style="display:block;">
+      <div id="feedbacks-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead><tr><th>Data</th><th>Tipo</th><th>Mensagem</th><th>Quem</th><th>Página</th><th>Status</th></tr></thead>
+          <tbody id="feedbacks-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
+    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleSugestoesProfissao()">
+      <span>🆕 Profissões sugeridas <span id="sugestoes-prof-badge" class="plan-badge" style="display:none;"></span></span>
+      <span id="sugestoes-prof-arrow" style="transition:transform .2s; display:inline-block; transform:rotate(180deg);">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Profissões que profissionais escreveram no cadastro ou no perfil por não estarem na lista. Adicione à lista de profissões ou ignore.</p>
+    <div id="sugestoes-prof-body" style="display:block;">
+      <div id="sugestoes-prof-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead><tr><th>Data</th><th>Profissão sugerida</th><th>Quem sugeriu</th><th>E-mail</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="sugestoes-prof-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
+    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleSolicitacoesIndice()">
+      <span>🛡️ Solicitações de avaliação do Índice</span>
+      <span id="solicitacoes-indice-arrow" style="transition:transform .2s; display:inline-block; transform:rotate(180deg);">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Pedidos de interessados para a Transformare avaliar o Índice de um edital que ainda não recebeu nota — use para priorizar quais editais avaliar primeiro.</p>
+    <div id="solicitacoes-indice-body" style="display:block;">
+      <div id="solicitacoes-indice-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table" id="solicitacoes-indice-table">
+          <thead><tr><th>Data</th><th>Edital</th><th>Órgão</th><th>Nome</th><th>Contato</th><th>Mensagem</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="solicitacoes-indice-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <div class="admin-tabpanel" id="admin-tab-config">
+  <div class="section-title" style="font-size:17px; margin-top:8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleCadastrosAuxiliares()">
+    <span>Cadastros auxiliares</span>
+    <span id="cadastros-auxiliares-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
+  </div>
+  <p class="section-sub">Profissões disponíveis para oportunidades, alertas e cadastro de profissionais.</p>
+  <div id="cadastros-auxiliares-body" style="display:none;">
+    <div class="panel" style="margin-top:0;">
+      <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+        <input type="text" id="prof-admin-input" placeholder="Nova profissão" style="flex:1; min-width:180px;">
+        <button type="button" class="btn-primary" onclick="addProfissaoAdmin()">+ Adicionar profissão</button>
+      </div>
+      <ul class="af-item-list" id="prof-admin-list"></ul>
+      <p style="font-size:11px; color:var(--ink-dim); margin-top:10px;">Desativar uma profissão a remove de novos cadastros, filtros e alertas — oportunidades já cadastradas com ela não são afetadas.</p>
     </div>
   </div>
 
@@ -1191,118 +1350,29 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
   </div>
 
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px; cursor:pointer; user-select:none;" onclick="toggleSecaoAdmin('oportunidades-cadastradas-body','oportunidades-cadastradas-arrow')">
-    <div class="section-title" style="font-size:17px; margin:0; display:flex; align-items:center; gap:8px;">
-      <span>Oportunidades cadastradas</span>
-      <span id="oportunidades-cadastradas-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
-    </div>
-    <button class="btn-primary" onclick="event.stopPropagation(); openAdminForm(null)">+ Nova oportunidade</button>
+  <div style="margin-top:28px; border-top:1px solid var(--border-soft); padding-top:20px;">
+    <div class="section-title" style="font-size:15px; margin:0 0 6px;">✎ Edição fora do painel</div>
+    <label style="display:flex; gap:8px; align-items:center; font-size:13px; color:var(--ink-muted); cursor:pointer;"><input type="checkbox" id="cfg-confirmar-edicao" checked onchange="setConfirmarEdicao(this.checked)"> Pedir confirmação (antes → depois) ao salvar uma edição feita fora do painel</label>
   </div>
 
-  <div id="oportunidades-cadastradas-body" style="display:none;">
-
-  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
-    <input type="text" id="admin-filtro-busca" placeholder="Buscar por edital, órgão ou objeto..." style="flex:1; min-width:200px;" oninput="adminFiltroMudou()">
-    <select id="admin-filtro-uf" style="min-width:110px;" onchange="adminFiltroMudou()"><option value="">Todas as UFs</option></select>
-    <select id="admin-filtro-profissao" style="min-width:160px;" onchange="adminFiltroMudou()"><option value="">Todas as profissões</option></select>
-    <select id="admin-filtro-situacao" style="min-width:150px;" onchange="adminFiltroMudou()"><option value="">Todas as situações</option></select>
-    <button class="btn-ghost" onclick="limparFiltrosAdmin()">Limpar filtros</button>
-  </div>
-  <div id="admin-filtro-contagem" style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;"></div>
-
-  <div style="overflow-x:auto;">
-    <table class="admin-table" id="admin-table">
-      <thead><tr><th>Edital</th><th>Órgão</th><th>Profissão</th><th>Situação</th><th>Ações</th></tr></thead>
-      <tbody id="admin-tbody"></tbody>
-    </table>
-  </div>
-  <div id="admin-paginacao" style="display:flex; justify-content:center; align-items:center; gap:14px; margin-top:14px;"></div>
   </div>
 
-  <div class="section-title" style="font-size:19px; margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">Leads recebidos</div>
-  <p class="section-sub">Pedidos de orientação enviados pelo portal, com classificação comercial automática.</p>
-
-  <div class="admin-stats" id="leads-stats"></div>
-
-  <div class="lead-section-title" style="margin-top:6px;">Oportunidades que mais geraram leads</div>
-  <div class="panel" id="top-oportunidades" style="margin-top:8px;"></div>
-
-  <div style="display:flex; justify-content:space-between; align-items:center; margin:26px 0 14px; flex-wrap:wrap; gap:10px;">
-    <div class="section-title" style="font-size:16px; margin:0;">Todos os leads</div>
-    <button class="btn-ghost" onclick="clearLeadsDemo()">↻ Atualizar leads</button>
-  </div>
-  <div style="overflow-x:auto;">
-    <table class="admin-table" id="leads-table">
-      <thead><tr><th>Data</th><th>Nome</th><th>Profissão</th><th>Oportunidade</th><th>Intenção</th><th>Urgência</th><th>Classificação</th><th>Status</th><th>Ações</th></tr></thead>
-      <tbody id="leads-tbody"></tbody>
-    </table>
-  </div>
-
-  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
-    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleUsuariosCadastrados()">
-      <span>👥 Usuários cadastrados</span>
-      <span id="usuarios-cadastrados-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
-    </div>
-    <p class="section-sub" style="margin-bottom:12px;">Contas de profissionais criadas no portal (Supabase Auth). Se alguém esquecer a senha, envie um link de redefinição — a pessoa cria a nova senha sozinha, você nunca vê nem define a senha dela.</p>
-    <div id="usuarios-cadastrados-body" style="display:none;">
-      <div id="usuarios-cadastrados-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
-      <div id="usuarios-cadastrados-lista"></div>
-    </div>
-  </div>
-
-  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
-    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleFeedbacksAdmin()">
-      <span>💬 Feedbacks do beta <span id="feedbacks-badge" class="plan-badge" style="display:none;"></span></span>
-      <span id="feedbacks-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
-    </div>
-    <p class="section-sub" style="margin-bottom:12px;">Mensagens enviadas pelo botão BETA, pelo rodapé ou pela página Sobre.</p>
-    <div id="feedbacks-body" style="display:none;">
-      <div id="feedbacks-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
-      <div style="overflow-x:auto;">
-        <table class="admin-table">
-          <thead><tr><th>Data</th><th>Tipo</th><th>Mensagem</th><th>Quem</th><th>Página</th><th>Status</th></tr></thead>
-          <tbody id="feedbacks-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
-    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleSugestoesProfissao()">
-      <span>🆕 Profissões sugeridas <span id="sugestoes-prof-badge" class="plan-badge" style="display:none;"></span></span>
-      <span id="sugestoes-prof-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
-    </div>
-    <p class="section-sub" style="margin-bottom:12px;">Profissões que profissionais escreveram no cadastro ou no perfil por não estarem na lista. Adicione à lista de profissões ou ignore.</p>
-    <div id="sugestoes-prof-body" style="display:none;">
-      <div id="sugestoes-prof-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
-      <div style="overflow-x:auto;">
-        <table class="admin-table">
-          <thead><tr><th>Data</th><th>Profissão sugerida</th><th>Quem sugeriu</th><th>E-mail</th><th>Status</th><th>Ações</th></tr></thead>
-          <tbody id="sugestoes-prof-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
-    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleSolicitacoesIndice()">
-      <span>🛡️ Solicitações de avaliação do Índice</span>
-      <span id="solicitacoes-indice-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
-    </div>
-    <p class="section-sub" style="margin-bottom:12px;">Pedidos de interessados para a Transformare avaliar o Índice de um edital que ainda não recebeu nota — use para priorizar quais editais avaliar primeiro.</p>
-    <div id="solicitacoes-indice-body" style="display:none;">
-      <div id="solicitacoes-indice-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
-      <div style="overflow-x:auto;">
-        <table class="admin-table" id="solicitacoes-indice-table">
-          <thead><tr><th>Data</th><th>Edital</th><th>Órgão</th><th>Nome</th><th>Contato</th><th>Mensagem</th><th>Status</th><th>Ações</th></tr></thead>
-          <tbody id="solicitacoes-indice-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 </section>
 
 </main>
+
+<div class="modal-overlay" id="confirm-edicao-modal" style="z-index:1200;">
+  <div class="modal-box" style="max-width:640px;">
+    <button class="modal-close" onclick="cancelarConfirmEdicao()">×</button>
+    <div class="section-title" style="font-size:17px;">Confirmar alteração?</div>
+    <p class="section-sub" style="margin-bottom:0;">Você está editando fora do Painel administrativo. Confira o que vai mudar antes de salvar.</p>
+    <div style="overflow-x:auto;"><table class="diff-tabela"><thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead><tbody id="confirm-edicao-tbody"></tbody></table></div>
+    <div class="form-actions" style="display:flex; gap:8px;">
+      <button class="btn-primary" style="flex:1;" onclick="confirmarEdicaoSalvar()">Confirmar e salvar</button>
+      <button class="btn-ghost" onclick="cancelarConfirmEdicao()">Voltar e revisar</button>
+    </div>
+  </div>
+</div>
 
 <footer class="site-footer">
   <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:12px;">
@@ -2057,7 +2127,7 @@ function nav(view){
   if(view === 'editais') applyFilters();
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
-  if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); }
+  if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); adminTab(adminTabAtual||'hoje'); carregarContagensHoje(); renderUsuariosAdmin(); renderFeedbacksAdmin(); renderSugestoesProfissaoAdmin(); renderSolicitacoesIndiceAdmin(); }
   if(view === 'minha-conta') renderMinhaConta();
   if(view === 'perfil') renderPerfil();
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
@@ -2107,7 +2177,7 @@ function scoreMini(score, label){
 function renderCard(o){
   const div = document.createElement('div');
   div.className = 'op-card';
-  div.onclick = (e) => { if(e.target.closest('.fav-btn') || e.target.closest('.compare-btn') || e.target.closest('.wa-btn')) return; openDetalhe(o.id); };
+  div.onclick = (e) => { if(e.target.closest('.fav-btn') || e.target.closest('.compare-btn') || e.target.closest('.wa-btn') || e.target.closest('.btn-editar-adm')) return; openDetalhe(o.id); };
   const isFav = favoritos.has(o.id);
   const isCmp = compareSet.has(o.id);
   div.innerHTML = `
@@ -2122,7 +2192,7 @@ function renderCard(o){
           ${(o.aceitaContratacao||[]).map(p=>`<span class="tag">${p}</span>`).join('')}
           <span class="tag">Prazo: ${o.prazo}</span>
         </div>
-        <div style="margin-top:10px;"><button class="wa-btn" onclick="shareWhatsApp(${o.id})">↗ WhatsApp</button></div>
+        <div style="margin-top:10px;"><button class="wa-btn" onclick="shareWhatsApp(${o.id})">↗ WhatsApp</button>${adminAuthed ? `<button class="btn-editar-adm" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button>` : ''}</div>
       </div>
       <div class="op-right">
         <div style="display:flex; gap:4px;">
@@ -4020,6 +4090,7 @@ function renderAdmin(){
   renderAdminTabela();
 
   renderLeadsAdmin();
+  renderHoje();
 }
 function adminDelete(id){
   oportunidades = oportunidades.filter(o=>o.id!==id);
@@ -4245,8 +4316,12 @@ function refreshAfProfChips(extraNomes){
 function editarDoDetalhe(id){
   openAdminForm(id);
 }
+let adminFormOrigemFora = false;
 function openAdminForm(id){
   editingId = id;
+  adminFormOrigemFora = (currentView !== 'admin');
+  _confirmEdicaoOk = false;
+  _editAntes = id ? JSON.parse(JSON.stringify(oportunidades.find(x=>x.id===id)||null)) : null;
   document.getElementById('admin-form-modal').classList.add('open');
   document.getElementById('admin-form-modalbox').scrollTop = 0;
   document.getElementById('admin-form-title').textContent = id ? 'Editar oportunidade' : 'Nova oportunidade';
@@ -4362,6 +4437,15 @@ async function saveAdminForm(){
     urlInscricao: document.getElementById('af-url-inscricao').value.trim() || null
   };
 
+  // Edição feita fora do Painel administrativo: mostra antes → depois e pede confirmação.
+  if(editingId && adminFormOrigemFora && confirmarEdicaoAtiva() && !_confirmEdicaoOk){
+    const diff = diffEdicao(_editAntes, data);
+    if(diff.length === 0){ toast('Nada foi alterado'); closeAdminForm(); return; }
+    abrirConfirmEdicao(diff);
+    return;
+  }
+  _confirmEdicaoOk = false;
+
   const ehEditalReal = editingId && editingId >= 900000;
   let idSalvo = editingId;
 
@@ -4423,6 +4507,138 @@ async function saveAdminForm(){
   // (botão "✎ Editar (admin)"), atualiza o que está na tela na hora, sem
   // precisar sair e voltar pra ver a mudança.
   if(document.getElementById('view-detalhe').classList.contains('active') && currentDetailId === idSalvo) openDetalhe(idSalvo);
+}
+
+
+/* ================= PAINEL DO ANALISTA: abas, "Hoje" e confirmação de edição ================= */
+let adminTabAtual = 'hoje';
+function adminTab(nome){
+  adminTabAtual = nome;
+  document.querySelectorAll('#admin-tabs .admin-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab === nome));
+  document.querySelectorAll('.admin-tabpanel').forEach(p=>p.classList.toggle('active', p.id === 'admin-tab-'+nome));
+}
+function adminIrPara(nome, ancora){
+  adminTab(nome);
+  if(ancora){ const el = document.getElementById(ancora); if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth', block:'start'}), 50); }
+  else window.scrollTo({top:0, behavior:'smooth'});
+}
+function _prazoParaDate(txt){
+  const m = (txt||'').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(m) return new Date(+m[3], +m[2]-1, +m[1]);
+  const m2 = (txt||'').trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m2) return new Date(+m2[1], +m2[2]-1, +m2[3]);
+  return null;
+}
+const _contagensHoje = { pncp:null, diario:null, leadsNovos:null, indicePend:null };
+async function carregarContagensHoje(){
+  if(!_sb){ renderHoje(); return; }
+  const cont = async (tabela, filtro) => {
+    let q = _sb.from(tabela).select('id', {count:'exact', head:true});
+    q = filtro(q);
+    const { count, error } = await q;
+    return error ? null : count;
+  };
+  const [pncp, diario, leadsNovos, indicePend] = await Promise.all([
+    cont('credenciamentos_pendentes', q=>q.eq('status','pendente')),
+    cont('diario_oficial_pendentes', q=>q.eq('status','pendente')),
+    cont('leads', q=>q.eq('status','Novo')),
+    cont('solicitacoes_avaliacao_indice', q=>q.eq('status','pendente')),
+  ]);
+  Object.assign(_contagensHoje, {pncp, diario, leadsNovos, indicePend});
+  renderHoje();
+}
+function _setBadge(id, n){
+  const b = document.getElementById(id); if(!b) return;
+  b.style.display = n ? '' : 'none'; b.textContent = n || '';
+}
+function renderHoje(){
+  const box = document.getElementById('hoje-cards'); if(!box) return;
+  const ck = document.getElementById('cfg-confirmar-edicao'); if(ck) ck.checked = confirmarEdicaoAtiva();
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const prazoDe = o => _prazoParaDate(o.prazo);
+  const suspeitos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d.getFullYear() >= 2030; });
+  const vencidos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d < hoje && d.getFullYear() < 2030 && o.situacao === 'Aberto'; });
+  const semPrazo = oportunidades.filter(o=>!prazoDe(o) && !/vig[eê]ncia|fluxo|cont[ií]nu/i.test(o.prazo||''));
+  const semSituacao = oportunidades.filter(o=>!o.situacao || o.situacao === 'Não informado');
+  const semIndice = oportunidades.filter(o=>o.indice == null);
+  const encerrando = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d >= hoje && (d-hoje)/86400000 <= 15 && d.getFullYear() < 2030; })
+                                   .sort((a,b)=>prazoDe(a)-prazoDe(b));
+  const problemas = suspeitos.length + vencidos.length + semPrazo.length + semSituacao.length;
+  const fmt = n => n == null ? '—' : n;
+  const cards = [
+    {num:fmt(_contagensHoje.pncp), label:'Achados do PNCP para triar', cls:_contagensHoje.pncp?'alerta':'', ir:()=>adminIrPara('triagem','caixa-entrada-body')},
+    {num:fmt(_contagensHoje.diario), label:'Achados do Diário Oficial para triar', cls:_contagensHoje.diario?'alerta':'', ir:()=>adminIrPara('triagem','diario-oficial-body')},
+    {num:problemas, label:'Editais com problema', cls:problemas?'perigo':'', ir:()=>adminIrPara('editais')},
+    {num:semIndice.length, label:'Editais sem Índice', cls:'', ir:()=>adminIrPara('editais')},
+    {num:fmt(_contagensHoje.indicePend), label:'Pedidos de avaliação de Índice', cls:_contagensHoje.indicePend?'alerta':'', ir:()=>adminIrPara('leads','solicitacoes-indice-body')},
+    {num:fmt(_contagensHoje.leadsNovos), label:'Leads novos', cls:_contagensHoje.leadsNovos?'alerta':'', ir:()=>adminIrPara('leads','leads-table')},
+  ];
+  box.innerHTML = '';
+  cards.forEach(c=>{
+    const el = document.createElement('div'); el.className = 'indicator-card clicavel';
+    el.innerHTML = `<div class="num ${c.cls}">${c.num}</div><div class="label">${c.label}</div>`;
+    el.onclick = c.ir; box.appendChild(el);
+  });
+  const linhas = [
+    ['Prazo suspeito (ano 2030 ou depois)', suspeitos], ['Prazo vencido e ainda "Aberto"', vencidos],
+    ['Sem prazo definido', semPrazo], ['Sem situação', semSituacao],
+  ];
+  document.getElementById('hoje-problemas').innerHTML = '<div class="hoje-lista">' + linhas.map(([t,arr])=>
+    `<div class="linha"><span>${t}</span><span style="display:flex; gap:8px; align-items:center;"><strong style="color:${arr.length?'var(--coral)':'var(--teal)'};">${arr.length}</strong>${arr.length?`<button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="abrirEditalProblema(${arr[0].id})">Corrigir o 1º</button>`:''}</span></div>`).join('') + '</div>';
+  document.getElementById('hoje-encerrando').innerHTML = encerrando.length
+    ? '<div class="hoje-lista">' + encerrando.map(o=>`<div class="linha"><span>${esc(o.edital)} — ${esc(o.orgao)} (${esc(o.uf)})</span><span style="display:flex; gap:8px; align-items:center;"><span style="color:var(--amber);">${esc(o.prazo)}</span><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openDetalhe(${o.id})">Ver</button></span></div>`).join('') + '</div>'
+    : '<span style="font-size:13px; color:var(--ink-dim);">Nenhum edital encerrando nos próximos 15 dias.</span>';
+  _setBadge('tabbadge-triagem', (_contagensHoje.pncp||0) + (_contagensHoje.diario||0));
+  _setBadge('tabbadge-leads', (_contagensHoje.leadsNovos||0) + (_contagensHoje.indicePend||0));
+  const be = document.getElementById('tabbadge-editais'); if(be){ be.style.display=''; be.textContent = oportunidades.length; }
+}
+function abrirEditalProblema(id){ openAdminForm(id); }
+
+/* ---- Edição fora do painel: confirmação antes → depois ---- */
+let _confirmEdicaoOk = false;
+let _editAntes = null;
+const _CAMPOS_EDICAO = {
+  edital:'Edital', orgao:'Órgão', objeto:'Objeto', uf:'UF', cidade:'Cidade', tipo:'Tipo', modalidade:'Modalidade',
+  abrangencia:'Abrangência', situacao:'Situação', indice:'Índice', prazo:'Prazo', publicacao:'Publicação',
+  profissoes:'Profissões', aceitaContratacao:'Aceita contratação', escolaridadeMinima:'Escolaridade mínima',
+  experienciaMinimaAnos:'Experiência mínima (anos)', valorAtendimento:'Valor por atendimento', volume:'Volume',
+  requisitos:'Requisitos', pontosPositivos:'Pontos positivos', pontosAtencao:'Pontos de atenção',
+  urlOficial:'Link oficial', urlEdital:'Link do edital', urlPncp:'Link PNCP', urlInscricao:'Link de inscrição',
+  documentos:'Documentos', movimentacoes:'Movimentações'
+};
+function confirmarEdicaoAtiva(){
+  try{ return localStorage.getItem('cfg_confirmar_edicao') !== '0'; }catch(e){ return true; }
+}
+function setConfirmarEdicao(v){
+  try{ localStorage.setItem('cfg_confirmar_edicao', v ? '1' : '0'); }catch(e){}
+  toast(v ? 'Confirmação de edição fora do painel: ativada' : 'Confirmação de edição fora do painel: desativada');
+}
+function _fmtValorDiff(v){
+  if(v == null || v === '') return '—';
+  if(Array.isArray(v)) return v.length ? v.map(x=> typeof x === 'object' ? JSON.stringify(x) : x).join('; ') : '—';
+  return String(v);
+}
+function diffEdicao(antes, depois){
+  if(!antes) return [];
+  const out = [];
+  Object.keys(_CAMPOS_EDICAO).forEach(k=>{
+    const a = _fmtValorDiff(antes[k]), d = _fmtValorDiff(depois[k]);
+    if(a !== d) out.push({campo:_CAMPOS_EDICAO[k], antes:a, depois:d});
+  });
+  return out;
+}
+function abrirConfirmEdicao(diff){
+  document.getElementById('confirm-edicao-tbody').innerHTML = diff.map(d=>
+    `<tr><td><strong>${esc(d.campo)}</strong></td><td class="diff-antes">${esc(d.antes)}</td><td class="diff-depois">${esc(d.depois)}</td></tr>`).join('');
+  document.getElementById('confirm-edicao-modal').classList.add('open');
+}
+function cancelarConfirmEdicao(){
+  document.getElementById('confirm-edicao-modal').classList.remove('open');
+}
+function confirmarEdicaoSalvar(){
+  document.getElementById('confirm-edicao-modal').classList.remove('open');
+  _confirmEdicaoOk = true;
+  saveAdminForm();
 }
 
 /* ================= INIT ================= */
