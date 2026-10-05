@@ -255,6 +255,7 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .badge.analise{color:var(--violet); background:rgba(140,124,240,0.14);}
 .badge.retificado{color:#F0A25E; background:rgba(240,162,94,0.12);}
 .badge.encerrado{color:var(--ink-dim); background:rgba(143,166,190,0.1);}
+.badge.divulgada{color:#8FA6BE; background:rgba(143,166,190,0.14); border:1px dashed rgba(143,166,190,0.4);}
 .badge.suspenso{color:var(--coral); background:rgba(240,101,78,0.12);}
 
 .score-mini{display:flex; align-items:center; gap:5px;}
@@ -1824,7 +1825,25 @@ const ABRANGENCIAS = ["Nacional","Estadual","Municipal"];
 // Clínica = o edital exige equipe multidisciplinar, então só uma clínica consegue atender.
 const PUBLICOS = ["Pessoa Física (PF)","Pessoa Jurídica (PJ)","Clínica (equipe multidisciplinar)"];
 function publicoTexto(o){ return (o.aceitaContratacao && o.aceitaContratacao.length) ? o.aceitaContratacao.join(', ') : 'Não informado'; }
-const SITUACOES = ["Aberto","Próximo do encerramento","Em análise","Retificado","Suspenso","Encerrado"];
+const SITUACOES = ["Aberto","Próximo do encerramento","Em análise","Retificado","Suspenso","Encerrado","Prazo não informado"];
+// "Divulgada no PNCP" só diz que o edital foi publicado — não significa que está aberto.
+// A situação exibida sai do prazo: vencido = Encerrado; até 7 dias = Próximo do encerramento;
+// prazo futuro = Aberto; sem prazo válido = Prazo não informado. Situações manuais
+// (Em análise, Retificado, Suspenso) e "Aberto" sem prazo (fluxo contínuo) são mantidas.
+function situacaoExibida(o){
+  const s = o.situacao || '';
+  if(['Em análise','Retificado','Suspenso'].includes(s)) return s;
+  const d = parseDate(o.prazo);
+  if(!isNaN(d.getTime()) && d.getFullYear() < 2030){
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const dias = Math.round((d - hoje)/86400000);
+    if(dias < 0) return 'Encerrado';
+    if(dias <= 7) return 'Próximo do encerramento';
+    return 'Aberto';
+  }
+  if(s === 'Aberto' || s === 'Próximo do encerramento' || s === 'Encerrado') return s;
+  return 'Prazo não informado';
+}
 const UFS = [
   {sigla:"AC",nome:"Acre"},{sigla:"AL",nome:"Alagoas"},{sigla:"AP",nome:"Amapá"},{sigla:"AM",nome:"Amazonas"},
   {sigla:"BA",nome:"Bahia"},{sigla:"CE",nome:"Ceará"},{sigla:"DF",nome:"Distrito Federal"},{sigla:"ES",nome:"Espírito Santo"},
@@ -2146,7 +2165,7 @@ function toast(msg){
 
 /* ================= BADGES / SCORE ================= */
 function badgeClass(s){
-  return {"Aberto":"aberto","Próximo do encerramento":"encerrando","Em análise":"analise","Retificado":"retificado","Encerrado":"encerrado","Suspenso":"suspenso"}[s] || "aberto";
+  return {"Aberto":"aberto","Próximo do encerramento":"encerrando","Em análise":"analise","Retificado":"retificado","Encerrado":"encerrado","Suspenso":"suspenso","Prazo não informado":"divulgada"}[s] || "aberto";
 }
 // "Inscrições próximas": prazo dentro dos próximos 7 dias (e ainda não vencido).
 const DIAS_INSCRICAO_PROXIMA = 7;
@@ -2199,7 +2218,7 @@ function renderCard(o){
           <button class="compare-btn ${isCmp?'active':''}" onclick="toggleCompare(${o.id})" title="Adicionar à comparação">${isCmp?'✓ Comparando':'⇄ Comparar'}</button>
           <button class="fav-btn ${isFav?'active':''}" onclick="toggleFav(${o.id})" title="Favoritar">${isFav?'★':'☆'}</button>
         </div>
-        <span class="badge ${badgeClass(o.situacao)}">${o.situacao}</span>
+        <span class="badge ${badgeClass(situacaoExibida(o))}">${situacaoExibida(o)}</span>
         ${inscricaoProximaHTML(o)}
         ${scoreMini(o.indice, o.indiceLabel)}
       </div>
@@ -2292,7 +2311,7 @@ function openCompare(){
     ['Modalidade', o=>o.modalidade, ()=>false],
     ['Para quem é', o=>publicoTexto(o), ()=>false],
     ['Abrangência', o=>o.abrangencia, o=>abrDestacavel && (abrangenciaRank[o.abrangencia]||0)===maxAbr],
-    ['Situação', o=>o.situacao, ()=>false],
+    ['Situação', o=>situacaoExibida(o), ()=>false],
     ['Prazo', o=>o.prazo, o=>maxPrazo!==null && prazoValsMap[o.id]===maxPrazo],
     ['Índice Transformare', o=>(o.indice!=null ? `${Math.round(Number(o.indice))}/5 — ${o.indiceLabel}` : 'Ainda não avaliado'), o=>indiceDestacavel && o.indice!=null && o.indice===maxIndice],
     ['Valor por atendimento', o=>o.valorAtendimento, o=>maxRem!==null && tipoRemuneracao(o)==='atendimento' && remValsMap[o.id]===maxRem],
@@ -2603,14 +2622,14 @@ function renderMinhaConta(){
   const u = userProfile;
   const acompanhados = oportunidades.filter(o=>favoritos.has(o.id));
   const recomendadas = oportunidades.filter(o=>{
-    if(o.situacao==='Encerrado' || favoritos.has(o.id)) return false;
+    if(situacaoExibida(o)==='Encerrado' || favoritos.has(o.id)) return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
     return mProf && mUf;
   }).slice(0,4);
   const historico = oportunidades.filter(o=>docChecks[o.id] && Object.values(docChecks[o.id]).some(v=>v));
   const todasAderencias = oportunidades
-    .filter(o=>o.situacao !== 'Encerrado')
+    .filter(o=>situacaoExibida(o) !== 'Encerrado')
     .map(o=>({ o, ad: calcularAderencia(o, u) }))
     .filter(x=>x.ad.pct !== null && x.ad.pct > 0)
     .sort((a,b)=>b.ad.pct - a.ad.pct || (b.o.indice||0) - (a.o.indice||0));
@@ -2777,7 +2796,7 @@ function populateSelects(){
   reconstruirOpcoesSelect(fp, ordenarComPresentes(PUBLICOS, valoresPresentesEmOportunidades(o=>o.aceitaContratacao)));
 
   const fs = document.getElementById('f-sit');
-  reconstruirOpcoesSelect(fs, ordenarComPresentes(SITUACOES, valoresPresentesEmOportunidades(o=>o.situacao)));
+  reconstruirOpcoesSelect(fs, ordenarComPresentes(SITUACOES, valoresPresentesEmOportunidades(o=>situacaoExibida(o))));
 
   const fu = document.getElementById('f-uf');
   const ufAtual = fu.value;
@@ -2859,7 +2878,7 @@ function applyFilters(){
     if(pub && !(o.aceitaContratacao||[]).includes(pub)) return false;
     if(uf && o.uf !== uf) return false;
     if(org && o.orgao !== org) return false;
-    if(sit && o.situacao !== sit) return false;
+    if(sit && situacaoExibida(o) !== sit) return false;
     if(filtroSomenteComIndice){
       if(o.indice===null || o.indice===undefined) return false;
       if(!indicadoresUsandoDemo && !o.origemSupabase) return false;
@@ -3020,7 +3039,7 @@ function openDetalhe(id){
             </div>
           </div>
           <div class="op-tags" style="margin-top:14px;">
-            <span class="badge ${badgeClass(o.situacao)}">${o.situacao}</span>
+            <span class="badge ${badgeClass(situacaoExibida(o))}">${situacaoExibida(o)}</span>
             ${inscricaoProximaHTML(o)}
             ${o.profissoes.map(p=>`<span class="tag">${p}</span>`).join('')}
           </div>
@@ -3545,7 +3564,7 @@ function renderAlertas(){
     return;
   }
   const items = oportunidades.filter(o=>{
-    if(o.situacao==='Encerrado') return false;
+    if(situacaoExibida(o)==='Encerrado') return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
     const mMod = alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
@@ -3571,7 +3590,7 @@ async function clearAlertPrefs(){
 function matchedAlertItems(){
   if(alertPrefs.prof.size===0 && alertPrefs.uf.size===0 && alertPrefs.mod.size===0 && !alertPrefs.cidade) return [];
   return oportunidades.filter(o=>{
-    if(o.situacao==='Encerrado') return false;
+    if(situacaoExibida(o)==='Encerrado') return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
     const mMod = alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
@@ -4014,7 +4033,7 @@ function adminMudarPagina(delta, totalPaginas){
 function popularFiltrosAdmin(){
   const ufs = [...new Set(oportunidades.map(o=>o.uf).filter(Boolean))].sort();
   const profissoesTodas = [...new Set(oportunidades.flatMap(o=>o.profissoes||[]))].sort();
-  const situacoes = [...new Set(oportunidades.map(o=>o.situacao).filter(Boolean))].sort();
+  const situacoes = [...new Set(oportunidades.map(o=>situacaoExibida(o)).filter(Boolean))].sort();
   const selUf = document.getElementById('admin-filtro-uf');
   const selProf = document.getElementById('admin-filtro-profissao');
   const selSit = document.getElementById('admin-filtro-situacao');
@@ -4032,7 +4051,7 @@ function renderAdminTabela(){
   }
   if(adminFiltro.uf) filtradas = filtradas.filter(o => o.uf === adminFiltro.uf);
   if(adminFiltro.profissao) filtradas = filtradas.filter(o => (o.profissoes||[]).includes(adminFiltro.profissao));
-  if(adminFiltro.situacao) filtradas = filtradas.filter(o => o.situacao === adminFiltro.situacao);
+  if(adminFiltro.situacao) filtradas = filtradas.filter(o => situacaoExibida(o) === adminFiltro.situacao);
 
   const totalPaginas = Math.max(1, Math.ceil(filtradas.length / ADMIN_POR_PAGINA));
   if(adminPagina > totalPaginas) adminPagina = totalPaginas;
@@ -4054,7 +4073,7 @@ function renderAdminTabela(){
       <td>${o.edital}</td>
       <td>${o.orgao}</td>
       <td>${o.profissoes.join(', ')}</td>
-      <td><span class="badge ${badgeClass(o.situacao)}">${o.situacao}</span></td>
+      <td><span class="badge ${badgeClass(situacaoExibida(o))}">${situacaoExibida(o)}</span></td>
       <td class="admin-actions">
         <button onclick="openDetalhe(${o.id})">Ver</button>
         <button onclick="openAdminForm(${o.id})">Editar</button>
@@ -4075,8 +4094,8 @@ function renderAdmin(){
   renderProfissoesAdmin();
   const stats = [
     {num:oportunidades.length, label:'Total de oportunidades'},
-    {num:oportunidades.filter(o=>o.situacao==='Aberto').length, label:'Abertas'},
-    {num:oportunidades.filter(o=>o.situacao==='Encerrado').length, label:'Encerradas'},
+    {num:oportunidades.filter(o=>['Aberto','Próximo do encerramento'].includes(situacaoExibida(o))).length, label:'Abertas'},
+    {num:oportunidades.filter(o=>situacaoExibida(o)==='Encerrado').length, label:'Encerradas'},
     {num:favoritos.size, label:'Favoritadas (você)'}
   ];
   const box = document.getElementById('admin-stats'); box.innerHTML='';
@@ -4557,8 +4576,8 @@ function renderHoje(){
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   const prazoDe = o => _prazoParaDate(o.prazo);
   const suspeitos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d.getFullYear() >= 2030; });
-  const vencidos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d < hoje && d.getFullYear() < 2030 && o.situacao === 'Aberto'; });
-  const semPrazo = oportunidades.filter(o=>!prazoDe(o) && !/vig[eê]ncia|fluxo|cont[ií]nu/i.test(o.prazo||''));
+  const vencidos = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d < hoje && d.getFullYear() < 2030 && o.situacao === 'Aberto'; }); // só situação manual "Aberto" com prazo vencido
+  const semPrazo = oportunidades.filter(o=>situacaoExibida(o)==='Prazo não informado');
   const semSituacao = oportunidades.filter(o=>!o.situacao || o.situacao === 'Não informado');
   const semIndice = oportunidades.filter(o=>o.indice == null);
   const encerrando = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d >= hoje && (d-hoje)/86400000 <= 15 && d.getFullYear() < 2030; })
@@ -5575,7 +5594,7 @@ function renderAprovarPreview(){
           </div>
         </div>
         <div class="op-right">
-          <span class="badge ${badgeClass(o.situacao)}">${esc(o.situacao)}</span>
+          <span class="badge ${badgeClass(situacaoExibida(o))}">${esc(situacaoExibida(o))}</span>
           ${inscricaoProximaHTML(o)}
           ${scoreMini(o.indice, o.indiceLabel)}
         </div>
