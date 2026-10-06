@@ -1440,7 +1440,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="section-title" style="font-size:16px;" id="admin-form-title">Nova oportunidade</div>
 
       <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
-        <label>Colar análise da IA (Gemini) — preenche Índice, Pontos de destaque, Pontos de atenção, Requisitos e Documentação automaticamente</label>
+        <label>Colar a análise (Analista de Editais Transformare ou Gemini) — preenche a ficha inteira: Edital, Órgão, Objeto, UF, Cidade, Tipo, Modalidade, Abrangência, Situação, Índice, Prazo, Publicação, Profissões, valores, pontos e documentação</label>
         <textarea id="af-analise-ia" rows="4" placeholder="Cole aqui o resultado completo da análise (as 5 seções: Índice Transformare, Pontos de destaque, Ponto de atenção, Requisitos, Documentação necessária)..."></textarea>
         <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="preencherComAnaliseIA()">⇩ Preencher campos com a análise</button>
         <div id="af-analise-ia-status" style="font-size:11.5px; color:var(--ink-dim); margin-top:6px;"></div>
@@ -1460,7 +1460,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <div class="form-row"><label>Modalidade</label><select id="af-mod"><option>Presencial</option><option>Online</option><option>Híbrido</option></select></div>
       </div>
       <div class="two-col">
-        <div class="form-row"><label>Abrangência</label><select id="af-abr"><option>Municipal</option><option>Estadual</option><option>Nacional</option></select></div>
+        <div class="form-row"><label>Abrangência</label><select id="af-abr"><option>Municipal</option><option>Regional</option><option>Estadual</option><option>Nacional</option></select></div>
         <div class="form-row"><label>Situação</label><select id="af-sit"><option>Aberto</option><option>Próximo do encerramento</option><option>Em análise</option><option>Retificado</option><option>Suspenso</option><option>Encerrado</option></select></div>
       </div>
       <div class="form-row"><label>Índice Transformare (1–5)</label><select id="af-indice"><option value="" selected>— Ainda não avaliado —</option><option value="1">1 — Baixa</option><option value="2">2 — Baixa</option><option value="3">3 — Média</option><option value="4">4 — Alta</option><option value="5">5 — Alta</option></select></div>
@@ -4494,6 +4494,148 @@ function parseAnaliseIAEdital(textoOriginal){
 
   return resultado;
 }
+/* ---- Leitor da ficha do "Analista de Editais Transformare" (Parte 1 + partes 2, 4 e 6) ----
+   Lê linhas "Campo: valor" (com ou sem marcadores/negrito) e devolve o que reconheceu
+   e o que não deu para preencher, para o admin conferir. */
+function _fNorm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function _fLimpa(s){ return String(s||'').replace(/[<>]/g,'').replace(/\*\*|__|`/g,'').replace(/\s+/g,' ').trim(); }
+const _FICHA_ROTULOS = [
+  ['edital',/^edital$/],['orgao',/^org[aã]o$/],['objeto',/^objeto$/],
+  ['ufcidade',/^uf\s*(?:e|\/|,)\s*cidade$|^cidade\s*(?:e|\/)\s*uf$/],['uf',/^uf$|^estado$/],['cidade',/^cidade$|^munic[ií]pio$/],
+  ['tipo',/^tipo$/],['modalidade',/^modalidade$/],['abrangencia',/^abrang[eê]ncia$/],['situacao',/^situa[cç][aã]o$/],
+  ['indice',/^[ií]ndice(?: transformare)?(?: \(1 a 5\)| \(1-5\))?$/],['prazo',/^prazo$/],['publicacao',/^publica[cç][aã]o$/],
+  ['profissoes',/^profiss[oõ]es(?: contempladas)?$/],['valor',/^valor por atendimento$/],['volume',/^volume estimado$/],
+  ['remuneracao',/^remunera[cç][aã]o(?:,? outras faixas.*)?$/],
+];
+function _fSemRotuloLinha(l){ return _fLimpa(l.replace(/^[\s>]*(?:[-•*]|\d+[.)])\s*/,'')); }
+function parseFichaRadar(texto){
+  const linhas = String(texto||'').replace(/\r\n/g,'\n').split('\n');
+  const campos = {}; const sobra = {};
+  let ultimo = null;
+  for(let i=0;i<linhas.length;i++){
+    const l = _fSemRotuloLinha(linhas[i]);
+    if(!l){ continue; }
+    const m = l.match(/^([^:：]{2,60})\s*[:：]\s*(.*)$/);
+    if(m){
+      const rot = _fNorm(m[1]);
+      const hit = _FICHA_ROTULOS.find(([,re])=>re.test(rot));
+      if(hit && !(hit[0] in campos)){ campos[hit[0]] = _fLimpa(m[2]); ultimo = hit[0]; continue; }
+      if(hit){ ultimo = null; continue; }
+    }
+    // linha de continuação (ex.: itens de Remuneração em lista)
+    if(ultimo === 'remuneracao' && /^[\s>]*(?:[-•*]|\d+[.)])\s+/.test(linhas[i])){ (sobra.remuneracao = sobra.remuneracao || []).push(l); }
+    else if(!/^[\s>]*(?:[-•*]|\d+[.)])\s+/.test(linhas[i])) ultimo = null;
+  }
+  const out = { campos, remuneracao: [], positivos: [], negativos: [], riscos: [], publico: {}, habilitacao: [], requisitosLinhas: [] };
+  if(campos.remuneracao && !/^(n[aã]o|nenhum|sem |—|-)/i.test(_fNorm(campos.remuneracao))) out.remuneracao.push(campos.remuneracao);
+  (sobra.remuneracao||[]).forEach(x=>out.remuneracao.push(x));
+  // listas das partes 2, 4 e 6
+  let secao = null;
+  for(let i=0;i<linhas.length;i++){
+    const bruta = linhas[i]; const l = _fSemRotuloLinha(bruta); const n = _fNorm(l);
+    if(!l) continue;
+    const ehItem = /^[\s>]*(?:[-•*]|\d+[.)])\s+/.test(bruta);
+    const cab = n.match(/^(positivos|pontos positivos|negativos|pontos negativos|riscos(?: e pegadinhas)?|oportunidade escondida|habilitacao(?: resumida)?)\b\s*[:：]?\s*(.*)$/);
+    if(cab && !/^(parte|\d)/.test(n)){
+      const k = cab[1];
+      secao = /posit/.test(k)?'positivos':/negat/.test(k)?'negativos':/risco/.test(k)?'riscos':/habilit/.test(k)?'habilitacao':'outra';
+      const resto = _fLimpa(l.replace(/^[^:：]*[:：]?/,''));
+      if(resto && !/^de \d+ a \d+ itens/i.test(resto) && secao !== 'outra') out[secao].push(resto);
+      continue;
+    }
+    if(/^parte \d+|^#{1,4}\s/.test(n) || /^#{1,4}\s/.test(bruta)){ secao = null; }
+    if(secao && secao !== 'outra' && ehItem) out[secao].push(l);
+    else if(secao && !ehItem && /^[a-zà-ú]+\s*[:：]/i.test(l) && secao !== 'habilitacao') secao = null;
+    // Parte 2: quem pode entrar
+    const mp = n.match(/^(autonomo(?: \(pessoa fisica[^)]*\))?|profissional liberal(?: com cnpj)?(?: \([^)]*\))?|clinica(?: ou empresa)?(?: \([^)]*\))?)\s*[:：\-–—]\s*(.+)$/);
+    if(mp){
+      const chave = /^autonomo/.test(mp[1])?'Pessoa Física (PF)':/^profissional/.test(mp[1])?'Pessoa Jurídica (PJ)':'Clínica (equipe multidisciplinar)';
+      const v = mp[2];
+      out.publico[chave] = /^(sim|aceita|aceito|pode|permitid|admite|sim,)/.test(v) ? true : /^(nao|não|vedad|nao aceita|exclu)/.test(v) ? false : null;
+    }
+    if(/^(exige pj|vinculo|tempo minimo|experiencia|registro no conselho|especializacao|exige registro)/.test(n) && l.includes(':')) out.requisitosLinhas.push(l);
+    if(secao === 'habilitacao' && !ehItem){
+      const mh = n.match(/^(juridica|fiscal|trabalhista|economica|economico-financeira|tecnica|declaracoes)\b/);
+      if(mh) out.habilitacao.push(l);
+    }
+    if(secao === 'habilitacao' && ehItem){ out.habilitacao.push(l); }
+  }
+  return out;
+}
+
+const _TIPOS_SINON = [[/chamamento/,'Chamamento Público'],[/credenciamento/,'Credenciamento'],[/preg[aã]o/,'Pregão'],[/processo seletivo/,'Processo seletivo'],[/conv[eê]nio/,'Convênio'],[/contrata[cç][aã]o/,'Contratação'],[/^edital/,'Edital']];
+function _fData(s){ const m = String(s||'').match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/); return m ? String(m[1]).padStart(2,'0')+'/'+String(m[2]).padStart(2,'0')+'/'+m[3] : null; }
+function aplicarFichaRadar(f){
+  const ok = [], falta = [];
+  const c = f.campos;
+  const setTxt = (id, rot, v)=>{ if(v && /^n[aã]o informad/i.test(v)) v = ''; if(v){ document.getElementById(id).value = v; ok.push(rot); } else falta.push(rot + ' — não veio na ficha'); };
+  const setSel = (id, rot, v, opcoes)=>{
+    if(!v){ falta.push(rot + ' — não veio na ficha'); return; }
+    const sel = document.getElementById(id), nv = _fNorm(v);
+    const op = [...sel.options].find(o=>nv.startsWith(_fNorm(o.value||o.textContent)) || _fNorm(o.value||o.textContent) === nv);
+    if(op){ sel.value = op.value || op.textContent; ok.push(rot); }
+    else falta.push(rot + ' — "' + v + '" não existe nas opções do formulário; escolha à mão');
+  };
+  setTxt('af-edital','Edital', c.edital); setTxt('af-orgao','Órgão', c.orgao); setTxt('af-objeto','Objeto', c.objeto);
+  // UF e Cidade
+  let uf = null, cidade = null;
+  const uc = c.ufcidade || '';
+  if(uc){
+    const m = uc.match(/^(.*?)[\s]*[\/,\-–—]\s*([A-Za-z]{2})\b\s*$/) || uc.match(/^([A-Za-z]{2})\s*[\/,\-–—]\s*(.*)$/);
+    if(m){ if(/^[A-Za-z]{2}$/.test(m[1].trim()) && m[1].trim().toUpperCase()===m[1].trim()){ uf = m[1].trim().toUpperCase(); cidade = m[2].trim(); } else { cidade = m[1].trim(); uf = m[2].toUpperCase(); } }
+  }
+  if(c.uf){ const m = c.uf.match(/\b([A-Z]{2})\b/); if(m) uf = m[1]; else { const u = UFS.find(x=>_fNorm(x.nome)===_fNorm(c.uf)); if(u) uf = u.sigla; } }
+  if(c.cidade) cidade = c.cidade;
+  if(uf && UFS.some(x=>x.sigla===uf)){ document.getElementById('af-uf').value = uf; ok.push('UF'); } else falta.push('UF — não reconhecida na ficha');
+  if(cidade){ document.getElementById('af-cidade').value = cidade; ok.push('Cidade'); } else falta.push('Cidade — não veio na ficha');
+  // Tipo
+  if(c.tipo){
+    const hit = _TIPOS_SINON.find(([re])=>re.test(_fNorm(c.tipo)));
+    if(hit){ document.getElementById('af-tipo').value = hit[1]; ok.push('Tipo'); } else falta.push('Tipo — "' + c.tipo + '" não existe nas opções; escolha à mão');
+  } else falta.push('Tipo — não veio na ficha');
+  setSel('af-mod','Modalidade', c.modalidade);
+  setSel('af-abr','Abrangência', c.abrangencia);
+  setSel('af-sit','Situação', c.situacao);
+  if(c.indice){ const m = c.indice.match(/[1-5]/); if(m){ document.getElementById('af-indice').value = m[0]; ok.push('Índice'); } else falta.push('Índice — sem número de 1 a 5'); } else falta.push('Índice — não veio na ficha');
+  // Prazo e Publicação
+  const pz = c.prazo ? (_fData((c.prazo.match(/at[eé]\s+(\d{1,2}\/\d{1,2}\/\d{4})/i)||[])[1]) || _fData(c.prazo)) : null;
+  if(pz){ document.getElementById('af-prazo').value = pz; ok.push('Prazo'); }
+  else falta.push('Prazo — ' + (c.prazo ? '"' + c.prazo + '" não tem data; deixei em branco' : 'não veio na ficha'));
+  const datasPub = (c.publicacao||'').match(/\d{1,2}\/\d{1,2}\/\d{4}/g) || [];
+  if(datasPub.length){ document.getElementById('af-publicacao').value = _fData(datasPub[0]); ok.push('Publicação' + (datasPub.length>1 ? ' (a ficha trouxe duas datas — usei a primeira: ' + datasPub.join(' e ') + ')' : '')); }
+  else falta.push('Publicação — não veio na ficha');
+  // Profissões
+  if(c.profissoes){
+    const nv = _fNorm(c.profissoes); let n = 0;
+    document.querySelectorAll('#af-profs .chip-opt').forEach(ch=>{
+      const base = _fNorm(ch.dataset.prof).slice(0,5);
+      const marcar = nv.includes(base) || (base==='medic' && /medic|m[eé]dic/.test(nv));
+      if(marcar){ ch.classList.add('selected'); n++; }
+    });
+    if(n) ok.push('Profissões (' + n + ')'); else falta.push('Profissões — nenhuma reconhecida em "' + c.profissoes + '"');
+  } else falta.push('Profissões — não veio na ficha');
+  setTxt('af-valor-atendimento','Valor por atendimento', c.valor); setTxt('af-volume','Volume estimado', c.volume);
+  if(f.remuneracao.length){ f.remuneracao.forEach(r=>{ if(!afRemuneracao.includes(r)) afRemuneracao.push(r); }); renderAfRemuneracaoList(); ok.push('Remuneração (' + f.remuneracao.length + ')'); }
+  // Para quem é (Parte 2)
+  const pub = Object.entries(f.publico); let np = 0, dv = [];
+  pub.forEach(([nome,v])=>{ if(v===true){ const ch = [...document.querySelectorAll('#af-publico .chip-opt')].find(x=>x.dataset.publico===nome); if(ch){ ch.classList.add('selected'); np++; } } else if(v===null) dv.push(nome); });
+  if(np) ok.push('Para quem é (' + np + ')');
+  if(dv.length) falta.push('Para quem é — marcado "verificar" na ficha: ' + dv.join(', '));
+  // Pontos (Parte 4)
+  if(f.positivos.length){ const ja = document.getElementById('af-pontos-positivos'); ja.value = [...new Set([...(ja.value?ja.value.split('\n'):[]), ...f.positivos])].join('\n'); ok.push('Pontos de destaque'); }
+  const aten = [...f.negativos, ...f.riscos];
+  if(aten.length){ const ja = document.getElementById('af-pontos-atencao'); ja.value = [...new Set([...(ja.value?ja.value.split('\n'):[]), ...aten])].join('\n'); ok.push('Pontos de atenção'); }
+  if(f.requisitosLinhas.length && !document.getElementById('af-requisitos').value){ document.getElementById('af-requisitos').value = f.requisitosLinhas.join('\n'); ok.push('Requisitos'); }
+  const ex = f.requisitosLinhas.join(' ').match(/(\d{1,2})\s*(?:anos?)\s*(?:de\s*)?(?:experi|atua|pr[aá]tica)/i);
+  if(ex && !document.getElementById('af-exp-anos').value){ document.getElementById('af-exp-anos').value = ex[1]; ok.push('Experiência mínima'); }
+  if(f.habilitacao.length){ f.habilitacao.forEach(d=>{ if(!afDocumentos.includes(d)) afDocumentos.push(d); }); renderAfDocList(); ok.push('Documentação (habilitação)'); }
+  // link do PNCP a partir do número de controle
+  const lp = (typeof linkPncpDoEdital === 'function') ? linkPncpDoEdital(c.edital || '') : null;
+  if(lp){ const el = document.getElementById('af-url-pncp'); if(!el.value || /pncp\.gov\.br\/app\/editais\/?$/.test(el.value)){ el.value = lp; ok.push('URL no PNCP'); } }
+  atualizarLinksPortais();
+  return { ok, falta };
+}
+
 function preencherComAnaliseIA(){
   const texto = document.getElementById('af-analise-ia').value.trim();
   const status = document.getElementById('af-analise-ia-status');
@@ -4501,8 +4643,12 @@ function preencherComAnaliseIA(){
 
   const r = parseAnaliseIAEdital(texto);
   const preenchidos = [];
+  const ficha = parseFichaRadar(texto);
+  const temFicha = Object.keys(ficha.campos).length >= 3;
+  let rel = null;
+  if(temFicha){ rel = aplicarFichaRadar(ficha); preenchidos.push(...rel.ok); }
 
-  if(r.indice){ document.getElementById('af-indice').value = String(r.indice); preenchidos.push('Índice'); }
+  if(r.indice && !temFicha){ document.getElementById('af-indice').value = String(r.indice); preenchidos.push('Índice'); }
   if(r.destaques.length){ document.getElementById('af-pontos-positivos').value = r.destaques.join('\n'); preenchidos.push('Pontos de destaque'); }
   if(r.atencao.length){ document.getElementById('af-pontos-atencao').value = r.atencao.join('\n'); preenchidos.push('Pontos de atenção'); }
   if(r.requisitos){ document.getElementById('af-requisitos').value = r.requisitos; preenchidos.push('Requisitos'); }
@@ -4517,7 +4663,9 @@ function preencherComAnaliseIA(){
     status.style.color = 'var(--coral)';
     return;
   }
-  status.textContent = `Preenchido a partir da análise: ${preenchidos.join(', ')}. Revise os campos antes de salvar.`;
+  status.innerHTML = `<div>✓ Preenchido: ${esc(preenchidos.join(', '))}.</div>` +
+    (rel && rel.falta.length ? `<div style="color:var(--amber); margin-top:6px;">⚠ Preencha à mão:<ul style="margin:4px 0 0 18px; padding:0;">${rel.falta.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul></div>` : '') +
+    `<div style="margin-top:6px;">Revise os campos antes de salvar.</div>`;
   status.style.color = 'var(--ink-dim)';
   toast('Campos preenchidos — revise antes de salvar');
 }
