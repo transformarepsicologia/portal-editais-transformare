@@ -1853,7 +1853,7 @@ const ABRANGENCIAS = ["Nacional","Estadual","Municipal"];
 // Clínica = o edital exige equipe multidisciplinar, então só uma clínica consegue atender.
 const PUBLICOS = ["Pessoa Física (PF)","Pessoa Jurídica (PJ)","Clínica (equipe multidisciplinar)"];
 function publicoTexto(o){ return (o.aceitaContratacao && o.aceitaContratacao.length) ? o.aceitaContratacao.join(', ') : 'Não informado'; }
-const SITUACOES = ["Aberto","Próximo do encerramento","Em análise","Retificado","Suspenso","Encerrado","Prazo não informado","Prazo a confirmar"];
+const SITUACOES = ["Aberto","Próximo do encerramento","Em análise","Retificado","Suspenso","Encerrado","Prazo não informado","Prazo a confirmar","Abertura em breve"];
 // "Divulgada no PNCP" só diz que o edital foi publicado — não significa que está aberto.
 // A situação exibida sai do prazo: vencido = Encerrado; até 7 dias = Próximo do encerramento;
 // prazo futuro = Aberto; sem prazo válido = Prazo não informado. Situações manuais
@@ -1862,6 +1862,12 @@ function situacaoExibida(o){
   const s = o.situacao || '';
   if(['Em análise','Retificado','Suspenso'].includes(s)) return s;
   const d = parseDate(o.prazo);
+  // Recebimento de propostas ainda não começou: "Abertura em breve".
+  const dAb = parseDate(o.abertura);
+  if(!isNaN(dAb.getTime())){
+    const h0 = new Date(); h0.setHours(0,0,0,0);
+    if(dAb > h0) return 'Abertura em breve';
+  }
   // Prazo de 2040 em diante só vale depois que o analista confirma (credenciamentos longos existem).
   if(!isNaN(d.getTime()) && d.getFullYear() >= 2040 && !o.prazoConfirmado) return 'Prazo a confirmar';
   if(!isNaN(d.getTime())){
@@ -2195,7 +2201,7 @@ function toast(msg){
 
 /* ================= BADGES / SCORE ================= */
 function badgeClass(s){
-  return {"Aberto":"aberto","Próximo do encerramento":"encerrando","Em análise":"analise","Retificado":"retificado","Encerrado":"encerrado","Suspenso":"suspenso","Prazo não informado":"divulgada","Prazo a confirmar":"divulgada"}[s] || "aberto";
+  return {"Aberto":"aberto","Próximo do encerramento":"encerrando","Em análise":"analise","Retificado":"retificado","Encerrado":"encerrado","Suspenso":"suspenso","Prazo não informado":"divulgada","Prazo a confirmar":"divulgada","Abertura em breve":"analise"}[s] || "aberto";
 }
 // "Inscrições próximas": prazo dentro dos próximos 7 dias (e ainda não vencido).
 const DIAS_INSCRICAO_PROXIMA = 7;
@@ -2882,6 +2888,18 @@ function searchFromHome(){
 // Filtro ligado pelo quadrado "editais com Índice Transformare" da home — não
 // tem um <select> próprio, então fica num flag à parte (ver irParaEditaisComFiltro).
 let filtroSomenteComIndice = false;
+let filtroRadar = null; // 'novas7' | 'embreve' — vindos dos Números do Radar
+const DIAS_NOVAS = 7, DIAS_ABRE_EM_BREVE = 7;
+function _diasDesde(txt){ const d = parseDate(txt); if(isNaN(d.getTime())) return null; const h = new Date(); h.setHours(0,0,0,0); return Math.round((h - d)/86400000); }
+function eNovaAberta(o){
+  const dias = _diasDesde(o.publicacao);
+  return dias !== null && dias >= 0 && dias <= DIAS_NOVAS && ['Aberto','Próximo do encerramento'].includes(situacaoExibida(o));
+}
+function eAbreEmBreve(o){
+  if(situacaoExibida(o) !== 'Abertura em breve') return false;
+  const dias = _diasDesde(o.abertura);
+  return dias !== null && dias < 0 && -dias <= DIAS_ABRE_EM_BREVE;
+}
 // Espelha o "usandoDemo" calculado em renderIndicators(): quando há editais reais,
 // o quadrado só conta os reais com índice, então o filtro precisa excluir também
 // os editais de demonstração do protótipo (que sempre vêm com índice fixo) —
@@ -2913,6 +2931,8 @@ function applyFilters(){
       if(o.indice===null || o.indice===undefined) return false;
       if(!indicadoresUsandoDemo && !o.origemSupabase) return false;
     }
+    if(filtroRadar === 'novas7' && !eNovaAberta(o)) return false;
+    if(filtroRadar === 'embreve' && !eAbreEmBreve(o)) return false;
     if(busca){
       const alvo = `${o.orgao} ${o.edital} ${o.objeto} ${o.profissoes.join(' ')} ${o.uf}`.toLowerCase();
       if(!alvo.includes(busca)) return false;
@@ -2975,12 +2995,21 @@ function renderFilterChips(){
     chip.querySelector('.fc-x').onclick = ()=>{ filtroSomenteComIndice = false; applyFilters(); };
     box.appendChild(chip);
   }
+  if(filtroRadar){
+    temAtivo = true;
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip';
+    chip.innerHTML = `<span>${filtroRadar === 'novas7' ? 'Novas abertas nos últimos 7 dias' : 'Abrem nos próximos 7 dias'}</span><span class="fc-x">✕</span>`;
+    chip.querySelector('.fc-x').onclick = ()=>{ filtroRadar = null; applyFilters(); };
+    box.appendChild(chip);
+  }
   document.getElementById('btn-limpar-filtros').style.display = temAtivo ? '' : 'none';
 }
 function clearAllFilters(){
   ['ed-search'].forEach(id=>document.getElementById(id).value='');
   ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
   filtroSomenteComIndice = false;
+  filtroRadar = null;
   applyFilters();
 }
 
@@ -3002,7 +3031,9 @@ function renderIndicators(){
     {num:orgaos, label:'órgãos e instituições', filtro:'orgao'},
     {num:profissoesAtivasNomes().length, label:'profissões cobertas', filtro:'profissao'},
     {num:new Set(base.map(o=>o.uf)).size, label:'estados com oportunidades', filtro:'uf'},
-    {num:comIndice, label:'editais com Índice Transformare', filtro:'indice'}
+    {num:comIndice, label:'editais com Índice Transformare', filtro:'indice'},
+    {num:base.filter(eNovaAberta).length, label:'novas oportunidades abertas em 7 dias', filtro:'novas7'},
+    {num:base.filter(eAbreEmBreve).length, label:'editais para abrir nos próximos dias', filtro:'embreve'}
   ];
   const box = document.getElementById('indicators');
   box.innerHTML = '';
@@ -3021,7 +3052,9 @@ function irParaEditaisComFiltro(filtro){
   ['ed-search'].forEach(id=>document.getElementById(id).value='');
   ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
   filtroSomenteComIndice = (filtro === 'indice');
+  filtroRadar = (filtro === 'novas7' || filtro === 'embreve') ? filtro : null;
   if(filtro === 'indice') document.getElementById('f-sort').value = 'indice';
+  if(filtro === 'novas7') document.getElementById('f-sort').value = 'recentes';
   nav('editais');
   // "Órgãos e instituições", "profissões cobertas" e "estados com oportunidades"
   // reúnem muitos valores diferentes — não dá pra filtrar por "um" só com um
@@ -4595,7 +4628,15 @@ function _prazoParaDate(txt){
   if(m2) return new Date(+m2[1], +m2[2]-1, +m2[3]);
   return null;
 }
-const _contagensHoje = { pncp:null, diario:null, leadsNovos:null, indicePend:null };
+// Mesma regra do robô do PNCP: "CONTRATAÇÃO DA EMPRESA FULANO LTDA, PARA PRESTAÇÃO DE..."
+// é contratação de fornecedor já escolhido, não edital aberto para credenciar.
+function ehContratacaoDeFornecedor(objeto){
+  const t = (objeto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+  if(!/^(contratacao|inexigibilidade)\s+d[aeo]s?\s+/.test(t)) return false;
+  const nome = t.split(/\s+(para|que atuara|com a finalidade)\s+/)[0];
+  return /\b(ltda|eireli|epp|s\/s|s\.s\.|mei|sociedade simples|sociedade unipessoal|s\.a\.)\b|\s-\s*me\b|\bme,/.test(nome);
+}
+const _contagensHoje = { pncp:null, diario:null, leadsNovos:null, indicePend:null, fornecedorPendentes:[] };
 async function carregarContagensHoje(){
   if(!_sb){ renderHoje(); return; }
   const cont = async (tabela, filtro) => {
@@ -4610,7 +4651,12 @@ async function carregarContagensHoje(){
     cont('leads', q=>q.eq('status','Novo')),
     cont('solicitacoes_avaliacao_indice', q=>q.eq('status','pendente')),
   ]);
-  Object.assign(_contagensHoje, {pncp, diario, leadsNovos, indicePend});
+  let fornecedorPendentes = [];
+  try{
+    const { data: pend } = await _sb.from('credenciamentos_pendentes').select('id, objeto, orgao, uf, status').in('status', ['pendente','mais_tarde']);
+    fornecedorPendentes = (pend||[]).filter(r=>ehContratacaoDeFornecedor(r.objeto));
+  }catch(e){ /* sem a lista, o resto da tela segue */ }
+  Object.assign(_contagensHoje, {pncp, diario, leadsNovos, indicePend, fornecedorPendentes});
   renderHoje();
 }
 function _setBadge(id, n){
@@ -4629,7 +4675,9 @@ function renderHoje(){
   const semIndice = oportunidades.filter(o=>o.indice == null);
   const encerrando = oportunidades.filter(o=>{ const d=prazoDe(o); return d && d >= hoje && (d-hoje)/86400000 <= 15 && d.getFullYear() < 2040; })
                                    .sort((a,b)=>prazoDe(a)-prazoDe(b));
-  const problemas = suspeitos.length + vencidos.length + semPrazo.length + semSituacao.length;
+  const fornecedores = oportunidades.filter(o=>ehContratacaoDeFornecedor(o.objeto));
+  const fornecedoresPend = _contagensHoje.fornecedorPendentes || [];
+  const problemas = suspeitos.length + vencidos.length + semPrazo.length + semSituacao.length + fornecedores.length + fornecedoresPend.length;
   const fmt = n => n == null ? '—' : n;
   const cards = [
     {num:fmt(_contagensHoje.pncp), label:'Achados do PNCP para triar', cls:_contagensHoje.pncp?'alerta':'', ir:()=>adminIrPara('triagem','caixa-entrada-body')},
@@ -4648,9 +4696,12 @@ function renderHoje(){
   const linhas = [
     ['Prazo de 2040 em diante a confirmar', suspeitos], ['Prazo vencido e ainda "Aberto"', vencidos],
     ['Sem prazo definido', semPrazo], ['Sem situação', semSituacao],
+    ['Contratação de fornecedor já definido, no catálogo (não é edital aberto)', fornecedores],
   ];
   document.getElementById('hoje-problemas').innerHTML = '<div class="hoje-lista">' + linhas.map(([t,arr])=>
-    `<div class="linha"><span>${t}</span><span style="display:flex; gap:8px; align-items:center;"><strong style="color:${arr.length?'var(--coral)':'var(--teal)'};">${arr.length}</strong>${arr.length?`<button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="abrirEditalProblema(${arr[0].id})">Corrigir o 1º</button>`:''}</span></div>`).join('') + (suspeitos.length ? '<div class="hoje-lista" style="margin-top:12px;"><div style="font-size:12px; color:var(--ink-dim);">Prazos longos podem estar certos. Confira no edital e confirme:</div>' + suspeitos.map(o=>`<div class="linha"><span>${esc(o.edital)} — prazo <strong style="color:var(--amber);">${esc(o.prazo)}</strong></span><span style="display:flex; gap:6px;"><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="confirmarPrazoEdital(${o.id})">✓ Confirmar prazo</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openAdminForm(${o.id})">Editar</button></span></div>`).join('') + '</div>' : '');
+    `<div class="linha"><span>${t}</span><span style="display:flex; gap:8px; align-items:center;"><strong style="color:${arr.length?'var(--coral)':'var(--teal)'};">${arr.length}</strong>${arr.length?`<button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="abrirEditalProblema(${arr[0].id})">Corrigir o 1º</button>`:''}</span></div>`).join('') + (fornecedores.length ? '<div class="hoje-lista" style="margin-top:12px;"><div style="font-size:12px; color:var(--ink-dim);">No catálogo — parecem contratação direta de uma empresa. Confira e remova ou corrija:</div>' + fornecedores.map(o=>`<div class="linha"><span>${esc(o.edital)} — ${esc((o.objeto||'').slice(0,90))}</span><span style="display:flex; gap:6px;"><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openDetalhe(${o.id})">Ver</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openAdminForm(${o.id})">Editar</button></span></div>`).join('') + '</div>' : '')
+    + (fornecedoresPend.length ? '<div class="hoje-lista" style="margin-top:12px;"><div style="font-size:12px; color:var(--ink-dim);">Na Caixa de entrada (aguardando você) — parecem contratação direta de uma empresa. Rejeite com o motivo "contratação direta de fornecedor":</div>' + fornecedoresPend.map(r=>`<div class="linha"><span>${esc((r.objeto||'').slice(0,100))} (${esc(r.uf||'')})</span><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="adminIrPara('triagem','caixa-entrada-body')">Abrir a Caixa</button></div>`).join('') + '</div>' : '')
+    + (suspeitos.length ? '<div class="hoje-lista" style="margin-top:12px;"><div style="font-size:12px; color:var(--ink-dim);">Prazos longos podem estar certos. Confira no edital e confirme:</div>' + suspeitos.map(o=>`<div class="linha"><span>${esc(o.edital)} — prazo <strong style="color:var(--amber);">${esc(o.prazo)}</strong></span><span style="display:flex; gap:6px;"><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="confirmarPrazoEdital(${o.id})">✓ Confirmar prazo</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openAdminForm(${o.id})">Editar</button></span></div>`).join('') + '</div>' : '');
   document.getElementById('hoje-encerrando').innerHTML = encerrando.length
     ? '<div class="hoje-lista">' + encerrando.map(o=>`<div class="linha"><span>${esc(o.edital)} — ${esc(o.orgao)} (${esc(o.uf)})</span><span style="display:flex; gap:8px; align-items:center;"><span style="color:var(--amber);">${esc(o.prazo)}</span><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openDetalhe(${o.id})">Ver</button></span></div>`).join('') + '</div>'
     : '<span style="font-size:13px; color:var(--ink-dim);">Nenhum edital encerrando nos próximos 15 dias.</span>';
@@ -5183,6 +5234,7 @@ function mapEditalSupabase(row){
     objeto: row.objeto || '',
     prazo: formatarDataBR(row.prazo),
     prazoConfirmado: !!row.prazo_confirmado,
+    abertura: row.abertura ? formatarDataBR(row.abertura) : null,
     publicacao: formatarDataBR(row.publicacao),
     horaPublicacao: row.hora_publicacao || '',
     indice,
