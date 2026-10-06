@@ -3037,7 +3037,8 @@ function renderIndicators(){
   ];
   const box = document.getElementById('indicators');
   box.innerHTML = '';
-  stats.forEach(s=>{
+  // Caixa com número zero não aparece (some sozinha e volta quando houver dados).
+  stats.filter(s=>s.num > 0).forEach(s=>{
     const el = document.createElement('div'); el.className='indicator-card indicator-card-link';
     // Com dado real, o próprio nome do indicador vai no selo dourado (no lugar
     // de "Dado real") — por isso some o texto simples do label nesse caso.
