@@ -3081,6 +3081,7 @@ function openDetalhe(id){
             <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}</div></div>
             <div class="qf-item"><div class="qf-icon">💰</div><span class="qf-k">Remuneração</span><div class="qf-v">${remuneracaoResumo}</div></div>
             <div class="qf-item"><div class="qf-icon">⏳</div><span class="qf-k">Prazo</span><div class="qf-v">${o.prazo}</div></div>
+             ${o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}</div></div>` : ''}
             ${(o.escolaridadeMinima || o.experienciaMinimaAnos) ? `<div class="qf-item"><div class="qf-icon">🎓</div><span class="qf-k">Exigência mínima</span><div class="qf-v">${esc([o.escolaridadeMinima, o.experienciaMinimaAnos ? o.experienciaMinimaAnos + ' ano(s) de experiência' : ''].filter(Boolean).join(' · '))}</div></div>` : ''}
           </div>
 
@@ -5183,6 +5184,7 @@ function mapEditalSupabase(row){
     prazo: formatarDataBR(row.prazo),
     prazoConfirmado: !!row.prazo_confirmado,
     publicacao: formatarDataBR(row.publicacao),
+    horaPublicacao: row.hora_publicacao || '',
     indice,
     indiceLabel: indice==null ? null : (indice >= 4 ? 'Alta oportunidade' : indice >= 3 ? 'Oportunidade moderada' : 'Baixa oportunidade'),
     valorAtendimento: row.valor_atendimento || 'Não informado no edital',
@@ -5295,7 +5297,7 @@ async function renderCaixaEntrada(){
         ${prioritario ? '<span class="badge-prioridade" title="Índice 5 e abrangência Nacional — avaliar com prioridade">⚡ Avaliar com prioridade</span>' : ''}
         ${badgeIndiceSugeridoHTML(item)}
         ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
-        <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao || '—'}${item.data_encerramento_proposta ? ` · Prazo: ${formatarDataBR(item.data_encerramento_proposta)}` : ''} · Fonte: ${esc(item.fonte)}</div>
+        <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao ? formatarDataBR(item.data_publicacao) : '—'}${item.hora_publicacao ? ' às ' + esc(item.hora_publicacao) : ''}${item.data_encerramento_proposta ? ` · Prazo: ${formatarDataBR(item.data_encerramento_proposta)}` : ''} · Fonte: ${esc(item.fonte)}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
       </summary>
       <div style="margin-top:10px;">
