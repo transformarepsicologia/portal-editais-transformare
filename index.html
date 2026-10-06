@@ -983,6 +983,12 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row"><label>Nível de instrução</label><select id="cad-escolaridade"><option value="">Selecione</option><option value="Graduação">Graduação</option><option value="Especialização">Especialização</option><option value="Residência">Residência</option><option value="Mestrado">Mestrado</option><option value="Doutorado">Doutorado</option></select></div>
       <div class="form-row"><label>Tempo de atuação na profissão (anos)</label><input type="number" id="cad-anos-exp" min="0" max="60" step="1" placeholder="Ex: 5"></div>
     </div>
+    <div class="form-row"><label>Especialidades / áreas de interesse</label><div class="chip-select" id="cad-esp"></div></div>
+    <div class="form-row"><label>Formato de atendimento</label><div class="chip-select" id="cad-formato"></div></div>
+    <div class="two-col">
+      <div class="form-row"><label>Meta de ganho mensal (análise financeira)</label><input type="number" id="cad-meta" min="0" step="100" placeholder="R$ por mês"></div>
+      <div class="form-row"><label>Como recebe / regime</label><select id="cad-regime"><option value="">Selecione</option><option>Autônomo (RPA)</option><option>MEI</option><option>Simples Nacional</option><option>Lucro presumido</option><option>Ainda não defini</option></select></div>
+    </div>
     <div class="form-row"><label>Como você atua</label><div class="chip-select" id="cad-atuacao"></div></div>
     <div id="cad-pj-box" style="display:none;">
       <div class="form-row"><label>CNPJ</label><div style="display:flex; gap:6px;"><input type="text" id="cad-cnpj" placeholder="00.000.000/0000-00" inputmode="numeric" maxlength="18" style="flex:1; min-width:0;" oninput="cnpjDigitado('cad')"><button type="button" class="btn-ghost" onclick="buscarCnpjPerfil('cad')">Buscar dados</button></div></div>
@@ -1025,6 +1031,12 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="two-col">
       <div class="form-row"><label>Nível de instrução</label><select id="perfil-escolaridade"><option value="">Selecione</option><option value="Graduação">Graduação</option><option value="Especialização">Especialização</option><option value="Residência">Residência</option><option value="Mestrado">Mestrado</option><option value="Doutorado">Doutorado</option></select></div>
       <div class="form-row"><label>Tempo de atuação na profissão (anos)</label><input type="number" id="perfil-anos-exp" min="0" max="60" step="1" placeholder="Ex: 5"></div>
+    </div>
+    <div class="form-row"><label>Especialidades / áreas de interesse</label><div class="chip-select" id="perfil-esp"></div></div>
+    <div class="form-row"><label>Formato de atendimento</label><div class="chip-select" id="perfil-formato"></div></div>
+    <div class="two-col">
+      <div class="form-row"><label>Meta de ganho mensal (análise financeira)</label><input type="number" id="perfil-meta" min="0" step="100" placeholder="R$ por mês"></div>
+      <div class="form-row"><label>Como recebe / regime</label><select id="perfil-regime"><option value="">Selecione</option><option>Autônomo (RPA)</option><option>MEI</option><option>Simples Nacional</option><option>Lucro presumido</option><option>Ainda não defini</option></select></div>
     </div>
     <div class="form-row"><label>Como você atua</label><div class="chip-select" id="perfil-atuacao"></div></div>
     <div id="perfil-pj-box" style="display:none;">
@@ -2199,7 +2211,7 @@ function nav(view){
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
   if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); adminTab(adminTabAtual||'hoje'); carregarContagensHoje(); renderUsuariosAdmin(); renderFeedbacksAdmin(); renderSugestoesProfissaoAdmin(); renderSolicitacoesIndiceAdmin(); }
-  if(view === 'minha-conta') renderMinhaConta();
+  if(view === 'minha-conta'){ renderMinhaConta(); atualizarStatusPedidoPlano(); }
   if(view === 'perfil') renderPerfil();
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
   currentView = view;
@@ -2484,6 +2496,24 @@ async function enviarSugestaoProfissao(nome, usuario){
 }
 const ATUACOES = [{v:'PF', label:'Pessoa Física (PF)'}, {v:'PJ', label:'Pessoa Jurídica (PJ)'}];
 const empresaForm = { cad:null, perfil:null }; // dados do CNPJ consultado em cada formulário
+const ESPECIALIDADES = ['Infantil','Adolescentes','Adultos','Idosos','TEA / autismo','Neuropsicologia','Saúde mental','Dependência química','Avaliação psicológica','Saúde do trabalhador','Hospitalar','Reabilitação'];
+const FORMATOS_ATEND = ['Individual','Grupo','Domiciliar','Telessaúde / teleatendimento','Plantão'];
+const REGIMES = ['Autônomo (RPA)','MEI','Simples Nacional','Lucro presumido','Ainda não defini'];
+function chipsSimples(boxId, lista, selecionadas){
+  const box = document.getElementById(boxId); box.innerHTML = '';
+  lista.forEach(a=>{
+    const c = document.createElement('div');
+    c.className = 'chip-opt' + ((selecionadas||[]).includes(a) ? ' selected' : '');
+    c.textContent = a; c.onclick = ()=>c.classList.toggle('selected');
+    box.appendChild(c);
+  });
+}
+function chipsBuscaPerfil(pre, u){
+  chipsSimples(pre+'-esp', ESPECIALIDADES, u && u.especialidades);
+  chipsSimples(pre+'-formato', FORMATOS_ATEND, u && u.formatos);
+  document.getElementById(pre+'-meta').value = (u && u.metaMensal) || '';
+  document.getElementById(pre+'-regime').value = (u && u.regime) || '';
+}
 function chipsAtuacaoPerfil(pre, selecionadas){
   const box = document.getElementById(pre+'-atuacao'); box.innerHTML = '';
   ATUACOES.forEach(a=>{
@@ -2567,12 +2597,17 @@ function lerPerfilExtraForm(pre){
     cnpj: atuacaoSelecionada(pre).includes('PJ') ? soDigitos(document.getElementById(pre+'-cnpj').value) : '',
     empresa: (atuacaoSelecionada(pre).includes('PJ') && empresaForm[pre] && empresaForm[pre].cnpj === soDigitos(document.getElementById(pre+'-cnpj').value)) ? empresaForm[pre] : null,
     anosExp: (()=>{ const n = parseInt(document.getElementById(pre+'-anos-exp').value, 10); return isNaN(n) || n < 0 ? null : n; })(),
+    especialidades: [...document.querySelectorAll('#'+pre+'-esp .chip-opt.selected')].map(x=>x.textContent),
+    formatos: [...document.querySelectorAll('#'+pre+'-formato .chip-opt.selected')].map(x=>x.textContent),
+    metaMensal: (()=>{ const n = parseFloat(document.getElementById(pre+'-meta').value); return isNaN(n) || n <= 0 ? null : n; })(),
+    regime: document.getElementById(pre+'-regime').value || '',
   };
 }
 function perfilExtraParaBanco(e){
   return { cidade: e.cidade || null, abrangencias: e.abrs || [], rem_min: e.remMin, rem_tipo: e.remTipo || 'atendimento',
            escolaridade: e.escolaridade || null, anos_experiencia: e.anosExp ?? null,
-           atuacao: e.atuacao || [], cnpj: e.cnpj || null, empresa: e.empresa || null };
+           atuacao: e.atuacao || [], cnpj: e.cnpj || null, empresa: e.empresa || null,
+           especialidades: e.especialidades || [], formatos: e.formatos || [], meta_mensal: e.metaMensal ?? null, regime: e.regime || null };
 }
 function normTxt(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase(); }
 
@@ -2635,6 +2670,30 @@ function calcularAderencia(o, u){
       else { naoAtende = true; motivos.push('⚠ exige ' + o.experienciaMinimaAnos + ' anos de experiência'); }
     } else motivos.push('⚠ exige ' + o.experienciaMinimaAnos + ' anos de experiência');
   }
+  // Especialidades e formato de atendimento: comparam com o texto do edital.
+  // Se o edital não cita nenhuma especialidade/formato, fica neutro.
+  const txt = normTxt([o.objeto, o.requisitos, o.edital].join(' '));
+  const kws = {
+    'Infantil':['infantil','crianca'],'Adolescentes':['adolescente'],'Adultos':['adulto'],'Idosos':['idoso'],'TEA / autismo':['autismo','tea ','espectro autista'],
+    'Neuropsicologia':['neuropsic'],'Saúde mental':['saude mental','caps','psicossocial'],'Dependência química':['dependencia quimica','alcool e drogas','caps ad'],
+    'Avaliação psicológica':['avaliacao psicologica','psicodiagn'],'Saúde do trabalhador':['saude do trabalhador','ocupacional'],'Hospitalar':['hospitalar','hospital'],'Reabilitação':['reabilitacao'],
+    'Individual':['individual'],'Grupo':['em grupo','grupal','oficina'],'Domiciliar':['domiciliar','domicilio'],'Telessaúde / teleatendimento':['telessaude','teleatendimento','telemedicina','teleconsulta'],'Plantão':['plantao']};
+  const casar = (escolhidas)=>{
+    const doEdital = Object.keys(kws).filter(k=>kws[k].some(w=>txt.includes(w)));
+    const relevantes = doEdital.filter(k=>ESPECIALIDADES.includes(k) === escolhidas.__esp);
+    if(!relevantes.length) return null;           // edital não cita: neutro
+    return relevantes.filter(k=>escolhidas.includes(k));
+  };
+  if((u.especialidades||[]).length){
+    const lista = [...u.especialidades]; lista.__esp = true;
+    const r = casar(lista); total += 10;
+    if(r === null) pontos += 5; else if(r.length){ pontos += 10; motivos.push('área: ' + r.join('/').toLowerCase()); }
+  }
+  if((u.formatos||[]).length){
+    const lista = [...u.formatos]; lista.__esp = false;
+    const r = casar(lista); total += 5;
+    if(r === null) pontos += 3; else if(r.length){ pontos += 5; motivos.push('formato: ' + r.join('/').toLowerCase()); }
+  }
   // Forma de contratação (PF/PJ/Clínica): só conta quando o edital informa e o
   // perfil diz como a pessoa atua. Também é requisito de habilitação.
   const aceita = o.aceitaContratacao || [];
@@ -2654,7 +2713,8 @@ function calcularAderencia(o, u){
 }
 
 /* ================= MINHA CONTA ================= */
-const PLANOS = {gratuito:'Gratuito'};
+const PLANOS = {gratuito:'Gratuito', essencial:'Essencial'};
+function ehEssencial(){ return !!(adminAuthed || (userProfile && userProfile.plano === 'essencial')); }
 function updateNavCta(){
   const ctaBtn = document.getElementById('nav-cta-btn');
   if(userProfile){
@@ -2689,7 +2749,7 @@ function renderMinhaConta(){
   // Indicadores do topo: alta aderência (70%+), melhor % e quanto do perfil está preenchido.
   const altaAderencia = todasAderencias.filter(x=>x.ad.pct >= 70).length;
   const melhorAderencia = todasAderencias.length ? todasAderencias[0].ad.pct : null;
-  const camposPerfil = [(u.profs||[]).length, u.uf, u.cidade, (u.mods||[]).length, (u.abrs||[]).length, u.remMin, u.escolaridade, u.anosExp != null, (u.atuacao||[]).length];
+  const camposPerfil = [(u.profs||[]).length, u.uf, u.cidade, (u.mods||[]).length, (u.abrs||[]).length, u.remMin, u.escolaridade, u.anosExp != null, (u.atuacao||[]).length, (u.especialidades||[]).length, (u.formatos||[]).length, u.metaMensal];
   const perfilPct = Math.round(camposPerfil.filter(Boolean).length / camposPerfil.length * 100);
   const desde = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : '—';
 
@@ -2713,6 +2773,10 @@ function renderMinhaConta(){
           <div class="profile-field"><span class="k">Instrução</span><span class="v">${esc(u.escolaridade) || 'Não informado'}</span></div>
           <div class="profile-field"><span class="k">Tempo de atuação</span><span class="v">${u.anosExp != null ? u.anosExp + ' ano(s)' : 'Não informado'}</span></div>
           <div class="profile-field"><span class="k">Remuneração mínima</span><span class="v">${u.remMin ? esc(formatarMoedaBR(u.remMin) + ' ' + (REM_TIPOS[u.remTipo]||'')) : 'Não informado'}</span></div>
+          <div class="profile-field"><span class="k">Especialidades</span><span class="v">${esc((u.especialidades||[]).join(', ')) || 'Não informado'}</span></div>
+          <div class="profile-field"><span class="k">Formato</span><span class="v">${esc((u.formatos||[]).join(', ')) || 'Não informado'}</span></div>
+          <div class="profile-field"><span class="k">Meta mensal</span><span class="v">${u.metaMensal ? esc(formatarMoedaBR(u.metaMensal)) : 'Não informado'}</span></div>
+          <div class="profile-field"><span class="k">Regime</span><span class="v">${esc(u.regime) || 'Não informado'}</span></div>
           <div class="profile-field"><span class="k">Conta criada em</span><span class="v">${desde}</span></div>
           <div class="account-quicklinks">
             <button class="btn-ghost" onclick="nav('perfil')">Editar perfil</button>
@@ -2721,8 +2785,13 @@ function renderMinhaConta(){
         </div>
         <div class="panel" style="margin-top:14px;">
           <h4><span class="dot"></span>Seu plano <span class="plan-badge">${PLANOS[u.plano]||'Gratuito'}</span></h4>
-          <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui busca, favoritos, alertas dentro do portal e checklist de documentos.</p>
-          <p style="font-size:11.5px; color:var(--ink-dim); margin:0;">Assinatura com recursos extras (como alertas por e-mail ou WhatsApp) ainda não está disponível.</p>
+          ${u.plano === 'essencial' ? `
+          <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui tudo do plano Gratuito, mais o <strong>checklist completo</strong> de documentos de cada edital e os links dos principais portais para emitir certidões.</p>
+          <div style="margin-top:8px;">${portaisDocsPanelHTML().replace('class="panel"','style="margin:0;"')}</div>` : `
+          <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui busca, favoritos, alertas dentro do portal e os principais documentos de cada edital.</p>
+          <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"><strong>Plano Essencial:</strong> checklist completo de todos os documentos exigidos e links dos portais de emissão (CND da Receita, FGTS, CNDT e outros).</p>
+          <button class="btn-primary" id="btn-plano-essencial" onclick="solicitarPlanoEssencial()">Quero o plano Essencial</button>
+          <div id="plano-pedido-status" style="font-size:12px; color:var(--ink-dim); margin-top:6px;"></div>`}
         </div>
       </div>
       <div>
@@ -2891,6 +2960,7 @@ function populateSelects(){
     modBox.appendChild(c);
   });
   chipsAbrangenciaPerfil('cad-abr', []);
+  chipsBuscaPerfil('cad', null);
   chipsAtuacaoPerfil('cad', []);
 }
 
@@ -3215,10 +3285,13 @@ function openDetalhe(id){
           ${ocultos>0 ? `
           <div class="checklist-cta" style="margin-top:10px;">
             <p>+ ${ocultos} outro${ocultos>1?'s':''} documento${ocultos>1?'s':''} exigido${ocultos>1?'s':''} neste edital. A lista completa de documentação pode ser organizada com o apoio da Transformare.</p>
-            <button class="btn-ghost" style="width:100%;" onclick="openLeadModal(${o.id},'detalhe_edital','Quero a lista completa de documentos')">Quero ver a lista completa</button>
+            <button class="btn-primary" style="width:100%; margin-bottom:6px;" onclick="solicitarPlanoEssencial()">Quero o plano Essencial (checklist completo)</button>
+            <button class="btn-ghost" style="width:100%;" onclick="openLeadModal(${o.id},'detalhe_edital','Quero a lista completa de documentos')">Prefiro o apoio da Transformare</button>
           </div>` : ''}
           `; })()}
         </div>
+
+        ${portaisDocsPanelHTML()}
 
         <div class="panel">
           <h4><span class="dot"></span>Histórico de movimentações</h4>
@@ -3240,6 +3313,8 @@ function openDetalhe(id){
           <p style="font-size:10.5px; color:var(--ink-dim); margin-top:10px;">Valores estimados a partir do edital — não representam garantia de demanda ou volume de atendimentos.</p>
         </div>
 
+        ${analiseFinanceiraHTML(o)}
+
         <div class="steps-panel">
           <h4 style="font-family:var(--font-display); font-size:15.5px; margin:0 0 12px; display:flex; align-items:center; gap:8px;"><span class="dot" style="width:6px;height:6px;border-radius:50%; background:var(--teal); display:inline-block;"></span>O que fazer a seguir</h4>
           <ol>
@@ -3257,6 +3332,24 @@ function openDetalhe(id){
   `;
   nav('detalhe');
 }
+async function solicitarPlanoEssencial(){
+  if(!userProfile){ toast('Crie sua conta gratuita ou entre para pedir o plano Essencial.'); nav('cadastro'); return; }
+  if(userProfile.plano === 'essencial'){ toast('Você já está no plano Essencial.'); return; }
+  if(!_sb){ toast('Indisponível sem conexão com o banco.'); return; }
+  const { data: ja } = await _sb.from('pedidos_plano').select('id').eq('usuario_id', userProfile.id).eq('status','pendente').limit(1);
+  if(ja && ja.length){ toast('Seu pedido já foi enviado. Aguarde a confirmação da Transformare.'); atualizarStatusPedidoPlano(); return; }
+  const { error } = await _sb.from('pedidos_plano').insert({ usuario_id: userProfile.id, email: userProfile.email, nome: userProfile.nome, plano: 'essencial' });
+  if(error){ toast('Não foi possível enviar o pedido: ' + error.message); return; }
+  toast('Pedido enviado! A Transformare vai confirmar o seu plano Essencial.');
+  atualizarStatusPedidoPlano();
+}
+async function atualizarStatusPedidoPlano(){
+  const el = document.getElementById('plano-pedido-status'); if(!el || !_sb || !userProfile) return;
+  const { data } = await _sb.from('pedidos_plano').select('id').eq('usuario_id', userProfile.id).eq('status','pendente').limit(1);
+  const pend = !!(data && data.length);
+  el.textContent = pend ? '✓ Pedido enviado — aguardando confirmação da Transformare.' : '';
+  const b = document.getElementById('btn-plano-essencial'); if(b){ b.disabled = pend; b.style.opacity = pend ? '.6' : '1'; }
+}
 let credenciarOppId = null;
 function openCredenciarModal(oppId){
   credenciarOppId = oppId;
@@ -3267,11 +3360,45 @@ function continuarParaEdital(){
   closeModal('credenciar-modal');
   if(o && o.urlInscricao) window.open(o.urlInscricao, '_blank');
 }
+const PORTAIS_DOCS = [
+  {nome:'CND Federal — Receita/PGFN (pessoa jurídica)', url:'https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PJ/Emitir'},
+  {nome:'CND Federal — Receita/PGFN (pessoa física)', url:'https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PF/Emitir'},
+  {nome:'Certificado de Regularidade do FGTS (CRF)', url:'https://consulta-crf.caixa.gov.br/consultacrf/pages/consultaEmpregador.jsf'},
+  {nome:'Certidão Negativa de Débitos Trabalhistas (CNDT)', url:'https://www.tst.jus.br/certidao'},
+  {nome:'Comprovante de inscrição no CNPJ', url:'https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp'},
+  {nome:'Certidão de antecedentes criminais — Polícia Federal', url:'https://servicos.dpf.gov.br/antecedentes-criminais/certidao'},
+  {nome:'Certidão de quitação eleitoral — TSE', url:'https://www.tse.jus.br/servicos-eleitorais/certidoes/certidao-de-quitacao-eleitoral'},
+  {nome:'Compras.gov.br / SICAF (cadastro de fornecedores)', url:'https://www.gov.br/compras/pt-br'},
+];
+function portaisDocsPanelHTML(){
+  if(!ehEssencial()){
+    return `<div class="panel"><h4><span class="dot"></span>Onde emitir cada documento</h4>
+      <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;">No plano Essencial você recebe os links dos principais portais (CND da Receita, certificado do FGTS, CNDT e outros) junto com o checklist completo.</p>
+      <button class="btn-ghost" onclick="solicitarPlanoEssencial()">Conhecer o plano Essencial</button></div>`;
+  }
+  return `<div class="panel"><h4><span class="dot"></span>Onde emitir cada documento</h4>
+    <ul style="list-style:none; padding:0; margin:0;">${PORTAIS_DOCS.map(l=>`<li style="margin-bottom:6px;"><a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color:var(--teal); font-size:13px;">↗ ${esc(l.nome)}</a></li>`).join('')}</ul>
+    <p style="font-size:11px; color:var(--ink-dim); margin:10px 0 0;">Certidões estadual e municipal variam por localidade: procure o portal da Secretaria da Fazenda do seu estado e da prefeitura. Confira sempre o que o edital exige.</p></div>`;
+}
+function analiseFinanceiraHTML(o){
+  const u = userProfile; if(!u || !u.metaMensal) return '';
+  const v = parseMoneyValue(o.valorAtendimento);
+  const meta = formatarMoedaBR(u.metaMensal);
+  let corpo;
+  if(v){
+    const n = Math.ceil(u.metaMensal / v);
+    corpo = `Para chegar à sua meta de <strong>${meta}/mês</strong>, com ${esc(formatarMoedaBR(v))} por atendimento, seriam cerca de <strong>${n} atendimentos por mês</strong> (~${Math.ceil(n/4.3)} por semana).`;
+  } else corpo = `Este edital não informa valor por atendimento; não foi possível estimar quantos atendimentos levam à sua meta de ${meta}/mês.`;
+  return `<div class="panel"><h4><span class="dot"></span>Análise financeira</h4>
+    <p style="font-size:13px; line-height:1.6; margin:0; color:var(--ink-muted);">${corpo}</p>
+    <p style="font-size:10.5px; color:var(--ink-dim); margin:8px 0 0;">Valor bruto, antes de impostos${u.regime ? ' (seu regime: ' + esc(u.regime) + ')' : ''}. Estimativa a partir do edital, sem garantia de demanda.</p></div>`;
+}
 const DOC_PREVIEW_LIMIT = 5;
 // Mostra apenas os principais documentos no público (gostinho) — a lista
 // completa é tratada como algo a organizar com o apoio da Transformare
 // (sem falar em plano pago por enquanto).
 function docsPreview(documentos){
+  if(ehEssencial()) return documentos || [];   // plano Essencial: checklist completo
   return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
 }
 function docProgressHTML(oid, documentos, checks){
@@ -3763,10 +3890,11 @@ async function carregarPerfilUsuario(authUser){
     plano: perfil?.plano || 'gratuito',
     criadoEm: perfil?.criado_em || null,
   };
-  const doBanco = (perfil && (perfil.cidade || (perfil.abrangencias||[]).length || perfil.rem_min != null || perfil.escolaridade || perfil.anos_experiencia != null || (perfil.atuacao||[]).length || perfil.cnpj))
+  const doBanco = (perfil && (perfil.cidade || (perfil.abrangencias||[]).length || perfil.rem_min != null || perfil.escolaridade || perfil.anos_experiencia != null || (perfil.atuacao||[]).length || perfil.cnpj || (perfil.especialidades||[]).length || (perfil.formatos||[]).length || perfil.meta_mensal != null || perfil.regime))
     ? { cidade: perfil.cidade || '', abrs: perfil.abrangencias || [], remMin: perfil.rem_min != null ? Number(perfil.rem_min) : null, remTipo: perfil.rem_tipo || 'atendimento',
         escolaridade: perfil.escolaridade || '', anosExp: perfil.anos_experiencia ?? null,
-        atuacao: perfil.atuacao || [], cnpj: perfil.cnpj || '', empresa: perfil.empresa || null }
+        atuacao: perfil.atuacao || [], cnpj: perfil.cnpj || '', empresa: perfil.empresa || null,
+        especialidades: perfil.especialidades || [], formatos: perfil.formatos || [], metaMensal: perfil.meta_mensal != null ? Number(perfil.meta_mensal) : null, regime: perfil.regime || '' }
     : null;
   let extra = doBanco;
   if(!extra){
@@ -3843,10 +3971,10 @@ async function userSignup(){
   await storeSet(ukey('docChecks'), docChecks);
   await saveAlertPrefs();
 
-  ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2','cad-cidade','cad-rem-min','cad-escolaridade','cad-anos-exp','cad-cnpj','cad-prof-outra'].forEach(id=>document.getElementById(id).value='');
+  ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2','cad-cidade','cad-rem-min','cad-escolaridade','cad-anos-exp','cad-cnpj','cad-prof-outra','cad-meta','cad-regime'].forEach(id=>document.getElementById(id).value='');
   empresaForm.cad = null; chipsAtuacaoPerfil('cad', []); renderEmpresaBox('cad');
   document.getElementById('cad-aceite').checked = false;
-  document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected, #cad-abr .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
+  document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected, #cad-abr .chip-opt.selected, #cad-esp .chip-opt.selected, #cad-formato .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
   msg.textContent = '';
   updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
   toast('Conta criada — bem-vindo(a), ' + nome.split(' ')[0]);
@@ -3955,6 +4083,7 @@ function renderPerfil(){
   chipsAtuacaoPerfil('perfil', u.atuacao);
   renderEmpresaBox('perfil');
   chipsAbrangenciaPerfil('perfil-abr', u.abrs);
+  chipsBuscaPerfil('perfil', u);
 }
 async function saveProfile(){
   const u = userProfile; if(!u) return;
@@ -4703,18 +4832,19 @@ async function carregarContagensHoje(){
     const { count, error } = await q;
     return error ? null : count;
   };
-  const [pncp, diario, leadsNovos, indicePend] = await Promise.all([
+  const [pncp, diario, leadsNovos, indicePend, pedidosPlano] = await Promise.all([
     cont('credenciamentos_pendentes', q=>q.eq('status','pendente')),
     cont('diario_oficial_pendentes', q=>q.eq('status','pendente')),
     cont('leads', q=>q.eq('status','Novo')),
     cont('solicitacoes_avaliacao_indice', q=>q.eq('status','pendente')),
+    cont('pedidos_plano', q=>q.eq('status','pendente')),
   ]);
   let fornecedorPendentes = [];
   try{
     const { data: pend } = await _sb.from('credenciamentos_pendentes').select('id, objeto, orgao, uf, status').in('status', ['pendente','mais_tarde']);
     fornecedorPendentes = (pend||[]).filter(r=>ehContratacaoDeFornecedor(r.objeto));
   }catch(e){ /* sem a lista, o resto da tela segue */ }
-  Object.assign(_contagensHoje, {pncp, diario, leadsNovos, indicePend, fornecedorPendentes});
+  Object.assign(_contagensHoje, {pncp, diario, leadsNovos, indicePend, pedidosPlano, fornecedorPendentes});
   renderHoje();
 }
 function _setBadge(id, n){
@@ -4743,6 +4873,7 @@ function renderHoje(){
     {num:problemas, label:'Editais com problema', cls:problemas?'perigo':'', ir:()=>adminIrPara('editais')},
     {num:semIndice.length, label:'Editais sem Índice', cls:'', ir:()=>adminIrPara('editais')},
     {num:fmt(_contagensHoje.indicePend), label:'Pedidos de avaliação de Índice', cls:_contagensHoje.indicePend?'alerta':'', ir:()=>adminIrPara('leads','solicitacoes-indice-body')},
+    {num:fmt(_contagensHoje.pedidosPlano), label:'Pedidos do plano Essencial', cls:_contagensHoje.pedidosPlano?'alerta':'', ir:()=>adminIrPara('leads','usuarios-cadastrados-body')},
     {num:fmt(_contagensHoje.leadsNovos), label:'Leads novos', cls:_contagensHoje.leadsNovos?'alerta':'', ir:()=>adminIrPara('leads','leads-table')},
   ];
   box.innerHTML = '';
@@ -4764,7 +4895,7 @@ function renderHoje(){
     ? '<div class="hoje-lista">' + encerrando.map(o=>`<div class="linha"><span>${esc(o.edital)} — ${esc(o.orgao)} (${esc(o.uf)})</span><span style="display:flex; gap:8px; align-items:center;"><span style="color:var(--amber);">${esc(o.prazo)}</span><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openDetalhe(${o.id})">Ver</button></span></div>`).join('') + '</div>'
     : '<span style="font-size:13px; color:var(--ink-dim);">Nenhum edital encerrando nos próximos 15 dias.</span>';
   _setBadge('tabbadge-triagem', (_contagensHoje.pncp||0) + (_contagensHoje.diario||0));
-  _setBadge('tabbadge-leads', (_contagensHoje.leadsNovos||0) + (_contagensHoje.indicePend||0));
+  _setBadge('tabbadge-leads', (_contagensHoje.leadsNovos||0) + (_contagensHoje.indicePend||0) + (_contagensHoje.pedidosPlano||0));
   const be = document.getElementById('tabbadge-editais'); if(be){ be.style.display=''; be.textContent = oportunidades.length; }
 }
 function abrirEditalProblema(id){ openAdminForm(id); }
@@ -5881,20 +6012,37 @@ async function renderUsuariosAdmin(){
   status.textContent = 'Carregando...';
   const { data, error } = await _sb.from('usuarios_perfil').select('*').order('criado_em', {ascending:false});
   if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
-  status.textContent = (data||[]).length + ' usuário(s) cadastrado(s).';
+  const { data: pedidos } = await _sb.from('pedidos_plano').select('*').eq('status','pendente');
+  const pedidoDe = {}; (pedidos||[]).forEach(p=>{ pedidoDe[p.usuario_id] = p; });
+  const lista = data || [];
+  status.textContent = lista.length + ' usuário(s) cadastrado(s)' + ((pedidos||[]).length ? ' · ' + pedidos.length + ' pedido(s) de plano aguardando você.' : '.');
   box.innerHTML = '';
-  (data||[]).forEach(u=>{
-    const row = document.createElement('div');
-    row.className = 'af-item';
-    row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid var(--border-soft);';
-    row.innerHTML = `
-      <div>
-        <div style="font-weight:600;">${esc(u.nome || '(sem nome)')}</div>
-        <div style="font-size:12px; color:var(--ink-dim);">${esc(u.email)}${u.uf ? ' · ' + esc(u.uf) : ''}</div>
-      </div>
-      <button type="button" class="btn-ghost" style="font-size:12px;" onclick="enviarLinkRedefinicaoUsuario('${esc(u.email)}', this)">🔑 Enviar link de redefinição</button>
-    `;
-    box.appendChild(row);
+  const grupos = [['essencial','Plano Essencial'],['gratuito','Plano Gratuito']];
+  grupos.forEach(([chave, titulo])=>{
+    const doGrupo = lista.filter(u=>(u.plano || 'gratuito') === chave)
+      .sort((a,b)=>(pedidoDe[b.id]?1:0) - (pedidoDe[a.id]?1:0));
+    const cab = document.createElement('div');
+    cab.style.cssText = 'font-family:var(--font-display); font-size:15px; margin:18px 0 4px; display:flex; gap:8px; align-items:center;';
+    cab.innerHTML = `${titulo} <span class="plan-badge">${doGrupo.length}</span>`;
+    box.appendChild(cab);
+    if(!doGrupo.length){ const v = document.createElement('div'); v.className='af-item-empty'; v.textContent='Ninguém neste plano.'; box.appendChild(v); }
+    doGrupo.forEach(u=>{
+      const ped = pedidoDe[u.id];
+      const row = document.createElement('div');
+      row.className = 'af-item';
+      row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid var(--border-soft);';
+      row.innerHTML = `
+        <div>
+          <div style="font-weight:600;">${esc(u.nome || '(sem nome)')}${ped ? ' <span class="plan-badge" style="background:var(--amber); color:#000;">pediu o Essencial</span>' : ''}</div>
+          <div style="font-size:12px; color:var(--ink-dim);">${esc(u.email)}${u.uf ? ' · ' + esc(u.uf) : ''}${(u.profs||[]).length ? ' · ' + esc(u.profs.join(', ')) : ''}</div>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          ${ped ? `<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="mudarPlanoUsuario('${u.id}','essencial',${ped.id})">✓ Aprovar Essencial</button><button type="button" class="btn-ghost" style="font-size:12px;" onclick="recusarPedidoPlano(${ped.id})">Recusar</button>` : ''}
+          <select style="font-size:12px;" onchange="mudarPlanoUsuario('${u.id}', this.value, null)">${Object.entries(PLANOS).map(([k,v])=>`<option value="${k}" ${k===(u.plano||'gratuito')?'selected':''}>${v}</option>`).join('')}</select>
+          <button type="button" class="btn-ghost" style="font-size:12px;" onclick="enviarLinkRedefinicaoUsuario('${esc(u.email)}', this)">🔑 Enviar link de redefinição</button>
+        </div>`;
+      box.appendChild(row);
+    });
   });
 }
 async function enviarLinkRedefinicaoUsuario(email, btn){
@@ -5904,6 +6052,21 @@ async function enviarLinkRedefinicaoUsuario(email, btn){
   if(btn){ btn.disabled = false; btn.textContent = '🔑 Enviar link de redefinição'; }
   if(error){ toast('Erro ao enviar: ' + error.message); return; }
   toast('Link de redefinição enviado para ' + email);
+}
+
+async function mudarPlanoUsuario(id, plano, pedidoId){
+  if(!_sb) return;
+  const { error } = await _sb.from('usuarios_perfil').update({ plano }).eq('id', id);
+  if(error){ toast('Erro ao mudar o plano: ' + error.message); return; }
+  if(pedidoId) await _sb.from('pedidos_plano').update({ status: plano === 'essencial' ? 'aprovado' : 'recusado', decidido_em: new Date().toISOString() }).eq('id', pedidoId);
+  toast('Plano atualizado: ' + (PLANOS[plano] || plano));
+  renderUsuariosAdmin(); carregarContagensHoje();
+}
+async function recusarPedidoPlano(pedidoId){
+  if(!_sb) return;
+  const { error } = await _sb.from('pedidos_plano').update({ status:'recusado', decidido_em:new Date().toISOString() }).eq('id', pedidoId);
+  if(error){ toast('Erro: ' + error.message); return; }
+  toast('Pedido recusado'); renderUsuariosAdmin(); carregarContagensHoje();
 }
 
 /* ---- Admin: feedbacks do beta ---- */
