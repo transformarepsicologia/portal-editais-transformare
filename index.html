@@ -439,6 +439,11 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .diff-tabela th, .diff-tabela td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top; word-break:break-word;}
 .diff-antes{color:var(--coral); text-decoration:line-through;}
 .diff-depois{color:var(--teal);}
+.diff-opcao{cursor:pointer; border:2px solid transparent; border-radius:8px; opacity:.5; text-decoration:line-through;}
+.diff-opcao.escolhido{opacity:1; text-decoration:none; background:rgba(255,255,255,.04);}
+.diff-antes.diff-opcao.escolhido{border-color:var(--coral);}
+.diff-depois.diff-opcao.escolhido{border-color:var(--teal);}
+.diff-opcao:hover{opacity:.85;}
 .admin-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:26px;}
 table.admin-table{width:100%; border-collapse:collapse; font-size:13px;}
 table.admin-table th{text-align:left; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; color:var(--ink-dim); padding:10px 12px; border-bottom:1px solid var(--border);}
@@ -1408,7 +1413,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="modal-box" style="max-width:640px;">
     <button class="modal-close" onclick="cancelarConfirmEdicao()">×</button>
     <div class="section-title" style="font-size:17px;">Confirmar alteração?</div>
-    <p class="section-sub" style="margin-bottom:0;">Você está editando fora do Painel administrativo. Confira o que vai mudar antes de salvar.</p>
+    <p class="section-sub" style="margin-bottom:6px;">Você está editando fora do Painel administrativo. Confira o que vai mudar e <strong>toque no valor que quer manter</strong> em cada campo (o contorno mostra o escolhido; por padrão fica o “Depois”).</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;"><button type="button" class="btn-ghost" style="font-size:12px; padding:4px 10px;" onclick="escolherTodosDiff('antes')">Manter todos os “Antes”</button><button type="button" class="btn-ghost" style="font-size:12px; padding:4px 10px;" onclick="escolherTodosDiff('depois')">Usar todos os “Depois”</button></div>
     <div style="overflow-x:auto;"><table class="diff-tabela"><thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead><tbody id="confirm-edicao-tbody"></tbody></table></div>
     <div class="form-actions" style="display:flex; gap:8px;">
       <button class="btn-primary" style="flex:1;" onclick="confirmarEdicaoSalvar()">Confirmar e salvar</button>
@@ -5004,6 +5010,14 @@ async function saveAdminForm(){
     return;
   }
   _confirmEdicaoOk = false;
+  // Campos em que o analista escolheu manter o valor de "Antes" na tela de confirmação.
+  if(_manterAntes.size && _editAntes){
+    const pares = { indice:['indiceLabel'], prazo:['prazoConfirmado'] };
+    [..._manterAntes].forEach(k=>{
+      [k, ...(pares[k]||[])].forEach(kk=>{ data[kk] = JSON.parse(JSON.stringify(_editAntes[kk] ?? null)); });
+    });
+  }
+  _manterAntes = new Set();
 
   const ehEditalReal = editingId && editingId >= 900000;
   let idSalvo = editingId;
@@ -5036,8 +5050,8 @@ async function saveAdminForm(){
       url_edital: data.urlEdital, url_pncp: data.urlPncp,
       email_inscricao: data.emailInscricao || null,
     };
-    const prazoISO = _dataBRParaISO(document.getElementById('af-prazo').value);
-    const publicacaoISO = _dataBRParaISO(document.getElementById('af-publicacao').value);
+    const prazoISO = _dataBRParaISO(data.prazo);
+    const publicacaoISO = _dataBRParaISO(data.publicacao);
     payloadSupabase.prazo_confirmado = data.prazoConfirmado;
     if(prazoISO !== undefined) payloadSupabase.prazo = prazoISO;
     if(publicacaoISO !== undefined) payloadSupabase.publicacao = publicacaoISO;
@@ -5052,8 +5066,8 @@ async function saveAdminForm(){
       toast('Atenção: NÃO foi gravado no banco (sem permissão ou edital não encontrado) — salvou só neste navegador. Avise o suporte técnico.');
     } else {
       let aviso = 'Oportunidade atualizada e salva no catálogo.';
-      if(prazoISO === undefined && document.getElementById('af-prazo').value.trim()) aviso += ' Prazo não gravado no banco (use o formato dd/mm/aaaa).';
-      if(publicacaoISO === undefined && document.getElementById('af-publicacao').value.trim()) aviso += ' Publicação não gravada no banco (use o formato dd/mm/aaaa).';
+      if(prazoISO === undefined && data.prazo && data.prazo !== 'Não informado') aviso += ' Prazo não gravado no banco (use o formato dd/mm/aaaa).';
+      if(publicacaoISO === undefined && data.publicacao && data.publicacao !== 'Não informado') aviso += ' Publicação não gravada no banco (use o formato dd/mm/aaaa).';
       toast(aviso);
     }
   } else {
@@ -5225,7 +5239,7 @@ const _CAMPOS_EDICAO = {
   experienciaMinimaAnos:'Experiência mínima (anos)', valorAtendimento:'Valor por atendimento', volume:'Volume',
   requisitos:'Requisitos', pontosPositivos:'Pontos positivos', pontosAtencao:'Pontos de atenção',
   urlOficial:'Link oficial', urlEdital:'Link do edital', urlPncp:'Link PNCP', urlInscricao:'Link de inscrição',
-  documentos:'Documentos', movimentacoes:'Movimentações'
+  documentos:'Documentos', movimentacoes:'Movimentações', emailInscricao:'E-mail de inscrição'
 };
 function confirmarEdicaoAtiva(){
   try{ return localStorage.getItem('cfg_confirmar_edicao') !== '0'; }catch(e){ return true; }
@@ -5244,14 +5258,28 @@ function diffEdicao(antes, depois){
   const out = [];
   Object.keys(_CAMPOS_EDICAO).forEach(k=>{
     const a = _fmtValorDiff(antes[k]), d = _fmtValorDiff(depois[k]);
-    if(a !== d) out.push({campo:_CAMPOS_EDICAO[k], antes:a, depois:d});
+    if(a !== d) out.push({chave:k, campo:_CAMPOS_EDICAO[k], antes:a, depois:d});
   });
   return out;
 }
+let _manterAntes = new Set();
 function abrirConfirmEdicao(diff){
+  _manterAntes = new Set();
   document.getElementById('confirm-edicao-tbody').innerHTML = diff.map(d=>
-    `<tr><td><strong>${esc(d.campo)}</strong></td><td class="diff-antes">${esc(d.antes)}</td><td class="diff-depois">${esc(d.depois)}</td></tr>`).join('');
+    `<tr data-k="${esc(d.chave)}"><td><strong>${esc(d.campo)}</strong></td>
+      <td class="diff-antes diff-opcao" onclick="escolherDiff('${esc(d.chave)}','antes')">${esc(d.antes)}</td>
+      <td class="diff-depois diff-opcao escolhido" onclick="escolherDiff('${esc(d.chave)}','depois')">${esc(d.depois)}</td></tr>`).join('');
   document.getElementById('confirm-edicao-modal').classList.add('open');
+}
+function escolherDiff(chave, lado, _filho){
+  if(chave === 'prazo' && !_filho) escolherDiff('prazoConfirmado', lado, true);   // "Prazo conferido" acompanha o prazo
+  if(lado === 'antes') _manterAntes.add(chave); else _manterAntes.delete(chave);
+  const tr = document.querySelector('#confirm-edicao-tbody tr[data-k="'+chave+'"]'); if(!tr) return;
+  tr.querySelector('.diff-antes').classList.toggle('escolhido', lado === 'antes');
+  tr.querySelector('.diff-depois').classList.toggle('escolhido', lado === 'depois');
+}
+function escolherTodosDiff(lado){
+  document.querySelectorAll('#confirm-edicao-tbody tr').forEach(tr=>escolherDiff(tr.dataset.k, lado));
 }
 function cancelarConfirmEdicao(){
   document.getElementById('confirm-edicao-modal').classList.remove('open');
