@@ -1448,6 +1448,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
         <label>Colar a análise (Analista de Editais Transformare ou Gemini) — preenche a ficha inteira: Edital, Órgão, Objeto, UF, Cidade, Tipo, Modalidade, Abrangência, Situação, Índice, Prazo, Publicação, Profissões, valores, pontos e documentação</label>
         <textarea id="af-analise-ia" rows="4" placeholder="Cole aqui o resultado completo da análise (as 5 seções: Índice Transformare, Pontos de destaque, Ponto de atenção, Requisitos, Documentação necessária)..."></textarea>
+        <div style="margin-top:10px; font-size:12px; color:var(--ink-dim);">Preencher quais partes? <a style="color:var(--teal); cursor:pointer;" onclick="marcarGruposAnalise(true)">todas</a> · <a style="color:var(--teal); cursor:pointer;" onclick="marcarGruposAnalise(false)">nenhuma</a></div>
+        <div class="chip-select" id="af-analise-grupos" style="margin-top:6px;"></div>
+        <label style="display:flex; gap:8px; align-items:center; font-size:12px; color:var(--ink-muted); margin-top:8px; cursor:pointer;"><input type="checkbox" id="af-analise-so-vazios"> Só preencher campos que estão vazios (não sobrescrever o que já digitei)</label>
         <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="preencherComAnaliseIA()">⇩ Preencher campos com a análise</button>
         <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="copiarPromptAnalise()" title="Copia o pedido que faz a IA devolver todos os campos no formato certo">📋 Copiar prompt da análise</button>
         <div id="af-analise-ia-status" style="font-size:11.5px; color:var(--ink-dim); margin-top:6px;"></div>
@@ -4761,11 +4764,54 @@ async function copiarPromptAnalise(){
   try{ await navigator.clipboard.writeText(PROMPT_ANALISE); toast('Prompt copiado — cole no Gemini ou no Analista junto com o edital'); }
   catch(e){ const ta = document.getElementById('af-analise-ia'); ta.value = PROMPT_ANALISE; ta.select(); toast('Copie o texto da caixa (Ctrl+C) e depois limpe a caixa'); }
 }
+/* ---- Escolher quais partes da análise preencher ---- */
+const _GRUPOS_ANALISE = {
+  basicos:{nome:'Dados do edital', ids:['af-edital','af-orgao','af-objeto','af-uf','af-cidade','af-tipo','af-mod','af-abr'], re:/^(Edital|Órgão|Objeto|UF|Cidade|Tipo|Modalidade|Abrangência)/},
+  prazos:{nome:'Situação e prazos', ids:['af-sit','af-prazo','af-publicacao'], re:/^(Situação|Prazo|Publicação)/},
+  indice:{nome:'Índice', ids:['af-indice'], re:/^Índice/},
+  prof:{nome:'Profissões e público', ids:['af-escolaridade','af-exp-anos'], chips:['af-profs','af-publico'], re:/^(Profiss|Para quem|Instrução|Experiência)/},
+  fin:{nome:'Financeiro', ids:['af-valor-atendimento','af-volume'], lista:'rem', re:/^(Valor|Volume|Remuneração)/},
+  aval:{nome:'Pontos de destaque e atenção', ids:['af-pontos-positivos','af-pontos-atencao'], re:/^Pontos/},
+  req:{nome:'Requisitos', ids:['af-requisitos'], re:/^Requisitos/},
+  docs:{nome:'Documentação', lista:'docs', re:/^Documenta/},
+  links:{nome:'Links e e-mail', ids:['af-url-pncp','af-email-inscricao'], re:/^(URL|E-mail)/},
+};
+function renderGruposAnalise(){
+  const box = document.getElementById('af-analise-grupos'); if(!box) return;
+  box.innerHTML = '';
+  Object.entries(_GRUPOS_ANALISE).forEach(([k,g])=>{
+    const c = document.createElement('div'); c.className = 'chip-opt selected'; c.textContent = g.nome; c.dataset.g = k;
+    c.onclick = ()=>c.classList.toggle('selected');
+    box.appendChild(c);
+  });
+}
+function marcarGruposAnalise(v){ document.querySelectorAll('#af-analise-grupos .chip-opt').forEach(c=>c.classList.toggle('selected', v)); }
+function _snapAnalise(){
+  const sn = { v:{}, chips:{}, rem:[...afRemuneracao], docs:[...afDocumentos] };
+  Object.values(_GRUPOS_ANALISE).forEach(g=>{
+    (g.ids||[]).forEach(id=>{ sn.v[id] = document.getElementById(id).value; });
+    (g.chips||[]).forEach(id=>{ sn.chips[id] = [...document.querySelectorAll('#'+id+' .chip-opt.selected')].map(x=>x.dataset.prof || x.dataset.publico || x.textContent); });
+  });
+  return sn;
+}
+function _restaurarGrupoAnalise(g, sn, soSeTinhaValor){
+  (g.ids||[]).forEach(id=>{ if(!soSeTinhaValor || (sn.v[id] || '').trim()) document.getElementById(id).value = sn.v[id]; });
+  (g.chips||[]).forEach(id=>{
+    if(soSeTinhaValor && !sn.chips[id].length) return;
+    document.querySelectorAll('#'+id+' .chip-opt').forEach(ch=>ch.classList.toggle('selected', sn.chips[id].includes(ch.dataset.prof || ch.dataset.publico || ch.textContent)));
+  });
+  if(g.lista === 'rem' && (!soSeTinhaValor || sn.rem.length)){ afRemuneracao = [...sn.rem]; renderAfRemuneracaoList(); }
+  if(g.lista === 'docs' && (!soSeTinhaValor || sn.docs.length)){ afDocumentos = [...sn.docs]; renderAfDocList(); }
+}
 function preencherComAnaliseIA(){
   const texto = document.getElementById('af-analise-ia').value.trim();
   const status = document.getElementById('af-analise-ia-status');
   if(!texto){ toast('Cole o texto da análise primeiro'); return; }
 
+  const gruposMarcados = new Set([...document.querySelectorAll('#af-analise-grupos .chip-opt.selected')].map(c=>c.dataset.g));
+  if(!gruposMarcados.size){ toast('Marque pelo menos uma parte para preencher'); return; }
+  const soVazios = document.getElementById('af-analise-so-vazios').checked;
+  const snap = _snapAnalise();
   const r = parseAnaliseIAEdital(texto);
   const preenchidos = [];
   const ficha = parseFichaRadar(texto);
@@ -4789,6 +4835,17 @@ function preencherComAnaliseIA(){
   if(!rel) rel = { ok: [], falta: [] };
   if(!temFicha) rel.falta.push('Edital, Órgão, Objeto, UF, Cidade, Tipo, Modalidade, Abrangência, Situação, Prazo e Publicação — o texto colado não traz a ficha. Use o botão "Copiar prompt" e peça a análise nesse formato');
   inf.falta.forEach(x=>{ if(!rel.falta.some(y=>y.startsWith(x.split(' — ')[0]))) rel.falta.push(x); });
+
+  // Desfaz as partes que não foram marcadas (e, se pedido, o que já estava preenchido) e filtra o relatório.
+  const grupoDe = txt => Object.keys(_GRUPOS_ANALISE).find(k=>_GRUPOS_ANALISE[k].re.test(txt));
+  Object.entries(_GRUPOS_ANALISE).forEach(([k,g])=>{
+    if(!gruposMarcados.has(k)) _restaurarGrupoAnalise(g, snap, false);
+    else if(soVazios) _restaurarGrupoAnalise(g, snap, true);
+  });
+  const mantem = txt => { const k = grupoDe(txt); return k ? gruposMarcados.has(k) : (gruposMarcados.has('basicos') || gruposMarcados.has('prazos')); };
+  for(let i = preenchidos.length - 1; i >= 0; i--) if(!mantem(preenchidos[i])) preenchidos.splice(i,1);
+  if(rel) rel.falta = rel.falta.filter(mantem);
+  atualizarLinksPortais();
 
   if(preenchidos.length === 0){
     status.textContent = 'Não consegui reconhecer nenhuma das 5 seções nesse texto — confira se colou o resultado completo do analisador.';
@@ -4881,6 +4938,8 @@ function openAdminForm(id){
   document.getElementById('af-mov-texto').value = '';
   document.getElementById('af-analise-ia').value = '';
   document.getElementById('af-analise-ia-status').textContent = '';
+  renderGruposAnalise();
+  document.getElementById('af-analise-so-vazios').checked = false;
   refreshAfProfChips(id ? oportunidades.find(x=>x.id===id).profissoes : []);
   refreshAfPublicoChips(id ? (oportunidades.find(x=>x.id===id).aceitaContratacao||[]) : []);
 
