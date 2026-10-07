@@ -254,7 +254,7 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .badge.encerrando{color:var(--amber); background:rgba(245,169,62,0.12);}
 .badge.analise{color:var(--violet); background:rgba(140,124,240,0.14);}
 .badge.retificado{color:#F0A25E; background:rgba(240,162,94,0.12);}
-.badge.encerrado{color:var(--ink-dim); background:rgba(143,166,190,0.1);}
+.badge.encerrado{color:#fff; background:#D6402C; border:1px solid #F0654E;}
 .badge.divulgada{color:#8FA6BE; background:rgba(143,166,190,0.14); border:1px dashed rgba(143,166,190,0.4);}
 .badge.suspenso{color:var(--coral); background:rgba(240,101,78,0.12);}
 
@@ -2249,6 +2249,29 @@ function toast(msg){
 }
 
 /* ================= BADGES / SCORE ================= */
+/* ---------- Paginação genérica das listas ---------- */
+const _pag = {}, _pagRender = {};
+function paginarLista(chave, arr, porPag, rerender){
+  _pagRender[chave] = rerender;
+  const total = Math.max(1, Math.ceil(arr.length / porPag));
+  const pg = Math.min(Math.max(1, _pag[chave] || 1), total);
+  _pag[chave] = pg;
+  const fatia = arr.slice((pg-1)*porPag, pg*porPag);
+  const barra = document.createElement('div');
+  if(total > 1){
+    barra.style.cssText = 'display:flex; gap:12px; align-items:center; justify-content:center; margin:18px 0; flex-wrap:wrap;';
+    barra.innerHTML = `<button class="btn-ghost" ${pg<=1?'disabled':''} onclick="pagIr('${chave}',-1,${total})">← Anterior</button>
+      <span style="font-size:12.5px; color:var(--ink-dim);">Página ${pg} de ${total} · ${arr.length} itens</span>
+      <button class="btn-ghost" ${pg>=total?'disabled':''} onclick="pagIr('${chave}',1,${total})">Próxima →</button>`;
+  }
+  return { fatia, barra, pg, total };
+}
+function pagIr(chave, delta, total){
+  _pag[chave] = Math.min(Math.max(1, (_pag[chave]||1) + delta), total);
+  const fn = _pagRender[chave]; if(fn) fn();
+  const alvo = document.getElementById(chave === 'ed' ? 'ed-list' : chave === 'fav' ? 'fav-list' : chave === 'cx' ? 'caixa-entrada-lista' : chave === 'do' ? 'diario-oficial-lista' : 'usuarios-cadastrados-lista');
+  if(alvo) alvo.scrollIntoView({behavior:'smooth', block:'start'});
+}
 function badgeClass(s){
   return {"Aberto":"aberto","Próximo do encerramento":"encerrando","Em análise":"analise","Retificado":"retificado","Encerrado":"encerrado","Suspenso":"suspenso","Revogado":"suspenso","Anulado":"suspenso","Prazo não informado":"divulgada","Prazo a confirmar":"divulgada","Próximo da abertura":"analise"}[s] || "aberto";
 }
@@ -2470,7 +2493,9 @@ function renderFavoritos(){
     list.innerHTML = `<div class="center-empty"><h3>Nenhum favorito ainda</h3><p>Clique na estrela ☆ de qualquer oportunidade para salvá-la aqui.</p><button class="btn-primary" onclick="nav('editais')">Ver editais</button></div>`;
     return;
   }
-  items.forEach(o=>list.appendChild(renderCard(o)));
+  const pgFav = paginarLista('fav', items, 12, renderFavoritos);
+  pgFav.fatia.forEach(o=>list.appendChild(renderCard(o)));
+  list.appendChild(pgFav.barra);
 }
 async function clearFavoritos(){
   if(favoritos.size===0) return;
@@ -3062,8 +3087,14 @@ function applyFilters(){
     list.innerHTML = `<div class="empty-state">Nenhuma oportunidade encontrada com esses filtros.<br>Ajuste os critérios de busca acima.</div>`;
     return;
   }
-  filtradas.forEach(o=>list.appendChild(renderCard(o)));
+  // volta para a página 1 quando os filtros/busca mudam
+  const assinatura = JSON.stringify([busca, sort, filtroRadar, filtroSomenteComIndice, ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit'].map(i=>document.getElementById(i).value)]);
+  if(assinatura !== _pagAssinaturaEd){ _pag.ed = 1; _pagAssinaturaEd = assinatura; }
+  const pgEd = paginarLista('ed', filtradas, 12, applyFilters);
+  pgEd.fatia.forEach(o=>list.appendChild(renderCard(o)));
+  list.appendChild(pgEd.barra);
 }
+let _pagAssinaturaEd = '';
 ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).addEventListener('change', applyFilters));
 document.getElementById('ed-search').addEventListener('input', applyFilters);
 
@@ -5924,7 +5955,8 @@ async function renderCaixaEntrada(){
   const porPrioridade = arr => [...arr].sort((a,b)=>(ehPrioritarioPendente(b)?1:0)-(ehPrioritarioPendente(a)?1:0));
   const dataOrdenada = [...porPrioridade(pendentesArr), ...porPrioridade(adiadosArr)];
 
-  dataOrdenada.forEach(item => {
+  const pgCx = paginarLista('cx', dataOrdenada, 10, renderCaixaEntrada);
+  pgCx.fatia.forEach(item => {
     const adiado = item.status === 'mais_tarde';
     const prioritario = ehPrioritarioPendente(item);
     const card = document.createElement('details');
@@ -5952,6 +5984,7 @@ async function renderCaixaEntrada(){
     `;
     lista.appendChild(card);
   });
+  lista.appendChild(pgCx.barra);
 }
 
 async function aprovarCredenciamento(id, overrides){
@@ -6048,7 +6081,8 @@ async function renderDiarioOficial(){
   const porPrioridade = arr => [...arr].sort((a,b)=>(ehPrioritarioPendente(b)?1:0)-(ehPrioritarioPendente(a)?1:0));
   const dataOrdenada = [...porPrioridade(pendentesArr), ...porPrioridade(adiadosArr)];
 
-  dataOrdenada.forEach(item => {
+  const pgDo = paginarLista('do', dataOrdenada, 10, renderDiarioOficial);
+  pgDo.fatia.forEach(item => {
     const adiado = item.status === 'mais_tarde';
     const prioritario = ehPrioritarioPendente(item);
     const card = document.createElement('details');
@@ -6079,6 +6113,7 @@ async function renderDiarioOficial(){
     `;
     lista.appendChild(card);
   });
+  lista.appendChild(pgDo.barra);
 }
 
 async function aprovarDiarioOficial(id, overrides){
@@ -6520,14 +6555,20 @@ async function renderUsuariosAdmin(){
   status.textContent = lista.length + ' usuário(s) cadastrado(s)' + ((pedidos||[]).length ? ' · ' + pedidos.length + ' pedido(s) de plano aguardando você.' : '.');
   box.innerHTML = '';
   const grupos = [['essencial','Plano Essencial'],['gratuito','Plano Gratuito']];
+  const _ordPlano = u => (u.plano || 'gratuito') === 'essencial' ? 0 : 1;
+  const _todos = [...lista].sort((a,b)=>_ordPlano(a)-_ordPlano(b) || (pedidoDe[b.id]?1:0) - (pedidoDe[a.id]?1:0));
+  const pgUs = paginarLista('us', _todos, 15, renderUsuariosAdmin);
+  const _naPagina = new Set(pgUs.fatia.map(u=>u.id));
   grupos.forEach(([chave, titulo])=>{
-    const doGrupo = lista.filter(u=>(u.plano || 'gratuito') === chave)
+    const totalGrupo = lista.filter(u=>(u.plano || 'gratuito') === chave).length;
+    const doGrupo = lista.filter(u=>(u.plano || 'gratuito') === chave && _naPagina.has(u.id))
       .sort((a,b)=>(pedidoDe[b.id]?1:0) - (pedidoDe[a.id]?1:0));
     const cab = document.createElement('div');
     cab.style.cssText = 'font-family:var(--font-display); font-size:15px; margin:18px 0 4px; display:flex; gap:8px; align-items:center;';
-    cab.innerHTML = `${titulo} <span class="plan-badge">${doGrupo.length}</span>`;
+    cab.innerHTML = `${titulo} <span class="plan-badge">${totalGrupo}</span>`;
     box.appendChild(cab);
-    if(!doGrupo.length){ const v = document.createElement('div'); v.className='af-item-empty'; v.textContent='Ninguém neste plano.'; box.appendChild(v); }
+    if(!doGrupo.length && totalGrupo){ cab.remove(); return; }
+    if(!totalGrupo){ const v = document.createElement('div'); v.className='af-item-empty'; v.textContent='Ninguém neste plano.'; box.appendChild(v); }
     doGrupo.forEach(u=>{
       const ped = pedidoDe[u.id];
       const row = document.createElement('div');
@@ -6546,6 +6587,7 @@ async function renderUsuariosAdmin(){
       box.appendChild(row);
     });
   });
+  box.appendChild(pgUs.barra);
 }
 async function enviarLinkRedefinicaoUsuario(email, btn){
   if(!_sb) return;
