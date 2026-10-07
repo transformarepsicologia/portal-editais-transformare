@@ -4515,7 +4515,17 @@ function parseFichaRadar(texto){
   for(let i=0;i<linhas.length;i++){
     const l = _fSemRotuloLinha(linhas[i]);
     if(!l){ continue; }
-    const m = l.match(/^([^:：]{2,60})\s*[:：]\s*(.*)$/);
+    // formatos aceitos: "Campo: valor", "Campo — valor", "| Campo | valor |" (tabela) e "Campo" sozinho com o valor na linha seguinte
+    let m = null;
+    if(l.startsWith('|')){
+      const cel = l.split('|').map(x=>x.trim()).filter((x,k,a)=>!(k===0&&x===''));
+      if(cel.length >= 2 && !/^[-: ]+$/.test(cel[0])) m = [null, cel[0], cel.slice(1).filter(Boolean)[0] || ''];
+    }
+    if(!m) m = l.match(/^([^:：]{2,60})\s*[:：]\s*(.*)$/);
+    if(!m){ const d = l.match(/^([^–—]{2,60}?)\s+[–—]\s+(.+)$/); if(d && _FICHA_ROTULOS.some(([,re])=>re.test(_fNorm(d[1])))) m = d; }
+    if(!m && _FICHA_ROTULOS.some(([,re])=>re.test(_fNorm(l)))){
+      for(let k=i+1;k<linhas.length;k++){ const nx = _fSemRotuloLinha(linhas[k]); if(nx){ m = [null, l, nx]; break; } }
+    }
     if(m){
       const rot = _fNorm(m[1]);
       const hit = _FICHA_ROTULOS.find(([,re])=>re.test(rot));
@@ -4526,7 +4536,7 @@ function parseFichaRadar(texto){
     if(ultimo === 'remuneracao' && /^[\s>]*(?:[-•*]|\d+[.)])\s+/.test(linhas[i])){ (sobra.remuneracao = sobra.remuneracao || []).push(l); }
     else if(!/^[\s>]*(?:[-•*]|\d+[.)])\s+/.test(linhas[i])) ultimo = null;
   }
-  const out = { campos, remuneracao: [], positivos: [], negativos: [], riscos: [], publico: {}, habilitacao: [], requisitosLinhas: [] };
+  const out = { texto: String(texto||''), campos, remuneracao: [], positivos: [], negativos: [], riscos: [], publico: {}, habilitacao: [], requisitosLinhas: [] };
   if(campos.remuneracao && !/^(n[aã]o|nenhum|sem |—|-)/i.test(_fNorm(campos.remuneracao))) out.remuneracao.push(campos.remuneracao);
   (sobra.remuneracao||[]).forEach(x=>out.remuneracao.push(x));
   // listas das partes 2, 4 e 6
@@ -4563,6 +4573,17 @@ function parseFichaRadar(texto){
   return out;
 }
 
+// Índice: ficha da Parte 1 → "conservador" → "Índice ...: N" no texto → soma dos 5 critérios (0 a 10).
+function indiceDaAnalise(f){
+  const c = f.campos || {}, t = (f.texto || '').replace(/\(\s*1\s*(?:a|–|-|—)\s*5\s*\)/gi,'');
+  const so = v=>{ const m = String(v||'').replace(/\(\s*1\s*(?:a|–|-|—)\s*5\s*\)/gi,'').match(/(?:^|[^\d/])([1-5])(?!\d)(?!\s*\/\s*10)/); return m ? parseInt(m[1],10) : null; };
+  let v = so(c.indice); if(v) return { valor:v, origem:'ficha' };
+  let m = t.match(/conservador[^\d\n]{0,40}\b([1-5])\b/i); if(m) return { valor:parseInt(m[1],10), origem:'cenário conservador' };
+  m = t.match(/[ií]ndice(?: transformare)?(?: final)?[^\n\d]{0,25}\b([1-5])\b(?!\s*\/\s*10)/i); if(m) return { valor:parseInt(m[1],10), origem:'texto da análise' };
+  m = t.match(/soma[^\n]{0,50}?\b(\d{1,2})\s*(?:\/|de)\s*10\b/i) || t.match(/total[^\n]{0,20}?\b(\d{1,2})\s*\/\s*10\b/i);
+  if(m){ const n = parseInt(m[1],10); if(n>=0 && n<=10) return { valor: n<=2?1:n<=4?2:n<=6?3:n<=8?4:5, origem:'soma ' + n + '/10' }; }
+  return null;
+}
 const _TIPOS_SINON = [[/chamamento/,'Chamamento Público'],[/credenciamento/,'Credenciamento'],[/preg[aã]o/,'Pregão'],[/processo seletivo/,'Processo seletivo'],[/conv[eê]nio/,'Convênio'],[/contrata[cç][aã]o/,'Contratação'],[/^edital/,'Edital']];
 function _fData(s){ const m = String(s||'').match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/); return m ? String(m[1]).padStart(2,'0')+'/'+String(m[2]).padStart(2,'0')+'/'+m[3] : null; }
 function aplicarFichaRadar(f){
@@ -4609,7 +4630,9 @@ function aplicarFichaRadar(f){
   if(c.email){ const em = (c.email.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/)||[])[0]; if(em){ document.getElementById('af-email-inscricao').value = em; ok.push('E-mail de inscrição'); } }
   setSel('af-abr','Abrangência', c.abrangencia);
   setSel('af-sit','Situação', c.situacao);
-  if(c.indice){ const m = c.indice.match(/[1-5]/); if(m){ document.getElementById('af-indice').value = m[0]; ok.push('Índice'); } else falta.push('Índice — sem número de 1 a 5'); } else falta.push('Índice — não veio na ficha');
+  const ix = indiceDaAnalise(f);
+  if(ix){ document.getElementById('af-indice').value = String(ix.valor); ok.push('Índice ' + ix.valor + ' (' + ix.origem + ')'); }
+  else falta.push('Índice — não achei o número de 1 a 5 nem a soma da Parte 9; escolha à mão');
   // Prazo e Publicação
   const pz = c.prazo ? (_fData((c.prazo.match(/at[eé]\s+(\d{1,2}\/\d{1,2}\/\d{4})/i)||[])[1]) || _fData(c.prazo)) : null;
   if(pz){ document.getElementById('af-prazo').value = pz; ok.push('Prazo'); }
