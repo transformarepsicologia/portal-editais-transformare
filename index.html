@@ -1457,8 +1457,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
       <div class="two-col">
         <div class="form-row"><label>Tipo</label><select id="af-tipo"></select></div>
-        <div class="form-row"><label>Modalidade</label><select id="af-mod"><option>Presencial</option><option>Presencial e online</option><option>Online</option><option>Home care</option></select></div>
-        <div class="form-row"><label>Deslocamento do profissional</label><select id="af-desloc"><option>Não há deslocamento</option><option>Até a unidade do contratante (in company)</option><option>Itinerante (várias localidades)</option><option>Até o domicílio do paciente</option></select></div>
+        <div class="form-row"><label>Modalidade</label><select id="af-mod"><option>Presencial</option><option>Presencial (in company)</option><option>Itinerante</option><option>Presencial e online</option><option>Online</option><option>Home care</option></select></div>
       </div>
       <div class="two-col">
         <div class="form-row"><label>Abrangência</label><select id="af-abr"><option>Municipal</option><option>Regional</option><option>Estadual</option><option>Nacional</option></select></div>
@@ -1867,11 +1866,9 @@ function iniciarCicloRadarHome(){
 }
 
 const TIPOS = ["Credenciamento","Edital","Chamamento Público","Pregão","Contratação","Convênio","Processo seletivo"];
-const MODALIDADES = ["Presencial","Presencial e online","Online","Home care"];
-// Quando o profissional se desloca (campo à parte da modalidade).
-const DESLOCAMENTOS = ["Não há deslocamento","Até a unidade do contratante (in company)","Itinerante (várias localidades)","Até o domicílio do paciente"];
+const MODALIDADES = ["Presencial","Presencial (in company)","Itinerante","Presencial e online","Online","Home care"];
 // Valores antigos viram os novos (perfil salvo no navegador, favoritos, etc.).
-function normModalidade(m){ return ({'Híbrido':'Presencial e online','Presencial e Online':'Presencial e online','Presencial (in company)':'Presencial'})[m] || m; }
+function normModalidade(m){ return ({'Híbrido':'Presencial e online','Presencial e Online':'Presencial e online'})[m] || m; }
 const ABRANGENCIAS = ["Nacional","Estadual","Municipal"];
 // "Para quem é" — que tipo de contratado o edital aceita (coluna aceita_contratacao no Supabase).
 // PF/PJ = o profissional se credencia sozinho (como pessoa física ou com CNPJ próprio);
@@ -2639,6 +2636,7 @@ function calcularAderencia(o, u){
     total += 15;
     if(u.mods.includes(o.modalidade)){ pontos += 15; motivos.push('atendimento ' + String(o.modalidade).toLowerCase()); }
     else if(o.modalidade === 'Presencial e online' && u.mods.some(m=>m==='Presencial' || m==='Online')){ pontos += 10; motivos.push('atendimento presencial e online'); }
+    else if(String(o.modalidade).startsWith('Presencial') && u.mods.includes('Presencial')){ pontos += 12; motivos.push('atendimento presencial'); }
     else if(u.mods.includes('Presencial e online') && (o.modalidade === 'Presencial' || o.modalidade === 'Online')){ pontos += 10; motivos.push('atendimento ' + String(o.modalidade).toLowerCase()); }
   }
   if((u.abrs||[]).length){
@@ -3198,7 +3196,7 @@ function openDetalhe(id){
             <div class="qf-item"><div class="qf-icon">👤</div><span class="qf-k">Quem pode participar</span><div class="qf-v">${o.profissoes.join(', ')}</div></div>
             <div class="qf-item"><div class="qf-icon">📍</div><span class="qf-k">Onde é o atendimento</span><div class="qf-v">${o.cidade ? o.cidade+' — ' : ''}${o.uf} · ${o.abrangencia}</div></div>
             <div class="qf-item"><div class="qf-icon">🏢</div><span class="qf-k">Para quem é</span><div class="qf-v">${publicoTexto(o)}</div></div>
-            <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}${o.deslocamento && o.deslocamento !== DESLOCAMENTOS[0] ? ' · ' + esc(o.deslocamento) : ''}</div></div>
+            <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}</div></div>
             <div class="qf-item"><div class="qf-icon">💰</div><span class="qf-k">Remuneração</span><div class="qf-v">${remuneracaoResumo}</div></div>
             <div class="qf-item"><div class="qf-icon">⏳</div><span class="qf-k">Prazo</span><div class="qf-v">${o.prazo}</div></div>
              ${o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}</div></div>` : ''}
@@ -4507,7 +4505,7 @@ const _FICHA_ROTULOS = [
   ['tipo',/^tipo$/],['modalidade',/^modalidade$/],['abrangencia',/^abrang[eê]ncia$/],['situacao',/^situa[cç][aã]o$/],
   ['indice',/^[ií]ndice(?: transformare)?(?: \(1 a 5\)| \(1-5\))?$/],['prazo',/^prazo$/],['publicacao',/^publica[cç][aã]o$/],
   ['profissoes',/^profiss[oõ]es(?: contempladas)?$/],['valor',/^valor por atendimento$/],['volume',/^volume estimado$/],
-  ['remuneracao',/^remunera[cç][aã]o(?:,? outras faixas.*)?$/],['deslocamento',/^deslocamento(?: do profissional)?$/],['email',/^(?:e-?mail(?: de inscri[cç][aã]o)?|inscri[cç][aã]o por e-?mail)$/],
+  ['remuneracao',/^remunera[cç][aã]o(?:,? outras faixas.*)?$/],['email',/^(?:e-?mail(?: de inscri[cç][aã]o)?|inscri[cç][aã]o por e-?mail)$/],
 ];
 function _fSemRotuloLinha(l){ return _fLimpa(l.replace(/^[\s>]*(?:[-•*]|\d+[.)])\s*/,'')); }
 function parseFichaRadar(texto){
@@ -4602,16 +4600,11 @@ function aplicarFichaRadar(f){
     const mod = /home ?care|domicil/.test(nm) ? 'Home care'
       : (/presencial/.test(nm) && /online|remot|tele/.test(nm)) || /h[ií]brid/.test(nm) ? 'Presencial e online'
       : /online|remot|teleatend|telessaude/.test(nm) ? 'Online'
-      : /presencial|in company|itinerante/.test(nm) ? 'Presencial' : null;
+      : /in company/.test(nm) ? 'Presencial (in company)'
+      : /itinerante/.test(nm) ? 'Itinerante'
+      : /presencial/.test(nm) ? 'Presencial' : null;
     if(mod){ document.getElementById('af-mod').value = mod; ok.push('Modalidade'); }
     else falta.push('Modalidade — "' + c.modalidade + '" não reconhecida; escolha à mão');
-    let d = null;
-    const alvo = _fNorm((c.deslocamento || '') + ' ' + c.modalidade);
-    if(/in company|unidade do contratante|ate o local/.test(alvo)) d = DESLOCAMENTOS[1];
-    else if(/itinerante/.test(alvo)) d = DESLOCAMENTOS[2];
-    else if(mod === 'Home care' || /domicil/.test(alvo)) d = DESLOCAMENTOS[3];
-    else if(c.deslocamento && /^(nao|sem)/.test(_fNorm(c.deslocamento))) d = DESLOCAMENTOS[0];
-    if(d){ document.getElementById('af-desloc').value = d; ok.push('Deslocamento'); }
   } else falta.push('Modalidade — não veio na ficha');
   if(c.email){ const em = (c.email.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/)||[])[0]; if(em){ document.getElementById('af-email-inscricao').value = em; ok.push('E-mail de inscrição'); } }
   setSel('af-abr','Abrangência', c.abrangencia);
@@ -4796,7 +4789,7 @@ function openAdminForm(id){
     document.getElementById('af-url-edital').value = o.urlEdital || '';
     document.getElementById('af-url-pncp').value = o.urlPncp || '';
     document.getElementById('af-email-inscricao').value = o.emailInscricao || '';
-    document.getElementById('af-desloc').value = DESLOCAMENTOS.includes(o.deslocamento) ? o.deslocamento : DESLOCAMENTOS[0];
+
     document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(o.profissoes.includes(c.dataset.prof)) c.classList.add('selected'); });
     afDocumentos = [...(o.documentos||[])];
     afMovimentacoes = (o.movimentacoes||[]).map(m=>({...m}));
@@ -4805,7 +4798,6 @@ function openAdminForm(id){
     ['af-edital','af-orgao','af-objeto','af-prazo','af-publicacao','af-email-inscricao','af-cidade',
      'af-valor-atendimento','af-volume',
      'af-requisitos','af-pontos-positivos','af-pontos-atencao','af-escolaridade','af-exp-anos'].forEach(id2=>document.getElementById(id2).value='');
-    document.getElementById('af-desloc').value = DESLOCAMENTOS[0];
     document.getElementById('af-url-edital').value = 'https://pncp.gov.br/app/editais';
     document.getElementById('af-url-pncp').value = 'https://pncp.gov.br/app/editais';
     document.getElementById('af-indice').value = '';
@@ -4873,7 +4865,6 @@ async function saveAdminForm(){
     movimentacoes: [...afMovimentacoes],
     remuneracao: [...afRemuneracao],
     urlOficial: (editingId && (oportunidades.find(x=>x.id===editingId)||{}).urlOficial) || 'https://www.gov.br/pncp/pt-br',
-    deslocamento: document.getElementById('af-desloc').value || '',
     emailInscricao: document.getElementById('af-email-inscricao').value.trim(),
     urlEdital: document.getElementById('af-url-edital').value.trim() || null,
     urlPncp: document.getElementById('af-url-pncp').value.trim() || null,
@@ -4930,7 +4921,7 @@ async function saveAdminForm(){
       requisitos: data.requisitos, pontos_positivos: data.pontosPositivos, pontos_atencao: data.pontosAtencao,
       documentos: data.documentos, movimentacoes: data.movimentacoes, remuneracao: data.remuneracao,
       url_edital: data.urlEdital, url_pncp: data.urlPncp,
-      email_inscricao: data.emailInscricao || null, deslocamento: data.deslocamento || null,
+      email_inscricao: data.emailInscricao || null,
     };
     const prazoISO = _dataBRParaISO(document.getElementById('af-prazo').value);
     const publicacaoISO = _dataBRParaISO(document.getElementById('af-publicacao').value);
@@ -5583,7 +5574,6 @@ function mapEditalSupabase(row){
     tipo: row.tipo || 'Credenciamento',
     profissoes: (row.profissoes && row.profissoes.length) ? row.profissoes : ['Não identificada'],
     modalidade: normModalidade(row.modalidade) || 'Presencial',
-    deslocamento: row.deslocamento || '',
     emailInscricao: row.email_inscricao || '',
     abrangencia: row.abrangencia || 'Municipal',
     aceitaContratacao: Array.isArray(row.aceita_contratacao) ? row.aceita_contratacao : [],
