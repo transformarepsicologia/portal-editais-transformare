@@ -566,6 +566,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 }
 
 /* ===== Caixa de entrada de credenciamentos (PNCP via Supabase) ===== */
+.filtro-oculto{display:none !important;}
 .inbox-card{background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:12px;}
 .inbox-card h5{margin:0 0 6px; font-family:var(--font-display);}
 .inbox-card-prioritario{border-color:var(--amber); box-shadow:0 0 0 1px rgba(245,169,62,0.35), 0 0 18px rgba(245,169,62,0.12);}
@@ -775,12 +776,12 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="filter-panel">
     <div class="filter-row">
       <div class="filter-field"><label>Profissão</label><select id="f-prof"><option value="">Todas</option></select></div>
-      <div class="filter-field"><label>Tipo</label><select id="f-tipo"><option value="">Todos</option></select></div>
+      <div class="filter-field filtro-oculto"><label>Tipo</label><select id="f-tipo"><option value="">Todos</option></select></div>
       <div class="filter-field"><label>Modalidade</label><select id="f-mod"><option value="">Todas</option></select></div>
       <div class="filter-field"><label>Abrangência</label><select id="f-abr"><option value="">Todas</option></select></div>
       <div class="filter-field"><label>Para quem é</label><select id="f-pub"><option value="">Todos</option></select></div>
       <div class="filter-field"><label>UF</label><select id="f-uf"><option value="">Todas</option></select></div>
-      <div class="filter-field"><label>Órgão</label><select id="f-org"><option value="">Todos</option></select></div>
+      <div class="filter-field filtro-oculto" id="ff-org"><label>Órgão</label><select id="f-org"><option value="">Todos</option></select></div>
       <div class="filter-field"><label>Situação</label><select id="f-sit"><option value="">Todas</option></select></div>
       <div class="filter-field"><label>Ordenar por</label><select id="f-sort"><option value="">Padrão</option><option value="prazo">Prazo mais próximo</option><option value="indice">Maior Índice Transformare</option><option value="recentes">Publicação mais recente</option></select></div>
     </div>
@@ -2966,13 +2967,7 @@ function populateSelects(){
   orgaosList.forEach(nome=>fo.insertAdjacentHTML('beforeend', `<option>${esc(nome)}</option>`));
   if(orgaosList.includes(orgaoAtual)) fo.value = orgaoAtual;
 
-  const chips = document.getElementById('quick-chips');
-  chips.innerHTML = '';
-  ["Psicologia","Nutrição","Fonoaudiologia","Teleatendimento","Rio Grande do Sul"].forEach(c=>{
-    const el = document.createElement('div'); el.className='quick-chip'; el.textContent=c;
-    el.onclick = ()=>{ document.getElementById('home-search').value = c; searchFromHome(); };
-    chips.appendChild(el);
-  });
+  renderQuickChips();
 
   refreshCadProfChips();
   const modBox = document.getElementById('cad-mod');
@@ -2985,6 +2980,27 @@ function populateSelects(){
   chipsAbrangenciaPerfil('cad-abr', []);
   chipsBuscaPerfil('cad', null);
   chipsAtuacaoPerfil('cad', []);
+}
+
+// Atalhos da home: sem login mostram os padrões; com perfil, mostram a(s)
+// profissão(ões) da pessoa, o estado dela e a modalidade preferida.
+function renderQuickChips(){
+  const chips = document.getElementById('quick-chips');
+  if(!chips) return;
+  let lista = ["Psicologia","Nutrição","Fonoaudiologia","Teleatendimento","Rio Grande do Sul"];
+  const u = userProfile;
+  if(u && ((u.profs||[]).length || u.uf)){
+    lista = (u.profs||[]).slice(0,3);
+    const uf = UFS.find(x=>x.sigla===u.uf);
+    if(uf) lista.push(uf.nome);
+    if((u.mods||[]).some(m=>/online/i.test(m))) lista.push('Teleatendimento');
+  }
+  chips.innerHTML = '';
+  lista.forEach(c=>{
+    const el = document.createElement('div'); el.className='quick-chip'; el.textContent=c;
+    el.onclick = ()=>{ document.getElementById('home-search').value = c; searchFromHome(); };
+    chips.appendChild(el);
+  });
 }
 
 function searchFromHome(){
@@ -3175,6 +3191,7 @@ function irParaEditaisComFiltro(filtro){
   // reúnem muitos valores diferentes — não dá pra filtrar por "um" só com um
   // clique. Em vez de só navegar, já abre o seletor certo para a pessoa
   // escolher na hora qual quer ver.
+  if(filtro === 'orgao') document.getElementById('ff-org').classList.remove('filtro-oculto');
   if(filtro === 'profissao' || filtro === 'uf' || filtro === 'orgao'){
     const idSelect = filtro === 'profissao' ? 'f-prof' : (filtro === 'uf' ? 'f-uf' : 'f-org');
     setTimeout(()=>{
@@ -3921,7 +3938,7 @@ async function loadUserData(){
 }
 
 async function carregarPerfilUsuario(authUser){
-  if(!authUser){ userProfile = null; return; }
+  if(!authUser){ userProfile = null; renderQuickChips(); return; }
   let perfil = null;
   if(_sb){
     const { data } = await _sb.from('usuarios_perfil').select('*').eq('id', authUser.id).maybeSingle();
@@ -3972,6 +3989,7 @@ async function carregarPerfilUsuario(authUser){
   if(extra) await storeSet(ukey('perfilExtra'), extra);
   Object.assign(userProfile, { cidade:'', abrs:[], remMin:null, remTipo:'atendimento', escolaridade:'', anosExp:null, atuacao:[], cnpj:'', empresa:null }, extra || {});
   userProfile.escolaridade = normEscolaridade(userProfile.escolaridade);
+  renderQuickChips();
 }
 
 async function userSignup(){
@@ -4091,6 +4109,7 @@ async function userForgotPassword(){
 async function userLogout(){
   if(_sb) await _sb.auth.signOut();
   userProfile = null;
+  renderQuickChips();
   adminAuthed = false;
   await storeRemove('sessao');
   await loadUserData();
@@ -4199,6 +4218,7 @@ async function deleteAccount(){
     await _sb.auth.signOut();
   }
   userProfile = null;
+  renderQuickChips();
   await storeRemove('sessao');
   await loadUserData();
   toast('Conta excluída');
