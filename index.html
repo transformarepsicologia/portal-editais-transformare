@@ -3136,14 +3136,19 @@ function renderIndicators(){
   const base = usandoDemo ? oportunidades : reais;
   const orgaos = new Set(base.map(o=>o.orgao)).size;
   const comIndice = base.filter(o=>o.indice !== null && o.indice !== undefined).length;
+  const novas = base.filter(eNovaAberta).length;
+  const abrem = base.filter(eAbreEmBreve).length;
+  // Sempre 6 caixas. "Órgãos e instituições" fica oculta e só entra no lugar de
+  // "Novas oportunidades" quando não há nenhuma nova nos últimos 7 dias.
   const stats = [
     {num:base.length, label:'oportunidades monitoradas', filtro:null},
-    {num:orgaos, label:'órgãos e instituições', filtro:'orgao'},
+    novas > 0
+      ? {num:novas, label:'novas oportunidades', filtro:'novas7'}
+      : {num:orgaos, label:'órgãos e instituições', filtro:'orgao'},
+    {num:abrem, label:'abrem em breve', filtro:'embreve'},
     {num:profissoesAtivasNomes().length, label:'profissões cobertas', filtro:'profissao'},
     {num:new Set(base.map(o=>o.uf)).size, label:'estados com oportunidades', filtro:'uf'},
-    {num:comIndice, label:'editais com Índice Transformare', filtro:'indice'},
-    {num:base.filter(eNovaAberta).length, label:'novas oportunidades abertas em 7 dias', filtro:'novas7'},
-    {num:base.filter(eAbreEmBreve).length, label:'editais para abrir nos próximos dias', filtro:'embreve'}
+    {num:comIndice, label:'editais com Índice Transformare', filtro:'indice'}
   ];
   const box = document.getElementById('indicators');
   box.innerHTML = '';
