@@ -1457,11 +1457,12 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
       <div class="two-col">
         <div class="form-row"><label>Tipo</label><select id="af-tipo"></select></div>
-        <div class="form-row"><label>Modalidade</label><select id="af-mod"><option>Presencial</option><option>Online</option><option>Híbrido</option></select></div>
+        <div class="form-row"><label>Modalidade</label><select id="af-mod"><option>Presencial</option><option>Presencial e online</option><option>Online</option><option>Home care</option></select></div>
+        <div class="form-row"><label>Deslocamento do profissional</label><select id="af-desloc"><option>Não há deslocamento</option><option>Até a unidade do contratante (in company)</option><option>Itinerante (várias localidades)</option><option>Até o domicílio do paciente</option></select></div>
       </div>
       <div class="two-col">
         <div class="form-row"><label>Abrangência</label><select id="af-abr"><option>Municipal</option><option>Regional</option><option>Estadual</option><option>Nacional</option></select></div>
-        <div class="form-row"><label>Situação</label><select id="af-sit"><option>Aberto</option><option>Próximo do encerramento</option><option>Em análise</option><option>Retificado</option><option>Suspenso</option><option>Encerrado</option></select></div>
+        <div class="form-row"><label>Situação</label><select id="af-sit"><option>Próximo da abertura</option><option>Aberto</option><option>Próximo do encerramento</option><option>Encerrado</option><option>Suspenso</option><option>Revogado</option><option>Anulado</option><option>Retificado</option><option>Em análise</option></select></div>
       </div>
       <div class="form-row"><label>Índice Transformare (1–5)</label><select id="af-indice"><option value="" selected>— Ainda não avaliado —</option><option value="1">1 — Baixa</option><option value="2">2 — Baixa</option><option value="3">3 — Média</option><option value="4">4 — Alta</option><option value="5">5 — Alta</option></select></div>
       <div class="two-col">
@@ -1513,28 +1514,20 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
       <ul class="af-item-list" id="af-mov-list"></ul>
 
-      <div class="lead-section-title" style="margin-top:20px;">Links oficiais</div>
-      <div class="two-col">
-        <div class="form-row" id="af-portais" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px;">
-          <label>Portais para consultar (abrem em nova aba — copie o link e cole nos campos abaixo)</label>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
-            <a class="btn-ghost" id="af-portal-edital-pncp" href="https://pncp.gov.br/app/editais" target="_blank" rel="noopener">Este edital no PNCP ↗</a>
-            <a class="btn-ghost" href="https://pncp.gov.br/app/editais" target="_blank" rel="noopener">Consulta de editais (PNCP) ↗</a>
-            <a class="btn-ghost" href="https://queridodiario.ok.org.br/" target="_blank" rel="noopener">Diários Oficiais (Querido Diário) ↗</a>
-            <a class="btn-ghost" id="af-portal-google" href="https://www.google.com/search?q=edital" target="_blank" rel="noopener">Buscar no Google ↗</a>
-          </div>
+      <div class="lead-section-title" style="margin-top:20px;">Links e inscrição</div>
+      <div class="form-row" id="af-portais" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px;">
+        <label>Buscar o edital (abre em nova aba — copie o link e cole nos campos abaixo)</label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+          <a class="btn-ghost" id="af-portal-google" href="https://www.google.com/search?q=edital" target="_blank" rel="noopener">Buscar no Google ↗</a>
         </div>
-        <div class="form-row"><label>URL oficial (site do órgão)</label><input type="text" id="af-url-oficial" placeholder="https://...">
-          <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-oficial')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-oficial')">Copiar</button></div></div>
+      </div>
+      <div class="two-col">
         <div class="form-row"><label>URL do edital</label><input type="text" id="af-url-edital" placeholder="https://...">
           <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-edital')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-edital')">Copiar</button></div></div>
-      </div>
-      <div class="two-col">
         <div class="form-row"><label>URL no PNCP</label><input type="text" id="af-url-pncp" placeholder="https://...">
           <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-pncp')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-pncp')">Copiar</button></div></div>
-        <div class="form-row"><label>URL de inscrição (opcional)</label><input type="text" id="af-url-inscricao" placeholder="Deixe em branco se não houver">
-          <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-inscricao')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-inscricao')">Copiar</button></div></div>
       </div>
+      <div class="form-row"><label>E-mail de inscrição (se a inscrição for por e-mail)</label><input type="email" id="af-email-inscricao" placeholder="Ex: credenciamento@prefeitura.gov.br"></div>
       <div class="form-actions">
         <button class="btn-primary" onclick="saveAdminForm()">Salvar oportunidade</button>
         <button class="btn-ghost" onclick="closeAdminForm()">Cancelar</button>
@@ -1874,27 +1867,34 @@ function iniciarCicloRadarHome(){
 }
 
 const TIPOS = ["Credenciamento","Edital","Chamamento Público","Pregão","Contratação","Convênio","Processo seletivo"];
-const MODALIDADES = ["Presencial","Online","Híbrido"];
+const MODALIDADES = ["Presencial","Presencial e online","Online","Home care"];
+// Quando o profissional se desloca (campo à parte da modalidade).
+const DESLOCAMENTOS = ["Não há deslocamento","Até a unidade do contratante (in company)","Itinerante (várias localidades)","Até o domicílio do paciente"];
+// Valores antigos viram os novos (perfil salvo no navegador, favoritos, etc.).
+function normModalidade(m){ return ({'Híbrido':'Presencial e online','Presencial e Online':'Presencial e online','Presencial (in company)':'Presencial'})[m] || m; }
 const ABRANGENCIAS = ["Nacional","Estadual","Municipal"];
 // "Para quem é" — que tipo de contratado o edital aceita (coluna aceita_contratacao no Supabase).
 // PF/PJ = o profissional se credencia sozinho (como pessoa física ou com CNPJ próprio);
 // Clínica = o edital exige equipe multidisciplinar, então só uma clínica consegue atender.
 const PUBLICOS = ["Pessoa Física (PF)","Pessoa Jurídica (PJ)","Clínica (equipe multidisciplinar)"];
 function publicoTexto(o){ return (o.aceitaContratacao && o.aceitaContratacao.length) ? o.aceitaContratacao.join(', ') : 'Não informado'; }
-const SITUACOES = ["Aberto","Próximo do encerramento","Em análise","Retificado","Suspenso","Encerrado","Prazo não informado","Prazo a confirmar","Abertura em breve"];
+const SITUACOES = ["Próximo da abertura","Aberto","Próximo do encerramento","Encerrado","Suspenso","Revogado","Anulado","Retificado","Em análise","Prazo não informado","Prazo a confirmar"];
+// Situação do PNCP (situacaoCompraNome) → situação do portal.
+const SITUACAO_PNCP = {'revogada':'Revogado','revogado':'Revogado','anulada':'Anulado','anulado':'Anulado','suspensa':'Suspenso','suspenso':'Suspenso'};
 // "Divulgada no PNCP" só diz que o edital foi publicado — não significa que está aberto.
 // A situação exibida sai do prazo: vencido = Encerrado; até 7 dias = Próximo do encerramento;
 // prazo futuro = Aberto; sem prazo válido = Prazo não informado. Situações manuais
 // (Em análise, Retificado, Suspenso) e "Aberto" sem prazo (fluxo contínuo) são mantidas.
 function situacaoExibida(o){
-  const s = o.situacao || '';
-  if(['Em análise','Retificado','Suspenso'].includes(s)) return s;
+  let s = o.situacao || '';
+  s = SITUACAO_PNCP[String(s).trim().toLowerCase()] || s;
+  if(['Em análise','Retificado','Suspenso','Revogado','Anulado'].includes(s)) return s;
   const d = parseDate(o.prazo);
-  // Recebimento de propostas ainda não começou: "Abertura em breve".
+  // Recebimento de propostas ainda não começou: "Próximo da abertura".
   const dAb = parseDate(o.abertura);
   if(!isNaN(dAb.getTime())){
     const h0 = new Date(); h0.setHours(0,0,0,0);
-    if(dAb > h0) return 'Abertura em breve';
+    if(dAb > h0) return 'Próximo da abertura';
   }
   // Prazo de 2040 em diante só vale depois que o analista confirma (credenciamentos longos existem).
   if(!isNaN(d.getTime()) && d.getFullYear() >= 2040 && !o.prazoConfirmado) return 'Prazo a confirmar';
@@ -2229,7 +2229,7 @@ function toast(msg){
 
 /* ================= BADGES / SCORE ================= */
 function badgeClass(s){
-  return {"Aberto":"aberto","Próximo do encerramento":"encerrando","Em análise":"analise","Retificado":"retificado","Encerrado":"encerrado","Suspenso":"suspenso","Prazo não informado":"divulgada","Prazo a confirmar":"divulgada","Abertura em breve":"analise"}[s] || "aberto";
+  return {"Aberto":"aberto","Próximo do encerramento":"encerrando","Em análise":"analise","Retificado":"retificado","Encerrado":"encerrado","Suspenso":"suspenso","Revogado":"suspenso","Anulado":"suspenso","Prazo não informado":"divulgada","Prazo a confirmar":"divulgada","Próximo da abertura":"analise"}[s] || "aberto";
 }
 // "Inscrições próximas": prazo dentro dos próximos 7 dias (e ainda não vencido).
 const DIAS_INSCRICAO_PROXIMA = 7;
@@ -2638,7 +2638,8 @@ function calcularAderencia(o, u){
   if((u.mods||[]).length){
     total += 15;
     if(u.mods.includes(o.modalidade)){ pontos += 15; motivos.push('atendimento ' + String(o.modalidade).toLowerCase()); }
-    else if(o.modalidade === 'Híbrido' && u.mods.some(m=>m==='Presencial' || m==='Online')){ pontos += 10; motivos.push('atendimento híbrido'); }
+    else if(o.modalidade === 'Presencial e online' && u.mods.some(m=>m==='Presencial' || m==='Online')){ pontos += 10; motivos.push('atendimento presencial e online'); }
+    else if(u.mods.includes('Presencial e online') && (o.modalidade === 'Presencial' || o.modalidade === 'Online')){ pontos += 10; motivos.push('atendimento ' + String(o.modalidade).toLowerCase()); }
   }
   if((u.abrs||[]).length){
     total += 15;
@@ -2954,7 +2955,7 @@ function populateSelects(){
   refreshCadProfChips();
   const modBox = document.getElementById('cad-mod');
   modBox.innerHTML = '';
-  ["Presencial","Online","Híbrido"].forEach(m=>{
+  MODALIDADES.forEach(m=>{
     const c = document.createElement('div'); c.className='chip-opt'; c.textContent=m;
     c.onclick = ()=>c.classList.toggle('selected');
     modBox.appendChild(c);
@@ -2982,7 +2983,7 @@ function eNovaAberta(o){
   return dias !== null && dias >= 0 && dias <= DIAS_NOVAS && ['Aberto','Próximo do encerramento'].includes(situacaoExibida(o));
 }
 function eAbreEmBreve(o){
-  if(situacaoExibida(o) !== 'Abertura em breve') return false;
+  if(situacaoExibida(o) !== 'Próximo da abertura') return false;
   const dias = _diasDesde(o.abertura);
   return dias !== null && dias < 0 && -dias <= DIAS_ABRE_EM_BREVE;
 }
@@ -3197,7 +3198,7 @@ function openDetalhe(id){
             <div class="qf-item"><div class="qf-icon">👤</div><span class="qf-k">Quem pode participar</span><div class="qf-v">${o.profissoes.join(', ')}</div></div>
             <div class="qf-item"><div class="qf-icon">📍</div><span class="qf-k">Onde é o atendimento</span><div class="qf-v">${o.cidade ? o.cidade+' — ' : ''}${o.uf} · ${o.abrangencia}</div></div>
             <div class="qf-item"><div class="qf-icon">🏢</div><span class="qf-k">Para quem é</span><div class="qf-v">${publicoTexto(o)}</div></div>
-            <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}</div></div>
+            <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}${o.deslocamento && o.deslocamento !== DESLOCAMENTOS[0] ? ' · ' + esc(o.deslocamento) : ''}</div></div>
             <div class="qf-item"><div class="qf-icon">💰</div><span class="qf-k">Remuneração</span><div class="qf-v">${remuneracaoResumo}</div></div>
             <div class="qf-item"><div class="qf-icon">⏳</div><span class="qf-k">Prazo</span><div class="qf-v">${o.prazo}</div></div>
              ${o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}</div></div>` : ''}
@@ -3263,6 +3264,7 @@ function openDetalhe(id){
                  <div style="font-family:var(--font-mono); font-size:9.5px; color:var(--ink-dim); text-align:center; margin-top:-4px;">Link de inscrição demonstrativo</div>`
               : `<span class="btn-primary" style="text-align:center; opacity:0.45; cursor:default; display:block;">Quero me credenciar</span>
                  <div style="font-family:var(--font-mono); font-size:9.5px; color:var(--ink-dim); text-align:center; margin-top:-4px;">Link de inscrição não informado no protótipo</div>`}
+            ${o.emailInscricao ? `<a class="btn-ghost" style="text-align:center; display:block;" href="mailto:${esc(o.emailInscricao)}">✉ Inscrição por e-mail: ${esc(o.emailInscricao)}</a>` : ''}
             <button class="btn-ghost" onclick="openLeadModal(${o.id},'detalhe_edital','Quero verificar minha documentação')">Quero verificar minha documentação</button>
           </div>
         </div>
@@ -3742,7 +3744,7 @@ function renderAlertChips(){
   });
 
   const modBox = document.getElementById('alert-mod'); modBox.innerHTML='';
-  ["Presencial","Online","Híbrido"].forEach(m=>{
+  MODALIDADES.forEach(m=>{
     const c = document.createElement('div'); c.className='chip-opt'+(alertPrefs.mod.has(m)?' selected':''); c.textContent=m;
     c.onclick = async ()=>{ alertPrefs.mod.has(m)?alertPrefs.mod.delete(m):alertPrefs.mod.add(m); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
     modBox.appendChild(c);
@@ -3886,7 +3888,7 @@ async function carregarPerfilUsuario(authUser){
     registro: perfil?.registro || '',
     uf: perfil?.uf || '',
     profs: perfil?.profs || [],
-    mods: perfil?.mods || [],
+    mods: (perfil?.mods || []).map(normModalidade),
     plano: perfil?.plano || 'gratuito',
     criadoEm: perfil?.criado_em || null,
   };
@@ -4066,7 +4068,7 @@ function renderPerfil(){
     profBox.appendChild(ch);
   });
   const modBox = document.getElementById('perfil-mod'); modBox.innerHTML = '';
-  ['Presencial','Online','Híbrido'].forEach(m=>{
+  MODALIDADES.forEach(m=>{
     const ch = document.createElement('div');
     ch.className = 'chip-opt' + ((u.mods||[]).includes(m) ? ' selected' : '');
     ch.textContent = m;
@@ -4505,7 +4507,7 @@ const _FICHA_ROTULOS = [
   ['tipo',/^tipo$/],['modalidade',/^modalidade$/],['abrangencia',/^abrang[eê]ncia$/],['situacao',/^situa[cç][aã]o$/],
   ['indice',/^[ií]ndice(?: transformare)?(?: \(1 a 5\)| \(1-5\))?$/],['prazo',/^prazo$/],['publicacao',/^publica[cç][aã]o$/],
   ['profissoes',/^profiss[oõ]es(?: contempladas)?$/],['valor',/^valor por atendimento$/],['volume',/^volume estimado$/],
-  ['remuneracao',/^remunera[cç][aã]o(?:,? outras faixas.*)?$/],
+  ['remuneracao',/^remunera[cç][aã]o(?:,? outras faixas.*)?$/],['deslocamento',/^deslocamento(?: do profissional)?$/],['email',/^(?:e-?mail(?: de inscri[cç][aã]o)?|inscri[cç][aã]o por e-?mail)$/],
 ];
 function _fSemRotuloLinha(l){ return _fLimpa(l.replace(/^[\s>]*(?:[-•*]|\d+[.)])\s*/,'')); }
 function parseFichaRadar(texto){
@@ -4571,6 +4573,7 @@ function aplicarFichaRadar(f){
   const setTxt = (id, rot, v)=>{ if(v && /^n[aã]o informad/i.test(v)) v = ''; if(v){ document.getElementById(id).value = v; ok.push(rot); } else falta.push(rot + ' — não veio na ficha'); };
   const setSel = (id, rot, v, opcoes)=>{
     if(!v){ falta.push(rot + ' — não veio na ficha'); return; }
+    if(id === 'af-sit'){ v = v.replace(/abertura em breve|em breve|pr[oó]xim[oa] (?:d?a )?abertura/i, 'Próximo da abertura').replace(/^(revogad|anulad|suspens)a\b/i, m=>m.slice(0,-1)+'o'); }
     const sel = document.getElementById(id), nv = _fNorm(v);
     const op = [...sel.options].find(o=>nv.startsWith(_fNorm(o.value||o.textContent)) || _fNorm(o.value||o.textContent) === nv);
     if(op){ sel.value = op.value || op.textContent; ok.push(rot); }
@@ -4593,7 +4596,24 @@ function aplicarFichaRadar(f){
     const hit = _TIPOS_SINON.find(([re])=>re.test(_fNorm(c.tipo)));
     if(hit){ document.getElementById('af-tipo').value = hit[1]; ok.push('Tipo'); } else falta.push('Tipo — "' + c.tipo + '" não existe nas opções; escolha à mão');
   } else falta.push('Tipo — não veio na ficha');
-  setSel('af-mod','Modalidade', c.modalidade);
+  // Modalidade e deslocamento (vocabulário novo: Presencial, Presencial e online, Online, Home care)
+  if(c.modalidade){
+    const nm = _fNorm(c.modalidade);
+    const mod = /home ?care|domicil/.test(nm) ? 'Home care'
+      : (/presencial/.test(nm) && /online|remot|tele/.test(nm)) || /h[ií]brid/.test(nm) ? 'Presencial e online'
+      : /online|remot|teleatend|telessaude/.test(nm) ? 'Online'
+      : /presencial|in company|itinerante/.test(nm) ? 'Presencial' : null;
+    if(mod){ document.getElementById('af-mod').value = mod; ok.push('Modalidade'); }
+    else falta.push('Modalidade — "' + c.modalidade + '" não reconhecida; escolha à mão');
+    let d = null;
+    const alvo = _fNorm((c.deslocamento || '') + ' ' + c.modalidade);
+    if(/in company|unidade do contratante|ate o local/.test(alvo)) d = DESLOCAMENTOS[1];
+    else if(/itinerante/.test(alvo)) d = DESLOCAMENTOS[2];
+    else if(mod === 'Home care' || /domicil/.test(alvo)) d = DESLOCAMENTOS[3];
+    else if(c.deslocamento && /^(nao|sem)/.test(_fNorm(c.deslocamento))) d = DESLOCAMENTOS[0];
+    if(d){ document.getElementById('af-desloc').value = d; ok.push('Deslocamento'); }
+  } else falta.push('Modalidade — não veio na ficha');
+  if(c.email){ const em = (c.email.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/)||[])[0]; if(em){ document.getElementById('af-email-inscricao').value = em; ok.push('E-mail de inscrição'); } }
   setSel('af-abr','Abrangência', c.abrangencia);
   setSel('af-sit','Situação', c.situacao);
   if(c.indice){ const m = c.indice.match(/[1-5]/); if(m){ document.getElementById('af-indice').value = m[0]; ok.push('Índice'); } else falta.push('Índice — sem número de 1 a 5'); } else falta.push('Índice — não veio na ficha');
@@ -4773,19 +4793,19 @@ function openAdminForm(id){
     document.getElementById('af-exp-anos').value = o.experienciaMinimaAnos || '';
     document.getElementById('af-pontos-positivos').value = o.pontosPositivos || '';
     document.getElementById('af-pontos-atencao').value = (o.pontosAtencao && o.pontosAtencao !== 'Nenhum ponto de atenção informado.') ? o.pontosAtencao : '';
-    document.getElementById('af-url-oficial').value = o.urlOficial || '';
     document.getElementById('af-url-edital').value = o.urlEdital || '';
     document.getElementById('af-url-pncp').value = o.urlPncp || '';
-    document.getElementById('af-url-inscricao').value = o.urlInscricao || '';
+    document.getElementById('af-email-inscricao').value = o.emailInscricao || '';
+    document.getElementById('af-desloc').value = DESLOCAMENTOS.includes(o.deslocamento) ? o.deslocamento : DESLOCAMENTOS[0];
     document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(o.profissoes.includes(c.dataset.prof)) c.classList.add('selected'); });
     afDocumentos = [...(o.documentos||[])];
     afMovimentacoes = (o.movimentacoes||[]).map(m=>({...m}));
     afRemuneracao = [...(o.remuneracao||[])];
   } else {
-    ['af-edital','af-orgao','af-objeto','af-prazo','af-publicacao','af-url-inscricao','af-cidade',
+    ['af-edital','af-orgao','af-objeto','af-prazo','af-publicacao','af-email-inscricao','af-cidade',
      'af-valor-atendimento','af-volume',
      'af-requisitos','af-pontos-positivos','af-pontos-atencao','af-escolaridade','af-exp-anos'].forEach(id2=>document.getElementById(id2).value='');
-    document.getElementById('af-url-oficial').value = 'https://www.gov.br/pncp/pt-br';
+    document.getElementById('af-desloc').value = DESLOCAMENTOS[0];
     document.getElementById('af-url-edital').value = 'https://pncp.gov.br/app/editais';
     document.getElementById('af-url-pncp').value = 'https://pncp.gov.br/app/editais';
     document.getElementById('af-indice').value = '';
@@ -4852,10 +4872,12 @@ async function saveAdminForm(){
     documentos: [...afDocumentos],
     movimentacoes: [...afMovimentacoes],
     remuneracao: [...afRemuneracao],
-    urlOficial: document.getElementById('af-url-oficial').value.trim() || null,
+    urlOficial: (editingId && (oportunidades.find(x=>x.id===editingId)||{}).urlOficial) || 'https://www.gov.br/pncp/pt-br',
+    deslocamento: document.getElementById('af-desloc').value || '',
+    emailInscricao: document.getElementById('af-email-inscricao').value.trim(),
     urlEdital: document.getElementById('af-url-edital').value.trim() || null,
     urlPncp: document.getElementById('af-url-pncp').value.trim() || null,
-    urlInscricao: document.getElementById('af-url-inscricao').value.trim() || null
+    urlInscricao: (editingId && (oportunidades.find(x=>x.id===editingId)||{}).urlInscricao) || null
   };
 
   // Prazo de 2040 em diante: avisa e pede confirmação antes de salvar.
@@ -4907,7 +4929,8 @@ async function saveAdminForm(){
       volume_estimado: data.volume, valor_maximo: data.valorMaximo,
       requisitos: data.requisitos, pontos_positivos: data.pontosPositivos, pontos_atencao: data.pontosAtencao,
       documentos: data.documentos, movimentacoes: data.movimentacoes, remuneracao: data.remuneracao,
-      url_oficial: data.urlOficial, url_edital: data.urlEdital, url_pncp: data.urlPncp, url_inscricao: data.urlInscricao,
+      url_edital: data.urlEdital, url_pncp: data.urlPncp,
+      email_inscricao: data.emailInscricao || null, deslocamento: data.deslocamento || null,
     };
     const prazoISO = _dataBRParaISO(document.getElementById('af-prazo').value);
     const publicacaoISO = _dataBRParaISO(document.getElementById('af-publicacao').value);
@@ -5055,10 +5078,7 @@ function linkPncpDoEdital(numero){
 }
 function atualizarLinksPortais(){
   const num = (document.getElementById('af-edital').value || '').trim();
-  const a = document.getElementById('af-portal-edital-pncp');
   const direto = linkPncpDoEdital(num);
-  a.href = direto || ('https://pncp.gov.br/app/editais' + (num ? '?q=' + encodeURIComponent(num) : ''));
-  a.textContent = direto ? 'Abrir este edital no PNCP ↗' : 'Buscar este edital no PNCP ↗';
   const org = (document.getElementById('af-orgao').value || '').trim();
   document.getElementById('af-portal-google').href = 'https://www.google.com/search?q=' + encodeURIComponent((num + ' ' + org + ' edital credenciamento').trim());
   const pncp = document.getElementById('af-url-pncp');
@@ -5562,7 +5582,9 @@ function mapEditalSupabase(row){
     cidade: row.cidade || '',
     tipo: row.tipo || 'Credenciamento',
     profissoes: (row.profissoes && row.profissoes.length) ? row.profissoes : ['Não identificada'],
-    modalidade: row.modalidade || 'Presencial',
+    modalidade: normModalidade(row.modalidade) || 'Presencial',
+    deslocamento: row.deslocamento || '',
+    emailInscricao: row.email_inscricao || '',
     abrangencia: row.abrangencia || 'Municipal',
     aceitaContratacao: Array.isArray(row.aceita_contratacao) ? row.aceita_contratacao : [],
     escolaridadeMinima: normEscolaridade(row.escolaridade_minima) || null,
