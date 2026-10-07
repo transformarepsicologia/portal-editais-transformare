@@ -1445,6 +1445,13 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="admin-form-panel" id="admin-form-panel">
       <div class="section-title" style="font-size:16px;" id="admin-form-title">Nova oportunidade</div>
 
+      <div id="af-revisao-bar" style="display:none; background:rgba(0,180,160,.07); border:1px solid var(--teal); border-radius:12px; padding:12px 16px; margin-bottom:14px;">
+        <div style="font-size:12.5px; color:var(--ink-muted);" id="af-revisao-origem"></div>
+        <div id="af-revisao-indice" style="font-size:12.5px; margin-top:8px; line-height:1.5;"></div>
+        <div class="form-row" style="margin:10px 0 0;"><label>Motivo da aprovação (opcional)</label><input type="text" id="af-revisao-motivo" placeholder="Ex: alinhado ao perfil da Transformare"></div>
+        <div style="font-size:11.5px; color:var(--ink-dim); margin-top:8px;">Preencha o que quiser (inclusive o Índice Transformare, colando a análise abaixo) e clique em “Aprovar e publicar”. O Índice pode ficar em branco.</div>
+      </div>
+
       <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
         <label>Colar a análise (Analista de Editais Transformare ou Gemini) — preenche a ficha inteira: Edital, Órgão, Objeto, UF, Cidade, Tipo, Modalidade, Abrangência, Situação, Índice, Prazo, Publicação, Profissões, valores, pontos e documentação</label>
         <textarea id="af-analise-ia" rows="4" placeholder="Cole aqui o resultado completo da análise (as 5 seções: Índice Transformare, Pontos de destaque, Ponto de atenção, Requisitos, Documentação necessária)..."></textarea>
@@ -1538,8 +1545,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
       <div class="form-row"><label>E-mail de inscrição (se a inscrição for por e-mail)</label><input type="email" id="af-email-inscricao" placeholder="Ex: credenciamento@prefeitura.gov.br"></div>
       <div class="form-actions">
-        <button class="btn-primary" onclick="saveAdminForm()">Salvar oportunidade</button>
+        <button class="btn-primary" id="af-btn-salvar" onclick="saveAdminForm()">Salvar oportunidade</button>
         <button class="btn-ghost" onclick="closeAdminForm()">Cancelar</button>
+        <button class="btn-ghost" id="af-btn-rejeitar" style="display:none; color:var(--coral); border-color:var(--coral);" onclick="rejeitarDaRevisaoCompleta()">Rejeitar</button>
         <button class="btn-ghost" id="af-btn-excluir" style="margin-left:auto; color:var(--coral); border-color:var(--coral);" onclick="excluirEditalDoFormulario()">🗑 Excluir edital</button>
       </div>
       <p style="font-size:11px; color:var(--ink-dim); margin-top:12px;">Cadastro salvo neste navegador (localStorage) — protótipo de homologação, não é um banco de dados de produção.</p>
@@ -4923,7 +4931,15 @@ function editarDoDetalhe(id){
   openAdminForm(id);
 }
 let adminFormOrigemFora = false;
+let _revisaoAlvo = null; // { id, tipo } quando o formulário está sendo usado para revisar/aprovar um pendente
+function _afModoRevisao(on){
+  document.getElementById('af-revisao-bar').style.display = on ? '' : 'none';
+  document.getElementById('af-btn-rejeitar').style.display = on ? '' : 'none';
+  document.getElementById('af-btn-salvar').textContent = on ? 'Aprovar e publicar no catálogo' : 'Salvar oportunidade';
+  if(!on) _revisaoAlvo = null;
+}
 function openAdminForm(id){
+  _afModoRevisao(false);
   editingId = id;
   adminFormOrigemFora = (currentView !== 'admin');
   _confirmEdicaoOk = false;
@@ -4990,6 +5006,7 @@ function openAdminForm(id){
 }
 function closeAdminForm(){
   editingId = null;
+  _afModoRevisao(false);
   document.getElementById('admin-form-modal').classList.remove('open');
 }
 function _dataBRParaISO(valor){
@@ -5061,6 +5078,20 @@ async function saveAdminForm(){
   data.prazoConfirmado = _longo;
   _prazoLongoOk = false;
 
+  // Revisão de um pendente: aprova (RPC) e em seguida grava TODOS os campos no edital criado.
+  if(_revisaoAlvo){
+    if(!_sb){ toast('Supabase indisponível — não foi possível aprovar'); return; }
+    const alvo = _revisaoAlvo;
+    const novoId = await aprovarPelaRevisao(data);
+    if(!novoId) return;
+    await carregarEditaisSupabase();
+    _revisaoAlvo = null;
+    editingId = 900000 + Number(novoId);
+    adminFormOrigemFora = false;
+    _editAntes = null;
+    if(alvo.tipo === 'diario') renderDiarioOficial(); else renderCaixaEntrada();
+    if(!oportunidades.some(o=>o.id===editingId)){ toast('Aprovado e publicado no catálogo (abra o edital para completar os campos)'); closeAdminForm(); return; }
+  }
   // Edição feita fora do Painel administrativo: mostra antes → depois e pede confirmação.
   if(editingId && adminFormOrigemFora && confirmarEdicaoAtiva() && !_confirmEdicaoOk){
     const diff = diffEdicao(_editAntes, data);
@@ -6213,6 +6244,70 @@ function rejeitarDaRevisao(){
 function abrirAprovarModal(id, tipo){
   const item = acharItem(id, tipo);
   if(!item){ alert('Item não encontrado — tente recarregar a lista.'); return; }
+  abrirRevisaoCompleta(id, tipo, item);
+}
+
+// "Revisar antes de aprovar" = o mesmo formulário completo de "Oportunidades
+// cadastradas", já preenchido com o que veio do PNCP/Diário Oficial.
+function abrirRevisaoCompleta(id, tipo, item){
+  openAdminForm(null);
+  _revisaoAlvo = { id, tipo };
+  _afModoRevisao(true);
+  _revisaoAlvo = { id, tipo };
+  const set = (k,v)=>{ document.getElementById(k).value = v; };
+  document.getElementById('admin-form-title').textContent = 'Revisar antes de aprovar';
+  document.getElementById('af-btn-excluir').style.display = 'none';
+  set('af-edital', tipo === 'diario' ? ('DOM ' + (item.municipio || '')).trim() : (item.numero_controle_pncp || 'PNCP'));
+  set('af-orgao', item.orgao || (item.municipio ? ('Diário Oficial — ' + item.municipio) : ''));
+  set('af-objeto', item.objeto || item.resumo || item.excerto || '');
+  if(item.uf) set('af-uf', item.uf);
+  set('af-cidade', item.cidade || item.municipio || '');
+  set('af-tipo', 'Credenciamento');
+  set('af-abr', item.abrangencia || 'Municipal');
+  if(item.situacao && [...document.getElementById('af-sit').options].some(o=>o.value===item.situacao)) set('af-sit', item.situacao);
+  set('af-prazo', item.data_encerramento_proposta ? formatarDataBR(item.data_encerramento_proposta) : '');
+  set('af-indice', item.indice_sugerido ? String(item.indice_sugerido) : '');
+  set('af-url-pncp', tipo === 'diario' ? '' : (item.link_pncp || ''));
+  set('af-url-edital', '');
+  if(typeof item.valor_estimado === 'number') set('af-volume', item.valor_estimado.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
+  const dets = item.profissoes_detectadas || [];
+  document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(dets.includes(c.dataset.prof)) c.classList.add('selected'); });
+  atualizarLinksPortais();
+  const r = sugerirFaixaIndice({ valorEstimado:(typeof item.valor_estimado==='number')?item.valor_estimado:null, profissoes:dets, objeto:item.objeto||item.excerto||'' });
+  document.getElementById('af-revisao-origem').innerHTML = (tipo==='diario' ? 'Achado do Diário Oficial' : 'Achado do PNCP') + ' — os campos abaixo vieram preenchidos do que foi encontrado. ' + (item.link_pncp ? `<a href="${esc(item.link_pncp)}" target="_blank" rel="noopener" style="color:var(--teal);">Ver no PNCP ↗</a>` : '') + (item.url_diario ? ` <a href="${esc(item.url_diario)}" target="_blank" rel="noopener" style="color:var(--teal);">Ver no Diário ↗</a>` : '');
+  document.getElementById('af-revisao-indice').innerHTML = `<strong>${esc(r.faixaTexto)}</strong><br>• ${esc(r.fin.texto)}<br>• ${esc(r.ader.texto)}`;
+  set('af-revisao-motivo','');
+}
+
+function rejeitarDaRevisaoCompleta(){
+  if(!_revisaoAlvo) return;
+  const { id, tipo } = _revisaoAlvo;
+  closeAdminForm();
+  abrirRejeitarModal(id, tipo);
+}
+
+// Aprova o pendente (RPC) usando os dados do formulário; devolve o id do edital criado.
+async function aprovarPelaRevisao(data){
+  const { id, tipo } = _revisaoAlvo;
+  const item = acharItem(id, tipo) || {};
+  const iso = _dataBRParaISO(data.prazo);
+  const args = {
+    p_id: id, p_revisor: 'admin-portal', p_motivo: document.getElementById('af-revisao-motivo').value.trim() || null,
+    p_edital: data.edital, p_tipo: data.tipo, p_situacao: data.situacao,
+    p_indice: data.indice || null, p_prazo: iso || null,
+    p_url_oficial: tipo==='diario' ? (item.url_diario || null) : null,
+    p_url_edital: data.urlEdital || null, p_url_pncp: data.urlPncp || null,
+    p_url_inscricao: tipo==='diario' ? null : (item.link_inscricao || null),
+  };
+  let fn = 'aprovar_diario_oficial';
+  if(tipo !== 'diario'){ fn = 'aprovar_credenciamento'; args.p_abrangencia = data.abrangencia || null; }
+  const { data: novoId, error } = await _sb.rpc(fn, args);
+  if(error){ alert('Erro ao aprovar: ' + error.message); return null; }
+  return novoId;
+}
+
+function _abrirAprovarModalAntigo(id, tipo){
+  const item = acharItem(id, tipo);
   _aprovarAlvo = { id, tipo };
 
   document.getElementById('aprovar-edital').value = tipo === 'diario'
