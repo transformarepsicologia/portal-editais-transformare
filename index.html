@@ -3040,6 +3040,7 @@ function applyFilters(){
   else if(sort === 'recentes') filtradas = [...filtradas].sort((a,b)=>parseDate(b.publicacao)-parseDate(a.publicacao));
 
   renderFilterChips();
+  _listaNavegacao = filtradas.map(o=>o.id);   // usada pelo rodapé da página do edital
 
   document.getElementById('ed-count').textContent = `${filtradas.length} oportunidade(s) encontrada(s)`;
   const list = document.getElementById('ed-list');
@@ -3168,6 +3169,36 @@ function irParaEditaisComFiltro(filtro){
 }
 
 /* ================= DETALHE ================= */
+// Rodapé da página do edital: os outros editais da lista atual (mesmos filtros e ordem), para
+// navegar sem voltar à lista.
+let _listaNavegacao = [];
+function renderOutrosEditais(id, el){
+  const ids = _listaNavegacao.length ? _listaNavegacao : oportunidades.map(x=>x.id);
+  const idx = ids.indexOf(id);
+  const ant = idx > 0 ? ids[idx-1] : null;
+  const prox = (idx >= 0 && idx < ids.length - 1) ? ids[idx+1] : null;
+  // a partir do atual, na ordem da lista, dando a volta no fim
+  const ordem = idx >= 0 ? [...ids.slice(idx+1), ...ids.slice(0, idx)] : ids.filter(x=>x!==id);
+  const MAX = 12;
+  const mostrar = ordem.slice(0, MAX).map(x=>oportunidades.find(o=>o.id===x)).filter(Boolean);
+  if(!mostrar.length) return;
+  const nome = x => { const o = oportunidades.find(v=>v.id===x); return o ? esc(o.edital) : ''; };
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:40px; padding-top:24px; border-top:1px solid var(--border-soft);';
+  wrap.innerHTML = `
+    <div class="section-title" style="font-size:18px; margin:0 0 4px;">Outros editais</div>
+    <p class="section-sub" style="margin-bottom:12px;">${idx >= 0 ? `Edital ${idx+1} de ${ids.length} na sua lista` : `${ids.length} editais`} (mesmos filtros e ordem da lista).</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+      <button class="btn-ghost" ${ant==null?'disabled style="opacity:.4;"':''} onclick="openDetalhe(${ant})" title="${ant!=null?nome(ant):''}">‹ Anterior</button>
+      <button class="btn-ghost" ${prox==null?'disabled style="opacity:.4;"':''} onclick="openDetalhe(${prox})" title="${prox!=null?nome(prox):''}">Próximo ›</button>
+      <button class="btn-ghost" onclick="nav('editais')">Ver toda a lista</button>
+    </div>
+    <div class="op-grid" id="detalhe-outros-grid"></div>
+    ${ordem.length > MAX ? `<p class="section-sub" style="margin-top:12px;">Mostrando ${MAX} de ${ordem.length}. <a style="color:var(--teal); cursor:pointer;" onclick="nav('editais')">Ver todos</a></p>` : ''}`;
+  el.appendChild(wrap);
+  const grid = wrap.querySelector('#detalhe-outros-grid');
+  mostrar.forEach(o=>grid.appendChild(renderCard(o)));
+}
 function openDetalhe(id){
   currentDetailId = id;
   const o = oportunidades.find(x=>x.id===id);
@@ -3340,6 +3371,7 @@ function openDetalhe(id){
       </div>
     </div>
   `;
+  renderOutrosEditais(id, el);
   nav('detalhe');
 }
 async function solicitarPlanoEssencial(){
