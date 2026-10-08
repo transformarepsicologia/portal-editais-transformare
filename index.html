@@ -2146,6 +2146,8 @@ function sha256(str){
 // Para dar acesso a mais alguém, crie a conta dela em Supabase > Authentication > Users
 // e adicione o e-mail nesta lista.
 const ADMIN_EMAILS = ['transformarepsicologia1@gmail.com'];
+// Editais sinalizados com problema ficam ocultos para clientes; só o administrador vê.
+const visivelAoCliente = o => adminAuthed || !o.problemaDescricao;
 let adminAuthed = false; // exige login (Supabase Auth) para acessar o painel administrativo
 let adminFails = 0, adminLockedUntil = 0;
 
@@ -2181,6 +2183,7 @@ async function adminLogin(){
     return;
   }
   adminAuthed = true;
+  carregarEditaisSupabase();
   adminFails = 0; passInput.value = ''; setAdminMsg('');
   nav('admin');
 }
@@ -2198,6 +2201,7 @@ async function adminForgotPassword(){
 async function adminLogout(){
   adminAuthed = false;
   if(_sb) await _sb.auth.signOut();
+  applyFilters(); renderIndicators();
   nav('home');
   toast('Você saiu do painel administrativo');
 }
@@ -2502,7 +2506,7 @@ function renderFavoritos(){
   const list = document.getElementById('fav-list');
   const countEl = document.getElementById('fav-count');
   list.innerHTML = '';
-  let items = oportunidades.filter(o=>favoritos.has(o.id));
+  let items = oportunidades.filter(o=>favoritos.has(o.id) && visivelAoCliente(o));
   const sort = document.getElementById('fav-sort').value;
   if(sort === 'prazo') items = [...items].sort((a,b)=>parseDate(a.prazo)-parseDate(b.prazo));
   else if(sort === 'indice') items = [...items].sort((a,b)=>b.indice-a.indice);
@@ -2798,8 +2802,9 @@ function renderMinhaConta(){
     return;
   }
   const u = userProfile;
-  const acompanhados = oportunidades.filter(o=>favoritos.has(o.id));
+  const acompanhados = oportunidades.filter(o=>favoritos.has(o.id) && visivelAoCliente(o));
   const recomendadas = oportunidades.filter(o=>{
+    if(!visivelAoCliente(o)) return false;
     if(situacaoExibida(o)==='Encerrado' || favoritos.has(o.id)) return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
@@ -2933,6 +2938,7 @@ function renderMinhaConta(){
 function valoresPresentesEmOportunidades(getter){
   const presentes = new Set();
   oportunidades.forEach(o=>{
+    if(!visivelAoCliente(o)) return;
     const v = getter(o);
     if(Array.isArray(v)) v.forEach(x=>{ if(x) presentes.add(x); });
     else if(v) presentes.add(v);
@@ -3005,7 +3011,7 @@ function populateSelects(){
   const fo = document.getElementById('f-org');
   const orgaoAtual = fo.value;
   fo.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
-  const orgaosList = [...new Set(oportunidades.map(o=>o.orgao))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const orgaosList = [...new Set(oportunidades.filter(visivelAoCliente).map(o=>o.orgao))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'pt-BR'));
   orgaosList.forEach(nome=>fo.insertAdjacentHTML('beforeend', `<option>${esc(nome)}</option>`));
   if(orgaosList.includes(orgaoAtual)) fo.value = orgaoAtual;
 
@@ -3086,6 +3092,7 @@ function applyFilters(){
   const sort = document.getElementById('f-sort').value;
 
   let filtradas = oportunidades.filter(o=>{
+    if(!visivelAoCliente(o)) return false;
     if(prof && !o.profissoes.includes(prof)) return false;
     if(tipo && o.tipo !== tipo) return false;
     if(mod && o.modalidade !== mod) return false;
@@ -3194,10 +3201,10 @@ function clearAllFilters(){
 // quando não há nenhuma oportunidade real carregada ainda (prototipo sem
 // Supabase configurado, ou antes da primeira carga terminar).
 function renderIndicators(){
-  const reais = oportunidades.filter(o=>o.origemSupabase);
+  const reais = oportunidades.filter(o=>o.origemSupabase && visivelAoCliente(o));
   const usandoDemo = reais.length === 0;
   indicadoresUsandoDemo = usandoDemo;
-  const base = usandoDemo ? oportunidades : reais;
+  const base = usandoDemo ? oportunidades.filter(visivelAoCliente) : reais;
   const orgaos = new Set(base.map(o=>o.orgao)).size;
   const comIndice = base.filter(o=>o.indice !== null && o.indice !== undefined).length;
   const novas = base.filter(eNovaAberta).length;
@@ -3286,6 +3293,7 @@ function renderOutrosEditais(id, el){
 function openDetalhe(id){
   currentDetailId = id;
   const o = oportunidades.find(x=>x.id===id);
+  if(!o || !visivelAoCliente(o)){ toast('Este edital está em análise e não está disponível no momento.'); nav('editais'); return; }
   const isFav = favoritos.has(id);
   const el = document.getElementById('detalhe-content');
   const temIndice = o.indice !== null && o.indice !== undefined;
@@ -3897,6 +3905,7 @@ function renderAlertas(){
     return;
   }
   const items = oportunidades.filter(o=>{
+    if(!visivelAoCliente(o)) return false;
     if(situacaoExibida(o)==='Encerrado') return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
@@ -3923,6 +3932,7 @@ async function clearAlertPrefs(){
 function matchedAlertItems(){
   if(alertPrefs.prof.size===0 && alertPrefs.uf.size===0 && alertPrefs.mod.size===0 && !alertPrefs.cidade) return [];
   return oportunidades.filter(o=>{
+    if(!visivelAoCliente(o)) return false;
     if(situacaoExibida(o)==='Encerrado') return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
@@ -4135,7 +4145,7 @@ async function userLogin(){
   userFails = 0; msg.textContent = '';
   document.getElementById('login-senha').value = '';
   await carregarPerfilUsuario(data.user);
-  if((data.user.email||'').toLowerCase() && ADMIN_EMAILS.includes(data.user.email.toLowerCase())) adminAuthed = true;
+  if((data.user.email||'').toLowerCase() && ADMIN_EMAILS.includes(data.user.email.toLowerCase())){ adminAuthed = true; carregarEditaisSupabase(); }
   await loadUserData();
   toast('Bem-vindo(a) de volta' + (userProfile.nome ? ', ' + userProfile.nome.split(' ')[0] : ''));
   nav('minha-conta');
@@ -4159,6 +4169,7 @@ async function userLogout(){
   userProfile = null;
   renderQuickChips();
   adminAuthed = false;
+  applyFilters(); renderIndicators();
   await storeRemove('sessao');
   await loadUserData();
   toast('Você saiu da sua conta');
@@ -5945,7 +5956,7 @@ if(_sb){
     const authUser = data && data.session ? data.session.user : null;
     if(!authUser) return;
     const email = authUser.email;
-    if(email && ADMIN_EMAILS.includes(email.toLowerCase())) adminAuthed = true;
+    if(email && ADMIN_EMAILS.includes(email.toLowerCase())){ adminAuthed = true; carregarEditaisSupabase(); }
     await carregarPerfilUsuario(authUser);
     await loadUserData();
     updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
