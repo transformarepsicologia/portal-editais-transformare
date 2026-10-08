@@ -1383,6 +1383,20 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 </main>
 
+<div class="modal-overlay" id="problema-modal" style="z-index:1300;">
+  <div class="modal-box" style="max-width:520px;">
+    <button class="modal-close" onclick="fecharProblemaModal()">×</button>
+    <div class="section-title" style="font-size:17px; color:var(--amber);">⚠ Sinalizar edital com problema</div>
+    <div class="panel" style="margin:0 0 12px;"><strong id="problema-nome"></strong><div id="problema-orgao" style="font-size:12.5px; color:var(--ink-muted); margin-top:4px;"></div></div>
+    <p class="section-sub" style="margin-bottom:8px;">Descreva o problema encontrado. O edital volta para o Painel administrativo, na lista “Editais com problema”, com este aviso.</p>
+    <textarea id="problema-texto" rows="4" placeholder="Ex: objeto não bate com o edital no PNCP; prazo errado; documento ilegível..." oninput="problemaDigitou()" style="width:100%; margin-bottom:12px;"></textarea>
+    <div class="form-actions" style="display:flex; gap:8px;">
+      <button class="btn-primary" id="problema-btn" style="flex:1; opacity:.5;" disabled onclick="confirmarProblema()">OK — sinalizar problema</button>
+      <button class="btn-ghost" onclick="fecharProblemaModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="confirm-exclusao-modal" style="z-index:1300;">
   <div class="modal-box" style="max-width:520px;">
     <button class="modal-close" onclick="cancelarExclusao()">×</button>
@@ -1446,6 +1460,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="admin-form-panel" id="admin-form-panel">
       <div class="section-title" style="font-size:16px;" id="admin-form-title">Nova oportunidade</div>
 
+      <div id="af-aviso-problema" style="display:none; background:rgba(245,169,62,.1); border:1px solid var(--amber); border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:13px;"></div>
       <div id="af-revisao-topo" class="inbox-actions" style="display:none; position:sticky; top:0; z-index:5; padding:8px 0; margin-bottom:10px; background:var(--bg-card, var(--bg)); border-bottom:1px solid var(--border-soft);">
         <button class="inbox-approve" onclick="saveAdminForm()">Aprovar</button>
         <button class="btn-ghost" onclick="adiarDaRevisaoCompleta()">Adiar</button>
@@ -1555,6 +1570,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <button class="btn-primary" id="af-btn-salvar" onclick="saveAdminForm()">Salvar oportunidade</button>
         <button class="btn-ghost" onclick="closeAdminForm()">Cancelar</button>
         <button class="btn-ghost" id="af-btn-rejeitar" style="display:none; color:var(--coral); border-color:var(--coral);" onclick="rejeitarDaRevisaoCompleta()">Rejeitar</button>
+        <button class="btn-ghost" id="af-btn-problema" style="display:none; color:var(--amber); border-color:var(--amber);" onclick="abrirProblemaModal()">⚠ Editais com problema</button>
+        <button class="btn-ghost" id="af-btn-resolvido" style="display:none; color:var(--teal); border-color:var(--teal);" onclick="marcarProblemaResolvido(editingId)">✓ Problema resolvido</button>
         <button class="btn-ghost" id="af-btn-excluir" style="margin-left:auto; color:var(--coral); border-color:var(--coral);" onclick="excluirEditalDoFormulario()">🗑 Excluir edital</button>
       </div>
       <p style="font-size:11px; color:var(--ink-dim); margin-top:12px;">Cadastro salvo neste navegador (localStorage) — protótipo de homologação, não é um banco de dados de produção.</p>
@@ -5044,6 +5061,7 @@ function openAdminForm(id){
   document.getElementById('admin-form-modalbox').scrollTop = 0;
   document.getElementById('admin-form-title').textContent = id ? 'Editar oportunidade' : 'Nova oportunidade';
   document.getElementById('af-btn-excluir').style.display = id ? '' : 'none';
+  atualizarBotoesProblema(id);
   document.getElementById('af-doc-input').value = '';
   document.getElementById('af-mov-data').value = '';
   document.getElementById('af-mov-texto').value = '';
@@ -5339,7 +5357,8 @@ function renderHoje(){
                                    .sort((a,b)=>prazoDe(a)-prazoDe(b));
   const fornecedores = oportunidades.filter(o=>ehContratacaoDeFornecedor(o.objeto));
   const fornecedoresPend = _contagensHoje.fornecedorPendentes || [];
-  const problemas = suspeitos.length + vencidos.length + semPrazo.length + semSituacao.length + fornecedores.length + fornecedoresPend.length;
+  const sinalizados = oportunidades.filter(o=>o.problemaDescricao);
+  const problemas = suspeitos.length + vencidos.length + semPrazo.length + semSituacao.length + fornecedores.length + fornecedoresPend.length + sinalizados.length;
   const fmt = n => n == null ? '—' : n;
   const cards = [
     {num:fmt(_contagensHoje.pncp), label:'Achados do PNCP para triar', cls:_contagensHoje.pncp?'alerta':'', ir:()=>adminIrPara('triagem','caixa-entrada-body')},
@@ -5358,11 +5377,12 @@ function renderHoje(){
   });
   const linhas = [
     ['Prazo de 2040 em diante a confirmar', suspeitos], ['Prazo vencido e ainda "Aberto"', vencidos],
+    ['Sinalizados pelo analista', sinalizados],
     ['Sem prazo definido', semPrazo], ['Sem situação', semSituacao],
     ['Contratação de fornecedor já definido, no catálogo (não é edital aberto)', fornecedores],
   ];
   document.getElementById('hoje-problemas').innerHTML = '<div class="hoje-lista">' + linhas.map(([t,arr])=>
-    `<div class="linha"><span>${t}</span><span style="display:flex; gap:8px; align-items:center;"><strong style="color:${arr.length?'var(--coral)':'var(--teal)'};">${arr.length}</strong></span></div>${arr.length && arr!==fornecedores && arr!==suspeitos ? `<details style="margin:2px 0 8px 12px;"><summary style="font-size:12px; cursor:pointer; color:var(--ink-dim);">Ver os ${arr.length} edital(is)</summary>${arr.map(o=>`<div class="linha"><span>${esc(o.edital)} — ${esc(o.orgao||'')} (${esc(o.uf||'')}) · prazo: ${esc(o.prazo||'—')}</span><span style="display:flex; gap:6px;"><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openDetalhe(${o.id})">Abrir</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openAdminForm(${o.id})">Editar</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">Excluir</button></span></div>`).join('')}</details>` : ''}`).join('') + (fornecedores.length ? '<div class="hoje-lista" style="margin-top:12px;"><div style="font-size:12px; color:var(--ink-dim);">No catálogo — parecem contratação direta de uma empresa. Confira e remova ou corrija:</div>' + fornecedores.map(o=>`<div class="linha"><span>${esc(o.edital)} — ${esc((o.objeto||'').slice(0,90))}</span><span style="display:flex; gap:6px;"><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openDetalhe(${o.id})">Abrir</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openAdminForm(${o.id})">Editar</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">Excluir</button></span></div>`).join('') + '</div>' : '')
+    `<div class="linha"><span>${t}</span><span style="display:flex; gap:8px; align-items:center;"><strong style="color:${arr.length?'var(--coral)':'var(--teal)'};">${arr.length}</strong></span></div>${arr.length && arr!==fornecedores && arr!==suspeitos ? `<details style="margin:2px 0 8px 12px;"><summary style="font-size:12px; cursor:pointer; color:var(--ink-dim);">Ver os ${arr.length} edital(is)</summary>${arr.map(o=>`<div class="linha"><span>${esc(o.edital)} — ${esc(o.orgao||'')} (${esc(o.uf||'')}) · prazo: ${esc(o.prazo||'—')}${o.problemaDescricao ? `<br><span style="color:var(--amber); font-size:12.5px;">⚠ ${esc(o.problemaDescricao)}${o.problemaEm ? ' · ' + esc(o.problemaEm) : ''}</span>` : ''}</span><span style="display:flex; gap:6px;">${o.problemaDescricao ? `<button class="btn-ghost" style="font-size:12px; padding:3px 10px; color:var(--teal); border-color:var(--teal);" onclick="marcarProblemaResolvido(${o.id})">Resolvido</button>` : ''}<button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openDetalhe(${o.id})">Abrir</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openAdminForm(${o.id})">Editar</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">Excluir</button></span></div>`).join('')}</details>` : ''}`).join('') + (fornecedores.length ? '<div class="hoje-lista" style="margin-top:12px;"><div style="font-size:12px; color:var(--ink-dim);">No catálogo — parecem contratação direta de uma empresa. Confira e remova ou corrija:</div>' + fornecedores.map(o=>`<div class="linha"><span>${esc(o.edital)} — ${esc((o.objeto||'').slice(0,90))}</span><span style="display:flex; gap:6px;"><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openDetalhe(${o.id})">Abrir</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openAdminForm(${o.id})">Editar</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">Excluir</button></span></div>`).join('') + '</div>' : '')
     + (fornecedoresPend.length ? '<div class="hoje-lista" style="margin-top:12px;"><div style="font-size:12px; color:var(--ink-dim);">Na Caixa de entrada (aguardando você) — parecem contratação direta de uma empresa. Rejeite com o motivo "contratação direta de fornecedor":</div>' + fornecedoresPend.map(r=>`<div class="linha"><span>${esc((r.objeto||'').slice(0,100))} (${esc(r.uf||'')})</span><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="adminIrPara('triagem','caixa-entrada-body')">Abrir a Caixa</button></div>`).join('') + '</div>' : '')
     + (suspeitos.length ? '<div class="hoje-lista" style="margin-top:12px;"><div style="font-size:12px; color:var(--ink-dim);">Prazos longos podem estar certos. Confira no edital e confirme:</div>' + suspeitos.map(o=>`<div class="linha"><span>${esc(o.edital)} — prazo <strong style="color:var(--amber);">${esc(o.prazo)}</strong></span><span style="display:flex; gap:6px;"><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openDetalhe(${o.id})">Abrir</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="confirmarPrazoEdital(${o.id})">✓ Confirmar prazo</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="openAdminForm(${o.id})">Editar</button><button class="btn-ghost" style="font-size:12px; padding:3px 10px; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">Excluir</button></span></div>`).join('') + '</div>' : '');
   document.getElementById('hoje-encerrando').innerHTML = encerrando.length
@@ -5373,6 +5393,65 @@ function renderHoje(){
   const be = document.getElementById('tabbadge-editais'); if(be){ be.style.display=''; be.textContent = oportunidades.length; }
 }
 function abrirEditalProblema(id){ openAdminForm(id); }
+
+/* ---- Sinalização manual de "edital com problema" (analista) ---- */
+let _problemaAlvo = null;
+function atualizarBotoesProblema(id){
+  const o = id ? oportunidades.find(x=>x.id===id) : null;
+  const marcado = !!(o && o.problemaDescricao);
+  document.getElementById('af-btn-problema').style.display = (id && !marcado) ? '' : 'none';
+  document.getElementById('af-btn-resolvido').style.display = marcado ? '' : 'none';
+  const av = document.getElementById('af-aviso-problema');
+  if(marcado){ av.style.display=''; av.innerHTML = '<strong>⚠ Sinalizado com problema:</strong> ' + esc(o.problemaDescricao) + (o.problemaEm ? ` <span style="color:var(--ink-dim);">(${esc(o.problemaEm)})</span>` : ''); }
+  else { av.style.display='none'; av.innerHTML=''; }
+}
+function abrirProblemaModal(){
+  if(!editingId) return;
+  const o = oportunidades.find(x=>x.id===editingId); if(!o) return;
+  _problemaAlvo = editingId;
+  document.getElementById('problema-nome').textContent = o.edital;
+  document.getElementById('problema-orgao').textContent = (o.orgao||'') + (o.uf ? ' — ' + o.uf : '');
+  document.getElementById('problema-texto').value = '';
+  problemaDigitou();
+  document.getElementById('problema-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('problema-texto').focus(), 50);
+}
+function problemaDigitou(){
+  const ok = document.getElementById('problema-texto').value.trim().length >= 3;
+  const b = document.getElementById('problema-btn'); b.disabled = !ok; b.style.opacity = ok ? '1' : '.5';
+}
+function fecharProblemaModal(){ document.getElementById('problema-modal').classList.remove('open'); _problemaAlvo = null; }
+async function _gravarProblema(id, descricao){
+  const o = oportunidades.find(x=>x.id===id); if(!o) return false;
+  const agora = new Date();
+  if(id >= 900000 && _sb){
+    const { data, error } = await _sb.from('editais').update({
+      problema_descricao: descricao, problema_em: descricao ? agora.toISOString() : null, problema_por: descricao ? 'admin' : null
+    }).eq('id', id - 900000).select('id');
+    if(error || !data || !data.length){ toast('Não foi possível gravar no banco' + (error ? ': ' + error.message : ' (sem permissão)')); return false; }
+  }
+  o.problemaDescricao = descricao || '';
+  o.problemaEm = descricao ? formatarDataBR(agora.toISOString().slice(0,10)) : '';
+  if(id < 900000) storeSet('oportunidades', oportunidades);
+  return true;
+}
+async function confirmarProblema(){
+  const id = _problemaAlvo; const txt = document.getElementById('problema-texto').value.trim();
+  if(!id || txt.length < 3) return;
+  if(!(await _gravarProblema(id, txt))) return;
+  fecharProblemaModal();
+  closeAdminForm();
+  renderHoje(); renderAdmin && renderAdmin();
+  nav('admin'); adminTab('hoje');
+  toast('Edital sinalizado — voltou para o Painel em “Editais com problema”');
+}
+async function marcarProblemaResolvido(id){
+  if(!id) return;
+  if(!(await _gravarProblema(id, ''))) return;
+  atualizarBotoesProblema(id);
+  renderHoje();
+  toast('Problema marcado como resolvido');
+}
 
 /* ---- Links dos portais na edição + confirmação de prazo ---- */
 function linkPncpDoEdital(numero){
@@ -5901,6 +5980,8 @@ function mapEditalSupabase(row){
     profissoes: (row.profissoes && row.profissoes.length) ? row.profissoes : ['Não identificada'],
     modalidade: normModalidade(row.modalidade) || 'Presencial',
     emailInscricao: row.email_inscricao || '',
+    problemaDescricao: row.problema_descricao || '',
+    problemaEm: row.problema_em ? formatarDataBR(String(row.problema_em).slice(0,10)) : '',
     abrangencia: row.abrangencia || 'Municipal',
     aceitaContratacao: Array.isArray(row.aceita_contratacao) ? row.aceita_contratacao : [],
     escolaridadeMinima: normEscolaridade(row.escolaridade_minima) || null,
@@ -6356,6 +6437,7 @@ function abrirRevisaoCompleta(id, tipo, item){
   const set = (k,v)=>{ document.getElementById(k).value = v; };
   document.getElementById('admin-form-title').textContent = 'Revisar antes de aprovar';
   document.getElementById('af-btn-excluir').style.display = 'none';
+  atualizarBotoesProblema(null);
   set('af-edital', tipo === 'diario' ? ('DOM ' + (item.municipio || '')).trim() : (item.numero_controle_pncp || 'PNCP'));
   set('af-orgao', item.orgao || (item.municipio ? ('Diário Oficial — ' + item.municipio) : ''));
   set('af-objeto', item.objeto || item.resumo || item.excerto || '');
