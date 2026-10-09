@@ -1102,6 +1102,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <button class="admin-tab" data-tab="triagem" onclick="adminTab('triagem')">Triagem<span class="admin-tab-badge" id="tabbadge-triagem" style="display:none;"></span></button>
     <button class="admin-tab" data-tab="editais" onclick="adminTab('editais')">Editais<span class="admin-tab-badge neutral" id="tabbadge-editais" style="display:none;"></span></button>
     <button class="admin-tab" data-tab="leads" onclick="adminTab('leads')">Leads e usuários<span class="admin-tab-badge" id="tabbadge-leads" style="display:none;"></span></button>
+    <button class="admin-tab" data-tab="aae" onclick="adminTab('aae')">Aderência (AAE)</button>
     <button class="admin-tab" data-tab="config" onclick="adminTab('config')">Configurações</button>
   </div>
 
@@ -1280,6 +1281,14 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
   </div>
 
+  </div>
+
+  <div class="admin-tabpanel" id="admin-tab-aae">
+    <div class="section-title" style="font-size:17px; margin-top:8px;">Análise de Aderência Estratégica</div>
+    <p class="section-sub">Para clientes que chegam de fora do site (ex.: grupo Radar Transformare). Cadastro Inicial PJ → score automático → relatório e prompt para IA.</p>
+    <div id="aae-lista" style="margin-bottom:8px;"></div>
+    <button class="btn-primary" onclick="aaeNovaCliente()">+ Nova cliente</button>
+    <div id="aae-form" style="margin-top:14px;"></div>
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-config">
@@ -5299,10 +5308,274 @@ async function saveAdminForm(){
 }
 
 
+/* ================= ANÁLISE DE ADERÊNCIA ESTRATÉGICA (AAE) — clientes de fora do site ================= */
+const AAE_CAMPOS = [
+  ['carimbo','Carimbo de data/hora'],['razao','Razão social'],['fantasia','Nome fantasia'],['cnpj','CNPJ'],
+  ['cidade','Cidade/UF onde atua'],['areas','Principais áreas de atuação'],['nprof','Nº de profissionais'],['profissoes','Profissões presentes'],
+  ['vinculo','Vínculo dos profissionais'],['atendimento','Forma de atendimento'],['regioes','Cidades/regiões de interesse'],['capacidade','Capacidade por semana'],
+  ['profissionais','Profissionais a disponibilizar'],['regProf','Profissionais com registro ativo?'],['regClinica','Clínica com cadastro ativo no Conselho?'],['especializacoes','Especializações/pós'],
+  ['interesses','Tipos de oportunidades de interesse'],['temEdital','Possui edital específico?'],['qualEdital','Qual edital?'],['faixaValor','Faixa de valor por atendimento'],
+  ['ampliar','Disponibilidade para ampliar'],['info','Informação adicional'],['apoio','Tipo de apoio desejado'],['site','Site profissional'],
+  ['email','E-mail profissional'],['gmn','Google Meu Negócio'],['redes','Outras redes']
+];
+const AAE_LONGOS = ['areas','profissoes','regioes','profissionais','especializacoes','interesses','info','apoio','qualEdital'];
+let aaeLista = [], aaeAtual = null; // aaeAtual = {id, nome, ficha:{}, analise:{editais:[],relatorio:'',final:''}}
+function aaeNovo(){ return {id:null, nome:'', ficha:{}, analise:{editais:[], relatorio:'', final:''}}; }
+async function aaeCarregar(){
+  if(typeof _sb==='undefined') return;
+  const {data,error} = await _sb.from('aae_clientes').select('*').order('atualizado_em',{ascending:false});
+  if(error){ toast('Erro ao carregar clientes AAE'); return; }
+  aaeLista = data||[]; aaeRenderLista();
+}
+function aaeRenderLista(){
+  const el = document.getElementById('aae-lista'); if(!el) return;
+  el.innerHTML = aaeLista.length ? aaeLista.map(c=>`<button class="btn-ghost" style="margin:0 6px 6px 0;" onclick="aaeAbrir(${c.id})">${esc(c.nome||'(sem nome)')}</button>`).join('') : '<span class="section-sub">Nenhuma cliente ainda.</span>';
+}
+function aaeAbrir(id){
+  const c = aaeLista.find(x=>x.id===id); if(!c) return;
+  aaeAtual = {id:c.id, nome:c.nome, ficha:c.ficha||{}, analise:Object.assign({editais:[],relatorio:'',final:''}, c.analise||{})};
+  aaeRenderForm();
+}
+function aaeNovaCliente(){ aaeAtual = aaeNovo(); aaeRenderForm(); }
+function aaeNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+function aaeColar(){
+  const txt = document.getElementById('aae-colar').value.replace(/\r/g,'');
+  if(!txt.trim()){ toast('Cole a linha da planilha primeiro'); return; }
+  const linhas = txt.split('\n').filter(l=>l.trim());
+  let cab = null, linha = linhas[linhas.length-1];
+  if(linhas.length>1 && /raz[aã]o social/i.test(linhas[0])) cab = linhas[0].split('\t');
+  const cel = linha.split('\t');
+  const f = {};
+  if(cab){
+    cab.forEach((h,i)=>{ const idx = AAE_CAMPOS.findIndex(([k,r])=>aaeNorm(h).startsWith(aaeNorm(r).slice(0,14))); if(idx>=0) f[AAE_CAMPOS[idx][0]] = (cel[i]||'').trim(); });
+  } else {
+    AAE_CAMPOS.forEach(([k],i)=>{ f[k] = (cel[i]||'').trim(); });
+  }
+  aaeLerForm();
+  aaeAtual.ficha = Object.assign({}, aaeAtual.ficha, f);
+  if(!aaeAtual.nome) aaeAtual.nome = f.fantasia || f.razao || '';
+  if(f.temEdital && /^s/i.test(f.temEdital) && f.qualEdital && !aaeAtual.analise.editais.length) aaeAtual.analise.editais.push({nome:f.qualEdital, orgao:'', uf:'', tipo:'', modalidade:'', valor:'', aceitaPJ:true, exigeEsp:false, profissoes:''});
+  aaeRenderForm(); toast('Linha importada — confira os campos');
+}
+function aaeEdital(e,i){
+  return `<div style="padding:10px; margin-bottom:8px; border:1px solid #ddd; border-radius:10px;" data-ed="${i}">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:6px;">
+      <input class="form-input" data-f="nome" placeholder="Edital" value="${esc(e.nome)}">
+      <input class="form-input" data-f="orgao" placeholder="Órgão" value="${esc(e.orgao)}">
+      <input class="form-input" data-f="uf" placeholder="UF" value="${esc(e.uf)}">
+      <input class="form-input" data-f="tipo" placeholder="Tipo do órgão (Prefeitura, Hospital…)" value="${esc(e.tipo)}">
+      <select class="form-input" data-f="modalidade">${['','Presencial','Online','Híbrido'].map(m=>`<option ${m===e.modalidade?'selected':''}>${m}</option>`).join('')}</select>
+      <input class="form-input" data-f="valor" placeholder="Valor por atendimento (R$)" value="${esc(e.valor)}">
+      <input class="form-input" data-f="profissoes" placeholder="Profissões aceitas" value="${esc(e.profissoes)}">
+    </div>
+    <label style="font-size:13px; margin-right:12px;"><input type="checkbox" data-f="aceitaPJ" ${e.aceitaPJ?'checked':''}> Aceita PJ</label>
+    <label style="font-size:13px; margin-right:12px;"><input type="checkbox" data-f="exigeEsp" ${e.exigeEsp?'checked':''}> Exige especialização</label>
+    <button class="btn-ghost" onclick="aaeRemoverEdital(${i})">Remover</button>
+  </div>`;
+}
+function aaeRenderForm(){
+  const el = document.getElementById('aae-form'); if(!el) return;
+  if(!aaeAtual){ el.innerHTML=''; return; }
+  const a = aaeAtual, f = a.ficha;
+  const campos = AAE_CAMPOS.map(([k,r])=>AAE_LONGOS.includes(k)
+    ? `<div style="grid-column:1/-1;"><label class="form-label">${r}</label><textarea class="form-input" rows="2" data-k="${k}">${esc(f[k]||'')}</textarea></div>`
+    : `<div><label class="form-label">${r}</label><input class="form-input" data-k="${k}" value="${esc(f[k]||'')}"></div>`).join('');
+  const opts = oportunidades.map(o=>`<option value="${o.id}">${esc((o.edital||'')+' — '+(o.orgao||''))}</option>`).join('');
+  el.innerHTML = `
+    <div class="section-title" style="font-size:16px;">${esc(a.nome||'Nova cliente')}</div>
+    <label class="form-label">Nome da cliente (para a lista)</label>
+    <input class="form-input" id="aae-nome" value="${esc(a.nome)}">
+    <label class="form-label" style="margin-top:10px;">Colar linha da planilha de respostas (pode incluir o cabeçalho)</label>
+    <textarea class="form-input" id="aae-colar" rows="3" placeholder="Copie a linha no Google Sheets e cole aqui"></textarea>
+    <button class="btn-ghost" onclick="aaeColar()">Importar linha</button>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; margin-top:12px;">${campos}</div>
+    <div class="section-title" style="font-size:16px; margin-top:16px;">Editais a analisar</div>
+    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+      <select class="form-input" id="aae-pick" style="max-width:420px;"><option value="">Escolher do catálogo…</option>${opts}</select>
+      <button class="btn-ghost" onclick="aaeAddCatalogo()">Adicionar</button>
+      <button class="btn-ghost" onclick="aaeAddManual()">+ Edital manual</button>
+    </div>
+    <div id="aae-editais">${a.analise.editais.map(aaeEdital).join('')}</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+      <button class="btn-primary" onclick="aaeCalcular()">Calcular aderência</button>
+      <button class="btn-ghost" onclick="aaeSalvar()">Salvar</button>
+      ${a.id?'<button class="btn-ghost" style="color:#c0392b;" onclick="aaeExcluir()">Excluir cliente</button>':''}
+    </div>
+    <div id="aae-resultado"></div>`;
+  if(a.analise.relatorio) aaeRenderResultado();
+}
+function aaeLerForm(){
+  if(!aaeAtual) return;
+  const nome = document.getElementById('aae-nome'); if(nome) aaeAtual.nome = nome.value.trim();
+  document.querySelectorAll('#aae-form [data-k]').forEach(i=>{ aaeAtual.ficha[i.dataset.k] = i.value.trim(); });
+  const eds = [];
+  document.querySelectorAll('#aae-editais [data-ed]').forEach(box=>{
+    const e = {}; box.querySelectorAll('[data-f]').forEach(i=>{ e[i.dataset.f] = i.type==='checkbox' ? i.checked : i.value.trim(); }); eds.push(e);
+  });
+  aaeAtual.analise.editais = eds;
+  const fin = document.getElementById('aae-final'); if(fin) aaeAtual.analise.final = fin.value;
+  const rel = document.getElementById('aae-relatorio'); if(rel) aaeAtual.analise.relatorio = rel.value;
+}
+function aaeAddManual(){ aaeLerForm(); aaeAtual.analise.editais.push({nome:'',orgao:'',uf:'',tipo:'',modalidade:'',valor:'',aceitaPJ:true,exigeEsp:false,profissoes:''}); aaeRenderForm(); }
+function aaeAddCatalogo(){
+  aaeLerForm();
+  const id = document.getElementById('aae-pick').value; const o = oportunidades.find(x=>String(x.id)===String(id)); if(!o) return;
+  const v = String(o.valorAtendimento||'').replace(/\./g,'').match(/\d+(?:,\d+)?/);
+  const pub = (o.aceitaContratacao||[]).join(' ');
+  aaeAtual.analise.editais.push({nome:o.edital||'', orgao:o.orgao||'', uf:o.uf||'', tipo:o.tipo||'', modalidade:o.modalidade||'', valor:v?v[0].replace(',','.'):'', aceitaPJ:!pub || /jur|cl[ií]nica/i.test(pub), exigeEsp:false, profissoes:(o.profissoes||[]).join(', ')});
+  aaeRenderForm();
+}
+function aaeRemoverEdital(i){ aaeLerForm(); aaeAtual.analise.editais.splice(i,1); aaeRenderForm(); }
+/* ---- Pontuação: pesos Profissional 30 / Operacional 20 / Financeira 20 / Interesse 15 / Barreiras 15 ---- */
+const AAE_PESOS = {prof:30, oper:20, fin:20, int:15, barr:15};
+function aaeFaixaMin(txt){
+  const nums = (String(txt||'').replace(/\./g,'').match(/\d+/g)||[]).map(Number); return nums.length ? Math.min(...nums) : null;
+}
+function aaePontuar(f, e){
+  const inf = [], fav = [], aten = [];
+  const cl = aaeNorm([f.profissoes,f.areas].join(' '));
+  const edProfs = aaeNorm(e.profissoes);
+  let prof = 60;
+  if(edProfs){
+    const ok = edProfs.split(/[,;\/]/).map(s=>s.trim()).filter(Boolean).some(p=>cl.includes(p.slice(0,6)));
+    prof = ok ? 100 : 20; (ok?fav:aten).push(ok?'Profissões da clínica compatíveis com o edital':'Nenhuma profissão da clínica consta no edital');
+  } else inf.push('Profissões aceitas pelo edital não informadas');
+  let oper = 50; const at = aaeNorm(f.atendimento), reg = aaeNorm([f.cidade,f.regioes].join(' '));
+  if(e.modalidade){
+    const m = aaeNorm(e.modalidade);
+    const ok = m==='online' ? /online/.test(at) : m==='presencial' ? /presencial/.test(at) : at!=='';
+    oper = ok ? 80 : 25; (ok?fav:aten).push(ok?`Forma de atendimento da clínica atende a modalidade ${e.modalidade}`:`Clínica não informa atendimento ${e.modalidade}`);
+  } else inf.push('Modalidade do edital não informada');
+  if(e.uf){ if(reg.includes(aaeNorm(e.uf))){ oper=Math.min(100,oper+20); fav.push('Região do edital dentro da área de interesse'); } else if(reg){ aten.push('UF do edital não consta nas regiões de interesse'); } }
+  let fin = 50; const min = aaeFaixaMin(f.faixaValor), val = parseFloat(String(e.valor).replace(',','.'));
+  if(min!=null && val){ fin = val>=min ? 100 : val>=min*0.8 ? 60 : 25; (fin>=60?fav:aten).push(`Valor do edital R$ ${val} vs. mínimo desejado R$ ${min}`); }
+  else inf.push('Valor do edital ou faixa desejada não informado');
+  let int = 50; const ints = aaeNorm(f.interesses), tp = aaeNorm(e.tipo+' '+e.orgao);
+  if(ints && tp.trim()){
+    const chaves = [['prefeitura','prefeitura'],['governo estadual','estad'],['governo federal','federal'],['forca','forca'],['fundac','fundac'],['hospital','hospital'],['empresa','empresa'],['plano','plano'],['orgao','orgao']];
+    const ok = chaves.some(([c,t])=>ints.includes(c) && tp.includes(t)) || (ints.includes('nacional') && /online/.test(aaeNorm(e.modalidade)));
+    int = ok ? 100 : 40; (ok?fav:aten).push(ok?'Tipo de órgão alinhado ao interesse da clínica':'Tipo de órgão fora dos interesses declarados');
+  } else inf.push('Tipo de órgão ou interesses não informados');
+  let barr = 100;
+  if(e.aceitaPJ===false){ barr-=40; aten.push('Edital não aceita PJ'); }
+  if(/^n/i.test(f.regClinica||'')){ barr-=30; aten.push('Clínica sem cadastro ativo no Conselho'); }
+  if(/^n|parcial|alguns/i.test(f.regProf||'') ){ barr-=25; aten.push('Nem todos os profissionais com registro ativo'); }
+  if(e.exigeEsp && !f.especializacoes){ barr-=25; aten.push('Edital exige especialização e a clínica não informou'); }
+  barr = Math.max(0,barr);
+  const sub = {prof,oper,fin,int,barr};
+  const score = Math.round(Object.keys(sub).reduce((s,k)=>s+sub[k]*AAE_PESOS[k]/100,0));
+  const faixa = score>=85?['🟢','Alta']:score>=70?['🟡','Média']:score>=50?['🟠','Baixa']:['🔴','Insuficiente'];
+  const rec = score>=85?'Avançar para DEH':score>=70?'Avançar para DEH com ressalvas':score>=50?'Avançar apenas após regularizar os pontos de atenção':'Não recomendar continuidade';
+  return {sub,score,faixa,rec,inf,fav,aten};
+}
+function aaeCalcular(){
+  aaeLerForm();
+  if(!aaeAtual.analise.editais.length){ toast('Adicione ao menos um edital'); return; }
+  const f = aaeAtual.ficha;
+  const res = aaeAtual.analise.editais.map(e=>Object.assign({e}, aaePontuar(f,e)));
+  aaeAtual.analise.resultados = res.map(r=>({nome:r.e.nome,score:r.score,faixa:r.faixa[1],rec:r.rec}));
+  aaeAtual.analise.relatorio = aaeGerarRelatorio(f,res);
+  aaeAtual.analise.prompt = aaeGerarPrompt(f,res);
+  aaeRenderResultado();
+}
+function aaeGerarRelatorio(f,res){
+  const nome = f.fantasia||f.razao||aaeAtual.nome;
+  const L = [];
+  L.push(`ANÁLISE DE ADERÊNCIA ESTRATÉGICA — ${nome}`,'');
+  L.push('1. RESUMO EXECUTIVO E PERFIL CADASTRAL');
+  L.push(`Razão social: ${f.razao||'—'} | CNPJ: ${f.cnpj||'—'} | Cidade/UF: ${f.cidade||'—'}`);
+  L.push(`Profissões: ${f.profissoes||'—'} | Profissionais: ${f.nprof||'—'} | Atendimento: ${f.atendimento||'—'}`);
+  L.push(`Registro profissionais: ${f.regProf||'—'} | Cadastro da clínica: ${f.regClinica||'—'} | Faixa de valor: ${f.faixaValor||'—'}`,'');
+  L.push('2. SCORE CONSOLIDADO','Edital | Score | Status | Recomendação');
+  res.forEach(r=>L.push(`${r.e.nome||'(sem nome)'} | ${r.score}% | ${r.faixa[0]} ${r.faixa[1]} | ${r.rec}`));
+  L.push('');
+  L.push('3. DETALHAMENTO POR EDITAL');
+  res.forEach(r=>{
+    L.push(`— ${r.e.nome||'(sem nome)'} (${r.e.orgao||'órgão não informado'})`);
+    L.push(`Compatibilidade profissional ${r.sub.prof} | Operacional ${r.sub.oper} | Financeira ${r.sub.fin} | Interesse ${r.sub.int} | Barreiras ${r.sub.barr}`);
+    if(r.fav.length) L.push('Fatores favoráveis: '+r.fav.join('; '));
+    if(r.aten.length) L.push('Pontos de atenção: '+r.aten.join('; '));
+    if(r.inf.length) L.push('Inferência baseada em informações parciais: '+r.inf.join('; '));
+    L.push('');
+  });
+  L.push('💡 Radar Transformare – Análise de Aderência Estratégica');
+  const melhor = res.slice().sort((a,b)=>b.score-a.score)[0];
+  L.push(`🎯 Decisão recomendada: ${melhor.rec} (${melhor.e.nome||'melhor edital'}, ${melhor.score}%)`);
+  L.push('🚀 Próximo movimento estratégico: ');
+  return L.join('\n');
+}
+function aaeGerarPrompt(f,res){
+  const ficha = AAE_CAMPOS.filter(([k])=>f[k]&&k!=='carimbo').map(([k,r])=>`- ${r}: ${f[k]}`).join('\n');
+  const eds = res.map(r=>`- ${r.e.nome} | Órgão: ${r.e.orgao||'?'} | UF: ${r.e.uf||'?'} | Tipo: ${r.e.tipo||'?'} | Modalidade: ${r.e.modalidade||'?'} | Valor: ${r.e.valor||'?'} | Aceita PJ: ${r.e.aceitaPJ?'sim':'não'} | Exige especialização: ${r.e.exigeEsp?'sim':'não'}\n  Pré-score automático: ${r.score}% (${r.faixa[1]}); componentes: Prof ${r.sub.prof}, Oper ${r.sub.oper}, Fin ${r.sub.fin}, Interesse ${r.sub.int}, Barreiras ${r.sub.barr}`).join('\n');
+  return `Você é o analista do Radar Transformare. Faça a Análise de Aderência Estratégica (AAE) desta clínica (PJ) para os editais abaixo.
+Critérios e pesos: Compatibilidade Profissional 30%, Operacional 20%, Financeira 20%, Interesse Estratégico 15%, Barreiras Iniciais 15%.
+Faixas: 85–100 🟢 Alta; 70–84 🟡 Média; 50–69 🟠 Baixa; 0–49 🔴 Insuficiente. Recomendação: Avançar para DEH / Avançar com ressalvas / Não recomendar continuidade.
+Responda neste formato: 1 Resumo Executivo; 2 Score (0–100) por edital em tabela; 3 Fatores Favoráveis; 4 Pontos de Atenção; 5 Inferências (marque "Inferência baseada em informações parciais"); 6 Potencial Estratégico (financeiro, institucional, expansão); 7 Recomendação Final; 8 Próximo Passo. Em cada seção, inclua "Análise Estratégica (So What?)".
+Encerre com: "💡 Radar Transformare – Análise de Aderência Estratégica / 🎯 Decisão recomendada / 🚀 Próximo movimento estratégico".
+Não invente dados; quando faltar informação, diga que é inferência.
+
+DADOS DA CLÍNICA:
+${ficha}
+
+EDITAIS:
+${eds}`;
+}
+function aaeRenderResultado(){
+  const el = document.getElementById('aae-resultado'); if(!el) return;
+  const a = aaeAtual.analise;
+  const tab = (a.resultados||[]).map(r=>`<tr><td>${esc(r.nome)}</td><td><b>${r.score}%</b></td><td>${esc(r.faixa)}</td><td>${esc(r.rec)}</td></tr>`).join('');
+  el.innerHTML = `
+    <div class="section-title" style="font-size:16px; margin-top:16px;">Resultado</div>
+    ${tab?`<table style="width:100%; font-size:13px; border-collapse:collapse;"><tr style="text-align:left;"><th>Edital</th><th>Score</th><th>Faixa</th><th>Recomendação</th></tr>${tab}</table>`:''}
+    <label class="form-label" style="margin-top:10px;">Relatório (editável)</label>
+    <textarea class="form-input" id="aae-relatorio" rows="16">${esc(a.relatorio||'')}</textarea>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin:8px 0;">
+      <button class="btn-ghost" onclick="aaeCopiar('aae-relatorio','Relatório copiado')">Copiar relatório</button>
+      <button class="btn-ghost" onclick="aaeCopiarPrompt()">Copiar prompt para IA</button>
+      <button class="btn-ghost" onclick="aaeImprimir()">Imprimir / PDF</button>
+    </div>
+    <label class="form-label">Texto final devolvido pela IA (colar aqui e salvar)</label>
+    <textarea class="form-input" id="aae-final" rows="10">${esc(a.final||'')}</textarea>`;
+}
+async function aaeCopiar(id,msg){
+  const ta = document.getElementById(id);
+  try{ await navigator.clipboard.writeText(ta.value); toast(msg); }catch(e){ ta.select(); toast('Copie com Ctrl+C'); }
+}
+async function aaeCopiarPrompt(){
+  try{ await navigator.clipboard.writeText(aaeAtual.analise.prompt||''); toast('Prompt copiado — cole no Claude ou Gemini'); }
+  catch(e){ toast('Não foi possível copiar'); }
+}
+function aaeImprimir(){
+  aaeLerForm();
+  const w = window.open('','_blank'); if(!w) return;
+  const txt = aaeAtual.analise.final || aaeAtual.analise.relatorio || '';
+  w.document.write(`<html><head><title>AAE — ${esc(aaeAtual.nome)}</title></head><body style="font-family:Arial,sans-serif; white-space:pre-wrap; line-height:1.5; padding:24px;">${esc(txt)}</body></html>`);
+  w.document.close(); w.print();
+}
+async function aaeSalvar(){
+  aaeLerForm();
+  if(!aaeAtual.nome){ aaeAtual.nome = aaeAtual.ficha.fantasia || aaeAtual.ficha.razao || ''; }
+  if(!aaeAtual.nome){ toast('Informe o nome da cliente'); return; }
+  const row = {nome:aaeAtual.nome, tipo:'PJ', ficha:aaeAtual.ficha, analise:aaeAtual.analise, atualizado_em:new Date().toISOString()};
+  const q = aaeAtual.id ? _sb.from('aae_clientes').update(row).eq('id',aaeAtual.id).select() : _sb.from('aae_clientes').insert(row).select();
+  const {data,error} = await q;
+  if(error){ toast('Erro ao salvar: '+error.message); return; }
+  if(data && data[0]) aaeAtual.id = data[0].id;
+  toast('Cliente salva'); await aaeCarregar(); aaeRenderForm();
+}
+async function aaeExcluir(){
+  if(!aaeAtual||!aaeAtual.id) return;
+  if(!confirm('Excluir '+aaeAtual.nome+'? Isso não pode ser desfeito.')) return;
+  const {error} = await _sb.from('aae_clientes').delete().eq('id',aaeAtual.id);
+  if(error){ toast('Erro ao excluir'); return; }
+  aaeAtual = null; toast('Cliente excluída'); await aaeCarregar(); aaeRenderForm();
+}
+
 /* ================= PAINEL DO ANALISTA: abas, "Hoje" e confirmação de edição ================= */
 let adminTabAtual = 'hoje';
 function adminTab(nome){
   adminTabAtual = nome;
+  if(nome==='aae') aaeCarregar();
   document.querySelectorAll('#admin-tabs .admin-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab === nome));
   document.querySelectorAll('.admin-tabpanel').forEach(p=>p.classList.toggle('active', p.id === 'admin-tab-'+nome));
 }
