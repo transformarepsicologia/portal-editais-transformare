@@ -5389,7 +5389,8 @@ function aaeRenderForm(){
     <textarea class="form-input" id="aae-colar" rows="3" placeholder="Copie a linha no Google Sheets e cole aqui"></textarea>
     <button class="btn-ghost" onclick="aaeColar()">Importar linha</button>
     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; margin-top:12px;">${campos}</div>
-    <div class="section-title" style="font-size:16px; margin-top:16px;">Editais a analisar</div>
+    <div class="section-title" style="font-size:16px; margin-top:16px;">Edital indicado pela cliente (se houver)</div>
+    <p class="section-sub">Além do indicado, o cálculo avalia todos os editais abertos do site e mostra os 5 mais aderentes.</p>
     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
       <select class="form-input" id="aae-pick" style="max-width:420px;"><option value="">Escolher do catálogo…</option>${opts}</select>
       <button class="btn-ghost" onclick="aaeAddCatalogo()">Adicionar</button>
@@ -5417,12 +5418,15 @@ function aaeLerForm(){
   const rel = document.getElementById('aae-relatorio'); if(rel) aaeAtual.analise.relatorio = rel.value;
 }
 function aaeAddManual(){ aaeLerForm(); aaeAtual.analise.editais.push({nome:'',orgao:'',uf:'',tipo:'',modalidade:'',valor:'',aceitaPJ:true,exigeEsp:false,profissoes:''}); aaeRenderForm(); }
+function aaeDeCatalogo(o){
+  const v = String(o.valorAtendimento||'').replace(/\./g,'').match(/\d+(?:,\d+)?/);
+  const pub = (o.aceitaContratacao||[]).join(' ');
+  return {nome:o.edital||'', orgao:o.orgao||'', uf:o.uf||'', tipo:o.tipo||'', modalidade:o.modalidade||'', valor:v?v[0].replace(',','.'):'', aceitaPJ:!pub || /jur|cl[ií]nica/i.test(pub), exigeEsp:false, profissoes:(o.profissoes||[]).join(', ')};
+}
 function aaeAddCatalogo(){
   aaeLerForm();
   const id = document.getElementById('aae-pick').value; const o = oportunidades.find(x=>String(x.id)===String(id)); if(!o) return;
-  const v = String(o.valorAtendimento||'').replace(/\./g,'').match(/\d+(?:,\d+)?/);
-  const pub = (o.aceitaContratacao||[]).join(' ');
-  aaeAtual.analise.editais.push({nome:o.edital||'', orgao:o.orgao||'', uf:o.uf||'', tipo:o.tipo||'', modalidade:o.modalidade||'', valor:v?v[0].replace(',','.'):'', aceitaPJ:!pub || /jur|cl[ií]nica/i.test(pub), exigeEsp:false, profissoes:(o.profissoes||[]).join(', ')});
+  aaeAtual.analise.editais.push(aaeDeCatalogo(o));
   aaeRenderForm();
 }
 function aaeRemoverEdital(i){ aaeLerForm(); aaeAtual.analise.editais.splice(i,1); aaeRenderForm(); }
@@ -5470,10 +5474,19 @@ function aaePontuar(f, e){
 }
 function aaeCalcular(){
   aaeLerForm();
-  if(!aaeAtual.analise.editais.length){ toast('Adicione ao menos um edital'); return; }
   const f = aaeAtual.ficha;
-  const res = aaeAtual.analise.editais.map(e=>Object.assign({e}, aaePontuar(f,e)));
-  aaeAtual.analise.resultados = res.map(r=>({nome:r.e.nome,score:r.score,faixa:r.faixa[1],rec:r.rec}));
+  const indicados = aaeAtual.analise.editais.map(e=>Object.assign({e, origem:'Indicado pela cliente'}, aaePontuar(f,e)));
+  // Todos os editais abertos do site, pontuados; ficam os 5 mais aderentes (fora os já indicados)
+  const nomesInd = indicados.map(r=>aaeNorm(r.e.nome));
+  const abertos = oportunidades.filter(o=>{
+    if(typeof visivelAoCliente==='function' && !visivelAoCliente(o)) return false;
+    return ['Aberto','Próximo do encerramento','Próximo da abertura'].includes(situacaoExibida(o));
+  }).map(aaeDeCatalogo).filter(e=>e.nome && !nomesInd.includes(aaeNorm(e.nome)));
+  const site = abertos.map(e=>Object.assign({e, origem:'Radar (site)'}, aaePontuar(f,e)))
+    .sort((a,b)=>b.score-a.score).slice(0,5);
+  const res = indicados.concat(site);
+  if(!res.length){ toast('Adicione um edital indicado ou cadastre editais abertos no site'); return; }
+  aaeAtual.analise.resultados = res.map(r=>({nome:r.e.nome,orgao:r.e.orgao,origem:r.origem,score:r.score,faixa:r.faixa[1],rec:r.rec}));
   aaeAtual.analise.relatorio = aaeGerarRelatorio(f,res);
   aaeAtual.analise.prompt = aaeGerarPrompt(f,res);
   aaeRenderResultado();
@@ -5487,11 +5500,11 @@ function aaeGerarRelatorio(f,res){
   L.push(`Profissões: ${f.profissoes||'—'} | Profissionais: ${f.nprof||'—'} | Atendimento: ${f.atendimento||'—'}`);
   L.push(`Registro profissionais: ${f.regProf||'—'} | Cadastro da clínica: ${f.regClinica||'—'} | Faixa de valor: ${f.faixaValor||'—'}`,'');
   L.push('2. SCORE CONSOLIDADO','Edital | Score | Status | Recomendação');
-  res.forEach(r=>L.push(`${r.e.nome||'(sem nome)'} | ${r.score}% | ${r.faixa[0]} ${r.faixa[1]} | ${r.rec}`));
+  res.forEach(r=>L.push(`${r.e.nome||'(sem nome)'} | ${r.origem} | ${r.score}% | ${r.faixa[0]} ${r.faixa[1]} | ${r.rec}`));
   L.push('');
   L.push('3. DETALHAMENTO POR EDITAL');
   res.forEach(r=>{
-    L.push(`— ${r.e.nome||'(sem nome)'} (${r.e.orgao||'órgão não informado'})`);
+    L.push(`— ${r.e.nome||'(sem nome)'} (${r.e.orgao||'órgão não informado'}) [${r.origem}]`);
     L.push(`Compatibilidade profissional ${r.sub.prof} | Operacional ${r.sub.oper} | Financeira ${r.sub.fin} | Interesse ${r.sub.int} | Barreiras ${r.sub.barr}`);
     if(r.fav.length) L.push('Fatores favoráveis: '+r.fav.join('; '));
     if(r.aten.length) L.push('Pontos de atenção: '+r.aten.join('; '));
@@ -5506,7 +5519,7 @@ function aaeGerarRelatorio(f,res){
 }
 function aaeGerarPrompt(f,res){
   const ficha = AAE_CAMPOS.filter(([k])=>f[k]&&k!=='carimbo').map(([k,r])=>`- ${r}: ${f[k]}`).join('\n');
-  const eds = res.map(r=>`- ${r.e.nome} | Órgão: ${r.e.orgao||'?'} | UF: ${r.e.uf||'?'} | Tipo: ${r.e.tipo||'?'} | Modalidade: ${r.e.modalidade||'?'} | Valor: ${r.e.valor||'?'} | Aceita PJ: ${r.e.aceitaPJ?'sim':'não'} | Exige especialização: ${r.e.exigeEsp?'sim':'não'}\n  Pré-score automático: ${r.score}% (${r.faixa[1]}); componentes: Prof ${r.sub.prof}, Oper ${r.sub.oper}, Fin ${r.sub.fin}, Interesse ${r.sub.int}, Barreiras ${r.sub.barr}`).join('\n');
+  const eds = res.map(r=>`- [${r.origem}] ${r.e.nome} | Órgão: ${r.e.orgao||'?'} | UF: ${r.e.uf||'?'} | Tipo: ${r.e.tipo||'?'} | Modalidade: ${r.e.modalidade||'?'} | Valor: ${r.e.valor||'?'} | Aceita PJ: ${r.e.aceitaPJ?'sim':'não'} | Exige especialização: ${r.e.exigeEsp?'sim':'não'}\n  Pré-score automático: ${r.score}% (${r.faixa[1]}); componentes: Prof ${r.sub.prof}, Oper ${r.sub.oper}, Fin ${r.sub.fin}, Interesse ${r.sub.int}, Barreiras ${r.sub.barr}`).join('\n');
   return `Você é o analista do Radar Transformare. Faça a Análise de Aderência Estratégica (AAE) desta clínica (PJ) para os editais abaixo.
 Critérios e pesos: Compatibilidade Profissional 30%, Operacional 20%, Financeira 20%, Interesse Estratégico 15%, Barreiras Iniciais 15%.
 Faixas: 85–100 🟢 Alta; 70–84 🟡 Média; 50–69 🟠 Baixa; 0–49 🔴 Insuficiente. Recomendação: Avançar para DEH / Avançar com ressalvas / Não recomendar continuidade.
@@ -5517,16 +5530,16 @@ Não invente dados; quando faltar informação, diga que é inferência.
 DADOS DA CLÍNICA:
 ${ficha}
 
-EDITAIS:
+EDITAIS (os marcados [Indicado pela cliente] foram pedidos por ela; os [Radar (site)] são os mais aderentes do portal — apresente no máximo os 5 melhores do Radar):
 ${eds}`;
 }
 function aaeRenderResultado(){
   const el = document.getElementById('aae-resultado'); if(!el) return;
   const a = aaeAtual.analise;
-  const tab = (a.resultados||[]).map(r=>`<tr><td>${esc(r.nome)}</td><td><b>${r.score}%</b></td><td>${esc(r.faixa)}</td><td>${esc(r.rec)}</td></tr>`).join('');
+  const tab = (a.resultados||[]).map(r=>`<tr><td>${esc(r.nome)}</td><td>${esc(r.origem||'')}</td><td><b>${r.score}%</b></td><td>${esc(r.faixa)}</td><td>${esc(r.rec)}</td></tr>`).join('');
   el.innerHTML = `
     <div class="section-title" style="font-size:16px; margin-top:16px;">Resultado</div>
-    ${tab?`<table style="width:100%; font-size:13px; border-collapse:collapse;"><tr style="text-align:left;"><th>Edital</th><th>Score</th><th>Faixa</th><th>Recomendação</th></tr>${tab}</table>`:''}
+    ${tab?`<table style="width:100%; font-size:13px; border-collapse:collapse;"><tr style="text-align:left;"><th>Edital</th><th>Origem</th><th>Score</th><th>Faixa</th><th>Recomendação</th></tr>${tab}</table>`:''}
     <label class="form-label" style="margin-top:10px;">Relatório (editável)</label>
     <textarea class="form-input" id="aae-relatorio" rows="16">${esc(a.relatorio||'')}</textarea>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:8px 0;">
