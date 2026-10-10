@@ -3444,11 +3444,11 @@ function openDetalhe(id){
           `}
         </div>
 
-        <details class="panel" style="cursor:pointer;">
-          <summary style="cursor:pointer; font-size:13px; color:var(--ink-muted); display:flex; align-items:center; gap:8px; list-style:none;">
-            <span style="font-size:16px;">ℹ️</span> Este resumo não substitui a leitura do edital — toque para saber mais
+        <details class="panel" style="cursor:pointer; border:1px solid var(--amber); border-left:4px solid var(--amber); background:rgba(245,169,62,0.10);">
+          <summary style="cursor:pointer; font-size:14px; font-weight:600; color:var(--ink); display:flex; align-items:center; gap:10px; list-style:none; line-height:1.4;">
+            <span style="font-size:20px;">⚠️</span> <span>Este resumo não substitui a leitura do edital <span style="color:var(--amber); font-weight:500;">— toque para saber mais</span></span>
           </summary>
-          <div style="margin-top:10px; font-size:13px; color:var(--ink-muted); line-height:1.55;">
+          <div style="margin-top:10px; font-size:13px; color:var(--ink); line-height:1.55;">
             As informações acima foram organizadas pela Transformare a partir do edital oficial, para facilitar sua decisão rápida — mas não substituem a leitura completa do documento antes de qualquer inscrição. Prazos, valores e requisitos podem ter sido retificados após a publicação original.
             <div style="margin-top:10px;">
               <button class="wa-btn" onclick="openLeadModal(${o.id}, 'duvida-resumo', 'Tenho outra dúvida')">Tirar dúvida com a equipe técnica</button>
