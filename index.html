@@ -5215,9 +5215,16 @@ function afTextoLimpar(){
 function afTextoPreencherFicha(){
   const t = document.getElementById('af-texto-md').value.trim();
   if(!t){ toast('Anexe ou cole o texto do edital primeiro'); return; }
-  document.getElementById('af-analise-ia').value = t;
-  preencherComAnaliseIA();
-  toast('Confira os campos preenchidos antes de salvar');
+  // Preenche só o que está vazio, sem sobrescrever o que já foi digitado, e sem deixar
+  // o texto do edital aparecendo na caixa "Colar a análise".
+  const caixa = document.getElementById('af-analise-ia');
+  const chk = document.getElementById('af-analise-so-vazios');
+  const chkAntes = chk.checked, caixaAntes = caixa.value;
+  if(!document.querySelector('#af-analise-grupos .chip-opt.selected')) marcarGruposAnalise(true);
+  caixa.value = t; chk.checked = true;
+  try{ preencherComAnaliseIA(); }
+  finally { caixa.value = caixaAntes; chk.checked = chkAntes; }
+  toast('Só os campos vazios foram preenchidos — confira antes de salvar');
 }
 async function afTextoSalvar(idReal){
   const t = (document.getElementById('af-texto-md').value || '').trim();
