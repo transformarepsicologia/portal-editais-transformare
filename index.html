@@ -5447,7 +5447,7 @@ function aaeAddManual(){ aaeLerForm(); aaeAtual.analise.editais.push({nome:'',or
 function aaeDeCatalogo(o){
   const v = String(o.valorAtendimento||'').replace(/\./g,'').match(/\d+(?:,\d+)?/);
   const pub = (o.aceitaContratacao||[]).join(' ');
-  return {nome:o.edital||'', orgao:o.orgao||'', uf:o.uf||'', tipo:o.tipo||'', modalidade:o.modalidade||'', valor:v?v[0].replace(',','.'):'', aceitaPJ:!pub || /jur|cl[ií]nica/i.test(pub), exigeEsp:false, profissoes:(o.profissoes||[]).join(', '), valorTexto:String(o.valorAtendimento||''), texto:[o.objeto,o.requisitos].filter(Boolean).join(' '), abrangencia:o.abrangencia||''};
+  return {nome:o.edital||'', orgao:o.orgao||'', uf:o.uf||'', tipo:o.tipo||'', modalidade:o.modalidade||'', valor:v?v[0].replace(',','.'):'', aceitaPJ:!pub || /jur|cl[ií]nica/i.test(pub), exigeEsp:false, profissoes:(o.profissoes||[]).join(', '), valorTexto:String(o.valorAtendimento||''), cidade:o.cidade||'', texto:[o.objeto,o.requisitos].filter(Boolean).join(' '), abrangencia:o.abrangencia||''};
 }
 function aaeAddCatalogo(){
   aaeLerForm();
@@ -5467,13 +5467,32 @@ function aaeProfOK(clienteTxt, edTxt){
   const cl = aaeNorm(clienteTxt); const eds = aaeNorm(edTxt).split(/[,;\/]| e /).map(x=>x.trim()).filter(x=>x.length>=4);
   return eds.some(x=>cl.includes(x.slice(0,5)));
 }
+const AAE_RMPA = ['porto alegre','alvorada','cachoeirinha','canoas','eldorado do sul','esteio','glorinha','gravatai','guaiba','nova santa rita','novo hamburgo','sao leopoldo','sapucaia do sul','viamao','charqueadas','sapiranga','campo bom','estancia velha','ivoti','dois irmaos','portao','triunfo','taquara','parobe','montenegro','sao jeronimo','arroio dos ratos','nova petropolis'];
+function aaeCidadeEdital(e){
+  if(e.cidade && e.cidade!=='—') return aaeNorm(e.cidade);
+  const m = String(e.orgao||'').match(/(?:municipio|prefeitura municipal|secretaria municipal(?: de sa[uú]de)?|fundo municipal(?: de sa[uú]de)?|c[aâ]mara municipal) de ([A-Za-zÀ-ÿ' .-]+?)(?:\s*[-\/(]|$)/i);
+  return m ? aaeNorm(m[1]).trim() : '';
+}
+function aaeCidadesCliente(f){
+  const base = aaeNorm(String(f.cidade||'').replace(/[-\/,].*$/,'')).trim();
+  const lista = base ? [base] : [];
+  aaeNorm(f.regioes||'').split(/[,;\/]| e |\bregiao\b/).map(x=>x.trim()).filter(x=>x.length>3 && !/on-?line|brasil|tudo|todo|nacional|^[a-z]{2}$/.test(x)).forEach(x=>lista.push(x));
+  if(base && AAE_RMPA.includes(base)) AAE_RMPA.forEach(c=>lista.push(c)); // região metropolitana de Porto Alegre
+  return Array.from(new Set(lista));
+}
 function aaeGeoOK(f, e){
-  const online = /online/.test(aaeNorm(e.modalidade)) && !/presencial/.test(aaeNorm(e.modalidade)) && /online|nacional|brasil/.test(aaeNorm(f.atendimento+' '+f.interesses+' '+f.regioes));
-  if(online) return true;
-  if(/nacional|federal/.test(aaeNorm(e.abrangencia||'')) && !e.uf) return true;
+  const mod = aaeNorm(e.modalidade);
+  const soOnline = /online/.test(mod) && !/presencial/.test(mod);
+  if(soOnline) return /online|nacional|brasil/.test(aaeNorm(f.atendimento+' '+f.interesses+' '+f.regioes)) ? true : null;
+  // Presencial (ou híbrido): precisa ser na cidade/região de atuação da clínica
   const ufs = aaeUFs([f.cidade,f.regioes].join(' '));
-  if(!e.uf || !ufs.length) return null; // sem dado
-  return ufs.includes(String(e.uf).toUpperCase());
+  if(!e.uf) return null;
+  const cidEd = aaeCidadeEdital(e), cids = aaeCidadesCliente(f);
+  if(cidEd && cids.some(c=>cidEd===c || cidEd.includes(c) || c.includes(cidEd))) return true;
+  const abr = aaeNorm(e.abrangencia||'');
+  if(/estadual|nacional|regional/.test(abr) && ufs.includes(String(e.uf).toUpperCase())) return true;
+  if(!cids.length && !ufs.length) return null;
+  return false;
 }
 function aaePontuar(f, e){
   const inf = [], fav = [], aten = [];
@@ -5500,7 +5519,7 @@ function aaePontuar(f, e){
   } else inf.push('Modalidade do edital não informada');
   const geo = aaeGeoOK(f,e);
   if(geo===true){ oper=Math.min(100,oper+20); fav.push('Região do edital compatível com a atuação/interesse da clínica'); }
-  else if(geo===false){ oper=Math.min(oper,25); aten.push(`Edital em ${e.uf}, fora das regiões de interesse da clínica`); }
+  else if(geo===false){ oper=Math.min(oper,25); aten.push(`Edital presencial em ${aaeCidadeEdital(e)?aaeTitulo(aaeCidadeEdital(e))+' ':''}(${e.uf}), fora da região de atuação da clínica`); }
   else inf.push('Região do edital ou da clínica não informada');
   // 3) Financeira
   let fin = 50; const min = aaeFaixaMin(f.faixaValor), val = parseFloat(String(e.valor).replace(',','.'));
@@ -5529,13 +5548,14 @@ function aaePontuar(f, e){
   if(achados.length) fav.push('Edital cita áreas de atuação da clínica ('+achados.length+')');
   if(fin===100 && min!=null && val>=min*1.2) bonus = Math.min(5, bonus+1);
   const sub = {prof,oper,fin,int,barr};
-  const score = Math.min(100, Math.round(Object.keys(sub).reduce((t,k)=>t+sub[k]*AAE_PESOS[k]/100,0)) + bonus);
+  const teto = inf.length ? 92 : 97;
+  const score = Math.min(teto, Math.round(Object.keys(sub).reduce((t,k)=>t+sub[k]*AAE_PESOS[k]/100,0)) + bonus);
   const faixa = score>=85?['🟢','Alta Aderência','#1e8e4e']:score>=70?['🟡','Média Aderência','#c9a100']:score>=50?['🟠','Baixa Aderência','#e07b00']:['🔴','Aderência Insuficiente','#c0392b'];
   const rec = score>=85?'Avançar para o DEH':score>=70?'Avançar para o DEH com ressalvas':score>=50?'Necessita adequações prévias antes do DEH':'Não recomendar continuidade';
   // Preferência declarada pela cliente: valor desejado, região e tipo de órgão
   const fora = [];
   if(min!=null && val && val<min) fora.push(`o valor (R$ ${val.toLocaleString('pt-BR')}) fica abaixo da faixa considerada interessante (a partir de R$ ${min.toLocaleString('pt-BR')})`);
-  if(geo===false) fora.push(`o edital é em ${e.uf}, fora das regiões de interesse`);
+  if(geo===false) fora.push(`o edital é presencial em ${aaeCidadeEdital(e)?aaeTitulo(aaeCidadeEdital(e))+' ':''}(${e.uf}), fora da região de atuação`);
   if(int<=35) fora.push('o tipo de órgão não está entre os interesses declarados');
   return {sub,score,faixa,rec,inf,fav,aten,geo,fora,pref:fora.length===0,profOk:!!e.profissoes && prof>=40};
 }
@@ -5753,7 +5773,8 @@ function aaeTres(res){
 }
 function aaeOutras(res, tres){
   // demais possibilidades (até 2): reconhecidas na análise como fora da escolha preferencial
-  return res.filter(r=>!tres.includes(r)).sort((a,b)=>(b.pref-a.pref)||(b.score-a.score)).slice(0,2);
+  const vistos = new Set(tres.map(r=>aaeNorm(r.e.nome)));
+  return res.filter(r=>!tres.includes(r) && !vistos.has(aaeNorm(r.e.nome))).sort((a,b)=>(b.pref-a.pref)||(b.score-a.score)).slice(0,2);
 }
 function aaeTitulo(s){
   s = String(s||'').trim();
