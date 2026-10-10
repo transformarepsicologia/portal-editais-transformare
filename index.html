@@ -2452,6 +2452,19 @@ function parseMoneyValue(str){
   const num = parseFloat(m[1].replace(/\./g,'').replace(',', '.'));
   return isNaN(num) ? null : num;
 }
+// Faixa de valores quando o edital tem vários: "R$ 100,00 a R$ 185,12". Junta o valor por atendimento
+// e o primeiro "R$" de cada linha da lista de remuneração. Com um valor só (ou nenhum), devolve null.
+function remuneracaoFaixa(o){
+  const vals = [];
+  const pega = t => { const m = String(t||'').match(/R\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)/); if(m){ const n = parseFloat(m[1].replace(/\./g,'').replace(',','.')); if(!isNaN(n)) vals.push(n); } };
+  pega(o.valorAtendimento);
+  (o.remuneracao||[]).forEach(pega);
+  if(vals.length < 2) return null;
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  if(mn === mx) return null;
+  const f = n => 'R$ ' + n.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+  return f(mn) + ' a ' + f(mx);
+}
 function tipoRemuneracao(o){
   if(parseMoneyValue(o.valorAtendimento)!==null) return 'atendimento';
   if(parseMoneyValue(o.valorMensal)!==null) return 'mensal';
@@ -3364,9 +3377,10 @@ function openDetalhe(id){
   const scoreSegs = temIndice ? Array.from({length:5}, (_,i)=>`<div class="seg ${i<Math.round(o.indice)?'on':''}"></div>`).join('') : '';
   const scoreClass = !temIndice ? 'vazio' : (o.indice>=4 ? 'alta' : (o.indice>=3 ? 'media' : 'baixa'));
   const checks = docChecks[id] || {};
-  const remuneracaoResumo = (o.remuneracao && o.remuneracao.length)
+  const remuneracaoResumo = remuneracaoFaixa(o)
+    || ((o.remuneracao && o.remuneracao.length)
     ? (o.remuneracao.length > 1 ? `${o.remuneracao[0]} (+${o.remuneracao.length - 1})` : o.remuneracao[0])
-    : (o.valorAtendimento && o.valorAtendimento.startsWith('Não') ? (o.valorMensal && !o.valorMensal.startsWith('Não') ? o.valorMensal : 'Não informado no edital') : o.valorAtendimento);
+    : (o.valorAtendimento && o.valorAtendimento.startsWith('Não') ? (o.valorMensal && !o.valorMensal.startsWith('Não') ? o.valorMensal : 'Não informado no edital') : o.valorAtendimento));
 
   el.innerHTML = `
     <div class="detail-grid">
@@ -4928,6 +4942,36 @@ function inferirDoTexto(texto){
     if(/pessoa juridica|cnpj|\bmei\b|profissional liberal/.test(t)) marca('Pessoa Jurídica (PJ)');
     if(/clinica|equipe multidisciplinar/.test(t)) marca('Clínica (equipe multidisciplinar)');
     if(n) ok.push('Para quem é (' + n + ', deduzido do texto — confira)'); else falta.push('Para quem é — não achei no texto');
+  }
+  // Tabela de itens do edital (como no PNCP): "descrição | quantidade | valor unitário | valor total".
+  // Cada item vira uma linha em "Remuneração — outras faixas/valores". Só vale quando quantidade × unitário = total.
+  const _num = x => Number(String(x).replace(/\./g,'').replace(',','.'));
+  const itens = [];
+  String(texto).split(/\r?\n/).forEach(linha=>{
+    const mt = linha.match(/(\d[\d.]*)[\s|*]+R\$\s*([\d.]+,\d{2})[\s|*]+R\$\s*([\d.]+,\d{2})/);
+    if(!mt) return;
+    const q = _num(mt[1]), u = _num(mt[2]), tt = _num(mt[3]);
+    if(!(q > 0 && u > 0 && Math.abs(q*u - tt) <= Math.max(1, tt*0.005))) return;
+    const cel = linha.split('|').map(c=>c.replace(/[*_`]/g,'').trim()).filter(Boolean);
+    const rotulo = cel.find(c=>/[A-Za-zÀ-ú]{4,}/.test(c) && !/^R\$/.test(c) && !/^\d/.test(c) && !/^(un|und|unid|unidade|sess[aã]o|hora)$/i.test(c));
+    itens.push({q, u, qTxt:mt[1], uTxt:mt[2], rotulo: rotulo ? rotulo.slice(0,90) : ''});
+  });
+  const va0 = document.getElementById('af-valor-atendimento'), vo0 = document.getElementById('af-volume');
+  if(itens.length){
+    if(!va0.value){ va0.value = 'R$ ' + itens[0].uTxt + ' por atendimento'; ok.push('Valor por atendimento (R$ ' + itens[0].uTxt + ')'); }
+    if(!vo0.value){
+      const total = itens.reduce((a,x)=>a+x.q,0);
+      vo0.value = (itens.length === 1 ? itens[0].qTxt : total.toLocaleString('pt-BR')) + ' atendimentos' + (itens.length > 1 ? ' (soma dos ' + itens.length + ' itens)' : '');
+      ok.push('Volume estimado');
+    }
+    if(itens.length > 1 || itens[0].rotulo){
+      let n = 0;
+      itens.forEach((x,k)=>{
+        const linha = (x.rotulo || 'Item ' + (k+1)) + ': R$ ' + x.uTxt + ' por atendimento (' + x.qTxt + ' atendimentos)';
+        if(!afRemuneracao.includes(linha)){ afRemuneracao.push(linha); n++; }
+      });
+      if(n){ renderAfRemuneracaoList(); ok.push('Remuneração — ' + n + ' item(ns) da tabela, um abaixo do outro'); }
+    }
   }
   const va = document.getElementById('af-valor-atendimento');
   if(!va.value){
