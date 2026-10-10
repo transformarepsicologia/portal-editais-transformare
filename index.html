@@ -5727,15 +5727,16 @@ function aaeRenderResultado(aviso){
       <button class="btn-ghost" onclick="aaeSalvar()">Salvar</button>
       <button class="btn-ghost" onclick="aaeCopiarPrompt('panorama')">Copiar prompt do Panorama (IA)</button>
       <button class="btn-ghost" onclick="aaeImprimir()">Imprimir análise técnica</button>
-      <button class="btn-primary" onclick="aaePanorama()">Gerar Panorama (formato cliente)</button>
       <button class="btn-ghost" onclick="aaeCopiarPrompt()">Copiar prompt oficial AAE (IA)</button>
       <button class="btn-ghost" onclick="aaeCopiar('aae-relatorio','Texto copiado')">Copiar como texto</button>
     </div>
     <details style="margin-top:8px;"><summary style="cursor:pointer; font-weight:600;">Análise técnica (uso interno)</summary><div style="background:#f3f3f3; padding:12px; border-radius:12px; margin-top:8px;">${aaeHtmlRelatorio()}</div></details>
     <details style="margin-top:12px;"><summary style="cursor:pointer;">Versão em texto (editável)</summary>
-      <textarea class="form-input" id="aae-relatorio" rows="14">${esc(a.relatorio||'')}</textarea></details>
+      <textarea class="form-input" id="aae-relatorio" rows="14">${esc(a.relatorio||'')}</textarea>
+      <button class="btn-ghost" style="margin-top:6px;" onclick="aaeDocTexto('relatorio')">Gerar documento desta versão em texto</button></details>
     <label class="form-label" style="margin-top:12px;">Texto final devolvido pela IA (colar aqui e salvar)</label>
-    <textarea class="form-input" id="aae-final" rows="10">${esc(a.final||'')}</textarea>`:''}`;
+    <textarea class="form-input" id="aae-final" rows="10">${esc(a.final||'')}</textarea>
+    <button class="btn-primary" style="margin-top:6px;" onclick="aaeDocTexto('final')">Gerar documento do texto da IA</button>`:''}`;
 }
 async function aaeCopiar(id,msg){
   const ta = document.getElementById(id);
@@ -5796,6 +5797,70 @@ function aaeReais(v){
   const n = parseFloat(String(v||'').replace(',','.'));
   return isNaN(n) ? null : 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
 }
+function aaeTextoParaHtml(t){
+  const inl = x=>esc(x).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+  const linhas = String(t||'').replace(/\r/g,'').split('\n');
+  let out='', lista=false, tab=[];
+  const fechaLista=()=>{ if(lista){ out+='</ul>'; lista=false; } };
+  const fechaTab=()=>{ if(tab.length){ const lin=tab.filter(r=>!/^[\s|:-]+$/.test(r)); out+='<table>'+lin.map((r,n)=>{ const c=r.replace(/^\||\|$/g,'').split('|').map(x=>x.trim()); return '<tr>'+c.map(x=>n===0?'<th>'+inl(x)+'</th>':'<td>'+inl(x)+'</td>').join('')+'</tr>'; }).join('')+'</table>'; tab=[]; } };
+  for(const bruta of linhas){
+    const l=bruta.trim();
+    if(!l){ fechaLista(); fechaTab(); continue; }
+    if(l.includes('|') && (l.match(/\|/g)||[]).length>=2){ fechaLista(); tab.push(l); continue; }
+    fechaTab();
+    const h = l.match(/^#{1,3}\s+(.*)$/);
+    const num = l.match(/^(\d{1,2})[.)]\s+(.{3,90})$/);
+    const caps = l.length<90 && l===l.toUpperCase() && /[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{4}/.test(l) && !/[.:]$/.test(l);
+    if(/^[-•*]\s+/.test(l)){ if(!lista){ out+='<ul>'; lista=true; } out+='<li>'+inl(l.replace(/^[-•*]\s+/,''))+'</li>'; continue; }
+    if(h){ fechaLista(); out+='<h2>'+inl(h[1])+'</h2>'; }
+    else if(num && !/[.]$/.test(num[2])){ fechaLista(); out+='<h2>'+inl(num[1]+'. '+num[2])+'</h2>'; }
+    else if(caps){ fechaLista(); out+='<h2>'+inl(l)+'</h2>'; }
+    else if(/^[-•*]\s+/.test(l)){ if(!lista){ out+='<ul>'; lista=true; } out+='<li>'+inl(l.replace(/^[-•*]\s+/,''))+'</li>'; }
+    else { fechaLista(); out+='<p>'+inl(l)+'</p>'; }
+  }
+  fechaLista(); fechaTab();
+  return out;
+}
+function aaeDocTexto(origem){
+  aaeLerForm();
+  const a = aaeAtual.analise, f = aaeAtual.ficha;
+  const txt = origem==='final' ? a.final : a.relatorio;
+  if(!String(txt||'').trim()){ toast(origem==='final'?'Cole primeiro o texto devolvido pela IA':'A versão em texto está vazia'); return; }
+  const nome = f.fantasia||f.razao||aaeAtual.nome||'Cliente';
+  const logo = new URL('assets/logo-transformare.webp', location.href).href;
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'numeric', month:'long', year:'numeric'});
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Aderência — ${esc(nome)}</title>
+<style>
+${AAE_DOC_CSS}</style></head><body>
+<div id="barra"><button onclick="window.print()">Imprimir / salvar PDF</button><span>Clique no texto para editar antes de imprimir.</span></div>
+<div id="doc" contenteditable="true">
+<div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>
+<h1>ANÁLISE DE ADERÊNCIA ESTRATÉGICA</h1>
+<p class="cli">${esc(nome)}</p>
+${aaeTextoParaHtml(txt)}
+<div class="fim">Porto Alegre, ${esc(hoje)}<br>Transformare Projetos</div>
+</div></body></html>`;
+  const w = window.open('','_blank'); if(!w){ toast('Permita pop-ups para abrir o documento'); return; }
+  w.document.write(html); w.document.close();
+}
+const AAE_DOC_CSS = `body{font-family:Georgia,'Times New Roman',serif; color:#222; margin:0; background:#eee;}
+#barra{position:sticky; top:0; background:#1f3a5f; color:#fff; padding:8px 16px; font:14px Arial,sans-serif; display:flex; gap:12px; align-items:center;}
+#barra button{padding:6px 14px; border:0; border-radius:6px; cursor:pointer; font-weight:bold;}
+#doc{max-width:800px; margin:16px auto; background:#fff; padding:36px 44px; line-height:1.5; font-size:15px;}
+.topo{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #ccc; padding-bottom:10px;}
+.marca{color:#1f7a6d; font-weight:bold; letter-spacing:.5px;} .marca small{display:block; color:#777; font-weight:normal; font-style:italic; font-size:11px;}
+.topo img{height:56px;}
+h1{text-align:center; color:#1f3a5f; font-size:26px; margin:18px 0 2px;} .cli{text-align:center; color:#1f7a6d; font-weight:bold; font-size:17px; margin:0 0 14px;}
+h2{color:#1f3a5f; font-size:19px; border-top:1px solid #ccc; padding-top:14px; margin-top:22px;} h3{color:#1f7a6d; font-size:16px; margin:16px 0 4px;}
+.kpis{display:flex; gap:12px; margin:14px 0;} .kpi{flex:1; background:#eef2f5; text-align:center; padding:14px 8px;} .kn{font-size:30px; font-weight:bold; color:#1f3a5f;} .kl{font-size:12px; color:#666;}
+table{width:100%; border-collapse:collapse; font-size:13.5px;} th{background:#1f3a5f; color:#fff; text-align:left; padding:7px;} td{border:1px solid #ddd; padding:7px; vertical-align:top;}
+.peq{font-size:12px; color:#666;} .junto{background:#eef2f5; padding:10px 18px; margin:16px 0; font-size:14px;}
+.alerta{background:#fdf3dc; border-left:4px solid #e6b96a; padding:6px 18px 8px; margin:18px 0;} .alerta h2{border:0; margin:8px 0 2px; color:#8a5a00; font-size:16px;}
+.veredito{text-align:center; margin-top:22px;} .veredito .t{color:#777; font-weight:bold; font-size:13px;} .veredito .v{color:#1f3a5f; font-weight:bold; font-size:20px;}
+.fim{text-align:center; font-weight:bold; margin-top:18px;} .aviso{font-style:italic; font-size:12px; color:#777; text-align:center; border-top:1px solid #ccc; padding-top:8px; margin-top:16px;}
+.edit-hint{background:#fff3a8; padding:0 4px;}
+@media print{ body{background:#fff;} #barra{display:none;} #doc{margin:0; max-width:none; padding:0;} .junto,.kpi,.alerta,tr,h3{page-break-inside:avoid;} }
+`;
 function aaePanorama(){
   const res = aaeCalcRes();
   if(!res.length){ toast('Adicione um edital indicado ou cadastre editais abertos no site'); return; }
@@ -5854,24 +5919,7 @@ function aaePanorama(){
     : 'NÃO RECOMENDAMOS CONTINUAR POR ENQUANTO 🔴';
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Panorama de Oportunidades — ${esc(nome)}</title>
 <style>
-body{font-family:Georgia,'Times New Roman',serif; color:#222; margin:0; background:#eee;}
-#barra{position:sticky; top:0; background:#1f3a5f; color:#fff; padding:8px 16px; font:14px Arial,sans-serif; display:flex; gap:12px; align-items:center;}
-#barra button{padding:6px 14px; border:0; border-radius:6px; cursor:pointer; font-weight:bold;}
-#doc{max-width:800px; margin:16px auto; background:#fff; padding:36px 44px; line-height:1.5; font-size:15px;}
-.topo{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #ccc; padding-bottom:10px;}
-.marca{color:#1f7a6d; font-weight:bold; letter-spacing:.5px;} .marca small{display:block; color:#777; font-weight:normal; font-style:italic; font-size:11px;}
-.topo img{height:56px;}
-h1{text-align:center; color:#1f3a5f; font-size:26px; margin:18px 0 2px;} .cli{text-align:center; color:#1f7a6d; font-weight:bold; font-size:17px; margin:0 0 14px;}
-h2{color:#1f3a5f; font-size:19px; border-top:1px solid #ccc; padding-top:14px; margin-top:22px;} h3{color:#1f7a6d; font-size:16px; margin:16px 0 4px;}
-.kpis{display:flex; gap:12px; margin:14px 0;} .kpi{flex:1; background:#eef2f5; text-align:center; padding:14px 8px;} .kn{font-size:30px; font-weight:bold; color:#1f3a5f;} .kl{font-size:12px; color:#666;}
-table{width:100%; border-collapse:collapse; font-size:13.5px;} th{background:#1f3a5f; color:#fff; text-align:left; padding:7px;} td{border:1px solid #ddd; padding:7px; vertical-align:top;}
-.peq{font-size:12px; color:#666;} .junto{background:#eef2f5; padding:10px 18px; margin:16px 0; font-size:14px;}
-.alerta{background:#fdf3dc; border-left:4px solid #e6b96a; padding:6px 18px 8px; margin:18px 0;} .alerta h2{border:0; margin:8px 0 2px; color:#8a5a00; font-size:16px;}
-.veredito{text-align:center; margin-top:22px;} .veredito .t{color:#777; font-weight:bold; font-size:13px;} .veredito .v{color:#1f3a5f; font-weight:bold; font-size:20px;}
-.fim{text-align:center; font-weight:bold; margin-top:18px;} .aviso{font-style:italic; font-size:12px; color:#777; text-align:center; border-top:1px solid #ccc; padding-top:8px; margin-top:16px;}
-.edit-hint{background:#fff3a8; padding:0 4px;}
-@media print{ body{background:#fff;} #barra{display:none;} #doc{margin:0; max-width:none; padding:0;} .junto,.kpi,.alerta,tr,h3{page-break-inside:avoid;} }
-</style></head><body>
+${AAE_DOC_CSS}</style></head><body>
 <div id="barra"><button onclick="window.print()">Imprimir / salvar PDF</button><span>Clique no texto para editar antes de imprimir. O trecho em amarelo precisa ser preenchido.</span></div>
 <div id="doc" contenteditable="true">
 <div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>
