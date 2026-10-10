@@ -196,6 +196,14 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
 .step-card h4{font-family:var(--font-display); font-size:16px; margin:0 0 8px;}
 .step-card p{font-size:13.5px; color:var(--ink-muted); line-height:1.6; margin:0;}
 
+.promo-band{display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-top:36px; padding:22px 26px; border-radius:14px; border:1px solid var(--teal); border-left:5px solid var(--teal); background:linear-gradient(90deg,rgba(45,212,191,0.12),rgba(45,212,191,0.03));}
+.promo-band.pro{border-color:var(--amber); background:linear-gradient(90deg,rgba(245,169,62,0.14),rgba(245,169,62,0.03));}
+.promo-band.consultoria{border-color:#8b9dff; background:linear-gradient(90deg,rgba(139,157,255,0.14),rgba(139,157,255,0.03));}
+.promo-band .promo-tag{font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--teal); margin-bottom:6px;}
+.promo-band.pro .promo-tag{color:var(--amber);}
+.promo-band.consultoria .promo-tag{color:#aab6ff;}
+.promo-band h3{font-family:var(--font-display); font-size:19px; margin:0 0 5px;}
+.promo-band p{margin:0; font-size:13.5px; color:var(--ink-muted); max-width:620px; line-height:1.55;}
 .cta-band{
   background:linear-gradient(135deg, var(--bg-card), var(--bg-elevated)); border:1px solid var(--border);
   border-radius:16px; padding:40px 36px; display:flex; align-items:center; justify-content:space-between; gap:20px;
@@ -732,6 +740,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="indicators" id="indicators"></div>
   </div>
 
+  <div class="promo-band" id="promo-cadastro">
+    <div><div class="promo-tag">Grátis · leva 2 minutos</div><h3>Crie sua conta e acompanhe as oportunidades da sua profissão</h3><p>Favorite editais, configure alertas e receba o que combina com o seu perfil.</p></div>
+    <button class="btn-primary" onclick="nav('cadastro')">Criar conta grátis</button>
+  </div>
+
   <div class="how-it-works">
     <h2 class="section-title">Como funciona</h2>
     <p class="section-sub">Do edital disperso à decisão em poucos minutos.</p>
@@ -743,6 +756,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
       </div>
 
+  <div class="promo-band pro">
+    <div><div class="promo-tag">🔒 Para assinantes</div><h3>Plano Transformare Pro</h3><p>Índice Transformare, checklist completo de documentos e links dos portais para dar entrada — tudo para decidir e se credenciar com mais segurança.</p></div>
+    <button class="btn-primary" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
+  </div>
+
   <div class="cta-band">
     <div>
       <h3>Pronto para ver as oportunidades ativas?</h3>
@@ -751,12 +769,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <button class="btn-primary" onclick="nav('editais')">Encontrar oportunidades</button>
   </div>
 
-  <div style="border-top:1px solid var(--border-soft); margin-top:36px; padding-top:28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
-    <div>
-      <div style="font-family:var(--font-display); font-size:15px; font-weight:600; margin-bottom:4px;">Encontrou uma oportunidade, mas não sabe como participar?</div>
-      <div style="font-size:12.5px; color:var(--ink-muted);">A Transformare pode ajudar na análise dos requisitos, documentação e processo de credenciamento.</div>
-    </div>
-    <button class="btn-ghost" onclick="openLeadModal(null,'home')">Quero conhecer a consultoria</button>
+  <div class="promo-band consultoria">
+    <div><div class="promo-tag">Consultoria Transformare</div><h3>Encontrou uma oportunidade, mas não sabe como participar?</h3><p>A Transformare pode ajudar na análise dos requisitos, documentação e processo de credenciamento.</p></div>
+    <button class="btn-primary" onclick="openLeadModal(null,'home')">Quero conhecer a consultoria</button>
   </div>
 </section>
 
@@ -2313,6 +2328,7 @@ function nav(view){
   document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   document.getElementById('mainNav').classList.remove('open');
   window.scrollTo({top:0, behavior:'smooth'});
+  const pc=document.getElementById('promo-cadastro'); if(pc) pc.style.display = userProfile ? 'none' : '';
   if(view === 'editais') applyFilters();
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
@@ -2860,7 +2876,7 @@ function calcularAderencia(o, u){
 }
 
 /* ================= MINHA CONTA ================= */
-const PLANOS = {gratuito:'Gratuito', essencial:'Essencial'};
+const PLANOS = {gratuito:'Gratuito', essencial:'Transformare Pro'};
 function ehEssencial(){ return !!(adminAuthed || (userProfile && userProfile.plano === 'essencial')); }
 function updateNavCta(){
   const ctaBtn = document.getElementById('nav-cta-btn');
@@ -2937,8 +2953,8 @@ function renderMinhaConta(){
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui tudo do plano Gratuito, mais o <strong>checklist completo</strong> de documentos de cada edital e os links dos principais portais para emitir certidões.</p>
           <div style="margin-top:8px;">${portaisDocsPanelHTML().replace('class="panel"','style="margin:0;"')}</div>` : `
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui busca, favoritos, alertas dentro do portal e os principais documentos de cada edital.</p>
-          <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"><strong>Plano Essencial:</strong> checklist completo de todos os documentos exigidos e links dos portais de emissão (CND da Receita, FGTS, CNDT e outros).</p>
-          <button class="btn-primary" id="btn-plano-essencial" onclick="solicitarPlanoEssencial()">Quero o plano Essencial</button>
+          <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"><strong>Plano Transformare Pro:</strong> checklist completo de todos os documentos exigidos e links dos portais de emissão (CND da Receita, FGTS, CNDT e outros).</p>
+          <button class="btn-primary" id="btn-plano-essencial" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
           <div id="plano-pedido-status" style="font-size:12px; color:var(--ink-dim); margin-top:6px;"></div>`}
         </div>
       </div>
@@ -3496,7 +3512,7 @@ function openDetalhe(id){
           ${ocultos>0 ? `
           <div class="checklist-cta" style="margin-top:10px;">
             <p>+ ${ocultos} outro${ocultos>1?'s':''} documento${ocultos>1?'s':''} exigido${ocultos>1?'s':''} neste edital. A lista completa de documentação pode ser organizada com o apoio da Transformare.</p>
-            <button class="btn-primary" style="width:100%; margin-bottom:6px;" onclick="solicitarPlanoEssencial()">Quero o plano Essencial (checklist completo)</button>
+            <button class="btn-primary" style="width:100%; margin-bottom:6px;" onclick="solicitarPlanoEssencial()">Quero o plano Pro (checklist completo)</button>
             <button class="btn-ghost" style="width:100%;" onclick="openLeadModal(${o.id},'detalhe_edital','Quero a lista completa de documentos')">Prefiro o apoio da Transformare</button>
           </div>` : ''}
           `; })()}
@@ -3545,14 +3561,14 @@ function openDetalhe(id){
   nav('detalhe');
 }
 async function solicitarPlanoEssencial(){
-  if(!userProfile){ toast('Crie sua conta gratuita ou entre para pedir o plano Essencial.'); nav('cadastro'); return; }
-  if(userProfile.plano === 'essencial'){ toast('Você já está no plano Essencial.'); return; }
+  if(!userProfile){ toast('Crie sua conta gratuita ou entre para pedir o plano Transformare Pro.'); nav('cadastro'); return; }
+  if(userProfile.plano === 'essencial'){ toast('Você já está no plano Transformare Pro.'); return; }
   if(!_sb){ toast('Indisponível sem conexão com o banco.'); return; }
   const { data: ja } = await _sb.from('pedidos_plano').select('id').eq('usuario_id', userProfile.id).eq('status','pendente').limit(1);
   if(ja && ja.length){ toast('Seu pedido já foi enviado. Aguarde a confirmação da Transformare.'); atualizarStatusPedidoPlano(); return; }
   const { error } = await _sb.from('pedidos_plano').insert({ usuario_id: userProfile.id, email: userProfile.email, nome: userProfile.nome, plano: 'essencial' });
   if(error){ toast('Não foi possível enviar o pedido: ' + error.message); return; }
-  toast('Pedido enviado! A Transformare vai confirmar o seu plano Essencial.');
+  toast('Pedido enviado! A Transformare vai confirmar o seu plano Transformare Pro.');
   atualizarStatusPedidoPlano();
 }
 async function atualizarStatusPedidoPlano(){
@@ -3585,8 +3601,8 @@ const PORTAIS_DOCS = [
 function portaisDocsPanelHTML(){
   if(!ehEssencial()){
     return `<div class="panel"><h4><span class="dot"></span>Onde emitir cada documento</h4>
-      <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;">No plano Essencial você recebe os links dos principais portais (CND da Receita, certificado do FGTS, CNDT e outros) junto com o checklist completo.</p>
-      <button class="btn-ghost" onclick="solicitarPlanoEssencial()">Conhecer o plano Essencial</button></div>`;
+      <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;">No plano Transformare Pro você recebe os links dos principais portais (CND da Receita, certificado do FGTS, CNDT e outros) junto com o checklist completo.</p>
+      <button class="btn-ghost" onclick="solicitarPlanoEssencial()">Conhecer o plano Transformare Pro</button></div>`;
   }
   return `<div class="panel"><h4><span class="dot"></span>Onde emitir cada documento</h4>
     <ul style="list-style:none; padding:0; margin:0;">${PORTAIS_DOCS.map(l=>`<li style="margin-bottom:6px;"><a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color:var(--teal); font-size:13px;">↗ ${esc(l.nome)}</a></li>`).join('')}</ul>
@@ -3610,7 +3626,7 @@ const DOC_PREVIEW_LIMIT = 5;
 // completa é tratada como algo a organizar com o apoio da Transformare
 // (sem falar em plano pago por enquanto).
 function docsPreview(documentos){
-  if(ehEssencial()) return documentos || [];   // plano Essencial: checklist completo
+  if(ehEssencial()) return documentos || [];   // plano Transformare Pro: checklist completo
   return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
 }
 function docProgressHTML(oid, documentos, checks){
@@ -6448,7 +6464,7 @@ function renderHoje(){
     {num:problemas, label:'Editais com problema', cls:problemas?'perigo':'', ir:()=>adminIrPara('editais')},
     {num:semIndice.length, label:'Editais sem Índice', cls:'', ir:()=>adminIrPara('editais')},
     {num:fmt(_contagensHoje.indicePend), label:'Pedidos de avaliação de Índice', cls:_contagensHoje.indicePend?'alerta':'', ir:()=>adminIrPara('leads','solicitacoes-indice-body')},
-    {num:fmt(_contagensHoje.pedidosPlano), label:'Pedidos do plano Essencial', cls:_contagensHoje.pedidosPlano?'alerta':'', ir:()=>adminIrPara('leads','usuarios-cadastrados-body')},
+    {num:fmt(_contagensHoje.pedidosPlano), label:'Pedidos do plano Transformare Pro', cls:_contagensHoje.pedidosPlano?'alerta':'', ir:()=>adminIrPara('leads','usuarios-cadastrados-body')},
     {num:fmt(_contagensHoje.leadsNovos), label:'Leads novos', cls:_contagensHoje.leadsNovos?'alerta':'', ir:()=>adminIrPara('leads','leads-table')},
   ];
   box.innerHTML = '';
@@ -7833,7 +7849,7 @@ async function renderUsuariosAdmin(){
   const lista = data || [];
   status.textContent = lista.length + ' usuário(s) cadastrado(s)' + ((pedidos||[]).length ? ' · ' + pedidos.length + ' pedido(s) de plano aguardando você.' : '.');
   box.innerHTML = '';
-  const grupos = [['essencial','Plano Essencial'],['gratuito','Plano Gratuito']];
+  const grupos = [['essencial','Plano Transformare Pro'],['gratuito','Plano Gratuito']];
   const _ordPlano = u => (u.plano || 'gratuito') === 'essencial' ? 0 : 1;
   const _todos = [...lista].sort((a,b)=>_ordPlano(a)-_ordPlano(b) || (pedidoDe[b.id]?1:0) - (pedidoDe[a.id]?1:0));
   const pgUs = paginarLista('us', _todos, 15, renderUsuariosAdmin);
@@ -7855,11 +7871,11 @@ async function renderUsuariosAdmin(){
       row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid var(--border-soft);';
       row.innerHTML = `
         <div>
-          <div style="font-weight:600;">${esc(u.nome || '(sem nome)')}${ped ? ' <span class="plan-badge" style="background:var(--amber); color:#000;">pediu o Essencial</span>' : ''}</div>
+          <div style="font-weight:600;">${esc(u.nome || '(sem nome)')}${ped ? ' <span class="plan-badge" style="background:var(--amber); color:#000;">pediu o Pro</span>' : ''}</div>
           <div style="font-size:12px; color:var(--ink-dim);">${esc(u.email)}${u.uf ? ' · ' + esc(u.uf) : ''}${(u.profs||[]).length ? ' · ' + esc(u.profs.join(', ')) : ''}</div>
         </div>
         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-          ${ped ? `<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="mudarPlanoUsuario('${u.id}','essencial',${ped.id})">✓ Aprovar Essencial</button><button type="button" class="btn-ghost" style="font-size:12px;" onclick="recusarPedidoPlano(${ped.id})">Recusar</button>` : ''}
+          ${ped ? `<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="mudarPlanoUsuario('${u.id}','essencial',${ped.id})">✓ Aprovar Pro</button><button type="button" class="btn-ghost" style="font-size:12px;" onclick="recusarPedidoPlano(${ped.id})">Recusar</button>` : ''}
           <select style="font-size:12px;" onchange="mudarPlanoUsuario('${u.id}', this.value, null)">${Object.entries(PLANOS).map(([k,v])=>`<option value="${k}" ${k===(u.plano||'gratuito')?'selected':''}>${v}</option>`).join('')}</select>
           <button type="button" class="btn-ghost" style="font-size:12px;" onclick="enviarLinkRedefinicaoUsuario('${esc(u.email)}', this)">🔑 Enviar link de redefinição</button>
         </div>`;
