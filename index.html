@@ -3378,9 +3378,9 @@ function openDetalhe(id){
             <div class="qf-item"><div class="qf-icon">🏢</div><span class="qf-k">Para quem é</span><div class="qf-v">${publicoTexto(o)}</div></div>
             <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}</div></div>
             <div class="qf-item"><div class="qf-icon">💰</div><span class="qf-k">Remuneração</span><div class="qf-v">${remuneracaoResumo}</div></div>
+            ${o.abertura ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Início das propostas</span><div class="qf-v">${esc(o.abertura)}</div></div>` : ''}
             <div class="qf-item"><div class="qf-icon">⏳</div><span class="qf-k">Prazo</span><div class="qf-v">${o.prazo}</div></div>
-             ${o.abertura ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Início das propostas</span><div class="qf-v">${esc(o.abertura)}</div></div>`
-               : (o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}</div></div>` : '')}
+            ${!o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}</div></div>` : ''}
             ${(o.escolaridadeMinima || o.experienciaMinimaAnos) ? `<div class="qf-item"><div class="qf-icon">🎓</div><span class="qf-k">Exigência mínima</span><div class="qf-v">${esc([o.escolaridadeMinima, o.experienciaMinimaAnos ? o.experienciaMinimaAnos + ' ano(s) de experiência' : ''].filter(Boolean).join(' · '))}</div></div>` : ''}
           </div>
 
