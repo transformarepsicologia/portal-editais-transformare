@@ -5296,22 +5296,34 @@ function afTextoLimpar(){
   document.getElementById('af-texto-arquivo').value = '';
   afTextoStatus();
 }
+// Marcadores de citação que ferramentas como NotebookLM/Gemini deixam no texto — não fazem parte do edital.
+const _limpaCitacoes = t => String(t||'').replace(/\s*\[cite:[^\]]*\]/gi, '');
 function afTextoPreencherFicha(){
-  const t = document.getElementById('af-texto-md').value.trim();
+  const t = _limpaCitacoes(document.getElementById('af-texto-md').value).trim();
   if(!t){ toast('Anexe ou cole o texto do edital primeiro'); return; }
-  // Preenche só o que está vazio, sem sobrescrever o que já foi digitado, e sem deixar
-  // o texto do edital aparecendo na caixa "Colar a análise".
-  const caixa = document.getElementById('af-analise-ia');
-  const chk = document.getElementById('af-analise-so-vazios');
-  const chkAntes = chk.checked, caixaAntes = caixa.value;
-  if(!document.querySelector('#af-analise-grupos .chip-opt.selected')) marcarGruposAnalise(true);
-  caixa.value = t; chk.checked = true;
-  try{ preencherComAnaliseIA(); }
-  finally { caixa.value = caixaAntes; chk.checked = chkAntes; }
-  toast('Só os campos vazios foram preenchidos — confira antes de salvar');
+  // Do texto cru do edital só se deduz o que é seguro, e só nos campos que estão vazios.
+  // (Requisitos, pontos de destaque/atenção e documentação NÃO são copiados do edital: isso vem da análise.)
+  const ok = [];
+  const dataApos = re => { const m = t.match(re); return m ? m[1] : null; };
+  const pares = [
+    ['af-prazo', dataApos(/fim de recebimento de propostas[^0-9]{0,15}(\d{2}\/\d{2}\/\d{4})/i), 'Prazo'],
+    ['af-abertura', dataApos(/in[ií]cio de recebimento de propostas[^0-9]{0,15}(\d{2}\/\d{2}\/\d{4})/i), 'Início das propostas'],
+    ['af-publicacao', dataApos(/divulga[cç][aã]o no PNCP[^0-9]{0,15}(\d{2}\/\d{2}\/\d{4})/i), 'Publicação'],
+  ];
+  pares.forEach(([id, v, nome])=>{ const el = document.getElementById(id); if(v && el && !el.value.trim()){ el.value = v; ok.push(nome); } });
+  const inf = inferirDoTexto(t);
+  ok.push(...inf.ok);
+  afProfSelecionadasNoTopo();
+  const st = document.getElementById('af-analise-ia-status');
+  if(st){
+    st.innerHTML = (ok.length ? `<div>✓ Preenchido a partir do texto: ${esc(ok.join(', '))}.</div>` : '<div>Nada novo para preencher (os campos já estavam preenchidos ou o texto não traz essas informações).</div>')
+      + '<div style="color:var(--ink-dim); margin-top:4px;">Requisitos, pontos de destaque/atenção e documentação não são copiados do edital — use a análise da IA para esses.</div>';
+    st.style.color = 'var(--teal)';
+  }
+  toast(ok.length ? 'Só campos vazios foram preenchidos — confira antes de salvar' : 'Nada novo para preencher');
 }
 async function afTextoSalvar(idReal){
-  const t = (document.getElementById('af-texto-md').value || '').trim();
+  const t = _limpaCitacoes(document.getElementById('af-texto-md').value || '').trim();
   if(t === _textoMdOriginal.trim()) return;
   if(t.length > TEXTO_MD_MAX){ toast('Texto do edital grande demais — não foi gravado'); return; }
   let erro;
