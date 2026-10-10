@@ -3240,21 +3240,21 @@ function renderIndicators(){
   const reais = oportunidades.filter(o=>o.origemSupabase && visivelAoCliente(o));
   const usandoDemo = reais.length === 0;
   indicadoresUsandoDemo = usandoDemo;
-  const base = usandoDemo ? oportunidades.filter(visivelAoCliente) : reais;
+  // Só contam as oportunidades ativas: encerradas, revogadas e anuladas saem dos números.
+  const ativa = o => !['Encerrado','Revogado','Anulado'].includes(situacaoExibida(o));
+  const base = (usandoDemo ? oportunidades.filter(visivelAoCliente) : reais).filter(ativa);
   const orgaos = new Set(base.map(o=>o.orgao)).size;
   const comIndice = base.filter(o=>o.indice !== null && o.indice !== undefined).length;
   const novas = base.filter(eNovaAberta).length;
   const abrem = base.filter(eAbreEmBreve).length;
-  // Sempre 6 caixas. "Órgãos e instituições" fica oculta e só entra no lugar de
-  // "Novas oportunidades" quando não há nenhuma nova nos últimos 7 dias.
+  // "Novas oportunidades" cede lugar a "órgãos e instituições" quando não há nenhuma
+  // nova nos últimos 7 dias. "Abrem em breve" só aparece quando há ao menos uma.
   const stats = [
     {num:base.length, label:'oportunidades monitoradas', filtro:null},
     novas > 0
       ? {num:novas, label:'novas oportunidades', filtro:'novas7'}
       : {num:orgaos, label:'órgãos e instituições', filtro:'orgao'},
-    {num:abrem, label:'abrem em breve', filtro:'embreve'},
-    {num:profissoesAtivasNomes().length, label:'profissões cobertas', filtro:'profissao'},
-    {num:new Set(base.map(o=>o.uf)).size, label:'estados com oportunidades', filtro:'uf'},
+    ...(abrem > 0 ? [{num:abrem, label:'abrem em breve', filtro:'embreve'}] : []),
     {num:comIndice, label:'editais com Índice Transformare', filtro:'indice'}
   ];
   const box = document.getElementById('indicators');
