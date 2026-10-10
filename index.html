@@ -273,6 +273,9 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .score-mini .txt{font-family:var(--font-mono); font-size:10.5px; color:var(--ink-muted); margin-left:2px;}
 .score-mini-label{font-family:var(--font-mono); font-size:9.5px; color:var(--ink-dim); text-align:right; margin-top:2px;}
 
+.pro-lock{display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border-radius:10px; border:1px dashed var(--amber); background:rgba(245,169,62,0.08); color:var(--amber); font-size:12px; font-weight:600; cursor:pointer; line-height:1.3;}
+.pro-lock:hover{background:rgba(245,169,62,0.16);}
+.pro-lock-box{padding:16px 18px; border-radius:12px; border:1px dashed var(--amber); background:rgba(245,169,62,0.07);}
 .aderencia-faixa{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px; margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed var(--border); font-size:12px; color:var(--ink-muted);}
 .aderencia-pct{font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--teal);}
 .aderencia-motivo{flex-basis:100%; font-family:var(--font-mono); font-size:11px; color:var(--ink-dim);}
@@ -851,8 +854,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="filter-panel">
     <div class="form-row"><label>Profissões de interesse</label><div class="chip-select" id="alert-prof"></div></div>
     <div class="form-row"><label>Estados de interesse</label><div class="chip-select chip-select-uf" id="alert-uf"></div></div>
-    <div class="form-row"><label>Cidade</label><input type="text" id="alert-cidade" placeholder="Ex: Porto Alegre" oninput="onAlertCidadeInput(this.value)"></div>
-    <div class="form-row"><label>Modalidade</label><div class="chip-select" id="alert-mod"></div></div>
+    <div class="form-row"><label>Cidade <span class="alert-pro-tag" style="color:var(--amber); font-size:11px;"></span></label><input type="text" id="alert-cidade" placeholder="Ex: Porto Alegre" oninput="onAlertCidadeInput(this.value)"></div>
+    <div class="form-row"><label>Modalidade <span class="alert-pro-tag" style="color:var(--amber); font-size:11px;"></span></label><div class="chip-select" id="alert-mod"></div></div>
     <div class="form-actions" style="margin-top:6px;"><button class="btn-ghost" onclick="clearAlertPrefs()">Limpar critérios</button></div>
   </div>
 
@@ -2432,7 +2435,7 @@ function renderCard(o){
         </div>
         <span class="badge ${badgeClass(situacaoExibida(o))}">${situacaoExibida(o)}</span>
         ${inscricaoProximaHTML(o)}
-        ${scoreMini(o.indice, o.indiceLabel)}
+        ${(o.indice != null && !ehPro()) ? travaProHTML('Índice no Plano Pro') : scoreMini(o.indice, o.indiceLabel)}
       </div>
     </div>
   `;
@@ -2538,7 +2541,7 @@ function openCompare(){
     ['Abrangência', o=>o.abrangencia, o=>abrDestacavel && (abrangenciaRank[o.abrangencia]||0)===maxAbr],
     ['Situação', o=>situacaoExibida(o), ()=>false],
     ['Prazo', o=>o.prazo, o=>maxPrazo!==null && prazoValsMap[o.id]===maxPrazo],
-    ['Índice Transformare', o=>(o.indice!=null ? `${Math.round(Number(o.indice))}/5 — ${o.indiceLabel}` : 'Ainda não avaliado'), o=>indiceDestacavel && o.indice!=null && o.indice===maxIndice],
+    ['Índice Transformare', o=>(o.indice!=null && !ehPro() ? '🔒 Plano Pro' : o.indice!=null ? `${Math.round(Number(o.indice))}/5 — ${o.indiceLabel}` : 'Ainda não avaliado'), o=>ehPro() && indiceDestacavel && o.indice!=null && o.indice===maxIndice],
     ['Valor por atendimento', o=>o.valorAtendimento, o=>maxRem!==null && tipoRemuneracao(o)==='atendimento' && remValsMap[o.id]===maxRem],
     ['Remuneração (outros valores)', o=>(o.remuneracao && o.remuneracao.length) ? o.remuneracao.join(' · ') : '—', ()=>false],
     ['Requisitos', o=>o.requisitos, ()=>false]
@@ -2880,6 +2883,16 @@ function calcularAderencia(o, u){
 /* ================= MINHA CONTA ================= */
 const PLANOS = {gratuito:'Gratuito', essencial:'Transformare Pro'};
 function ehEssencial(){ return !!(adminAuthed || (userProfile && userProfile.plano === 'essencial')); }
+const ehPro = ehEssencial;
+// Trava visual de recurso do Plano Pro (só interface: o conteúdo continua nos dados do navegador)
+function travaProHTML(texto){
+  return `<div class="pro-lock" onclick="solicitarPlanoEssencial()" title="Disponível no Plano Transformare Pro"><span>🔒</span><span>${texto}</span></div>`;
+}
+function exigePro(recurso){
+  if(ehPro()) return true;
+  toast((recurso || 'Este recurso') + ' é do Plano Transformare Pro.');
+  return false;
+}
 function updateNavCta(){
   const ctaBtn = document.getElementById('nav-cta-btn');
   if(userProfile){
@@ -2962,7 +2975,7 @@ function renderMinhaConta(){
       </div>
       <div>
         <div class="account-stats">
-          <div class="indicator-card"><div class="num">${altaAderencia}</div><div class="label">Editais com alta aderência (70%+)</div></div>
+          <div class="indicator-card"><div class="num">${ehPro() ? altaAderencia : '🔒'}</div><div class="label">Editais com alta aderência (70%+)${ehPro() ? '' : ' — Plano Pro'}</div></div>
           <div class="indicator-card"><div class="num">${melhorAderencia !== null ? melhorAderencia + '%' : '—'}</div><div class="label">Maior aderência ao seu perfil</div></div>
           <div class="indicator-card" style="cursor:pointer;" onclick="nav('perfil')" title="Completar perfil"><div class="num">${perfilPct}%</div><div class="label">Perfil preenchido${perfilPct < 100 ? ' — completar ›' : ''}</div></div>
         </div>
@@ -2993,7 +3006,9 @@ function renderMinhaConta(){
   `;
 
   const adBox = document.getElementById('conta-aderentes');
-  if(aderentes.length===0){
+  if(!ehPro()){
+    adBox.innerHTML = `<div class="pro-lock-box"><div style="font-weight:600; margin-bottom:6px;">🔒 Editais mais aderentes ao seu perfil — Plano Pro</div><div style="font-size:13px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${todasAderencias.length ? `Encontramos ${todasAderencias.length} edital(is) ativo(s) com algum grau de aderência ao seu perfil` + (altaAderencia ? `, ${altaAderencia} com 70% ou mais` : '') + '.' : 'Complete seu perfil para a Transformare apontar onde você tem mais chance.'} Assine o Plano Pro para ver a lista ordenada, sem perder tempo procurando edital por edital.</div><button class="btn-primary" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button></div>`;
+  } else if(aderentes.length===0){
     adBox.innerHTML = `<div class="empty-state">Complete seu perfil (profissão, estado, modalidade, abrangência e remuneração) para ver os editais mais aderentes. <a style="color:var(--teal); cursor:pointer;" onclick="nav('perfil')">Editar perfil</a></div>`;
   } else {
     aderentes.forEach(({o, ad})=>{
@@ -3446,7 +3461,13 @@ function openDetalhe(id){
         </div>
 
         <div class="score-hero ${scoreClass}">
-          ${temIndice ? `
+          ${(temIndice && !ehPro()) ? `
+          <div class="score-hero-body" style="flex:1;">
+            <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — nota de 1 a 5 disponível no Plano Pro</div>
+            <div class="caption">Este edital já foi avaliado pela Transformare (retorno financeiro, facilidade de entrada, aderência e complexidade documental). Assine o Plano Transformare Pro para ver a nota.</div>
+            <button class="btn-primary" style="margin-top:10px;" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
+          </div>
+          ` : temIndice ? `
           <div class="score-hero-num">${Math.round(Number(o.indice))}<span>/5</span></div>
           <div class="score-hero-body">
             <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${o.indiceLabel}</div>
@@ -3974,15 +3995,17 @@ function renderAlertChips(){
   const modBox = document.getElementById('alert-mod'); modBox.innerHTML='';
   MODALIDADES.forEach(m=>{
     const c = document.createElement('div'); c.className='chip-opt'+(alertPrefs.mod.has(m)?' selected':''); c.textContent=m;
-    c.onclick = async ()=>{ alertPrefs.mod.has(m)?alertPrefs.mod.delete(m):alertPrefs.mod.add(m); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
+    c.onclick = async ()=>{ if(!exigePro('Alerta por modalidade')) return; alertPrefs.mod.has(m)?alertPrefs.mod.delete(m):alertPrefs.mod.add(m); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
     modBox.appendChild(c);
   });
 
+  document.querySelectorAll('.alert-pro-tag').forEach(t=>{ t.textContent = ehPro() ? '' : '🔒 Plano Pro'; });
   const cidadeInput = document.getElementById('alert-cidade');
   if(cidadeInput && cidadeInput.value !== alertPrefs.cidade) cidadeInput.value = alertPrefs.cidade || '';
 }
 let _alertCidadeTimer = null;
 function onAlertCidadeInput(valor){
+  if(!ehPro()){ const i=document.getElementById('alert-cidade'); if(i) i.value=''; exigePro('Alerta por cidade'); return; }
   alertPrefs.cidade = valor.trim();
   clearTimeout(_alertCidadeTimer);
   _alertCidadeTimer = setTimeout(async ()=>{ await saveAlertPrefs(); renderAlertas(); }, 350);
@@ -4005,8 +4028,8 @@ function renderAlertas(){
     if(situacaoExibida(o)==='Encerrado') return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
-    const mMod = alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
-    const mCidade = !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
+    const mMod = !ehPro() || alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
+    const mCidade = !ehPro() || !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
     return mProf && mUf && mMod && mCidade;
   });
   countEl.textContent = `${items.length} compatível(is)`;
@@ -4032,8 +4055,8 @@ function matchedAlertItems(){
     if(situacaoExibida(o)==='Encerrado') return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
-    const mMod = alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
-    const mCidade = !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
+    const mMod = !ehPro() || alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
+    const mCidade = !ehPro() || !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
     return mProf && mUf && mMod && mCidade;
   });
 }
