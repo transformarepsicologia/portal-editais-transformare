@@ -7114,6 +7114,13 @@ async function carregarEditaisSupabase(){
   // remove versões antigas dos mesmos editais reais; os editais de demonstração
   // do protótipo só continuam aparecendo se o banco ainda não tiver nenhum edital real.
   oportunidades = oportunidades.filter(o => !o.origemSupabase && !(reais.length && IDS_EDITAIS_DEMO.has(o.id)));
+  // Cópias antigas guardadas só neste navegador (localStorage) de um edital que já existe no banco
+  // aparecem como "duplicados": descarta as cópias locais com o mesmo número de edital.
+  const chaveEd = t => String(t||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const chavesReais = new Set(reais.map(o=>chaveEd(o.edital)).filter(k=>/^\d{14}/.test(k)));
+  const antes = oportunidades.length;
+  oportunidades = oportunidades.filter(o => !chavesReais.has(chaveEd(o.edital)));
+  if(oportunidades.length !== antes){ try{ await storeSet('oportunidades', oportunidades); }catch(e){} }
   oportunidades = [...reais, ...oportunidades];
   populateSelects();
   applyFilters();
