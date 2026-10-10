@@ -196,6 +196,14 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
 .step-card h4{font-family:var(--font-display); font-size:16px; margin:0 0 8px;}
 .step-card p{font-size:13.5px; color:var(--ink-muted); line-height:1.6; margin:0;}
 
+.promo-band{display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-top:36px; padding:22px 26px; border-radius:14px; border:1px solid var(--teal); border-left:5px solid var(--teal); background:linear-gradient(90deg,rgba(45,212,191,0.12),rgba(45,212,191,0.03));}
+.promo-band.pro{border-color:var(--amber); background:linear-gradient(90deg,rgba(245,169,62,0.14),rgba(245,169,62,0.03));}
+.promo-band.consultoria{border-color:#8b9dff; background:linear-gradient(90deg,rgba(139,157,255,0.14),rgba(139,157,255,0.03));}
+.promo-band .promo-tag{font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--teal); margin-bottom:6px;}
+.promo-band.pro .promo-tag{color:var(--amber);}
+.promo-band.consultoria .promo-tag{color:#aab6ff;}
+.promo-band h3{font-family:var(--font-display); font-size:19px; margin:0 0 5px;}
+.promo-band p{margin:0; font-size:13.5px; color:var(--ink-muted); max-width:620px; line-height:1.55;}
 .cta-band{
   background:linear-gradient(135deg, var(--bg-card), var(--bg-elevated)); border:1px solid var(--border);
   border-radius:16px; padding:40px 36px; display:flex; align-items:center; justify-content:space-between; gap:20px;
@@ -732,6 +740,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="indicators" id="indicators"></div>
   </div>
 
+  <div class="promo-band" id="promo-cadastro">
+    <div><div class="promo-tag">Grátis · leva 2 minutos</div><h3>Crie sua conta e acompanhe as oportunidades da sua profissão</h3><p>Favorite editais, configure alertas e receba o que combina com o seu perfil.</p></div>
+    <button class="btn-primary" onclick="nav('cadastro')">Criar conta grátis</button>
+  </div>
+
   <div class="how-it-works">
     <h2 class="section-title">Como funciona</h2>
     <p class="section-sub">Do edital disperso à decisão em poucos minutos.</p>
@@ -743,6 +756,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
       </div>
 
+  <div class="promo-band pro">
+    <div><div class="promo-tag">🔒 Para assinantes</div><h3>Plano Transformare Pro</h3><p>Índice Transformare, checklist completo de documentos e links dos portais para dar entrada — tudo para decidir e se credenciar com mais segurança.</p></div>
+    <button class="btn-primary" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
+  </div>
+
   <div class="cta-band">
     <div>
       <h3>Pronto para ver as oportunidades ativas?</h3>
@@ -751,12 +769,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <button class="btn-primary" onclick="nav('editais')">Encontrar oportunidades</button>
   </div>
 
-  <div style="border-top:1px solid var(--border-soft); margin-top:36px; padding-top:28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
-    <div>
-      <div style="font-family:var(--font-display); font-size:15px; font-weight:600; margin-bottom:4px;">Encontrou uma oportunidade, mas não sabe como participar?</div>
-      <div style="font-size:12.5px; color:var(--ink-muted);">A Transformare pode ajudar na análise dos requisitos, documentação e processo de credenciamento.</div>
-    </div>
-    <button class="btn-ghost" onclick="openLeadModal(null,'home')">Quero conhecer a consultoria</button>
+  <div class="promo-band consultoria">
+    <div><div class="promo-tag">Consultoria Transformare</div><h3>Encontrou uma oportunidade, mas não sabe como participar?</h3><p>A Transformare pode ajudar na análise dos requisitos, documentação e processo de credenciamento.</p></div>
+    <button class="btn-primary" onclick="openLeadModal(null,'home')">Quero conhecer a consultoria</button>
   </div>
 </section>
 
@@ -2313,6 +2328,7 @@ function nav(view){
   document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   document.getElementById('mainNav').classList.remove('open');
   window.scrollTo({top:0, behavior:'smooth'});
+  const pc=document.getElementById('promo-cadastro'); if(pc) pc.style.display = userProfile ? 'none' : '';
   if(view === 'editais') applyFilters();
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
