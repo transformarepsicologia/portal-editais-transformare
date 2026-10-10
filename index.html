@@ -1533,7 +1533,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
       <div class="form-row"><label>Início do recebimento de propostas</label><input type="text" id="af-abertura" placeholder="dd/mm/aaaa (deixe em branco se não houver)"></div>
       <div class="form-row"><label>Profissões contempladas <span id="af-prof-conta" style="font-weight:400; color:var(--ink-dim); text-transform:none; letter-spacing:0;"></span></label>
-        <input type="search" id="af-prof-busca" placeholder="🔍 Pesquisar profissão..." oninput="afProfFiltrar()" style="margin-bottom:8px;">
+        <input type="search" id="af-prof-busca" placeholder="🔍 Pesquisar profissão..." oninput="afProfFiltrar()" style="width:100%; box-sizing:border-box; padding:13px 16px; font-size:15px; border-radius:12px; margin-bottom:10px;">
         <div class="chip-select" id="af-profs" style="max-height:150px; overflow-y:auto;"></div>
         <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
           <input type="text" id="af-prof-nova" placeholder="Não achou? Digite uma nova profissão" style="flex:1; min-width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();afProfNova();}">
@@ -5132,6 +5132,15 @@ function afProfFiltrar(){
   const el = document.getElementById('af-prof-conta');
   if(el) el.textContent = n ? '— ' + n + ' selecionada(s)' : '';
 }
+// Leva as profissões já marcadas para o topo da lista (mantendo a ordem alfabética dentro de cada grupo).
+// Só roda ao abrir o formulário e ao cadastrar uma nova — não a cada clique, para os botões não pularem.
+function afProfSelecionadasNoTopo(){
+  const box = document.getElementById('af-profs'); if(!box) return;
+  const chips = [...box.querySelectorAll('.chip-opt')];
+  [...chips.filter(c=>c.classList.contains('selected')), ...chips.filter(c=>!c.classList.contains('selected'))].forEach(c=>box.appendChild(c));
+  box.scrollTop = 0;
+  afProfFiltrar();
+}
 async function afProfNova(){
   const input = document.getElementById('af-prof-nova');
   const nome = input.value.trim(); if(!nome) return;
@@ -5152,7 +5161,7 @@ async function afProfNova(){
   document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(marcadas.includes(c.dataset.prof) || c.dataset.prof===alvo) c.classList.add('selected'); });
   input.value = '';
   document.getElementById('af-prof-busca').value = '';
-  afProfFiltrar();
+  afProfSelecionadasNoTopo();
 }
 // Atalho pro admin editar um edital direto da página de detalhe (menu
 // Editais), sem sair de onde está — o formulário abre como uma janela por
@@ -5220,7 +5229,7 @@ function openAdminForm(id){
     document.getElementById('af-email-inscricao').value = o.emailInscricao || '';
 
     document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(o.profissoes.includes(c.dataset.prof)) c.classList.add('selected'); });
-    afProfFiltrar();
+    afProfSelecionadasNoTopo();
     afDocumentos = [...(o.documentos||[])];
     afMovimentacoes = (o.movimentacoes||[]).map(m=>({...m}));
     afRemuneracao = [...(o.remuneracao||[])];
@@ -7477,7 +7486,7 @@ function abrirRevisaoCompleta(id, tipo, item){
   if(typeof item.valor_estimado === 'number') set('af-volume', item.valor_estimado.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
   const dets = item.profissoes_detectadas || [];
   document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(dets.includes(c.dataset.prof)) c.classList.add('selected'); });
-  afProfFiltrar();
+  afProfSelecionadasNoTopo();
   atualizarLinksPortais();
   const r = sugerirFaixaIndice({ valorEstimado:(typeof item.valor_estimado==='number')?item.valor_estimado:null, profissoes:dets, objeto:item.objeto||item.excerto||'' });
   document.getElementById('af-revisao-origem').innerHTML = (tipo==='diario' ? 'Achado do Diário Oficial' : 'Achado do PNCP') + ' — os campos abaixo vieram preenchidos do que foi encontrado. ' + (item.link_pncp ? `<a href="${esc(item.link_pncp)}" target="_blank" rel="noopener" style="color:var(--teal);">Ver no PNCP ↗</a>` : '') + (item.url_diario ? ` <a href="${esc(item.url_diario)}" target="_blank" rel="noopener" style="color:var(--teal);">Ver no Diário ↗</a>` : '');
