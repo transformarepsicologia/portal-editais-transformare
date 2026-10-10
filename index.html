@@ -5313,11 +5313,25 @@ const AAE_CAMPOS = [
   ['carimbo','Carimbo de data/hora'],['razao','Razão social'],['fantasia','Nome fantasia'],['cnpj','CNPJ'],
   ['cidade','Cidade/UF onde atua'],['areas','Principais áreas de atuação'],['nprof','Nº de profissionais'],['profissoes','Profissões presentes'],
   ['vinculo','Vínculo dos profissionais'],['atendimento','Forma de atendimento'],['regioes','Cidades/regiões de interesse'],['capacidade','Capacidade por semana'],
-  ['profissionais','Profissionais a disponibilizar'],['regProf','Profissionais com registro ativo?'],['regClinica','Clínica com cadastro ativo no Conselho?'],['especializacoes','Especializações/pós'],
+  ['profissionais','Profissionais a disponibilizar'],['regProf','Profissionais com registro ativo?'],['especializacoes','Especializações/pós'],
   ['interesses','Tipos de oportunidades de interesse'],['temEdital','Possui edital específico?'],['qualEdital','Qual edital?'],['faixaValor','Faixa de valor por atendimento'],
   ['ampliar','Disponibilidade para ampliar'],['info','Informação adicional'],['apoio','Tipo de apoio desejado'],['site','Site profissional'],
-  ['email','E-mail profissional'],['gmn','Google Meu Negócio'],['redes','Outras redes']
+  ['email','E-mail profissional'],['gmn','Google Meu Negócio'],['redes','Outras redes'],['regClinica','Clínica com cadastro ativo no Conselho?']
 ];
+const AAE_CAB = {carimbo:/carimbo/, razao:/razao social/, fantasia:/nome fantasia/, cnpj:/cnpj/, cidade:/cidade\/uf|cidade.*clinica atua/, areas:/principais areas/, nprof:/quantos profissionais/, profissoes:/quais profissoes/, vinculo:/como os profissionais atuam/, atendimento:/como a clinica realiza/, regioes:/cidades ou regioes/, capacidade:/capacidade aproximada/, profissionais:/informe os profissionais/, regProf:/profissionais possuem registro/, especializacoes:/especializacoes ou pos/, interesses:/tipos de oportunidades/, temEdital:/possui atualmente algum edital/, qualEdital:/se sim, qual/, faixaValor:/faixa de valor/, ampliar:/disponibilidade para ampliar/, info:/informacao adicional/, apoio:/tipo de apoio/, site:/site profissional/, email:/e-?mail profissional/, gmn:/google meu negocio/, redes:/outras redes/, regClinica:/clinica possu[ei] cadastro|cadastro ativo no respectivo/};
+function aaeParseTSV(txt){
+  const rows=[]; let row=[], cell='', q=false;
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(ch==='\r') continue;
+    if(ch==='"'){ if(q && txt[i+1]==='"'){ cell+='"'; i++; } else q=!q; }
+    else if(ch==='\t' && !q){ row.push(cell); cell=''; }
+    else if(ch==='\n' && !q){ row.push(cell); rows.push(row); row=[]; cell=''; }
+    else cell+=ch;
+  }
+  row.push(cell); rows.push(row);
+  return rows.map(r=>r.map(c=>c.replace(/\s+/g,' ').trim()));
+}
 const AAE_LONGOS = ['areas','profissoes','regioes','profissionais','especializacoes','interesses','info','apoio','qualEdital'];
 let aaeLista = [], aaeAtual = null; // aaeAtual = {id, nome, ficha:{}, analise:{editais:[],relatorio:'',final:''}}
 function aaeNovo(){ return {id:null, nome:'', ficha:{}, analise:{editais:[], relatorio:'', final:''}}; }
@@ -5338,25 +5352,33 @@ function aaeAbrir(id){
 }
 function aaeNovaCliente(){ aaeAtual = aaeNovo(); aaeRenderForm(); }
 function aaeNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+let aaeLinhasPend = [];
 function aaeColar(){
-  const txt = document.getElementById('aae-colar').value.replace(/\r/g,'');
+  const txt = document.getElementById('aae-colar').value;
   if(!txt.trim()){ toast('Cole a linha da planilha primeiro'); return; }
-  const linhas = txt.split('\n').filter(l=>l.trim());
-  let cab = null, linha = linhas[linhas.length-1];
-  if(linhas.length>1 && /raz[aã]o social/i.test(linhas[0])) cab = linhas[0].split('\t');
-  const cel = linha.split('\t');
-  const f = {};
-  if(cab){
-    cab.forEach((h,i)=>{ const idx = AAE_CAMPOS.findIndex(([k,r])=>aaeNorm(h).startsWith(aaeNorm(r).slice(0,14))); if(idx>=0) f[AAE_CAMPOS[idx][0]] = (cel[i]||'').trim(); });
-  } else {
-    AAE_CAMPOS.forEach(([k],i)=>{ f[k] = (cel[i]||'').trim(); });
+  const rows = aaeParseTSV(txt).filter(r=>r.some(c=>c));
+  const hi = rows.findIndex(r=>r.some(c=>/razao social/.test(aaeNorm(c))));
+  let map = null;
+  if(hi>=0){ map = {}; const usados = {}; rows[hi].forEach((h,idx)=>{ const hn = aaeNorm(h).replace(/\s+/g,' '); for(const k in AAE_CAB){ if(!usados[k] && AAE_CAB[k].test(hn)){ usados[k]=1; map[idx]=k; break; } } }); }
+  const ehData = r=>/^\d{2}\/\d{2}\/\d{4}/.test(r[0]||'');
+  let lista = rows.filter((r,idx)=>idx!==hi && ehData(r));
+  if(!lista.length) lista = rows.filter((r,idx)=>idx>hi && r.filter(c=>c).length>=4);
+  if(!lista.length){ toast('Não encontrei a linha de respostas'); return; }
+  aaeLinhasPend = lista.map(cel=>{ const f={}; if(map){ cel.forEach((v,idx)=>{ if(map[idx]) f[map[idx]]=v; }); } else { AAE_CAMPOS.forEach(([k],idx)=>{ f[k]=cel[idx]||''; }); } return f; });
+  if(aaeLinhasPend.length>1){
+    const el = document.getElementById('aae-escolha');
+    el.innerHTML = '<p class="section-sub">A planilha tem '+aaeLinhasPend.length+' respostas. Qual cliente analisar?</p>'+aaeLinhasPend.map((f,n)=>`<button class="btn-ghost" style="margin:0 6px 6px 0;" onclick="aaeImportarLinha(${n})">${esc(f.fantasia||f.razao||('Linha '+(n+1)))} <small>(${esc(f.carimbo||'')})</small></button>`).join('');
+    return;
   }
+  aaeImportarLinha(0);
+}
+function aaeImportarLinha(n){
+  const f = aaeLinhasPend[n]; if(!f) return;
   aaeLerForm();
-  aaeAtual.ficha = Object.assign({}, aaeAtual.ficha, f);
-  if(!aaeAtual.nome) aaeAtual.nome = f.fantasia || f.razao || '';
+  aaeAtual.ficha = f;
+  aaeAtual.nome = f.fantasia || f.razao || aaeAtual.nome || '';
   aaeAtual.analise.editais = [];
-  aaeAtual.analise.editais = aaeAtual.analise.editais.filter(e=>e.nome);
-  aaeRenderForm(); aaeCalcular(); toast('Linha importada e analisada');
+  aaeRenderForm(); aaeCalcular(); toast('Respostas importadas e analisadas');
 }
 function aaeEdital(e,i){
   return `<div style="padding:10px; margin-bottom:8px; border:1px solid #ddd; border-radius:10px;" data-ed="${i}">
@@ -5387,7 +5409,8 @@ function aaeRenderForm(){
     <label class="form-label">Nome da cliente (para a lista)</label>
     <input class="form-input" id="aae-nome" value="${esc(a.nome)}">
     <label class="form-label" style="margin-top:10px;">Colar linha da planilha de respostas (pode incluir o cabeçalho)</label>
-    <textarea class="form-input" id="aae-colar" rows="3" placeholder="Copie a linha no Google Sheets e cole aqui"></textarea>
+    <textarea class="form-input" id="aae-colar" rows="3" placeholder="No Google Sheets, copie o cabeçalho + a linha da cliente (ou a planilha toda) e cole aqui"></textarea>
+    <div id="aae-escolha"></div>
     <button class="btn-primary" onclick="aaeColar()">Importar e analisar</button>
     <details style="margin-top:12px;" ${a.id||Object.keys(f).length?'':'closed'}><summary style="cursor:pointer; font-weight:600;">Dados do cadastro e edital indicado (editar)</summary>
     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; margin-top:12px;">${campos}</div>
@@ -5424,7 +5447,7 @@ function aaeAddManual(){ aaeLerForm(); aaeAtual.analise.editais.push({nome:'',or
 function aaeDeCatalogo(o){
   const v = String(o.valorAtendimento||'').replace(/\./g,'').match(/\d+(?:,\d+)?/);
   const pub = (o.aceitaContratacao||[]).join(' ');
-  return {nome:o.edital||'', orgao:o.orgao||'', uf:o.uf||'', tipo:o.tipo||'', modalidade:o.modalidade||'', valor:v?v[0].replace(',','.'):'', aceitaPJ:!pub || /jur|cl[ií]nica/i.test(pub), exigeEsp:false, profissoes:(o.profissoes||[]).join(', '), valorTexto:String(o.valorAtendimento||'')};
+  return {nome:o.edital||'', orgao:o.orgao||'', uf:o.uf||'', tipo:o.tipo||'', modalidade:o.modalidade||'', valor:v?v[0].replace(',','.'):'', aceitaPJ:!pub || /jur|cl[ií]nica/i.test(pub), exigeEsp:false, profissoes:(o.profissoes||[]).join(', '), valorTexto:String(o.valorAtendimento||''), texto:[o.objeto,o.requisitos].filter(Boolean).join(' '), abrangencia:o.abrangencia||''};
 }
 function aaeAddCatalogo(){
   aaeLerForm();
@@ -5445,7 +5468,7 @@ function aaeProfOK(clienteTxt, edTxt){
   return eds.some(x=>cl.includes(x.slice(0,5)));
 }
 function aaeGeoOK(f, e){
-  const online = /online/.test(aaeNorm(e.modalidade)) && /online|nacional/.test(aaeNorm(f.atendimento+' '+f.interesses+' '+f.regioes));
+  const online = /online/.test(aaeNorm(e.modalidade)) && !/presencial/.test(aaeNorm(e.modalidade)) && /online|nacional|brasil/.test(aaeNorm(f.atendimento+' '+f.interesses+' '+f.regioes));
   if(online) return true;
   if(/nacional|federal/.test(aaeNorm(e.abrangencia||'')) && !e.uf) return true;
   const ufs = aaeUFs([f.cidade,f.regioes].join(' '));
@@ -5460,10 +5483,14 @@ function aaePontuar(f, e){
     if(aaeProfOK(f.profissoes+' '+f.areas, e.profissoes)){ prof = 100; fav.push('Profissão da clínica é aceita pelo edital'); }
     else { prof = 10; aten.push('Nenhuma profissão da clínica consta entre as aceitas pelo edital'); }
   } else inf.push('Profissões aceitas pelo edital não informadas');
-  if(/^n/i.test(f.regProf||'')){ prof = Math.min(prof,40); aten.push('Profissionais sem registro ativo no Conselho'); }
-  else if(/^s/i.test(f.regProf||'')) fav.push('Profissionais com registro ativo no Conselho');
-  if(e.exigeEsp && !f.especializacoes){ prof = Math.max(0,prof-30); aten.push('Edital exige especialização e a clínica não informou'); }
-  else if(f.especializacoes && /^s|[a-z]{4}/i.test(f.especializacoes)) fav.push('Clínica informa especializações/pós');
+  const regP = aaeNorm(f.regProf||'');
+  if(/^nao/.test(regP)){ prof = Math.min(prof,40); aten.push('Profissionais sem registro ativo no Conselho'); }
+  else if(/alguns|parcial/.test(regP)){ prof = Math.min(prof,75); aten.push('Só parte dos profissionais tem registro ativo no Conselho'); }
+  else if(/^sim/.test(regP)) fav.push('Todos os profissionais com registro ativo no Conselho');
+  const espN = aaeNorm(f.especializacoes||'');
+  const temEsp = /^sim|alguns/.test(espN) || (espN.length>6 && !/^nao/.test(espN));
+  if(e.exigeEsp && !temEsp){ prof = Math.max(0,prof-30); aten.push('Edital exige especialização e a clínica não informou'); }
+  else if(temEsp) fav.push(/alguns/.test(espN)?'Parte da equipe tem especializações/pós':'Equipe com especializações/pós');
   // 2) Operacional
   let oper = 50; const at = aaeNorm(f.atendimento);
   if(e.modalidade){
@@ -5482,20 +5509,27 @@ function aaePontuar(f, e){
   // 4) Interesse
   let int = 50; const ints = aaeNorm(f.interesses), tp = aaeNorm(e.tipo+' '+e.orgao);
   if(ints.length>4 && tp.trim()){
-    const chaves = [['prefeitura','prefeitura'],['governo estadual','estad'],['governo federal','federal'],['forca','forca'],['fundac','fundac'],['hospital','hospital'],['empresa','empresa'],['plano','plano'],['orgao','orgao']];
-    const ok = chaves.some(([c,t])=>ints.includes(c) && tp.includes(t)) || (ints.includes('nacional') && /online/.test(aaeNorm(e.modalidade)));
+    const chaves = [['orgaos publicos','municip|prefeitura|estad|federal|secretaria|fundo|camara|ministerio|policia|capsem|instituto|autarquia|hospital|universidade|forca|exercito|aeronautica|marinha'],['prefeitura','municip|prefeitura|fundo municipal|secretaria municipal'],['governo estadual','estad|secretaria de estado'],['governo federal','federal|ministerio|forca|exercito|aeronautica|marinha'],['forca','forca'],['fundac','fundac'],['hospital','hospital'],['empresa','empresa'],['plano','plano'],['orgao','orgao']];
+    const ok = chaves.some(([c,t])=>ints.includes(c) && new RegExp(t).test(tp)) || (ints.includes('nacional') && /online/.test(aaeNorm(e.modalidade)));
     int = ok ? 100 : 35; (ok?fav:aten).push(ok?'Tipo de órgão alinhado ao interesse declarado':'Tipo de órgão fora dos interesses declarados');
   } else inf.push('Tipo de órgão ou interesses não informados');
-  if(/^s/i.test(f.ampliar||'')){ int=Math.min(100,int+10); fav.push('Disponibilidade para ampliar atendimentos'); }
+  if(/^sim|depende/i.test(aaeNorm(f.ampliar||''))){ int=Math.min(100,int+10); fav.push(/depende/i.test(f.ampliar)?'Disponibilidade para ampliar atendimentos, conforme a demanda':'Disponibilidade para ampliar atendimentos'); }
   // 5) Barreiras
   let barr = 100;
   if(e.aceitaPJ===false){ barr-=50; aten.push('Edital não aceita PJ'); }
   if(/^n/i.test(f.regClinica||'')){ barr-=30; aten.push('Clínica sem cadastro ativo no Conselho'); }
   else if(/parcial|alguns/i.test(f.regClinica||'')){ barr-=15; aten.push('Só parte dos cadastros da clínica no Conselho está ativa'); }
+  else if(/^s/i.test(f.regClinica||'')) fav.push('Clínica com cadastro ativo no Conselho');
   if(!f.regClinica) inf.push('Cadastro da clínica no Conselho não informado');
   barr = Math.max(0,barr);
+  const txtEd = aaeNorm([e.nome,e.orgao,e.profissoes,e.texto].join(' '));
+  const termos = Array.from(new Set(aaeNorm(f.areas||'').split(/[^a-z]+/).filter(w=>w.length>=5 && !/^(atendimento|clinica|servicos|publico|publicos)$/.test(w)).map(w=>w.slice(0,6))));
+  const achados = termos.filter(w=>txtEd.includes(w));
+  let bonus = Math.min(5, achados.length*2);
+  if(achados.length) fav.push('Edital cita áreas de atuação da clínica ('+achados.length+')');
+  if(fin===100 && min!=null && val>=min*1.2) bonus = Math.min(5, bonus+1);
   const sub = {prof,oper,fin,int,barr};
-  const score = Math.round(Object.keys(sub).reduce((t,k)=>t+sub[k]*AAE_PESOS[k]/100,0));
+  const score = Math.min(100, Math.round(Object.keys(sub).reduce((t,k)=>t+sub[k]*AAE_PESOS[k]/100,0)) + bonus);
   const faixa = score>=85?['🟢','Alta Aderência','#1e8e4e']:score>=70?['🟡','Média Aderência','#c9a100']:score>=50?['🟠','Baixa Aderência','#e07b00']:['🔴','Aderência Insuficiente','#c0392b'];
   const rec = score>=85?'Avançar para o DEH':score>=70?'Avançar para o DEH com ressalvas':score>=50?'Necessita adequações prévias antes do DEH':'Não recomendar continuidade';
   return {sub,score,faixa,rec,inf,fav,aten,geo,profOk:!!e.profissoes && prof>=40};
@@ -5510,10 +5544,14 @@ function aaeCalcRes(){
   const f = aaeAtual.ficha;
   // Edital indicado: se o texto do formulário bate com o catálogo, usa os dados do portal
   if(!aaeAtual.analise.editais.length && /^s/i.test(f.temEdital||'') && f.qualEdital){
-    const o = aaeAcharNoCatalogo(f.qualEdital);
-    aaeAtual.analise.editais.push(o ? aaeDeCatalogo(o) : {nome:f.qualEdital, orgao:'', uf:'', tipo:'', modalidade:'', valor:'', aceitaPJ:true, exigeEsp:false, profissoes:''});
+    let o = aaeAcharNoCatalogo(f.qualEdital);
+    if(!o){
+      const m = String(f.qualEdital).match(/\b(?:do|de|em|da)\s+([A-Za-z]{2})\b/);
+      if(m && /ultim|recente|novo/.test(aaeNorm(f.qualEdital))){ const uf = m[1].toUpperCase(); o = oportunidades.find(x=>String(x.uf).toUpperCase()===uf) || null; }
+    }
+    aaeAtual.analise.editais.push(o ? aaeDeCatalogo(o) : {nome:f.qualEdital, orgao:'', uf:'', tipo:'', modalidade:'', valor:'', aceitaPJ:true, exigeEsp:false, profissoes:'', naoLocalizado:true});
   }
-  const indicados = aaeAtual.analise.editais.map(e=>Object.assign({e, origem:'Indicado pela cliente'}, aaePontuar(f,e)));
+  const indicados = aaeAtual.analise.editais.map(e=>{ const r = Object.assign({e, origem:'Indicado pela cliente'}, aaePontuar(f,e)); if(e.naoLocalizado) r.aten.unshift('Edital citado pela cliente (“'+e.nome+'”) não foi localizado no portal — confirmar qual é'); return r; });
   const nomesInd = indicados.map(r=>aaeNorm(r.e.nome));
   // Editais abertos do site: só os elegíveis (profissão aceita, aceita PJ, região compatível), os 5 de maior score
   const abertos = oportunidades.filter(o=>{
@@ -5741,10 +5779,17 @@ function aaePanorama(){
   const geral = Math.round(tres.reduce((s,r)=>s+r.score,0)/tres.length);
   const logo = new URL('assets/logo-transformare.webp', location.href).href;
   const hoje = new Date().toLocaleDateString('pt-BR',{day:'numeric', month:'long', year:'numeric'});
-  let pratica = 'A clínica atua como pessoa jurídica'+(f.cidade?' em '+f.cidade:'')+'.';
-  if(f.nprof||f.profissoes) pratica += ' Equipe: '+(f.nprof||'não informada')+(f.profissoes?' ('+f.profissoes+')':'')+'.';
-  if(f.atendimento) pratica += ' Formas de atendimento: '+f.atendimento+'.';
-  if(f.capacidade) pratica += ' Capacidade informada por semana: '+f.capacidade+'.';
+  const lim = x=>String(x||'').replace(/\s+/g,' ').replace(/[.\s]+$/,'').trim();
+  let pratica = 'A clínica atua como pessoa jurídica'+(f.cidade?' em '+lim(f.cidade):'')+'.';
+  if(f.nprof||f.profissoes) pratica += ' Equipe: '+(lim(f.nprof)||'não informada')+(f.profissoes?' ('+lim(f.profissoes)+')':'')+'.';
+  if(f.areas) pratica += ' Áreas de atuação: '+lim(f.areas)+'.';
+  if(f.atendimento) pratica += ' Formas de atendimento: '+lim(f.atendimento)+'.';
+  if(f.regioes) pratica += ' Regiões de interesse: '+lim(f.regioes)+'.';
+  if(f.capacidade) pratica += ' Capacidade informada por semana: '+lim(f.capacidade)+'.';
+  if(f.faixaValor) pratica += ' Faixa de valor considerada interessante: '+lim(f.faixaValor)+'.';
+  if(f.ampliar) pratica += ' Disponibilidade para ampliar atendimentos: '+lim(f.ampliar).toLowerCase()+'.';
+  if(f.temEdital && /^s/i.test(f.temEdital) && f.qualEdital) pratica += ' Edital que você indicou: '+lim(f.qualEdital)+'.';
+  const apoioTxt = (f.apoio && !/^(n[aã]o|ainda)/i.test(f.apoio)) ? ' O apoio que você indicou: '+lim(f.apoio).toLowerCase()+'.' : '';
   const kpis = tres.map((r,i)=>`<div class="kpi"><div class="kn">${r.score}%</div><div class="kl">${esc(aaeNomeEd(r.e).t)}${i===0&&destaque?' — sua melhor opção':''}</div></div>`).join('');
   const linhas = tres.map(r=>{
     const v = aaeValorTxt(r.e), nm = aaeNomeEd(r.e);
@@ -5810,7 +5855,7 @@ ${detalhes}
 <div class="junto"><b>O QUE ISSO SIGNIFICA JUNTO</b><br>${esc(juntos)}</div>
 <div class="alerta"><h2>⚠ FIQUE ATENTA — ISSO PODE TRAVAR SEU CREDENCIAMENTO</h2>${caixa}</div>
 <h2>O que fazer agora</h2>
-<p><b>Você pode contar com o nosso apoio.</b> O passo seguinte é o Diagnóstico Estratégico de Habilitação: uma conferência minuciosa de todos os requisitos do edital escolhido, para garantir que tudo esteja certo antes de você submeter. É nessa etapa que minimizamos surpresas desagradáveis lá na frente.</p>
+<p><b>Você pode contar com o nosso apoio.</b> O passo seguinte é o Diagnóstico Estratégico de Habilitação: uma conferência minuciosa de todos os requisitos do edital escolhido, para garantir que tudo esteja certo antes de você submeter. É nessa etapa que minimizamos surpresas desagradáveis lá na frente.${esc(apoioTxt)}</p>
 <p><b>Sobre o investimento.</b> Sendo transparentes: <span class="edit-hint">[inserir valor e condições do Diagnóstico]</span>. O retorno depende da demanda que o órgão gerar e da disponibilidade de agenda para atender.</p>
 <div class="veredito"><div class="t">NOSSO VEREDITO</div><div class="v">${ver}</div></div>
 <p>Com os pontos de atenção resolvidos, a clínica está pronta para dar o próximo passo com segurança.</p>
