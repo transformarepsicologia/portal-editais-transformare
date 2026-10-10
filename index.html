@@ -4331,7 +4331,10 @@ async function deleteAccount(){
 
 /* ================= ADMIN (mock CRUD, sessão) ================= */
 /* ================= CADASTROS AUXILIARES: PROFISSÕES ================= */
-async function persistProfissoes(){ await storeSet('profissoes', profissoes); }
+// Mantém a lista de profissões sempre em ordem alfabética (ignora acento e maiúscula) — vale para o
+// cadastro, os filtros, os alertas e o painel, que leem todos desta mesma lista.
+function ordenarProfissoes(){ profissoes.sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR',{sensitivity:'base'})); }
+async function persistProfissoes(){ ordenarProfissoes(); await storeSet('profissoes', profissoes); }
 function afterProfissoesChanged(){
   renderProfissoesAdmin();
   refreshProfFilterSelect();
@@ -6517,6 +6520,7 @@ async function init(){
     profissoes = PROFISSOES_SEED.map(nome=>({nome, ativa:true}));
     await storeSet('profissoes', profissoes);
   }
+  ordenarProfissoes();
 
   populateSelects();
   populateAdminFormSelects();
