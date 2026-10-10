@@ -1315,8 +1315,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div id="cadastros-auxiliares-body" style="display:none;">
     <div class="panel" style="margin-top:0;">
       <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-        <input type="text" id="prof-admin-input" placeholder="Nova profissão" style="flex:1; min-width:180px;">
-        <button type="button" class="btn-primary" onclick="addProfissaoAdmin()">+ Adicionar profissão</button>
+        <textarea id="prof-admin-input" rows="2" placeholder="Nova profissão — ou cole várias de uma vez (uma por linha, ou separadas por vírgula ou ponto e vírgula)" style="flex:1; min-width:180px; resize:vertical;"></textarea>
+        <button type="button" class="btn-primary" onclick="addProfissaoAdmin()">+ Adicionar profissão(ões)</button>
       </div>
       <ul class="af-item-list" id="prof-admin-list"></ul>
       <p style="font-size:11px; color:var(--ink-dim); margin-top:10px;">Desativar uma profissão a remove de novos cadastros, filtros e alertas — oportunidades já cadastradas com ela não são afetadas.</p>
@@ -4355,14 +4355,22 @@ function renderProfissoesAdmin(){
 }
 async function addProfissaoAdmin(){
   const input = document.getElementById('prof-admin-input');
-  const nome = input.value.trim();
-  if(!nome) return;
-  if(profissoes.some(p=>p.nome.toLowerCase()===nome.toLowerCase())){ toast('Essa profissão já está cadastrada'); return; }
-  profissoes.push({nome, ativa:true});
+  // Aceita uma ou várias: separa por quebra de linha, vírgula ou ponto e vírgula; tira marcadores (-, •, 1.).
+  const nomes = [...new Set(input.value.split(/[\n;,]+/)
+    .map(t=>t.replace(/^\s*(?:[-•*–—]|\d+[.)])\s*/, '').trim())
+    .filter(Boolean))];
+  if(!nomes.length) return;
+  const novas = [], repetidas = [];
+  nomes.forEach(nome=>{
+    if(profissoes.some(p=>p.nome.toLowerCase()===nome.toLowerCase()) || novas.some(n=>n.toLowerCase()===nome.toLowerCase())) repetidas.push(nome);
+    else novas.push(nome);
+  });
+  if(!novas.length){ toast(repetidas.length > 1 ? 'Essas profissões já estão cadastradas' : 'Essa profissão já está cadastrada'); return; }
+  novas.forEach(nome=>profissoes.push({nome, ativa:true}));
   input.value = '';
   await persistProfissoes();
   afterProfissoesChanged();
-  toast('Profissão adicionada');
+  toast(novas.length === 1 ? 'Profissão adicionada' : `${novas.length} profissões adicionadas` + (repetidas.length ? ` (${repetidas.length} já existia${repetidas.length>1?'m':''})` : ''));
 }
 async function toggleProfissaoAtiva(i){
   profissoes[i].ativa = !profissoes[i].ativa;
