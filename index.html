@@ -5532,7 +5532,12 @@ function aaePontuar(f, e){
   const score = Math.min(100, Math.round(Object.keys(sub).reduce((t,k)=>t+sub[k]*AAE_PESOS[k]/100,0)) + bonus);
   const faixa = score>=85?['🟢','Alta Aderência','#1e8e4e']:score>=70?['🟡','Média Aderência','#c9a100']:score>=50?['🟠','Baixa Aderência','#e07b00']:['🔴','Aderência Insuficiente','#c0392b'];
   const rec = score>=85?'Avançar para o DEH':score>=70?'Avançar para o DEH com ressalvas':score>=50?'Necessita adequações prévias antes do DEH':'Não recomendar continuidade';
-  return {sub,score,faixa,rec,inf,fav,aten,geo,profOk:!!e.profissoes && prof>=40};
+  // Preferência declarada pela cliente: valor desejado, região e tipo de órgão
+  const fora = [];
+  if(min!=null && val && val<min) fora.push(`o valor (R$ ${val.toLocaleString('pt-BR')}) fica abaixo da faixa considerada interessante (a partir de R$ ${min.toLocaleString('pt-BR')})`);
+  if(geo===false) fora.push(`o edital é em ${e.uf}, fora das regiões de interesse`);
+  if(int<=35) fora.push('o tipo de órgão não está entre os interesses declarados');
+  return {sub,score,faixa,rec,inf,fav,aten,geo,fora,pref:fora.length===0,profOk:!!e.profissoes && prof>=40};
 }
 function aaeAcharNoCatalogo(txt){
   const t = aaeNorm(txt).replace(/[^a-z0-9\/ ]/g,' ').trim(); if(!t) return null;
@@ -5560,7 +5565,7 @@ function aaeCalcRes(){
   }).map(aaeDeCatalogo).filter(e=>e.nome && !nomesInd.includes(aaeNorm(e.nome)));
   const site = abertos.map(e=>Object.assign({e, origem:'Radar (site)'}, aaePontuar(f,e)))
     .filter(r=>r.profOk && r.e.aceitaPJ!==false && r.geo!==false && r.e.profissoes)
-    .sort((a,b)=>b.score-a.score).slice(0,5);
+    .sort((a,b)=>(b.pref-a.pref)||(b.score-a.score)).slice(0,5);
   return indicados.concat(site);
 }
 function aaeCalcular(){
@@ -5743,11 +5748,12 @@ function aaeImprimir(){
 }
 /* ---- Panorama de Oportunidades (documento para a cliente): até 5 opções (indicado primeiro + mais aderentes do site) ---- */
 function aaeTres(res){
-  const ind = res.filter(r=>r.origem==='Indicado pela cliente');
-  const site = res.filter(r=>r.origem!=='Indicado pela cliente').sort((a,b)=>b.score-a.score);
-  const pick = ind.slice(0,5);
-  for(const r of site){ if(pick.length>=5) break; pick.push(r); }
-  return pick.sort((a,b)=>b.score-a.score);
+  // 3 em destaque = só as que respeitam a preferência da cliente (valor, região, interesse), por score
+  return res.filter(r=>r.pref).sort((a,b)=>b.score-a.score).slice(0,3);
+}
+function aaeOutras(res, tres){
+  // demais possibilidades (até 2): reconhecidas na análise como fora da escolha preferencial
+  return res.filter(r=>!tres.includes(r)).sort((a,b)=>(b.pref-a.pref)||(b.score-a.score)).slice(0,2);
 }
 function aaeTitulo(s){
   s = String(s||'').trim();
@@ -5773,7 +5779,10 @@ function aaePanorama(){
   const res = aaeCalcRes();
   if(!res.length){ toast('Adicione um edital indicado ou cadastre editais abertos no site'); return; }
   const f = aaeAtual.ficha, nome = f.fantasia||f.razao||aaeAtual.nome||'Cliente';
-  const tres = aaeTres(res);
+  let tres = aaeTres(res);
+  const semPref = !tres.length;
+  if(semPref) tres = res.slice().sort((a,b)=>b.score-a.score).slice(0,3);
+  const outras = semPref ? [] : aaeOutras(res, tres);
   const melhor = tres[0];
   const destaque = tres.length<2 || tres[0].score>tres[1].score; // só destaca "melhor" se não houver empate
   const geral = Math.round(tres.reduce((s,r)=>s+r.score,0)/tres.length);
@@ -5808,6 +5817,10 @@ function aaePanorama(){
       ${r.aten.length?`<p>O ponto de atenção aqui: ${esc(r.aten.join('; '))}.</p>`:''}
       ${r.inf.length?`<p class="peq"><i>Ainda a confirmar no edital:</i> ${esc(r.inf.join('; '))}.</p>`:''}`;
   }).join('');
+  const semPrefHtml = semPref ? '<p><b>Importante:</b> nenhuma oportunidade encontrada atende plenamente às preferências que você informou (valor, região e tipo de órgão). Mostramos as mais próximas, e cada ponto de divergência está indicado abaixo.</p>' : '';
+  const outrasHtml = outras.length ? `<h2>Outras possibilidades, fora da sua escolha preferencial</h2>
+    <p>Além das oportunidades acima, encontramos ${outras.length>1?'estas possibilidades':'esta possibilidade'}. Reconhecemos que ${outras.length>1?'não são':'não é'} o que você priorizou, mas ${outras.length>1?'existem':'existe'} e vale você saber:</p>
+    ${outras.map(r=>{ const nm=aaeNomeEd(r.e), v=aaeValorTxt(r.e); const m=r.fora.length?r.fora.join('; '):'ficou fora do top 3 por aderência'; return `<h3>${esc(nm.t)} — ${r.score}%</h3><p>Apesar de não ser a escolha preferencial (${esc(m)}), existe essa possibilidade${v?': '+esc(v):''}${r.e.modalidade?', modalidade '+esc(String(r.e.modalidade).toLowerCase()):''}. Vale considerar caso você queira ampliar as frentes de atuação ou se as condições forem negociáveis.${r.aten.filter(x=>!/^Repasse/.test(x)).length?' Atenção: '+esc(r.aten.filter(x=>!/^Repasse/.test(x)).join('; '))+'.':''}</p>`; }).join('')}` : '';
   const nOn = tres.filter(r=>/online/i.test(r.e.modalidade||'')).length, nPr = tres.filter(r=>/presencial/i.test(r.e.modalidade||'')).length;
   const juntos = (tres.length>1?'Juntas, essas oportunidades formam um caminho '+(nOn&&nPr?'equilibrado, combinando editais online e presenciais':'coerente com o seu perfil')+'. ':'')+'O melhor ponto de partida é '+aaeNomeEd(melhor.e).t+', com '+melhor.score+'% de aderência'+(melhor.fav[0]?' — '+melhor.fav[0].charAt(0).toLowerCase()+melhor.fav[0].slice(1):'')+'.';
   const atencoes = Array.from(new Set(tres.flatMap(r=>r.aten)));
@@ -5845,6 +5858,7 @@ table{width:100%; border-collapse:collapse; font-size:13.5px;} th{background:#1f
 <p class="cli">${esc(nome)}</p>
 <p>Preparamos um resumo simples e direto do que encontramos sobre o seu perfil e as oportunidades de credenciamento mais adequadas agora. Seu perfil tem <b>${geral}% de aderência geral</b> às ${tres.length>1?tres.length+' oportunidades':'oportunidade'} abaixo. Trouxemos também, com transparência, os pontos que precisam de atenção antes de qualquer submissão: eles são tão importantes quanto as boas notícias.</p>
 <div class="kpis">${kpis}</div>
+${semPrefHtml}
 <h2>O que isso significa, na prática</h2>
 <p>${esc(pratica)}</p>
 <h2>Onde você tem mais chance</h2>
@@ -5852,6 +5866,7 @@ table{width:100%; border-collapse:collapse; font-size:13.5px;} th{background:#1f
 <table><tr><th>Edital</th><th>Aderência</th><th>Modalidade</th><th>O que isso quer dizer pra você</th></tr>${linhas}</table>
 <h2>Suas ${tres.length>1?tres.length+' melhores oportunidades':'melhor oportunidade'}, em detalhe</h2>
 ${detalhes}
+${outrasHtml}
 <div class="junto"><b>O QUE ISSO SIGNIFICA JUNTO</b><br>${esc(juntos)}</div>
 <div class="alerta"><h2>⚠ FIQUE ATENTA — ISSO PODE TRAVAR SEU CREDENCIAMENTO</h2>${caixa}</div>
 <h2>O que fazer agora</h2>
