@@ -1288,12 +1288,13 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p class="section-sub">Para clientes que chegam de fora do site (ex.: grupo Radar Transformare). Cadastro Inicial PJ → score automático → relatório e prompt para IA.</p>
     <div style="border:1px solid var(--border,#2a3a52); border-radius:12px; padding:14px; margin-bottom:16px;">
       <div class="section-title" style="font-size:16px; margin:0 0 4px;">Gerar documento a partir da análise da IA</div>
-      <p class="section-sub" style="margin-top:0;">Cole a análise pronta (do Claude ou Gemini) e gere o documento no formato padrão da Transformare. O sistema não analisa nada: só formata.</p>
+      <p class="section-sub" style="margin-top:0;">Cole a análise pronta (do Claude ou Gemini) e gere o documento no formato padrão da Transformare. O sistema não analisa nada: só formata no mesmo layout do Panorama, com download em PDF e Word.</p>
       <label class="form-label">Nome da cliente</label>
       <input class="form-input" id="aae-rapido-nome" placeholder="Ex.: A Gabi Te Ajuda">
       <label class="form-label" style="margin-top:8px;">Análise da IA (colar aqui)</label>
       <textarea class="form-input" id="aae-rapido-texto" rows="10" placeholder="Cole aqui o texto da análise"></textarea>
-      <button class="btn-primary" style="margin-top:8px;" onclick="aaeDocRapido()">Gerar documento padrão</button>
+      <button class="btn-primary" style="margin-top:8px;" onclick="aaeDocRapido()">Gerar documento padrão (PDF / Word)</button>
+      <button class="btn-ghost" style="margin-top:8px;" onclick="aaeCopiarFormato()">Copiar instruções de formato para a IA</button>
     </div>
     <details><summary style="cursor:pointer; font-weight:600;">Análise automática por planilha (opcional)</summary>
     <div id="aae-lista" style="margin:8px 0;"></div>
@@ -5766,7 +5767,25 @@ Estrutura obrigatória, nesta ordem:
 9. "O QUE FAZER AGORA": apoio da Transformare, Diagnóstico Estratégico de Habilitação (DEH) e "Sobre o investimento" (comparar com o valor de algumas consultas dela).
 10. "NOSSO VEREDITO" com selo 🟢/🟡/🟠/🔴 e uma frase final.
 11. Aviso: "Este resumo é um guia para te ajudar a decidir. Ele não garante aprovação em nenhum edital — a decisão final é sempre do órgão responsável." + cidade, data e "Transformare Projetos".
-Não invente dados; o que faltar, diga que precisa ser confirmado no edital. Evite jargão técnico (IPT, IPO, ICA, MTE).`;
+Não invente dados; o que faltar, diga que precisa ser confirmado no edital. Evite jargão técnico (IPT, IPO, ICA, MTE).
+
+FORMATAÇÃO (para o portal reconhecer cada parte; use exatamente estes títulos, um por linha, e nada de tabelas fora do item 5):
+SEU PANORAMA DE OPORTUNIDADES
+<nome da cliente>
+<parágrafo de abertura>
+92% Nome do edital — sua melhor opção   (uma linha por edital, começando pelo percentual)
+## O que isso significa, na prática
+## Onde você tem mais chance   (tabela com | Edital | Aderência | Modalidade | O que isso quer dizer pra você |)
+## Suas melhores oportunidades, em detalhe   (cada edital: "1. Nome — papel dele" numa linha e o parágrafo na linha seguinte)
+## Outras possibilidades, fora da sua escolha preferencial   (mesmo padrão; omita se não houver)
+O QUE ISSO SIGNIFICA JUNTO
+⚠ FIQUE ATENTA — ISSO PODE TRAVAR SEU CREDENCIAMENTO   (itens com "- ")
+## O que fazer agora   (com **Você pode contar com o nosso apoio.** e **Sobre o investimento.**)
+NOSSO VEREDITO   (próxima linha: o veredito com selo 🟢/🟡/🟠/🔴; depois uma frase)
+Este resumo é um guia para te ajudar a decidir. Ele não garante aprovação em nenhum edital — a decisão final é sempre do órgão responsável.`;
+async function aaeCopiarFormato(){
+  try{ await navigator.clipboard.writeText(AAE_PROMPT_PANORAMA); toast('Instruções copiadas — cole na IA junto com os dados da cliente'); }catch(e){ toast('Não foi possível copiar'); }
+}
 async function aaeCopiarPrompt(tipo){
   try{ await navigator.clipboard.writeText((aaeAtual.analise.prompt||'')+(tipo==='panorama'?'\n\n---\n'+AAE_PROMPT_PANORAMA:'')); toast('Prompt copiado — cole no Claude ou Gemini'); }
   catch(e){ toast('Não foi possível copiar'); }
@@ -5837,7 +5856,7 @@ function aaeDocTexto(origem){
   const a = aaeAtual.analise, f = aaeAtual.ficha;
   const txt = origem==='final' ? a.final : a.relatorio;
   if(!String(txt||'').trim()){ toast(origem==='final'?'Cole primeiro o texto devolvido pela IA':'A versão em texto está vazia'); return; }
-  aaeAbrirDoc(f.fantasia||f.razao||aaeAtual.nome||'Cliente', txt);
+  aaeAbrirDoc(f.fantasia||f.razao||aaeAtual.nome||'Cliente', txt, origem==='final'?'panorama':'tecnico');
 }
 function aaeDocRapido(){
   const nome = document.getElementById('aae-rapido-nome').value.trim();
@@ -5845,20 +5864,118 @@ function aaeDocRapido(){
   if(!txt.trim()){ toast('Cole primeiro a análise da IA'); return; }
   aaeAbrirDoc(nome||'Cliente', txt);
 }
-function aaeAbrirDoc(nome, txt){
+
+/* ---- Documento padrão (Panorama) a partir do texto da IA: o sistema NÃO analisa, só formata ---- */
+const AAE_SECOES = [
+  ['titulo',/^seu panorama/],['pratica',/significa.*pratica/],['chance',/onde voce tem mais chance/],
+  ['detalhe',/oportunidades.*detalhe|em detalhe/],['outras',/outras possibilidades/],['junto',/significa junto/],
+  ['alerta',/fique atent|pode travar/],['agora',/o que fazer agora/],['veredito',/^nosso veredito|^veredito/]
+];
+function aaeLimpaTitulo(l){ return l.replace(/^#{1,4}\s*/,'').replace(/\*\*/g,'').replace(/^\d{1,2}[.)]\s*/,'').replace(/[:.]\s*$/,'').trim(); }
+function aaeChaveSecao(l){
+  const t = aaeNorm(aaeLimpaTitulo(l)).replace(/\s+/g,' ');
+  if(!t || t.length>110) return null;
+  for(const [k,re] of AAE_SECOES){ if(re.test(t)) return k; }
+  return null;
+}
+function aaeDocPanoramaHtml(txt){
+  const inl = x=>esc(x).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,;:]|$)/g,'$1<i>$2</i>');
+  const linhas = String(txt||'').replace(/\r/g,'').split('\n').map(l=>l.trim());
+  // 1) quebra em seções
+  const secs = []; let atual = {k:'abertura', titulo:'', ls:[]}; secs.push(atual);
+  for(const l of linhas){
+    if(/^(porto alegre|[a-zçãé ]+),?\s+\d{1,2} de [a-zç]+ de \d{4}/i.test(l) || /^transformare projetos\.?$/i.test(l)) continue;
+    const k = l ? aaeChaveSecao(l) : null;
+    const ehMd = /^#{1,2}\s/.test(l);
+    const caps = l && l.length<100 && l===l.toUpperCase() && /[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{4}/.test(l) && !/[.]$/.test(l) && !/^\d{1,3}\s?%/.test(l) && !/^[-•*]/.test(l);
+    const dentroDetalhe = ['detalhe','outras','veredito'].includes(atual.k);
+    if(k==='titulo'){ atual = {k:'abertura', titulo:'', ls:[], skipName:true}; secs.push(atual); continue; }
+    if(k && !(atual.k==='veredito' && atual.ls.filter(Boolean).length===0 && false)){ atual = {k, titulo:aaeLimpaTitulo(l), ls:[]}; secs.push(atual); continue; }
+    if((ehMd || caps) && !dentroDetalhe){ atual = {k:'generica', titulo:aaeLimpaTitulo(l), ls:[]}; secs.push(atual); continue; }
+    atual.ls.push(l);
+  }
+  // 2) renderizadores de bloco
+  const corpo = (ls, auto)=>{
+    let out='', lista=false, tab=[];
+    const fl=()=>{ if(lista){ out+='</ul>'; lista=false; } };
+    const ft=()=>{ if(tab.length){ const lin=tab.filter(r=>!/^[\s|:-]+$/.test(r)); out+='<table>'+lin.map((r,n)=>{ const c=r.replace(/^\||\|$/g,'').split('|').map(x=>x.trim()); return '<tr>'+c.map(x=>n===0?'<th>'+inl(x)+'</th>':'<td>'+inl(x)+'</td>').join('')+'</tr>'; }).join('')+'</table>'; tab=[]; } };
+    for(let ix=0; ix<ls.length; ix++){
+      const l = ls[ix];
+      if(!l){ fl(); ft(); continue; }
+      if((l.match(/\|/g)||[]).length>=2){ fl(); tab.push(l); continue; }
+      ft();
+      if(/^[-•*]\s+/.test(l)){ if(!lista){ out+='<ul>'; lista=true; } out+='<li>'+inl(l.replace(/^[-•*]\s+/,''))+'</li>'; continue; }
+      fl();
+      if(/^este resumo [eé] um guia/i.test(aaeNorm(l))){ out+='<div class="aviso">'+inl(l)+'</div>'; continue; }
+      const h3 = l.match(/^#{3,4}\s+(.*)$/) || l.match(/^\*\*([^*]{3,100})\*\*:?$/) || l.match(/^(\d{1,2})[.)]\s+(.{3,100})$/);
+      if(h3 && !/[.]$/.test(l)){ const tx = h3[2]&&/^\d/.test(h3[1]) ? h3[1]+'. '+h3[2] : h3[1]; out+='<h3>'+inl(tx.replace(/\*\*/g,''))+'</h3>'; continue; }
+      if(auto && l.length<110 && !/[.:;]$/.test(l) && !/^[-•*]\s/.test(l) && ls.slice(ix+1).find(x=>x)){ out+='<h3>'+inl(l)+'</h3>'; continue; }
+      out+='<p>'+inl(l)+'</p>';
+    }
+    fl(); ft(); return out;
+  };
+  const kpis = [];
+  const pegaKpi = l=>{ const m = l.match(/^[\W_]*(\d{1,3})\s?%\s*[—–:|-]*\s*(.*)$/); if(m && !/^[-•*]\s/.test(l)) return {n:m[1], t:m[2].replace(/\*\*/g,'').trim()}; return null; };
+  let html = '';
+  for(const sc of secs){
+    if(sc.k==='titulo') { sc.ls.forEach(l=>{ const k=pegaKpi(l); if(k) kpis.push(k); }); continue; }
+    if(sc.k==='abertura'){
+      let pulou = !sc.skipName;
+      const ps = sc.ls.filter(l=>{ if(!l) return false; if(!pulou){ pulou=true; if(l.length<80 && !/[.:]$/.test(l) && !pegaKpi(l)) return false; } const k=pegaKpi(l); if(k){ kpis.push(k); return false; } return true; });
+      let intro = corpo(ps);
+      const kp = kpis.length ? '<div class="kpis">'+kpis.map(k=>`<div class="kpi"><div class="kn">${esc(k.n)}%</div><div class="kl">${esc(k.t)}</div></div>`).join('')+'</div>' : '';
+      html += intro + kp; continue;
+    }
+    if(sc.k==='junto'){ html += '<div class="junto"><b>O QUE ISSO SIGNIFICA JUNTO</b><br>'+sc.ls.filter(Boolean).map(inl).join('<br>')+'</div>'; continue; }
+    if(sc.k==='alerta'){
+      const t = sc.titulo.replace(/^⚠\uFE0F?\s*/,'');
+      html += '<div class="alerta"><h2>⚠ '+esc(t.toUpperCase())+'</h2>'+corpo(sc.ls)+'</div>'; continue;
+    }
+    if(sc.k==='veredito'){
+      const ls = sc.ls.filter(Boolean); const v = ls.shift()||'';
+      html += '<div class="veredito"><div class="t">NOSSO VEREDITO</div><div class="v">'+inl(v.replace(/^#+\s*/,''))+'</div></div>'+corpo(ls); continue;
+    }
+    // demais: título h2 + corpo (sem repetir título genérico vazio)
+    const titulo = sc.k==='pratica'?'O que isso significa, na prática':sc.k==='chance'?'Onde você tem mais chance':sc.k==='agora'?'O que fazer agora':sc.titulo;
+    html += '<h2>'+inl(titulo)+'</h2>'+corpo(sc.ls, sc.k==='outras'||sc.k==='detalhe');
+  }
+  // se a IA não deu o quadro de % na abertura, tenta pelas linhas da tabela (coluna Aderência)
+  if(!kpis.length){
+    const re = /<tr><td>(.*?)<\/td><td>(?:<b>)?(\d{1,3})\s?%/g; let m, arr=[];
+    while((m=re.exec(html)) && arr.length<5) arr.push({n:m[2], t:m[1].replace(/<[^>]+>/g,'')});
+    if(arr.length){ const kp='<div class="kpis">'+arr.map(k=>`<div class="kpi"><div class="kn">${esc(k.n)}%</div><div class="kl">${esc(k.t)}</div></div>`).join('')+'</div>'; const i=html.indexOf('<h2>'); html = i>=0 ? html.slice(0,i)+kp+html.slice(i) : html+kp; }
+  }
+  return html;
+}
+const AAE_WORD_JS = `function baixarWord(){
+  var d=document.getElementById('doc').cloneNode(true);
+  d.removeAttribute('contenteditable');
+  d.querySelectorAll('img').forEach(function(i){i.remove();});
+  var topo=d.querySelector('.topo'); if(topo){ topo.style.display='block'; }
+  var k=d.querySelector('.kpis');
+  if(k){ var t=document.createElement('table'); t.style.width='100%'; var tr=document.createElement('tr');
+    k.querySelectorAll('.kpi').forEach(function(c){ var td=document.createElement('td'); td.style.cssText='background:#eef2f5;text-align:center;padding:10px;border:6px solid #fff;'; td.innerHTML=c.innerHTML; tr.appendChild(td); });
+    t.appendChild(tr); k.parentNode.replaceChild(t,k); }
+  var css=''; document.querySelectorAll('style').forEach(function(s){css+=s.textContent;});
+  var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>'+document.title+'</title><style>'+css+' body{background:#fff;} #doc{max-width:none;padding:0;margin:0;}</style></head><body>'+d.outerHTML+'</body></html>';
+  var b=new Blob(['\\ufeff'+html],{type:'application/msword'}); var a=document.createElement('a');
+  a.href=URL.createObjectURL(b); a.download=(document.title||'documento').replace(/[\\\\/:*?"<>|]+/g,'-')+'.doc'; document.body.appendChild(a); a.click(); setTimeout(function(){a.remove();},500);
+}`;
+function aaeAbrirDoc(nome, txt, modo){
   const logo = new URL('assets/logo-transformare.webp', location.href).href;
   const hoje = new Date().toLocaleDateString('pt-BR',{day:'numeric', month:'long', year:'numeric'});
-  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Aderência — ${esc(nome)}</title>
+  const pano = modo!=='tecnico';
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${pano?'Panorama de Oportunidades':'Análise de Aderência'} — ${esc(nome)}</title>
 <style>
 ${AAE_DOC_CSS}</style></head><body>
-<div id="barra"><button onclick="window.print()">Imprimir / salvar PDF</button><span>Clique no texto para editar antes de imprimir.</span></div>
+<div id="barra"><button onclick="window.print()">Salvar PDF / imprimir</button><button onclick="baixarWord()">Baixar Word (.doc)</button><span>Clique no texto para editar antes de baixar.</span></div>
 <div id="doc" contenteditable="true">
 <div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>
-<h1>ANÁLISE DE ADERÊNCIA ESTRATÉGICA</h1>
+<h1>${pano?'SEU PANORAMA DE OPORTUNIDADES':'ANÁLISE DE ADERÊNCIA ESTRATÉGICA'}</h1>
 <p class="cli">${esc(nome)}</p>
-${aaeTextoParaHtml(txt)}
+${pano?aaeDocPanoramaHtml(txt):aaeTextoParaHtml(txt)}
 <div class="fim">Porto Alegre, ${esc(hoje)}<br>Transformare Projetos</div>
-</div></body></html>`;
+</div><script>${AAE_WORD_JS}<\/script></body></html>`;
   const w = window.open('','_blank'); if(!w){ toast('Permita pop-ups para abrir o documento'); return; }
   w.document.write(html); w.document.close();
 }
@@ -5873,7 +5990,8 @@ h1{text-align:center; color:#1f3a5f; font-size:26px; margin:18px 0 2px;} .cli{te
 h2{color:#1f3a5f; font-size:19px; border-top:1px solid #ccc; padding-top:14px; margin-top:22px;} h3{color:#1f7a6d; font-size:16px; margin:16px 0 4px;}
 .kpis{display:flex; gap:12px; margin:14px 0;} .kpi{flex:1; background:#eef2f5; text-align:center; padding:14px 8px;} .kn{font-size:30px; font-weight:bold; color:#1f3a5f;} .kl{font-size:12px; color:#666;}
 table{width:100%; border-collapse:collapse; font-size:13.5px;} th{background:#1f3a5f; color:#fff; text-align:left; padding:7px;} td{border:1px solid #ddd; padding:7px; vertical-align:top;}
-.peq{font-size:12px; color:#666;} .junto{background:#eef2f5; padding:10px 18px; margin:16px 0; font-size:14px;}
+.peq{font-size:12px; color:#666;} .alerta ul{margin:4px 0 0 18px; padding:0;} .alerta p{margin:6px 0;} h2:first-child{border-top:0;}
+.junto{background:#eef2f5; padding:10px 18px; margin:16px 0; font-size:14px;}
 .alerta{background:#fdf3dc; border-left:4px solid #e6b96a; padding:6px 18px 8px; margin:18px 0;} .alerta h2{border:0; margin:8px 0 2px; color:#8a5a00; font-size:16px;}
 .veredito{text-align:center; margin-top:22px;} .veredito .t{color:#777; font-weight:bold; font-size:13px;} .veredito .v{color:#1f3a5f; font-weight:bold; font-size:20px;}
 .fim{text-align:center; font-weight:bold; margin-top:18px;} .aviso{font-style:italic; font-size:12px; color:#777; text-align:center; border-top:1px solid #ccc; padding-top:8px; margin-top:16px;}
@@ -5939,7 +6057,7 @@ function aaePanorama(){
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Panorama de Oportunidades — ${esc(nome)}</title>
 <style>
 ${AAE_DOC_CSS}</style></head><body>
-<div id="barra"><button onclick="window.print()">Imprimir / salvar PDF</button><span>Clique no texto para editar antes de imprimir. O trecho em amarelo precisa ser preenchido.</span></div>
+<div id="barra"><button onclick="window.print()">Salvar PDF / imprimir</button><button onclick="baixarWord()">Baixar Word (.doc)</button><span>Clique no texto para editar antes de baixar. O trecho em amarelo precisa ser preenchido.</span></div>
 <div id="doc" contenteditable="true">
 <div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>
 <h1>SEU PANORAMA DE OPORTUNIDADES</h1>
@@ -5966,7 +6084,7 @@ ${outrasHtml}
 <div class="fim">Porto Alegre, ${esc(hoje)}<br>Transformare Projetos</div>
 </div></body></html>`;
   const w = window.open('','_blank'); if(!w){ toast('Permita pop-ups para abrir o Panorama'); return; }
-  w.document.write(html); w.document.close();
+  w.document.write(html.replace('</body></html>','<script>'+AAE_WORD_JS+'<\/script></body></html>')); w.document.close();
 }
 async function aaeSalvar(){
   aaeLerForm();
