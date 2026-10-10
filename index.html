@@ -3477,8 +3477,8 @@ function openDetalhe(id){
           ` : `
           <div class="score-hero-body" style="flex:1;">
             <div class="label">Índice Transformare — ainda não avaliado</div>
-            <div class="caption">Este edital ainda não recebeu uma nota da nossa equipe. Se tiver interesse, você pode solicitar a avaliação.</div>
-            <button class="btn-ghost" style="margin-top:10px;" onclick="abrirSolicitarIndiceModal(${o.id})">Solicitar avaliação do Índice</button>
+            ${ehPro() ? `<div class="caption">Este edital ainda não recebeu uma nota da nossa equipe. Como assinante do Plano Pro, você pode solicitar a avaliação do Índice Transformare para a nossa equipe.</div>
+            <button class="btn-ghost" style="margin-top:10px;" onclick="abrirSolicitarIndiceModal(${o.id})">Solicitar avaliação do Índice</button>` : `<div class="caption">Este edital ainda não recebeu uma nota da nossa equipe. Assinantes do Plano Pro podem solicitar o Índice Transformare para a nossa equipe.</div>`}
           </div>
           `}
         </div>
@@ -3750,6 +3750,7 @@ async function submitFeedback(){
 /* ================= SOLICITAÇÃO DE AVALIAÇÃO DO ÍNDICE (fluxo próprio, separado dos leads) ================= */
 let _solicitarIndiceOppId = null;
 function abrirSolicitarIndiceModal(oppId){
+  if(!exigePro('Solicitar o Índice Transformare')) return;
   _solicitarIndiceOppId = oppId;
   const o = oportunidades.find(x=>x.id===oppId);
   document.getElementById('solicitar-indice-context').textContent = o
