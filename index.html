@@ -1590,6 +1590,18 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
           <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-pncp')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-pncp')">Copiar</button></div></div>
       </div>
       <div class="form-row"><label>E-mail de inscrição (se a inscrição for por e-mail)</label><input type="email" id="af-email-inscricao" placeholder="Ex: credenciamento@prefeitura.gov.br"></div>
+      <div class="lead-section-title" style="margin-top:20px;">Texto do edital (Markdown) — só administrador</div>
+      <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px;">
+        <label>Anexe o edital convertido em Markdown (escolha o arquivo .md ou cole o texto). Fica guardado no banco, visível só para o administrador, e ajuda a IA nas análises.</label>
+        <input type="file" id="af-texto-arquivo" accept=".md,.markdown,.txt,text/markdown,text/plain" onchange="afTextoArquivo(event)" style="margin-top:6px;">
+        <textarea id="af-texto-md" rows="8" placeholder="Cole aqui o texto do edital em Markdown..." oninput="afTextoStatus()" style="margin-top:8px; font-family:monospace; font-size:12px;"></textarea>
+        <div id="af-texto-status" style="font-size:11.5px; color:var(--ink-dim); margin-top:6px;"></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+          <button type="button" class="btn-ghost" onclick="afTextoPreencherFicha()">⇩ Preencher a ficha com este texto</button>
+          <button type="button" class="btn-ghost" style="color:var(--coral); border-color:var(--coral);" onclick="afTextoLimpar()">Remover texto</button>
+        </div>
+        <div style="font-size:11.5px; color:var(--ink-dim); margin-top:6px;">O texto é gravado junto quando você clica em “Salvar oportunidade”. Só edital já publicado no catálogo aceita texto.</div>
+      </div>
       <div class="form-actions">
         <button class="btn-primary" id="af-btn-salvar" onclick="saveAdminForm()">Salvar oportunidade</button>
         <button class="btn-ghost" onclick="closeAdminForm()">Cancelar</button>
@@ -4443,7 +4455,7 @@ function renderAdminTabela(){
   pagina.forEach(o=>{
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${o.edital}</td>
+      <td>${o.edital}${_idsComTexto.has(o.id) ? ' <span class="badge" title="Tem o texto do edital anexado" style="background:rgba(0,180,160,.15); color:var(--teal);">📄 Com texto</span>' : ''}</td>
       <td>${o.orgao}</td>
       <td>${o.profissoes.join(', ')}</td>
       <td><span class="badge ${badgeClass(situacaoExibida(o))}">${situacaoExibida(o)}</span></td>
@@ -5102,6 +5114,7 @@ function openAdminForm(id){
   document.getElementById('af-mov-texto').value = '';
   document.getElementById('af-analise-ia').value = '';
   document.getElementById('af-analise-ia-status').textContent = '';
+  afTextoCarregar(id);
   renderGruposAnalise();
   document.getElementById('af-analise-so-vazios').checked = false;
   refreshAfProfChips(id ? oportunidades.find(x=>x.id===id).profissoes : []);
@@ -5152,6 +5165,75 @@ function openAdminForm(id){
   renderAfMovList();
   renderAfRemuneracaoList();
 }
+/* ---- Texto do edital em Markdown (tabela editais_texto, só admin) ---- */
+const TEXTO_MD_MAX = 400000;
+let _textoMdOriginal = '';
+let _idsComTexto = new Set();
+async function carregarIdsComTexto(){
+  if(!_sb) return;
+  try{
+    const { data } = await _sb.from('editais_texto').select('edital_id');
+    _idsComTexto = new Set((data||[]).map(r=>900000 + Number(r.edital_id)));
+    if(typeof renderAdmin === 'function' && currentView === 'admin') renderAdmin();
+  }catch(e){}
+}
+function afTextoStatus(){
+  const t = document.getElementById('af-texto-md').value;
+  const el = document.getElementById('af-texto-status');
+  if(!el) return;
+  if(!t){ el.textContent = 'Nenhum texto anexado.'; el.style.color = 'var(--ink-dim)'; return; }
+  const kb = Math.round(t.length/1024);
+  const alto = t.length > TEXTO_MD_MAX;
+  el.textContent = (alto ? '⚠ Texto grande demais: ' : '📄 Texto anexado: ') + kb + ' KB' + (alto ? ' (limite ~390 KB) — reduza antes de salvar.' : '.');
+  el.style.color = alto ? 'var(--coral)' : 'var(--teal)';
+}
+async function afTextoCarregar(id){
+  const ta = document.getElementById('af-texto-md'); if(!ta) return;
+  ta.value = ''; _textoMdOriginal = '';
+  document.getElementById('af-texto-arquivo').value = '';
+  afTextoStatus();
+  if(!id || id < 900000 || !_sb) return;
+  try{
+    const { data } = await _sb.from('editais_texto').select('texto_md').eq('edital_id', id - 900000).maybeSingle();
+    if(data && editingId === id){ ta.value = data.texto_md || ''; _textoMdOriginal = ta.value; afTextoStatus(); }
+  }catch(e){}
+}
+function afTextoArquivo(ev){
+  const f = ev.target.files && ev.target.files[0]; if(!f) return;
+  if(f.size > 2*1024*1024){ toast('Arquivo muito grande para ser um texto de edital'); return; }
+  const r = new FileReader();
+  r.onload = () => { document.getElementById('af-texto-md').value = String(r.result||''); afTextoStatus(); toast('Texto carregado — clique em Salvar oportunidade para gravar'); };
+  r.readAsText(f, 'UTF-8');
+}
+function afTextoLimpar(){
+  if(!document.getElementById('af-texto-md').value) return;
+  if(!confirm('Remover o texto do edital? A remoção só vale depois de clicar em Salvar oportunidade.')) return;
+  document.getElementById('af-texto-md').value = '';
+  document.getElementById('af-texto-arquivo').value = '';
+  afTextoStatus();
+}
+function afTextoPreencherFicha(){
+  const t = document.getElementById('af-texto-md').value.trim();
+  if(!t){ toast('Anexe ou cole o texto do edital primeiro'); return; }
+  document.getElementById('af-analise-ia').value = t;
+  preencherComAnaliseIA();
+  toast('Confira os campos preenchidos antes de salvar');
+}
+async function afTextoSalvar(idReal){
+  const t = (document.getElementById('af-texto-md').value || '').trim();
+  if(t === _textoMdOriginal.trim()) return;
+  if(t.length > TEXTO_MD_MAX){ toast('Texto do edital grande demais — não foi gravado'); return; }
+  let erro;
+  if(!t){
+    ({ error: erro } = await _sb.from('editais_texto').delete().eq('edital_id', idReal));
+    if(!erro){ _idsComTexto.delete(900000 + idReal); toast('Texto do edital removido'); }
+  } else {
+    ({ error: erro } = await _sb.from('editais_texto').upsert({ edital_id: idReal, texto_md: t, atualizado_em: new Date().toISOString() }, { onConflict: 'edital_id' }));
+    if(!erro){ _idsComTexto.add(900000 + idReal); toast('Texto do edital gravado'); }
+  }
+  if(erro) toast('Erro ao gravar o texto do edital: ' + erro.message);
+}
+
 function closeAdminForm(){
   editingId = null;
   _afModoRevisao(false);
@@ -5307,6 +5389,7 @@ async function saveAdminForm(){
       if(prazoISO === undefined && data.prazo && data.prazo !== 'Não informado') aviso += ' Prazo não gravado no banco (use o formato dd/mm/aaaa).';
       if(publicacaoISO === undefined && data.publicacao && data.publicacao !== 'Não informado') aviso += ' Publicação não gravada no banco (use o formato dd/mm/aaaa).';
       toast(aviso);
+      await afTextoSalvar(idReal);
     }
   } else {
     toast(editingId ? 'Oportunidade atualizada e salva neste navegador' : 'Oportunidade criada e salva neste navegador');
@@ -6864,6 +6947,7 @@ async function carregarEditaisSupabase(){
   populateSelects();
   applyFilters();
   renderIndicators();
+  if(adminAuthed) carregarIdsComTexto();
 }
 
 // Prioridade máxima: índice sugerido 5 (da análise rápida feita fora do site,
