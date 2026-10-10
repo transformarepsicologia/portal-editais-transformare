@@ -4350,14 +4350,16 @@ function renderProfissoesAdmin(){
       <div>
         <button type="button" class="af-item-btn" onclick="editProfissaoAdmin(${i})" title="Editar">✎</button>
         <button type="button" class="af-item-btn" onclick="toggleProfissaoAtiva(${i})" title="Ativar/Desativar">${p.ativa?'⏸':'▶'}</button>
+        <button type="button" class="af-item-btn" onclick="removerProfissaoAdmin(${i})" title="Excluir da lista">🗑</button>
       </div>
     </li>`).join('');
 }
 async function addProfissaoAdmin(){
   const input = document.getElementById('prof-admin-input');
   // Aceita uma ou várias: separa por quebra de linha, vírgula ou ponto e vírgula; tira marcadores (-, •, 1.).
-  const nomes = [...new Set(input.value.split(/[\n;,]+/)
-    .map(t=>t.replace(/^\s*(?:[-•*–—]|\d+[.)])\s*/, '').trim())
+  // Também separa quando a lista veio de uma tela/tabela (ex.: "... Ativa Alergologista / Alergologia Ativa ...").
+  const nomes = [...new Set(input.value.split(/[\n;,]+|\s+(?:Ativa|Inativa)\b/)
+    .map(t=>t.replace(/[🟢⚪]/g,'').replace(/^\s*(?:[-•*–—]|\d+[.)])\s*/, '').replace(/[\s—–-]+$/,'').trim())
     .filter(Boolean))];
   if(!nomes.length) return;
   const novas = [], repetidas = [];
@@ -4371,6 +4373,14 @@ async function addProfissaoAdmin(){
   await persistProfissoes();
   afterProfissoesChanged();
   toast(novas.length === 1 ? 'Profissão adicionada' : `${novas.length} profissões adicionadas` + (repetidas.length ? ` (${repetidas.length} já existia${repetidas.length>1?'m':''})` : ''));
+}
+async function removerProfissaoAdmin(i){
+  const p = profissoes[i]; if(!p) return;
+  if(!confirm('Excluir "' + p.nome.slice(0,80) + '" da lista de profissões? Oportunidades já cadastradas com ela não são afetadas.')) return;
+  profissoes.splice(i,1);
+  await persistProfissoes();
+  afterProfissoesChanged();
+  toast('Profissão excluída da lista');
 }
 async function toggleProfissaoAtiva(i){
   profissoes[i].ativa = !profissoes[i].ativa;
