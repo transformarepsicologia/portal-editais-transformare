@@ -4929,6 +4929,22 @@ function inferirDoTexto(texto){
     if(/clinica|equipe multidisciplinar/.test(t)) marca('Clínica (equipe multidisciplinar)');
     if(n) ok.push('Para quem é (' + n + ', deduzido do texto — confira)'); else falta.push('Para quem é — não achei no texto');
   }
+  // Tabela de itens do edital: "quantidade | valor unitário | valor total" (ex.: 364 | R$ 185,12 | R$ 67.383,68).
+  // Só vale quando quantidade × unitário bate com o total, para não confundir com outros números.
+  const _num = x => Number(String(x).replace(/\./g,'').replace(',','.'));
+  const itens = [];
+  const reTab = /(\d[\d.]*)[\s|*]+R\$\s*([\d.]+,\d{2})[\s|*]+R\$\s*([\d.]+,\d{2})/g;
+  let mt;
+  while((mt = reTab.exec(String(texto)))){
+    const q = _num(mt[1]), u = _num(mt[2]), tt = _num(mt[3]);
+    if(q > 0 && u > 0 && Math.abs(q*u - tt) <= Math.max(1, tt*0.005)) itens.push({q, u, txt:mt[1], uTxt:mt[2]});
+  }
+  const va0 = document.getElementById('af-valor-atendimento'), vo0 = document.getElementById('af-volume');
+  if(itens.length){
+    if(!va0.value){ va0.value = 'R$ ' + itens[0].uTxt + ' por atendimento'; ok.push('Valor por atendimento (R$ ' + itens[0].uTxt + ', da tabela de itens)'); }
+    if(!vo0.value){ vo0.value = itens[0].txt + ' atendimentos'; ok.push('Volume estimado (' + itens[0].txt + ', da tabela de itens)'); }
+    if(itens.length > 1) ok.push('⚠ a tabela tem ' + itens.length + ' itens — usei o primeiro, confira os demais');
+  }
   const va = document.getElementById('af-valor-atendimento');
   if(!va.value){
     const m = String(texto).match(/R\$\s*[\d.]+(?:,\d{2})?\s*(?:\/|por|a)\s*(?:sess[aã]o|atendimento|consulta|hora|avalia[cç][aã]o|plant[aã]o)[^.\n;]{0,40}/i);
