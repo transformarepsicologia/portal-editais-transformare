@@ -1846,6 +1846,8 @@ async function storeRemove(key){
 
 /* ================= DADOS DEMONSTRATIVOS ================= */
 const PROFISSOES_SEED = ["Psicologia","Psiquiatria","Fisioterapia","Nutrição","Fonoaudiologia","Enfermagem","Farmácia","Medicina","Terapia Ocupacional","Odontologia","Biomedicina","Assistência Social"];
+// Remove o "Ativa"/"Inativa" que veio colado no nome quando a lista foi copiada de uma tela.
+const limparNomeProf = n => String(n||'').replace(/\s+(?:Ativa|Inativa)\s*$/i, '').trim();
 let profissoes = []; // [{nome, ativa}], carregado/persistido via localStorage (chave "profissoes")
 function profissoesAtivasNomes(){ return profissoes.filter(p=>p.ativa).map(p=>p.nome); }
 
@@ -2002,6 +2004,13 @@ const UFS = [
   {sigla:"SP",nome:"São Paulo"},{sigla:"SE",nome:"Sergipe"},{sigla:"TO",nome:"Tocantins"}
 ];
 function ufOptionsHTML(){ return UFS.map(u=>`<option value="${u.sigla}">${u.sigla} — ${u.nome}</option>`).join(''); }
+// "MUNICIPIO DE MONTE ALTO/SP" quando o nome do órgão já traz a cidade; senão "ÓRGÃO — Cidade/UF".
+function orgaoLocalTexto(o){
+  const sem = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const orgao = String(o.orgao||'').trim(), cidade = String(o.cidade||'').trim(), uf = String(o.uf||'').trim();
+  if(cidade && sem(orgao).includes(sem(cidade))) return orgao + (uf ? '/' + uf : '');
+  return orgao + ' — ' + (cidade ? cidade + '/' : '') + uf;
+}
 function parseDate(str){
   if(!str || typeof str !== 'string') return new Date(NaN);
   const partes = str.split('/');
@@ -3367,7 +3376,7 @@ function openDetalhe(id){
             <div>
               <div class="op-meta">${o.edital} · ${o.tipo}</div>
               <h3>${o.objeto}</h3>
-              <div class="detail-org">${o.orgao} — ${o.cidade ? o.cidade+'/' : ''}${o.uf} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${o.origemSupabase ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}${o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? ` · divulgado em ${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}` : ''}</div>
+              <div class="detail-org">${esc(orgaoLocalTexto(o))} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${o.origemSupabase ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}${o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? ` · divulgado em ${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}` : ''}</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
               ${adminAuthed ? `<button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap;" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button><button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">🗑 Excluir</button>` : ''}
@@ -6586,6 +6595,16 @@ async function init(){
   const savedProfissoes = await storeGet('profissoes');
   if(savedProfissoes && Array.isArray(savedProfissoes) && savedProfissoes.length){
     profissoes = savedProfissoes;
+    // limpa nomes com "Ativa/Inativa" colado e junta repetidos
+    const vistos = new Map();
+    profissoes.forEach(p=>{
+      const nome = limparNomeProf(p.nome); if(!nome) return;
+      const k = nome.toLowerCase();
+      if(vistos.has(k)) vistos.get(k).ativa = vistos.get(k).ativa || p.ativa;
+      else vistos.set(k, { ...p, nome });
+    });
+    const limpas = [...vistos.values()];
+    if(JSON.stringify(limpas) !== JSON.stringify(profissoes)){ profissoes = limpas; await storeSet('profissoes', profissoes); }
   } else {
     profissoes = PROFISSOES_SEED.map(nome=>({nome, ativa:true}));
     await storeSet('profissoes', profissoes);
@@ -7002,7 +7021,7 @@ function mapEditalSupabase(row){
     uf: row.uf || '—',
     cidade: row.cidade || '',
     tipo: row.tipo || 'Credenciamento',
-    profissoes: (row.profissoes && row.profissoes.length) ? row.profissoes : ['Não identificada'],
+    profissoes: (row.profissoes && row.profissoes.length) ? [...new Set(row.profissoes.map(limparNomeProf).filter(Boolean))] : ['Não identificada'],
     modalidade: normModalidade(row.modalidade) || 'Presencial',
     emailInscricao: row.email_inscricao || '',
     problemaDescricao: row.problema_descricao || '',
