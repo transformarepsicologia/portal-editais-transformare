@@ -1532,7 +1532,15 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <div class="form-row"><label>Publicação (divulgação)</label><input type="text" id="af-publicacao" placeholder="dd/mm/aaaa"></div>
       </div>
       <div class="form-row"><label>Início do recebimento de propostas</label><input type="text" id="af-abertura" placeholder="dd/mm/aaaa (deixe em branco se não houver)"></div>
-      <div class="form-row"><label>Profissões contempladas</label><div class="chip-select" id="af-profs"></div></div>
+      <div class="form-row"><label>Profissões contempladas <span id="af-prof-conta" style="font-weight:400; color:var(--ink-dim); text-transform:none; letter-spacing:0;"></span></label>
+        <input type="search" id="af-prof-busca" placeholder="🔍 Pesquisar profissão..." oninput="afProfFiltrar()" style="margin-bottom:8px;">
+        <div class="chip-select" id="af-profs" style="max-height:150px; overflow-y:auto;"></div>
+        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+          <input type="text" id="af-prof-nova" placeholder="Não achou? Digite uma nova profissão" style="flex:1; min-width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();afProfNova();}">
+          <button type="button" class="btn-ghost" onclick="afProfNova()">+ Cadastrar nova</button>
+        </div>
+        <div style="font-size:11.5px; color:var(--ink-dim); margin-top:4px;">A nova profissão entra também na lista do painel administrativo (Cadastros auxiliares), nos filtros e nos alertas.</div>
+      </div>
       <div class="form-row"><label>Para quem é (quem pode se credenciar)</label><div class="chip-select" id="af-publico"></div></div>
 
       <div class="lead-section-title" style="margin-top:20px;">Informações financeiras</div>
@@ -5110,9 +5118,41 @@ function refreshAfProfChips(extraNomes){
   [...nomes].forEach(p=>{
     const inativa = !ativas.includes(p);
     const c = document.createElement('div'); c.className='chip-opt'; c.textContent = p + (inativa?' (inativa)':''); c.dataset.prof=p;
-    c.onclick = ()=>c.classList.toggle('selected');
+    c.onclick = ()=>{ c.classList.toggle('selected'); afProfFiltrar(); };
     box.appendChild(c);
   });
+  afProfFiltrar();
+}
+const _semAcento = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function afProfFiltrar(){
+  const q = _semAcento((document.getElementById('af-prof-busca')||{}).value || '').trim();
+  const chips = [...document.querySelectorAll('#af-profs .chip-opt')];
+  chips.forEach(c=>{ c.style.display = (!q || _semAcento(c.dataset.prof).includes(q)) ? '' : 'none'; });
+  const n = chips.filter(c=>c.classList.contains('selected')).length;
+  const el = document.getElementById('af-prof-conta');
+  if(el) el.textContent = n ? '— ' + n + ' selecionada(s)' : '';
+}
+async function afProfNova(){
+  const input = document.getElementById('af-prof-nova');
+  const nome = input.value.trim(); if(!nome) return;
+  const jaTem = profissoes.find(p=>p.nome.toLowerCase()===nome.toLowerCase());
+  const marcadas = [...document.querySelectorAll('#af-profs .chip-opt.selected')].map(c=>c.dataset.prof);
+  let alvo = nome;
+  if(jaTem){
+    alvo = jaTem.nome;
+    if(!jaTem.ativa){ jaTem.ativa = true; await persistProfissoes(); afterProfissoesChanged(); }
+    toast('Essa profissão já existe — marquei para você');
+  } else {
+    profissoes.push({nome, ativa:true});
+    await persistProfissoes();
+    afterProfissoesChanged();
+    toast('Profissão cadastrada e adicionada ao painel');
+  }
+  refreshAfProfChips(marcadas);
+  document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(marcadas.includes(c.dataset.prof) || c.dataset.prof===alvo) c.classList.add('selected'); });
+  input.value = '';
+  document.getElementById('af-prof-busca').value = '';
+  afProfFiltrar();
 }
 // Atalho pro admin editar um edital direto da página de detalhe (menu
 // Editais), sem sair de onde está — o formulário abre como uma janela por
@@ -5149,6 +5189,7 @@ function openAdminForm(id){
   afTextoCarregar(id);
   renderGruposAnalise();
   document.getElementById('af-analise-so-vazios').checked = false;
+  { const b = document.getElementById('af-prof-busca'); if(b) b.value = ''; const n = document.getElementById('af-prof-nova'); if(n) n.value = ''; }
   refreshAfProfChips(id ? oportunidades.find(x=>x.id===id).profissoes : []);
   refreshAfPublicoChips(id ? (oportunidades.find(x=>x.id===id).aceitaContratacao||[]) : []);
 
@@ -5179,6 +5220,7 @@ function openAdminForm(id){
     document.getElementById('af-email-inscricao').value = o.emailInscricao || '';
 
     document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(o.profissoes.includes(c.dataset.prof)) c.classList.add('selected'); });
+    afProfFiltrar();
     afDocumentos = [...(o.documentos||[])];
     afMovimentacoes = (o.movimentacoes||[]).map(m=>({...m}));
     afRemuneracao = [...(o.remuneracao||[])];
@@ -7435,6 +7477,7 @@ function abrirRevisaoCompleta(id, tipo, item){
   if(typeof item.valor_estimado === 'number') set('af-volume', item.valor_estimado.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
   const dets = item.profissoes_detectadas || [];
   document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(dets.includes(c.dataset.prof)) c.classList.add('selected'); });
+  afProfFiltrar();
   atualizarLinksPortais();
   const r = sugerirFaixaIndice({ valorEstimado:(typeof item.valor_estimado==='number')?item.valor_estimado:null, profissoes:dets, objeto:item.objeto||item.excerto||'' });
   document.getElementById('af-revisao-origem').innerHTML = (tipo==='diario' ? 'Achado do Diário Oficial' : 'Achado do PNCP') + ' — os campos abaixo vieram preenchidos do que foi encontrado. ' + (item.link_pncp ? `<a href="${esc(item.link_pncp)}" target="_blank" rel="noopener" style="color:var(--teal);">Ver no PNCP ↗</a>` : '') + (item.url_diario ? ` <a href="${esc(item.url_diario)}" target="_blank" rel="noopener" style="color:var(--teal);">Ver no Diário ↗</a>` : '');
