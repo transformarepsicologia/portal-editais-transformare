@@ -2183,7 +2183,16 @@ function sha256(str){
 // e adicione o e-mail nesta lista.
 const ADMIN_EMAILS = ['transformarepsicologia1@gmail.com'];
 // Editais sinalizados com problema ficam ocultos para clientes; só o administrador vê.
-const visivelAoCliente = o => adminAuthed || !o.problemaDescricao;
+// Regra de exibição: o cliente não vê edital sinalizado com problema nem edital cujo prazo de
+// recebimento de propostas termina em menos de 30 dias (inclui os já encerrados). O administrador vê tudo.
+const PRAZO_MINIMO_DIAS = 30;
+function prazoCurtoDemais(o){
+  const d = parseDate(o.prazo);
+  if(isNaN(d.getTime())) return false; // sem prazo informado: continua visível
+  const h0 = new Date(); h0.setHours(0,0,0,0);
+  return Math.round((d - h0)/86400000) < PRAZO_MINIMO_DIAS;
+}
+const visivelAoCliente = o => adminAuthed || (!o.problemaDescricao && !prazoCurtoDemais(o));
 let adminAuthed = false; // exige login (Supabase Auth) para acessar o painel administrativo
 let adminFails = 0, adminLockedUntil = 0;
 
@@ -3329,7 +3338,7 @@ function renderOutrosEditais(id, el){
 function openDetalhe(id){
   currentDetailId = id;
   const o = oportunidades.find(x=>x.id===id);
-  if(!o || !visivelAoCliente(o)){ toast('Este edital está em análise e não está disponível no momento.'); nav('editais'); return; }
+  if(!o || !visivelAoCliente(o)){ toast('Este edital não está disponível no momento.'); nav('editais'); return; }
   const isFav = favoritos.has(id);
   const el = document.getElementById('detalhe-content');
   const temIndice = o.indice !== null && o.indice !== undefined;
