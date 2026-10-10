@@ -1286,9 +1286,20 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="admin-tabpanel" id="admin-tab-aae">
     <div class="section-title" style="font-size:17px; margin-top:8px;">Análise de Aderência Estratégica</div>
     <p class="section-sub">Para clientes que chegam de fora do site (ex.: grupo Radar Transformare). Cadastro Inicial PJ → score automático → relatório e prompt para IA.</p>
-    <div id="aae-lista" style="margin-bottom:8px;"></div>
+    <div style="border:1px solid var(--border,#2a3a52); border-radius:12px; padding:14px; margin-bottom:16px;">
+      <div class="section-title" style="font-size:16px; margin:0 0 4px;">Gerar documento a partir da análise da IA</div>
+      <p class="section-sub" style="margin-top:0;">Cole a análise pronta (do Claude ou Gemini) e gere o documento no formato padrão da Transformare. O sistema não analisa nada: só formata.</p>
+      <label class="form-label">Nome da cliente</label>
+      <input class="form-input" id="aae-rapido-nome" placeholder="Ex.: A Gabi Te Ajuda">
+      <label class="form-label" style="margin-top:8px;">Análise da IA (colar aqui)</label>
+      <textarea class="form-input" id="aae-rapido-texto" rows="10" placeholder="Cole aqui o texto da análise"></textarea>
+      <button class="btn-primary" style="margin-top:8px;" onclick="aaeDocRapido()">Gerar documento padrão</button>
+    </div>
+    <details><summary style="cursor:pointer; font-weight:600;">Análise automática por planilha (opcional)</summary>
+    <div id="aae-lista" style="margin:8px 0;"></div>
     <button class="btn-primary" onclick="aaeNovaCliente()">+ Nova cliente</button>
     <div id="aae-form" style="margin-top:14px;"></div>
+    </details>
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-config">
@@ -5826,7 +5837,15 @@ function aaeDocTexto(origem){
   const a = aaeAtual.analise, f = aaeAtual.ficha;
   const txt = origem==='final' ? a.final : a.relatorio;
   if(!String(txt||'').trim()){ toast(origem==='final'?'Cole primeiro o texto devolvido pela IA':'A versão em texto está vazia'); return; }
-  const nome = f.fantasia||f.razao||aaeAtual.nome||'Cliente';
+  aaeAbrirDoc(f.fantasia||f.razao||aaeAtual.nome||'Cliente', txt);
+}
+function aaeDocRapido(){
+  const nome = document.getElementById('aae-rapido-nome').value.trim();
+  const txt = document.getElementById('aae-rapido-texto').value;
+  if(!txt.trim()){ toast('Cole primeiro a análise da IA'); return; }
+  aaeAbrirDoc(nome||'Cliente', txt);
+}
+function aaeAbrirDoc(nome, txt){
   const logo = new URL('assets/logo-transformare.webp', location.href).href;
   const hoje = new Date().toLocaleDateString('pt-BR',{day:'numeric', month:'long', year:'numeric'});
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Aderência — ${esc(nome)}</title>
