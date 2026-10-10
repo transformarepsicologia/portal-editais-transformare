@@ -5660,13 +5660,15 @@ function aaeRenderResultado(aviso){
     ${(a.resultados&&a.resultados.length)?`
     <div class="section-title" style="font-size:16px; margin-top:18px;">Resultado</div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:8px 0;">
-      <button class="btn-primary" onclick="aaeSalvar()">Salvar</button>
-      <button class="btn-ghost" onclick="aaeImprimir()">Imprimir / PDF</button>
-      <button class="btn-primary" onclick="aaePanorama()">Gerar Panorama (3 opções)</button>
-      <button class="btn-ghost" onclick="aaeCopiarPrompt()">Copiar prompt oficial para IA</button>
+      <button class="btn-primary" onclick="aaePanorama()">Gerar Panorama (formato cliente)</button>
+      <button class="btn-ghost" onclick="aaeSalvar()">Salvar</button>
+      <button class="btn-ghost" onclick="aaeCopiarPrompt('panorama')">Copiar prompt do Panorama (IA)</button>
+      <button class="btn-ghost" onclick="aaeImprimir()">Imprimir análise técnica</button>
+      <button class="btn-primary" onclick="aaePanorama()">Gerar Panorama (formato cliente)</button>
+      <button class="btn-ghost" onclick="aaeCopiarPrompt()">Copiar prompt oficial AAE (IA)</button>
       <button class="btn-ghost" onclick="aaeCopiar('aae-relatorio','Texto copiado')">Copiar como texto</button>
     </div>
-    <div style="background:#f3f3f3; padding:12px; border-radius:12px;">${aaeHtmlRelatorio()}</div>
+    <details style="margin-top:8px;"><summary style="cursor:pointer; font-weight:600;">Análise técnica (uso interno)</summary><div style="background:#f3f3f3; padding:12px; border-radius:12px; margin-top:8px;">${aaeHtmlRelatorio()}</div></details>
     <details style="margin-top:12px;"><summary style="cursor:pointer;">Versão em texto (editável)</summary>
       <textarea class="form-input" id="aae-relatorio" rows="14">${esc(a.relatorio||'')}</textarea></details>
     <label class="form-label" style="margin-top:12px;">Texto final devolvido pela IA (colar aqui e salvar)</label>
@@ -5676,8 +5678,22 @@ async function aaeCopiar(id,msg){
   const ta = document.getElementById(id);
   try{ await navigator.clipboard.writeText(ta.value); toast(msg); }catch(e){ ta.select(); toast('Copie com Ctrl+C'); }
 }
-async function aaeCopiarPrompt(){
-  try{ await navigator.clipboard.writeText(aaeAtual.analise.prompt||''); toast('Prompt copiado — cole no Claude ou Gemini'); }
+const AAE_PROMPT_PANORAMA = `Com base na análise de aderência acima, redija o "SEU PANORAMA DE OPORTUNIDADES" — documento de 2 páginas para ENVIAR À CLIENTE, em português, tom acolhedor, direto e transparente, tratando-a por "você" (use "Fique atenta" no feminino se a cliente for mulher).
+Estrutura obrigatória, nesta ordem:
+1. Título "SEU PANORAMA DE OPORTUNIDADES" + nome da cliente/clínica.
+2. Parágrafo de abertura: resumo simples, aderência geral (média) e a promessa de transparência (boas notícias e pontos de atenção).
+3. Quadro com os percentuais de cada edital (até 5), destacando "sua melhor opção".
+4. "O QUE ISSO SIGNIFICA, NA PRÁTICA": como o perfil atual favorece o credenciamento (PF/PJ, CNAE, equipe, agenda, modalidade).
+5. "ONDE VOCÊ TEM MAIS CHANCE": tabela Edital | Aderência | Modalidade | "O que isso quer dizer pra você" (valor, faixa pretendida, o que falta).
+6. "SUAS MELHORES OPORTUNIDADES, EM DETALHE": um parágrafo por edital, com título que diz o papel dele (ex.: "melhor porta de entrada", "monetizar o que você já faz").
+7. Caixa "O QUE ISSO SIGNIFICA JUNTO": como os editais se complementam.
+8. Caixa "⚠ FIQUE ATENTA — ISSO PODE TRAVAR SEU CREDENCIAMENTO": 2 a 3 travas concretas (CNAE, comprovação de experiência, especialização, registro).
+9. "O QUE FAZER AGORA": apoio da Transformare, Diagnóstico Estratégico de Habilitação (DEH) e "Sobre o investimento" (comparar com o valor de algumas consultas dela).
+10. "NOSSO VEREDITO" com selo 🟢/🟡/🟠/🔴 e uma frase final.
+11. Aviso: "Este resumo é um guia para te ajudar a decidir. Ele não garante aprovação em nenhum edital — a decisão final é sempre do órgão responsável." + cidade, data e "Transformare Projetos".
+Não invente dados; o que faltar, diga que precisa ser confirmado no edital. Evite jargão técnico (IPT, IPO, ICA, MTE).`;
+async function aaeCopiarPrompt(tipo){
+  try{ await navigator.clipboard.writeText((aaeAtual.analise.prompt||'')+(tipo==='panorama'?'\n\n---\n'+AAE_PROMPT_PANORAMA:'')); toast('Prompt copiado — cole no Claude ou Gemini'); }
   catch(e){ toast('Não foi possível copiar'); }
 }
 function aaeImprimir(){
@@ -5687,12 +5703,12 @@ function aaeImprimir(){
   w.document.write(`<html><head><meta charset="utf-8"><title>AAE — ${esc(aaeAtual.nome)}</title></head><body style="padding:20px;">${aaeHtmlRelatorio()}<div style="max-width:820px; margin:0 auto;">${ia}</div></body></html>`);
   w.document.close(); setTimeout(()=>w.print(),300);
 }
-/* ---- Panorama de Oportunidades (documento para a cliente): sempre 3 opções ---- */
+/* ---- Panorama de Oportunidades (documento para a cliente): até 5 opções (indicado primeiro + mais aderentes do site) ---- */
 function aaeTres(res){
   const ind = res.filter(r=>r.origem==='Indicado pela cliente');
   const site = res.filter(r=>r.origem!=='Indicado pela cliente').sort((a,b)=>b.score-a.score);
-  const pick = ind.slice(0,3);
-  for(const r of site){ if(pick.length>=3) break; pick.push(r); }
+  const pick = ind.slice(0,5);
+  for(const r of site){ if(pick.length>=5) break; pick.push(r); }
   return pick.sort((a,b)=>b.score-a.score);
 }
 function aaeTitulo(s){
@@ -5733,16 +5749,22 @@ function aaePanorama(){
   const linhas = tres.map(r=>{
     const v = aaeValorTxt(r.e), nm = aaeNomeEd(r.e);
     const dizer = [v?v+'.':'Valor não informado.', r.e.aceitaPJ===false?'Não aceita PJ.':'', r.fav[0]?r.fav[0]+'.':''].filter(Boolean).join(' ');
-    return `<tr><td>${esc(nm.t)}<br><span class="peq">${esc(nm.s)}</span></td><td><b>${r.score}%</b> ${r.faixa[0]}</td><td>${esc(r.e.modalidade||'—')}</td><td>${esc(dizer)}</td></tr>`;
+    return `<tr><td>${esc(nm.t)}<br><span class="peq">${esc(nm.s)}</span></td><td><b>${r.score}%</b> ${r.faixa[0]}</td><td>${r.e.aceitaPJ===false?'PF':'PJ'}<br><span class="peq">${esc(r.e.modalidade||'')}</span></td><td>${esc(dizer)}</td></tr>`;
   }).join('');
   const detalhes = tres.map((r,i)=>{
-    const v = aaeValorTxt(r.e), nm = aaeNomeEd(r.e);
+    const v = aaeValorTxt(r.e), nm = aaeNomeEd(r.e), min = aaeFaixaMin(f.faixaValor), val = parseFloat(String(r.e.valor).replace(',','.'));
+    const mod = r.e.modalidade ? String(r.e.modalidade).toLowerCase() : '';
+    const dentro = (min!=null && val) ? (val>=min ? ' — um valor que já está dentro do que você pretende cobrar' : ' — abaixo do que você pretende cobrar, o que merece ponderação') : '';
+    let t = 'Você entra como '+(r.e.aceitaPJ===false?'Pessoa Física':'PJ (clínica)')+(mod?' na modalidade de atendimento '+mod:'')+(v?', recebendo '+v:'')+dentro+'. ';
+    t += r.e.exigeEsp ? 'O edital exige especialização.' : 'Não há exigência de especialização informada.';
+    const ok = r.fav.filter(x=>!/^Repasse|^Forma de atendimento/.test(x));
     return `<h3>${i+1}. ${esc(nm.t)}${i===0&&destaque?' — sua melhor porta de entrada':''}</h3>
-      <p>${esc([nm.s, r.e.modalidade, v, r.e.aceitaPJ===false?'não aceita PJ':'aceita PJ'].filter(Boolean).join(' · '))}.</p>
-      ${r.fav.length?`<p><b>A favor:</b> ${esc(r.fav.join('; '))}.</p>`:''}
-      ${r.aten.length?`<p><b>Atenção:</b> ${esc(r.aten.join('; '))}.</p>`:''}
+      <p>${esc(t)}${ok.length?' A seu favor: '+esc(ok.join('; ').replace(/\.$/,''))+'.':''}</p>
+      ${r.aten.length?`<p>O ponto de atenção aqui: ${esc(r.aten.join('; '))}.</p>`:''}
       ${r.inf.length?`<p class="peq"><i>Ainda a confirmar no edital:</i> ${esc(r.inf.join('; '))}.</p>`:''}`;
   }).join('');
+  const nOn = tres.filter(r=>/online/i.test(r.e.modalidade||'')).length, nPr = tres.filter(r=>/presencial/i.test(r.e.modalidade||'')).length;
+  const juntos = (tres.length>1?'Juntas, essas oportunidades formam um caminho '+(nOn&&nPr?'equilibrado, combinando editais online e presenciais':'coerente com o seu perfil')+'. ':'')+'O melhor ponto de partida é '+aaeNomeEd(melhor.e).t+', com '+melhor.score+'% de aderência'+(melhor.fav[0]?' — '+melhor.fav[0].charAt(0).toLowerCase()+melhor.fav[0].slice(1):'')+'.';
   const atencoes = Array.from(new Set(tres.flatMap(r=>r.aten)));
   const caixa = atencoes.length
     ? '<ul>'+atencoes.map(a=>`<li>${esc(a)}.</li>`).join('')+'</ul>'
@@ -5764,27 +5786,28 @@ h1{text-align:center; color:#1f3a5f; font-size:26px; margin:18px 0 2px;} .cli{te
 h2{color:#1f3a5f; font-size:19px; border-top:1px solid #ccc; padding-top:14px; margin-top:22px;} h3{color:#1f7a6d; font-size:16px; margin:16px 0 4px;}
 .kpis{display:flex; gap:12px; margin:14px 0;} .kpi{flex:1; background:#eef2f5; text-align:center; padding:14px 8px;} .kn{font-size:30px; font-weight:bold; color:#1f3a5f;} .kl{font-size:12px; color:#666;}
 table{width:100%; border-collapse:collapse; font-size:13.5px;} th{background:#1f3a5f; color:#fff; text-align:left; padding:7px;} td{border:1px solid #ddd; padding:7px; vertical-align:top;}
-.peq{font-size:12px; color:#666;}
+.peq{font-size:12px; color:#666;} .junto{background:#eef2f5; padding:10px 18px; margin:16px 0; font-size:14px;}
 .alerta{background:#fdf3dc; border-left:4px solid #e6b96a; padding:6px 18px 8px; margin:18px 0;} .alerta h2{border:0; margin:8px 0 2px; color:#8a5a00; font-size:16px;}
 .veredito{text-align:center; margin-top:22px;} .veredito .t{color:#777; font-weight:bold; font-size:13px;} .veredito .v{color:#1f3a5f; font-weight:bold; font-size:20px;}
 .fim{text-align:center; font-weight:bold; margin-top:18px;} .aviso{font-style:italic; font-size:12px; color:#777; text-align:center; border-top:1px solid #ccc; padding-top:8px; margin-top:16px;}
 .edit-hint{background:#fff3a8; padding:0 4px;}
-@media print{ body{background:#fff;} #barra{display:none;} #doc{margin:0; max-width:none; padding:0;} .kpi,.alerta,tr,h3{page-break-inside:avoid;} }
+@media print{ body{background:#fff;} #barra{display:none;} #doc{margin:0; max-width:none; padding:0;} .junto,.kpi,.alerta,tr,h3{page-break-inside:avoid;} }
 </style></head><body>
 <div id="barra"><button onclick="window.print()">Imprimir / salvar PDF</button><span>Clique no texto para editar antes de imprimir. O trecho em amarelo precisa ser preenchido.</span></div>
 <div id="doc" contenteditable="true">
 <div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>
 <h1>SEU PANORAMA DE OPORTUNIDADES</h1>
 <p class="cli">${esc(nome)}</p>
-<p>Preparamos um resumo simples e direto do que encontramos sobre o seu perfil e as oportunidades de credenciamento mais adequadas agora. Seu perfil tem <b>${geral}% de aderência geral</b> às 3 oportunidades abaixo. Trouxemos também, com transparência, os pontos que precisam de atenção antes de qualquer submissão: eles são tão importantes quanto as boas notícias.</p>
+<p>Preparamos um resumo simples e direto do que encontramos sobre o seu perfil e as oportunidades de credenciamento mais adequadas agora. Seu perfil tem <b>${geral}% de aderência geral</b> às ${tres.length>1?tres.length+' oportunidades':'oportunidade'} abaixo. Trouxemos também, com transparência, os pontos que precisam de atenção antes de qualquer submissão: eles são tão importantes quanto as boas notícias.</p>
 <div class="kpis">${kpis}</div>
 <h2>O que isso significa, na prática</h2>
 <p>${esc(pratica)}</p>
 <h2>Onde você tem mais chance</h2>
-<p>Analisamos o seu perfil com a nossa Biblioteca de Oportunidades. Escolha com a gente qual das 3 vale avançar primeiro:</p>
+<p>Analisamos o seu perfil com a nossa Biblioteca de Oportunidades. Veja abaixo, por ordem de aderência, onde vale avançar primeiro:</p>
 <table><tr><th>Edital</th><th>Aderência</th><th>Modalidade</th><th>O que isso quer dizer pra você</th></tr>${linhas}</table>
-<h2>Suas 3 oportunidades, em detalhe</h2>
+<h2>Suas ${tres.length>1?tres.length+' melhores oportunidades':'melhor oportunidade'}, em detalhe</h2>
 ${detalhes}
+<div class="junto"><b>O QUE ISSO SIGNIFICA JUNTO</b><br>${esc(juntos)}</div>
 <div class="alerta"><h2>⚠ FIQUE ATENTA — ISSO PODE TRAVAR SEU CREDENCIAMENTO</h2>${caixa}</div>
 <h2>O que fazer agora</h2>
 <p><b>Você pode contar com o nosso apoio.</b> O passo seguinte é o Diagnóstico Estratégico de Habilitação: uma conferência minuciosa de todos os requisitos do edital escolhido, para garantir que tudo esteja certo antes de você submeter. É nessa etapa que minimizamos surpresas desagradáveis lá na frente.</p>
