@@ -1529,8 +1529,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row"><label>Índice Transformare (1–5)</label><select id="af-indice"><option value="" selected>— Ainda não avaliado —</option><option value="1">1 — Baixa</option><option value="2">2 — Baixa</option><option value="3">3 — Média</option><option value="4">4 — Alta</option><option value="5">5 — Alta</option></select></div>
       <div class="two-col">
         <div class="form-row"><label>Prazo</label><input type="text" id="af-prazo" placeholder="dd/mm/aaaa"></div>
-        <div class="form-row"><label>Publicação</label><input type="text" id="af-publicacao" placeholder="dd/mm/aaaa"></div>
+        <div class="form-row"><label>Publicação (divulgação)</label><input type="text" id="af-publicacao" placeholder="dd/mm/aaaa"></div>
       </div>
+      <div class="form-row"><label>Início do recebimento de propostas</label><input type="text" id="af-abertura" placeholder="dd/mm/aaaa (deixe em branco se não houver)"></div>
       <div class="form-row"><label>Profissões contempladas</label><div class="chip-select" id="af-profs"></div></div>
       <div class="form-row"><label>Para quem é (quem pode se credenciar)</label><div class="chip-select" id="af-publico"></div></div>
 
@@ -2384,6 +2385,7 @@ function renderCard(o){
           <span class="tag">${o.tipo}</span>
           <span class="tag">${o.modalidade}</span>
           ${(o.aceitaContratacao||[]).map(p=>`<span class="tag">${p}</span>`).join('')}
+          ${o.abertura ? `<span class="tag">Início: ${esc(o.abertura)}</span>` : ''}
           <span class="tag">Prazo: ${o.prazo}</span>
         </div>
         <div style="margin-top:10px;"><button class="wa-btn" onclick="shareWhatsApp(${o.id})">↗ WhatsApp</button>${adminAuthed ? `<button class="btn-editar-adm" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button><button class="btn-editar-adm" style="color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">🗑 Excluir</button>` : ''}</div>
@@ -3357,7 +3359,7 @@ function openDetalhe(id){
             <div>
               <div class="op-meta">${o.edital} · ${o.tipo}</div>
               <h3>${o.objeto}</h3>
-              <div class="detail-org">${o.orgao} — ${o.cidade ? o.cidade+'/' : ''}${o.uf} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${o.origemSupabase ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}</div>
+              <div class="detail-org">${o.orgao} — ${o.cidade ? o.cidade+'/' : ''}${o.uf} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${o.origemSupabase ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}${o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? ` · divulgado em ${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}` : ''}</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
               ${adminAuthed ? `<button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap;" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button><button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">🗑 Excluir</button>` : ''}
@@ -3377,7 +3379,8 @@ function openDetalhe(id){
             <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}</div></div>
             <div class="qf-item"><div class="qf-icon">💰</div><span class="qf-k">Remuneração</span><div class="qf-v">${remuneracaoResumo}</div></div>
             <div class="qf-item"><div class="qf-icon">⏳</div><span class="qf-k">Prazo</span><div class="qf-v">${o.prazo}</div></div>
-             ${o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}</div></div>` : ''}
+             ${o.abertura ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Início das propostas</span><div class="qf-v">${esc(o.abertura)}</div></div>`
+               : (o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}</div></div>` : '')}
             ${(o.escolaridadeMinima || o.experienciaMinimaAnos) ? `<div class="qf-item"><div class="qf-icon">🎓</div><span class="qf-k">Exigência mínima</span><div class="qf-v">${esc([o.escolaridadeMinima, o.experienciaMinimaAnos ? o.experienciaMinimaAnos + ' ano(s) de experiência' : ''].filter(Boolean).join(' · '))}</div></div>` : ''}
           </div>
 
@@ -5164,6 +5167,7 @@ function openAdminForm(id){
     document.getElementById('af-indice').value = (o.indice==null) ? '' : String(Math.min(5, Math.max(1, Math.round(Number(o.indice)))));
     document.getElementById('af-prazo').value = o.prazo;
     document.getElementById('af-publicacao').value = o.publicacao;
+    document.getElementById('af-abertura').value = o.abertura || '';
     document.getElementById('af-valor-atendimento').value = (o.valorAtendimento && !o.valorAtendimento.startsWith('Não')) ? o.valorAtendimento : '';
     document.getElementById('af-volume').value = (o.volume && !o.volume.startsWith('Não')) ? o.volume : '';
     document.getElementById('af-requisitos').value = o.requisitos || '';
@@ -5180,7 +5184,7 @@ function openAdminForm(id){
     afMovimentacoes = (o.movimentacoes||[]).map(m=>({...m}));
     afRemuneracao = [...(o.remuneracao||[])];
   } else {
-    ['af-edital','af-orgao','af-objeto','af-prazo','af-publicacao','af-email-inscricao','af-cidade',
+    ['af-edital','af-orgao','af-objeto','af-prazo','af-publicacao','af-abertura','af-email-inscricao','af-cidade',
      'af-valor-atendimento','af-volume',
      'af-requisitos','af-pontos-positivos','af-pontos-atencao','af-escolaridade','af-exp-anos'].forEach(id2=>document.getElementById(id2).value='');
     document.getElementById('af-url-edital').value = 'https://pncp.gov.br/app/editais';
@@ -5311,6 +5315,7 @@ async function saveAdminForm(){
     prazo: document.getElementById('af-prazo').value.trim() || 'Não informado',
     prazoConfirmado: false,
     publicacao: document.getElementById('af-publicacao').value.trim() || 'Não informado',
+    abertura: document.getElementById('af-abertura').value.trim() || null,
     profissoes: profs.length ? profs : ['Não informado'],
     aceitaContratacao: publico,
     escolaridadeMinima: document.getElementById('af-escolaridade').value || null,
@@ -5412,6 +5417,9 @@ async function saveAdminForm(){
     payloadSupabase.prazo_confirmado = data.prazoConfirmado;
     if(prazoISO !== undefined) payloadSupabase.prazo = prazoISO;
     if(publicacaoISO !== undefined) payloadSupabase.publicacao = publicacaoISO;
+    const aberturaISO = _dataBRParaISO(data.abertura);
+    if(aberturaISO !== undefined) payloadSupabase.abertura = aberturaISO;
+    else if(!data.abertura) payloadSupabase.abertura = null;
 
     // .select() depois do update é essencial: sem ele, uma gravação bloqueada por
     // permissão (RLS) no Supabase não gera "error" nenhum — só devolve 0 linhas
@@ -7081,7 +7089,7 @@ async function renderCaixaEntrada(){
         ${badgeIndiceSugeridoHTML(item)}
         ${par ? `<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="Já existe no catálogo: ${esc(par.orgao||'')} — ${esc(par.edital||'')}">⚠ Parecido com edital já cadastrado (id ${par.id})</span>` : ''}
         ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
-        <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao ? formatarDataBR(item.data_publicacao) : '—'}${item.hora_publicacao ? ' às ' + esc(item.hora_publicacao) : ''}${item.data_encerramento_proposta ? ` · Prazo: ${formatarDataBR(item.data_encerramento_proposta)}` : ''} · Fonte: ${esc(item.fonte)}</div>
+        <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao ? formatarDataBR(item.data_publicacao) : '—'}${item.hora_publicacao ? ' às ' + esc(item.hora_publicacao) : ''}${item.abertura ? ` · Início das propostas: ${formatarDataBR(item.abertura)}` : ''}${item.data_encerramento_proposta ? ` · Prazo: ${formatarDataBR(item.data_encerramento_proposta)}` : ''} · Fonte: ${esc(item.fonte)}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
       </summary>
       <div style="margin-top:10px;">
@@ -7574,6 +7582,7 @@ function renderAprovarPreview(){
           <div class="op-tags">
             ${o.profissoes.map(p=>`<span class="tag">${esc(p)}</span>`).join('')}
             <span class="tag">${esc(o.tipo)}</span>
+            ${o.abertura ? `<span class="tag">Início: ${esc(o.abertura)}</span>` : ''}
             <span class="tag">Prazo: ${esc(o.prazo)}</span>
           </div>
         </div>
