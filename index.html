@@ -988,7 +988,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--teal); margin-bottom:12px;">Etapa 1 de 2 · Acesso</div>
       <div class="form-row"><label>E-mail</label><input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
       <div class="two-col">
-        <div class="form-row"><label>Senha (mínimo 8 caracteres)</label><input type="password" id="cad-senha" autocomplete="new-password"></div>
+        <div class="form-row"><label>Senha (mínimo 6 caracteres)</label><input type="password" id="cad-senha" autocomplete="new-password"></div>
         <div class="form-row"><label>Confirmar senha</label><input type="password" id="cad-senha2" autocomplete="new-password"></div>
       </div>
       <div id="cad-captcha" style="margin:4px 0 10px;"></div>
@@ -4204,7 +4204,7 @@ function cadastroContinuar(){
   const email = document.getElementById('cad-email').value.trim().toLowerCase();
   const s1 = document.getElementById('cad-senha').value, s2 = document.getElementById('cad-senha2').value;
   if(!validEmail(email)){ msg.textContent = 'Informe um e-mail válido.'; return; }
-  if(s1.length < 8){ msg.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; return; }
+  if(s1.length < 6){ msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
   if(s1 !== s2){ msg.textContent = 'As senhas não conferem.'; return; }
   if(TURNSTILE_SITE_KEY && !_cadCaptchaToken){ msg.textContent = 'Confirme que você não é um robô.'; return; }
   msg.textContent = '';
@@ -4242,7 +4242,7 @@ async function userSignup(){
   if(!document.getElementById('cad-aceite').checked){ msg.textContent = 'Para criar a conta, é preciso aceitar a Política de Privacidade.'; return; }
   const aceite = { aceite_privacidade_em: new Date().toISOString(), versao_privacidade: VERSAO_PRIVACIDADE };
   if(!validEmail(email)){ msg.textContent = 'Informe um e-mail válido.'; return; }
-  if(senha.length < 8){ msg.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; return; }
+  if(senha.length < 6){ msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
   if(senha !== senha2){ msg.textContent = 'As senhas não conferem.'; return; }
   msg.textContent = 'Criando conta...';
 
@@ -4431,7 +4431,7 @@ async function changeUserPassword(){
   const n1 = document.getElementById('perfil-senha-nova').value;
   const n2 = document.getElementById('perfil-senha-nova2').value;
   if(!_sb){ toast('Indisponível: configure o Supabase.'); return; }
-  if(n1.length < 8){ toast('A nova senha precisa ter pelo menos 8 caracteres'); return; }
+  if(n1.length < 6){ toast('A nova senha precisa ter pelo menos 6 caracteres'); return; }
   if(n1 !== n2){ toast('As senhas novas não conferem'); return; }
   const { error: erroLogin } = await _sb.auth.signInWithPassword({ email: u.email, password: atual });
   if(erroLogin){ toast('Senha atual incorreta'); return; }
