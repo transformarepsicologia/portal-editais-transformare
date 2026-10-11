@@ -1388,6 +1388,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
         <textarea id="prof-admin-input" rows="2" placeholder="Nova profissão — ou cole várias de uma vez (uma por linha, ou separadas por vírgula ou ponto e vírgula)" style="flex:1; min-width:180px; resize:vertical;"></textarea>
         <button type="button" class="btn-primary" onclick="addProfissaoAdmin()">+ Adicionar profissão(ões)</button>
+        <button type="button" class="btn-ghost" onclick="padronizarProfissoes()" title="Remove sinônimos (ex.: 'Psicólogo / Psicologia' vira 'Psicologia') e junta repetidas">🧹 Padronizar lista</button>
       </div>
       <ul class="af-item-list" id="prof-admin-list"></ul>
       <p style="font-size:11px; color:var(--ink-dim); margin-top:10px;">Desativar uma profissão a remove de novos cadastros, filtros e alertas — oportunidades já cadastradas com ela não são afetadas.</p>
@@ -4711,6 +4712,36 @@ async function addProfissaoAdmin(){
   await persistProfissoes();
   afterProfissoesChanged();
   toast(novas.length === 1 ? 'Profissão adicionada' : `${novas.length} profissões adicionadas` + (repetidas.length ? ` (${repetidas.length} já existia${repetidas.length>1?'m':''})` : ''));
+}
+const PROF_PADRAO_ESPECIAIS = {
+  'alegologia (alergologia)':'Alergologia',
+  'clinico geral':'Clínico Geral',
+  'clínico geral / clínica médica':'Clínico Geral',
+  'ortopedista / traumatologista':'Ortopedia e Traumatologia',
+  'psicopedagogo / psicopedagologia':'Psicopedagogia',
+  'gastroenteroclínica médica':'Gastroenterologia'
+};
+function nomePadraoProfissao(nome){
+  const n = String(nome||'').trim();
+  const esp = PROF_PADRAO_ESPECIAIS[n.toLowerCase()];
+  if(esp) return esp;
+  return n.includes('/') ? n.split('/').pop().trim() : n;
+}
+async function padronizarProfissoes(){
+  const mapa = new Map(); // chave minúscula -> {nome, ativa}
+  profissoes.forEach(p=>{
+    const nome = nomePadraoProfissao(p.nome);
+    const k = nome.toLowerCase();
+    if(mapa.has(k)) mapa.get(k).ativa = mapa.get(k).ativa || p.ativa;
+    else mapa.set(k, { nome, ativa: p.ativa });
+  });
+  const nova = [...mapa.values()];
+  if(nova.length === profissoes.length && nova.every((p,i)=>p.nome === profissoes[i].nome)){ toast('A lista já está padronizada.'); return; }
+  if(!confirm('Padronizar a lista: de ' + profissoes.length + ' para ' + nova.length + ' profissões (sinônimos removidos, repetidas unidas).\n\nOportunidades já cadastradas não são alteradas. Continuar?')) return;
+  profissoes = nova;
+  await persistProfissoes();
+  afterProfissoesChanged();
+  toast('Lista padronizada: ' + nova.length + ' profissões.');
 }
 async function removerProfissaoAdmin(i){
   const p = profissoes[i]; if(!p) return;
