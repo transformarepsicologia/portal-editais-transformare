@@ -3648,6 +3648,7 @@ async function abrirPlanosModal(){
     const r = await fetch(SUPABASE_URL + '/functions/v1/asaas-assinatura', { headers:{ apikey: SUPABASE_ANON_KEY } });
     cfg = await r.json();
   }catch(e){ cfg = null; }
+  window._cfgPlanos = cfg;
   if(!cfg || !cfg.configurado){
     document.getElementById('plano-cpf-box').style.display = 'none';
     box.innerHTML = '<div style="font-size:13px; color:var(--ink-muted); line-height:1.55; grid-column:1/-1;">O pagamento automático ainda não está disponível. Envie seu pedido e a equipe da Transformare entra em contato para combinar o pagamento e liberar o seu acesso.</div><div style="grid-column:1/-1;"><button class="btn-primary" onclick="closeModal(\'planos-modal\'); pedirPlanoManual();">Enviar pedido do plano Pro</button></div>';
@@ -3657,10 +3658,10 @@ async function abrirPlanosModal(){
   const card = (ciclo, titulo, valor, sub, destaque)=>`<div style="border:1px solid ${destaque?'var(--amber)':'var(--border)'}; border-radius:12px; padding:16px; background:${destaque?'rgba(245,169,62,0.08)':'transparent'}; display:flex; flex-direction:column; gap:6px;">
     <div style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:${destaque?'var(--amber)':'var(--teal)'};">${titulo}</div>
     <div style="font-family:var(--font-display); font-size:24px; font-weight:700;">${brl(valor)}</div>
-    <div style="font-size:12px; color:var(--ink-muted); min-height:48px;">${sub}</div>
+    <div style="font-size:12px; color:var(--ink-muted); min-height:48px; line-height:1.45;">${sub}</div>
     <button class="btn-primary" style="margin-top:auto;" onclick="assinarPlano('${ciclo}')">Assinar ${titulo.toLowerCase()}</button></div>`;
   box.innerHTML = card('mensal','Mensal',cfg.mensal,'Cobrança automática no cartão a cada 30 dias. Cancele quando quiser.',false)
-    + card('anual','Anual',cfg.anual, `Pague uma vez e use por 1 ano — ou parcele em até 12x de ${brl(cfg.anual/12)} no cartão.${economia>0 ? ' Economia de ' + economia + '%.' : ''} Não renova sozinho.`,true);
+    + card('anual','Anual',cfg.anual, `Pague uma vez e use por 1 ano — ou parcele em até 12x de ${brl(cfg.anual/12)} no cartão.${economia>0 ? ' Economia de ' + economia + '%.' : ''} Não renova sozinho.${cfg.anualLink ? ' Na página de pagamento, use o mesmo e-mail da sua conta (' + esc(userProfile && userProfile.email || '') + ').' : ''}`,true);
 }
 function cpfCnpjValido(v){
   const d = String(v||'').replace(/\D/g,'');
@@ -3679,7 +3680,8 @@ function cpfCnpjValido(v){
 async function assinarPlano(ciclo){
   const msg = document.getElementById('planos-msg');
   const cpfCnpj = (document.getElementById('plano-cpf').value || '').replace(/\D/g,'');
-  if(!cpfCnpjValido(cpfCnpj)){
+  const anualPorLink = ciclo === 'anual' && window._cfgPlanos && window._cfgPlanos.anualLink;
+  if(!anualPorLink && !cpfCnpjValido(cpfCnpj)){
     msg.style.color = 'var(--coral)'; msg.textContent = 'Informe um CPF ou CNPJ válido para emitir a cobrança.';
     document.getElementById('plano-cpf').focus(); return;
   }
