@@ -1840,6 +1840,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <button class="modal-close" onclick="closeModal('planos-modal')">×</button>
     <h3>Plano Transformare Pro</h3>
     <p style="font-size:13px; color:var(--ink-muted); line-height:1.55;">Índice Transformare, aderência ao seu perfil, checklist de documentos e links das certidões. Pague com Pix, boleto ou cartão.</p>
+    <div id="plano-cpf-box" style="margin:12px 0 0;">
+      <label for="plano-cpf" style="font-size:12.5px; color:var(--ink-muted); display:block; margin-bottom:5px;">CPF ou CNPJ (exigido para emitir a cobrança)</label>
+      <input id="plano-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="Somente números" maxlength="18" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); font-size:14px;">
+    </div>
     <div id="planos-opcoes" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:14px 0;"></div>
     <div id="planos-msg" style="font-size:12.5px; color:var(--coral); min-height:18px;"></div>
   </div>
@@ -3619,7 +3623,7 @@ async function solicitarPlanoEssencial(){
 }
 async function abrirPlanosModal(){
   const box = document.getElementById('planos-opcoes'), msg = document.getElementById('planos-msg');
-  msg.textContent = ''; box.innerHTML = '<div style="font-size:13px; color:var(--ink-dim);">Carregando planos...</div>';
+  msg.textContent = ''; document.getElementById('plano-cpf-box').style.display = ''; box.innerHTML = '<div style="font-size:13px; color:var(--ink-dim);">Carregando planos...</div>';
   openModal('planos-modal');
   let cfg = null;
   try{
@@ -3627,6 +3631,7 @@ async function abrirPlanosModal(){
     cfg = await r.json();
   }catch(e){ cfg = null; }
   if(!cfg || !cfg.configurado){
+    document.getElementById('plano-cpf-box').style.display = 'none';
     box.innerHTML = '<div style="font-size:13px; color:var(--ink-muted); line-height:1.55; grid-column:1/-1;">O pagamento automático ainda não está disponível. Envie seu pedido e a equipe da Transformare entra em contato para combinar o pagamento e liberar o seu acesso.</div><div style="grid-column:1/-1;"><button class="btn-primary" onclick="closeModal(\'planos-modal\'); pedirPlanoManual();">Enviar pedido do plano Pro</button></div>';
     return;
   }
@@ -3639,8 +3644,27 @@ async function abrirPlanosModal(){
   box.innerHTML = card('mensal','Mensal',cfg.mensal,'Cobrado todo mês. Cancele quando quiser.',false)
     + card('anual','Anual',cfg.anual, economia>0 ? `Cobrado uma vez por ano — economia de ${economia}% em relação ao mensal.` : 'Cobrado uma vez por ano.',true);
 }
+function cpfCnpjValido(v){
+  const d = String(v||'').replace(/\D/g,'');
+  if(/^(\d)\1+$/.test(d)) return false;
+  const dig = (base, pesos)=>{ let t=0; for(let i=0;i<pesos.length;i++) t += Number(base[i])*pesos[i]; const r = t % 11; return r < 2 ? 0 : 11 - r; };
+  if(d.length === 11){
+    const a = dig(d,[10,9,8,7,6,5,4,3,2]); const b = dig(d,[11,10,9,8,7,6,5,4,3,2]);
+    return a === Number(d[9]) && b === Number(d[10]);
+  }
+  if(d.length === 14){
+    const a = dig(d,[5,4,3,2,9,8,7,6,5,4,3,2]); const b = dig(d,[6,5,4,3,2,9,8,7,6,5,4,3,2]);
+    return a === Number(d[12]) && b === Number(d[13]);
+  }
+  return false;
+}
 async function assinarPlano(ciclo){
   const msg = document.getElementById('planos-msg');
+  const cpfCnpj = (document.getElementById('plano-cpf').value || '').replace(/\D/g,'');
+  if(!cpfCnpjValido(cpfCnpj)){
+    msg.style.color = 'var(--coral)'; msg.textContent = 'Informe um CPF ou CNPJ válido para emitir a cobrança.';
+    document.getElementById('plano-cpf').focus(); return;
+  }
   msg.style.color = 'var(--ink-muted)'; msg.textContent = 'Preparando o pagamento...';
   try{
     const { data } = await _sb.auth.getSession();
@@ -3648,7 +3672,7 @@ async function assinarPlano(ciclo){
     const r = await fetch(SUPABASE_URL + '/functions/v1/asaas-assinatura', {
       method:'POST',
       headers:{ 'Content-Type':'application/json', apikey: SUPABASE_ANON_KEY, Authorization:'Bearer ' + token },
-      body: JSON.stringify({ ciclo })
+      body: JSON.stringify({ ciclo, cpfCnpj })
     });
     const j = await r.json();
     if(j.url){ window.location.href = j.url; return; }
