@@ -1839,7 +1839,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="modal-box" style="max-width:560px;">
     <button class="modal-close" onclick="closeModal('planos-modal')">×</button>
     <h3>Plano Transformare Pro</h3>
-    <p style="font-size:13px; color:var(--ink-muted); line-height:1.55;">Índice Transformare, aderência ao seu perfil, checklist de documentos e links das certidões. Pague com Pix, boleto ou cartão.</p>
+    <p style="font-size:13px; color:var(--ink-muted); line-height:1.55;">Índice Transformare, aderência ao seu perfil, checklist de documentos e links das certidões. Pagamento seguro no cartão de crédito.</p>
     <div id="plano-cpf-box" style="margin:12px 0 0;">
       <label for="plano-cpf" style="font-size:12.5px; color:var(--ink-muted); display:block; margin-bottom:5px;">CPF ou CNPJ (exigido para emitir a cobrança)</label>
       <input id="plano-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="Somente números" maxlength="18" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); font-size:14px;">
@@ -2370,7 +2370,7 @@ function nav(view){
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
   if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); adminTab(adminTabAtual||'hoje'); carregarContagensHoje(); renderUsuariosAdmin(); renderFeedbacksAdmin(); renderSugestoesProfissaoAdmin(); renderSolicitacoesIndiceAdmin(); }
-  if(view === 'minha-conta'){ renderMinhaConta(); atualizarStatusPedidoPlano(); }
+  if(view === 'minha-conta'){ renderMinhaConta(); atualizarStatusPedidoPlano(); carregarMinhaAssinatura(); }
   if(view === 'perfil') renderPerfil();
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
   currentView = view;
@@ -2998,6 +2998,7 @@ function renderMinhaConta(){
           <h4><span class="dot"></span>Seu plano <span class="plan-badge">${PLANOS[u.plano]||'Gratuito'}</span></h4>
           ${u.plano === 'essencial' ? `
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui tudo do plano Gratuito, mais o <strong>checklist completo</strong> de documentos de cada edital e os links dos principais portais para emitir certidões.</p>
+          <div id="minha-assinatura" style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"></div>
           <div style="margin-top:8px;">${portaisDocsPanelHTML().replace('class="panel"','style="margin:0;"')}</div>` : `
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui busca, favoritos, alertas dentro do portal e os principais documentos de cada edital.</p>
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"><strong>Plano Transformare Pro:</strong> checklist completo de todos os documentos exigidos e links dos portais de emissão (CND da Receita, FGTS, CNDT e outros).</p>
@@ -3639,10 +3640,10 @@ async function abrirPlanosModal(){
   const card = (ciclo, titulo, valor, sub, destaque)=>`<div style="border:1px solid ${destaque?'var(--amber)':'var(--border)'}; border-radius:12px; padding:16px; background:${destaque?'rgba(245,169,62,0.08)':'transparent'}; display:flex; flex-direction:column; gap:6px;">
     <div style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:${destaque?'var(--amber)':'var(--teal)'};">${titulo}</div>
     <div style="font-family:var(--font-display); font-size:24px; font-weight:700;">${brl(valor)}</div>
-    <div style="font-size:12px; color:var(--ink-muted); min-height:32px;">${sub}</div>
+    <div style="font-size:12px; color:var(--ink-muted); min-height:48px;">${sub}</div>
     <button class="btn-primary" style="margin-top:auto;" onclick="assinarPlano('${ciclo}')">Assinar ${titulo.toLowerCase()}</button></div>`;
-  box.innerHTML = card('mensal','Mensal',cfg.mensal,'Cobrado todo mês. Cancele quando quiser.',false)
-    + card('anual','Anual',cfg.anual, economia>0 ? `Cobrado uma vez por ano — economia de ${economia}% em relação ao mensal.` : 'Cobrado uma vez por ano.',true);
+  box.innerHTML = card('mensal','Mensal',cfg.mensal,'Cobrança automática no cartão a cada 30 dias. Cancele quando quiser.',false)
+    + card('anual','Anual',cfg.anual, `Pague uma vez e use por 1 ano — ou parcele em até 12x de ${brl(cfg.anual/12)} no cartão.${economia>0 ? ' Economia de ' + economia + '%.' : ''} Não renova sozinho.`,true);
 }
 function cpfCnpjValido(v){
   const d = String(v||'').replace(/\D/g,'');
@@ -3681,6 +3682,35 @@ async function assinarPlano(ciclo){
   }catch(e){
     msg.style.color = 'var(--coral)'; msg.textContent = 'Sem conexão. Tente de novo em instantes.';
   }
+}
+function dataBR(iso){ return iso ? new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR') : ''; }
+async function carregarMinhaAssinatura(){
+  const el = document.getElementById('minha-assinatura'); if(!el || !_sb || !userProfile) return;
+  const { data } = await _sb.from('assinaturas').select('ciclo,status,ativa_ate,valor').eq('user_id', userProfile.id).not('ativa_ate','is',null).order('ativa_ate',{ascending:false}).limit(1);
+  const a = data && data[0]; if(!a){ el.innerHTML = ''; return; }
+  const ate = dataBR(a.ativa_ate);
+  const venceEm = Math.round((new Date(a.ativa_ate + 'T12:00:00') - new Date()) / 86400000);
+  if(a.ciclo === 'mensal' && a.status !== 'cancelada'){
+    el.innerHTML = `<strong>Plano mensal</strong> — renovação automática no cartão. Acesso garantido até <strong>${ate}</strong>.<br><button class="btn-ghost" style="margin-top:8px;" onclick="cancelarAssinatura()">Cancelar assinatura</button>`;
+  } else if(a.ciclo === 'mensal'){
+    el.innerHTML = `<strong>Assinatura cancelada.</strong> Você continua com o Plano Pro até <strong>${ate}</strong>, sem novas cobranças.`;
+  } else {
+    el.innerHTML = `<strong>Plano anual</strong> — vale até <strong>${ate}</strong>. Não renova sozinho.` + (venceEm <= 30 ? `<br><button class="btn-primary" style="margin-top:8px;" onclick="abrirPlanosModal()">Renovar plano</button>` : '');
+  }
+}
+async function cancelarAssinatura(){
+  if(!confirm('Cancelar a assinatura mensal? Você continua com o Plano Pro até o fim do período já pago e não será cobrado de novo.')) return;
+  try{
+    const { data } = await _sb.auth.getSession();
+    const r = await fetch(SUPABASE_URL + '/functions/v1/asaas-assinatura', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey: SUPABASE_ANON_KEY, Authorization:'Bearer ' + (data && data.session ? data.session.access_token : '') },
+      body: JSON.stringify({ acao:'cancelar' })
+    });
+    const j = await r.json();
+    toast(j.ok ? 'Assinatura cancelada. Seu acesso continua até o fim do período pago.' : (j.erro || 'Não foi possível cancelar. Tente de novo.'));
+    carregarMinhaAssinatura();
+  }catch(e){ toast('Sem conexão. Tente de novo em instantes.'); }
 }
 async function pedirPlanoManual(){
   if(!userProfile){ toast('Crie sua conta gratuita ou entre para pedir o plano Transformare Pro.'); nav('cadastro'); return; }
