@@ -4305,7 +4305,7 @@ async function userSignup(){
   if(senha !== senha2){ msg.textContent = 'As senhas não conferem.'; return; }
   msg.textContent = 'Criando conta...';
 
-  const { data, error } = await _sb.auth.signUp({ email, password: senha, options: _cadCaptchaToken ? { captchaToken: _cadCaptchaToken } : undefined });
+  const { data, error } = await _sb.auth.signUp({ email, password: senha, options: { emailRedirectTo: window.location.origin + window.location.pathname, ...(_cadCaptchaToken ? { captchaToken: _cadCaptchaToken } : {}) } });
   if(error && _cadCaptchaWidget !== null && window.turnstile){ try{ window.turnstile.reset(_cadCaptchaWidget); }catch(e){} _cadCaptchaToken = ''; }
   if(error){ msg.textContent = traduzErroAuth(error); return; }
   if(!data.user){ msg.textContent = 'Não foi possível criar a conta. Tente novamente.'; return; }
