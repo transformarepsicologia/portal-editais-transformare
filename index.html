@@ -2378,7 +2378,7 @@ function nav(view){
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
   if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); adminTab(adminTabAtual||'hoje'); carregarContagensHoje(); renderUsuariosAdmin(); renderFeedbacksAdmin(); renderSugestoesProfissaoAdmin(); renderSolicitacoesIndiceAdmin(); }
-  if(view === 'minha-conta'){ renderMinhaConta(); atualizarStatusPedidoPlano(); carregarMinhaAssinatura(); }
+  if(view === 'minha-conta'){ renderMinhaConta(); atualizarStatusPedidoPlano(); carregarMinhaAssinatura(); carregarAvisoProEncerrado(); }
   if(view === 'perfil') renderPerfil();
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
   currentView = view;
@@ -3008,6 +3008,7 @@ function renderMinhaConta(){
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui tudo do plano Gratuito, mais o <strong>checklist completo</strong> de documentos de cada edital e os links dos principais portais para emitir certidões.</p>
           <div id="minha-assinatura" style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"></div>
           <div style="margin-top:8px;">${portaisDocsPanelHTML().replace('class="panel"','style="margin:0;"')}</div>` : `
+          <div id="aviso-pro-encerrado"></div>
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui busca, favoritos, alertas dentro do portal e os principais documentos de cada edital.</p>
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"><strong>Plano Transformare Pro:</strong> checklist completo de todos os documentos exigidos e links dos portais de emissão (CND da Receita, FGTS, CNDT e outros).</p>
           <button class="btn-primary" id="btn-plano-essencial" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
@@ -3737,6 +3738,18 @@ async function resgatarCodigo(inputId, msgId){
   closeModal('planos-modal');
   toast('Plano Pro liberado até ' + dataBR(data.ate) + '.');
   nav('minha-conta');
+}
+async function carregarAvisoProEncerrado(){
+  const el = document.getElementById('aviso-pro-encerrado'); if(!el || !_sb || !userProfile || ehPro()) return;
+  const { data } = await _sb.from('assinaturas').select('ciclo,ativa_ate').eq('user_id', userProfile.id).not('ativa_ate','is',null).order('ativa_ate',{ascending:false}).limit(1);
+  const a = data && data[0];
+  if(!a || a.ativa_ate >= new Date().toISOString().slice(0,10)){ el.innerHTML = ''; return; }
+  const quando = dataBR(a.ativa_ate);
+  const titulo = a.ciclo === 'cortesia' ? 'Seu acesso cortesia ao Plano Pro terminou em ' + quando + '.' : 'Seu Plano Pro terminou em ' + quando + '.';
+  el.innerHTML = `<div style="border:1px solid var(--amber); background:rgba(245,169,62,0.08); border-radius:10px; padding:12px 14px; margin:0 0 12px;">
+    <div style="font-size:13px; font-weight:600; margin-bottom:4px;">${titulo}</div>
+    <div style="font-size:12.5px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">Você voltou para o plano Grátis. Assine para continuar com o Índice Transformare, a aderência ao seu perfil e o checklist de documentos.</div>
+    <button class="btn-primary" onclick="solicitarPlanoEssencial()">Assinar o Plano Pro</button></div>`;
 }
 async function cancelarAssinatura(){
   if(!confirm('Cancelar a assinatura mensal? Você continua com o Plano Pro até o fim do período já pago e não será cobrado de novo.')) return;
