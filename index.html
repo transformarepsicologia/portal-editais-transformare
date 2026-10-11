@@ -1266,7 +1266,41 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p class="section-sub" style="margin-bottom:12px;">Contas de profissionais criadas no portal (Supabase Auth). Se alguém esquecer a senha, envie um link de redefinição — a pessoa cria a nova senha sozinha, você nunca vê nem define a senha dela.</p>
     <div id="usuarios-cadastrados-body" style="display:block;">
       <div id="usuarios-cadastrados-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <div id="usuarios-cadastrados-resumo" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;"></div>
+      <div id="usuarios-cadastrados-filtros" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <input id="usr-busca" type="text" placeholder="Buscar por nome, e-mail ou UF" oninput="filtrarUsuariosAdmin()" style="flex:1; min-width:200px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); font-size:13px;">
+        <select id="usr-filtro" onchange="filtrarUsuariosAdmin()" style="font-size:13px; padding:8px 10px;">
+          <option value="todos">Todos</option>
+          <option value="pro">Plano Pro</option>
+          <option value="gratis">Plano Grátis</option>
+          <option value="pagantes">Pagantes (Asaas)</option>
+          <option value="cortesia">Cortesia / liberados por você</option>
+          <option value="vencendo">Pro vencendo em 7 dias</option>
+          <option value="pedidos">Pediram o Pro</option>
+          <option value="aguardando">Aguardando pagamento</option>
+        </select>
+      </div>
       <div id="usuarios-cadastrados-lista"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
+    <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleCodigosPro()">
+      <span>🎟️ Códigos de acesso (isenção)</span>
+      <span id="codigos-pro-arrow" style="transition:transform .2s; display:inline-block; transform:rotate(0deg);">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Cada código libera o Plano Pro por um número de dias, sem pagamento. Quem usa volta para o Grátis quando o prazo termina.</p>
+    <div id="codigos-pro-body" style="display:none;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px;">
+        <label style="font-size:12px; color:var(--ink-muted);">Código<br><input id="cod-novo-codigo" type="text" maxlength="40" placeholder="EX: PARCEIRO30" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); text-transform:uppercase; width:160px;"></label>
+        <label style="font-size:12px; color:var(--ink-muted);">Dias de Pro<br><input id="cod-novo-dias" type="number" min="1" placeholder="30" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); width:90px;"></label>
+        <label style="font-size:12px; color:var(--ink-muted);">Máx. de pessoas<br><input id="cod-novo-usos" type="number" min="1" placeholder="ilimitado" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); width:110px;"></label>
+        <label style="font-size:12px; color:var(--ink-muted);">Resgatar até<br><input id="cod-novo-valido" type="date" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink);"></label>
+        <label style="font-size:12px; color:var(--ink-muted);">Observação<br><input id="cod-novo-obs" type="text" maxlength="80" placeholder="para quem é" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); width:180px;"></label>
+        <button type="button" class="btn-primary" style="font-size:12.5px;" onclick="criarCodigoPro()">Criar código</button>
+      </div>
+      <div id="codigos-pro-msg" style="font-size:12.5px; min-height:16px; margin-bottom:8px;"></div>
+      <div id="codigos-pro-lista"></div>
     </div>
   </div>
 
@@ -8091,50 +8125,101 @@ function toggleUsuariosCadastrados(){
   arrow.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
   if(abrir) renderUsuariosAdmin();
 }
-async function renderUsuariosAdmin(){
+const SEM_PRAZO_ISO = '2090-01-01';
+let _usrAdmDados = null;
+function hojeISOAdmin(){ return new Date().toISOString().slice(0,10); }
+function infoPlanoUsuario(u, assinaturas, pedido){
+  const hoje = hojeISOAdmin();
+  const pro = (u.plano || 'gratuito') === 'essencial';
+  const minhas = (assinaturas || []).filter(a=>a.user_id === u.id);
+  const vig = minhas.filter(a=>a.ativa_ate && a.ativa_ate >= hoje).sort((a,b)=>b.ativa_ate.localeCompare(a.ativa_ate))[0];
+  const ult = vig || minhas.slice().sort((a,b)=>String(b.criado_em).localeCompare(String(a.criado_em)))[0];
+  let origem = pro ? 'Liberado manualmente' : '';
+  let ate = null, semPrazo = !!pro, status = '';
+  if(ult){
+    origem = ult.ciclo === 'mensal' ? 'Mensal (Asaas)' : ult.ciclo === 'anual' ? 'Anual (Asaas)' : 'Cortesia';
+    status = ult.status;
+    if(vig){ ate = vig.ativa_ate; semPrazo = vig.ativa_ate >= SEM_PRAZO_ISO; }
+    else semPrazo = false;
+  }
+  const dias = ate && !semPrazo ? Math.ceil((new Date(ate + 'T12:00:00') - new Date()) / 86400000) : null;
+  const ehAsaas = !!(ult && (ult.ciclo === 'mensal' || ult.ciclo === 'anual'));
+  return {
+    pro, origem, ate, semPrazo, status, dias, pedido: !!pedido,
+    pagante: pro && ehAsaas && !!vig,
+    cortesia: pro && (!ult || ult.ciclo === 'cortesia'),
+    vencendo: pro && dias !== null && dias <= 7,
+    aguardando: !pro && !!ult && ult.status === 'pendente'
+  };
+}
+function filtrarUsuariosAdmin(){ _pag['us'] = 1; renderUsuariosAdmin(true); }
+function setFiltroUsuarios(f){ document.getElementById('usr-filtro').value = f; filtrarUsuariosAdmin(); }
+async function renderUsuariosAdmin(semRecarregar){
   const status = document.getElementById('usuarios-cadastrados-status');
   const box = document.getElementById('usuarios-cadastrados-lista');
   if(!_sb){ status.textContent = 'Indisponível: configure o Supabase.'; return; }
-  status.textContent = 'Carregando...';
-  const { data, error } = await _sb.from('usuarios_perfil').select('*').order('criado_em', {ascending:false});
-  if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
-  const { data: pedidos } = await _sb.from('pedidos_plano').select('*').eq('status','pendente');
-  const pedidoDe = {}; (pedidos||[]).forEach(p=>{ pedidoDe[p.usuario_id] = p; });
-  const lista = data || [];
-  status.textContent = lista.length + ' usuário(s) cadastrado(s)' + ((pedidos||[]).length ? ' · ' + pedidos.length + ' pedido(s) de plano aguardando você.' : '.');
+  if(!(semRecarregar === true && _usrAdmDados)){
+    status.textContent = 'Carregando...';
+    const { data, error } = await _sb.from('usuarios_perfil').select('*').order('criado_em', {ascending:false});
+    if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
+    const { data: pedidos } = await _sb.from('pedidos_plano').select('*').eq('status','pendente');
+    const { data: assinaturas } = await _sb.from('assinaturas').select('*');
+    _usrAdmDados = { lista: data || [], pedidos: pedidos || [], assinaturas: assinaturas || [] };
+  }
+  const { lista, pedidos, assinaturas } = _usrAdmDados;
+  const pedidoDe = {}; pedidos.forEach(p=>{ pedidoDe[p.usuario_id] = p; });
+  const itens = lista.map(u=>({ u, info: infoPlanoUsuario(u, assinaturas, pedidoDe[u.id]), ped: pedidoDe[u.id] }));
+
+  // resumo (clicável)
+  const conta = f => itens.filter(f).length;
+  const chip = (rotulo, n, filtro, alerta)=>`<button type="button" class="btn-ghost" style="font-size:12px; padding:5px 12px; ${alerta && n ? 'border-color:var(--amber); color:var(--amber);' : ''}" onclick="setFiltroUsuarios('${filtro}')">${rotulo} <strong>${n}</strong></button>`;
+  document.getElementById('usuarios-cadastrados-resumo').innerHTML =
+    chip('Total', itens.length, 'todos') + chip('Pro', conta(x=>x.info.pro), 'pro') + chip('Grátis', conta(x=>!x.info.pro), 'gratis') +
+    chip('Pagantes', conta(x=>x.info.pagante), 'pagantes') + chip('Cortesia', conta(x=>x.info.cortesia), 'cortesia') +
+    chip('Vencendo (7 dias)', conta(x=>x.info.vencendo), 'vencendo', true) + chip('Pediram o Pro', conta(x=>x.info.pedido), 'pedidos', true) +
+    chip('Aguardando pgto', conta(x=>x.info.aguardando), 'aguardando');
+
+  // filtros
+  const q = (document.getElementById('usr-busca').value || '').trim().toLowerCase();
+  const f = document.getElementById('usr-filtro').value;
+  const passa = x=>{
+    if(q && !((x.u.nome||'') + ' ' + (x.u.email||'') + ' ' + (x.u.uf||'')).toLowerCase().includes(q)) return false;
+    return f === 'todos' || (f === 'pro' && x.info.pro) || (f === 'gratis' && !x.info.pro) || (f === 'pagantes' && x.info.pagante) ||
+      (f === 'cortesia' && x.info.cortesia) || (f === 'vencendo' && x.info.vencendo) || (f === 'pedidos' && x.info.pedido) || (f === 'aguardando' && x.info.aguardando);
+  };
+  const filtrados = itens.filter(passa).sort((a,b)=>
+    (b.info.pedido?1:0) - (a.info.pedido?1:0) ||
+    (b.info.vencendo?1:0) - (a.info.vencendo?1:0) ||
+    (b.info.pro?1:0) - (a.info.pro?1:0));
+  status.textContent = filtrados.length + ' de ' + itens.length + ' usuário(s)' + (pedidos.length ? ' · ' + pedidos.length + ' pedido(s) de plano aguardando você.' : '.');
   box.innerHTML = '';
-  const grupos = [['essencial','Plano Transformare Pro'],['gratuito','Plano Gratuito']];
-  const _ordPlano = u => (u.plano || 'gratuito') === 'essencial' ? 0 : 1;
-  const _todos = [...lista].sort((a,b)=>_ordPlano(a)-_ordPlano(b) || (pedidoDe[b.id]?1:0) - (pedidoDe[a.id]?1:0));
-  const pgUs = paginarLista('us', _todos, 15, renderUsuariosAdmin);
-  const _naPagina = new Set(pgUs.fatia.map(u=>u.id));
-  grupos.forEach(([chave, titulo])=>{
-    const totalGrupo = lista.filter(u=>(u.plano || 'gratuito') === chave).length;
-    const doGrupo = lista.filter(u=>(u.plano || 'gratuito') === chave && _naPagina.has(u.id))
-      .sort((a,b)=>(pedidoDe[b.id]?1:0) - (pedidoDe[a.id]?1:0));
-    const cab = document.createElement('div');
-    cab.style.cssText = 'font-family:var(--font-display); font-size:15px; margin:18px 0 4px; display:flex; gap:8px; align-items:center;';
-    cab.innerHTML = `${titulo} <span class="plan-badge">${totalGrupo}</span>`;
-    box.appendChild(cab);
-    if(!doGrupo.length && totalGrupo){ cab.remove(); return; }
-    if(!totalGrupo){ const v = document.createElement('div'); v.className='af-item-empty'; v.textContent='Ninguém neste plano.'; box.appendChild(v); }
-    doGrupo.forEach(u=>{
-      const ped = pedidoDe[u.id];
-      const row = document.createElement('div');
-      row.className = 'af-item';
-      row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid var(--border-soft);';
-      row.innerHTML = `
-        <div>
-          <div style="font-weight:600;">${esc(u.nome || '(sem nome)')}${ped ? ' <span class="plan-badge" style="background:var(--amber); color:#000;">pediu o Pro</span>' : ''}</div>
-          <div style="font-size:12px; color:var(--ink-dim);">${esc(u.email)}${u.uf ? ' · ' + esc(u.uf) : ''}${(u.profs||[]).length ? ' · ' + esc(u.profs.join(', ')) : ''}</div>
-        </div>
-        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-          ${ped ? `<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="mudarPlanoUsuario('${u.id}','essencial',${ped.id})">✓ Aprovar Pro</button><button type="button" class="btn-ghost" style="font-size:12px;" onclick="recusarPedidoPlano(${ped.id})">Recusar</button>` : ''}
-          <select style="font-size:12px;" onchange="mudarPlanoUsuario('${u.id}', this.value, null)">${Object.entries(PLANOS).map(([k,v])=>`<option value="${k}" ${k===(u.plano||'gratuito')?'selected':''}>${v}</option>`).join('')}</select>
-          <button type="button" class="btn-ghost" style="font-size:12px;" onclick="enviarLinkRedefinicaoUsuario('${esc(u.email)}', this)">🔑 Enviar link de redefinição</button>
-        </div>`;
-      box.appendChild(row);
-    });
+  if(!filtrados.length){ const v = document.createElement('div'); v.className = 'af-item-empty'; v.textContent = 'Nenhum usuário com esse filtro.'; box.appendChild(v); return; }
+  const pgUs = paginarLista('us', filtrados, 15, ()=>renderUsuariosAdmin(true));
+  pgUs.fatia.forEach(({u, info, ped})=>{
+    const cadastro = u.criado_em ? new Date(u.criado_em).toLocaleDateString('pt-BR') : '—';
+    const selo = info.pro
+      ? `<span class="plan-badge" style="background:var(--teal); color:#000;">Pro</span>`
+      : `<span class="plan-badge">Grátis</span>`;
+    const validade = info.pro
+      ? (info.semPrazo ? 'sem prazo' : (info.ate ? 'até ' + dataBR(info.ate) + (info.dias !== null ? ' (' + (info.dias >= 0 ? 'faltam ' + info.dias + ' dia(s)' : 'vencido') + ')' : '') : ''))
+      : '';
+    const stLabel = {ativa:'ativa', atrasada:'em atraso', cancelada:'cancelada (vale até o fim do período)', pendente:'aguardando pagamento', estornada:'estornada'}[info.status] || '';
+    const row = document.createElement('div');
+    row.className = 'af-item';
+    row.style.cssText = 'display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px 0; border-bottom:1px solid var(--border-soft);';
+    row.innerHTML = `
+      <div style="min-width:240px; flex:1;">
+        <div style="font-weight:600;">${esc(u.nome || '(sem nome)')} ${selo}${ped ? ' <span class="plan-badge" style="background:var(--amber); color:#000;">pediu o Pro</span>' : ''}${info.vencendo ? ' <span class="plan-badge" style="background:var(--coral); color:#000;">vence logo</span>' : ''}</div>
+        <div style="font-size:12px; color:var(--ink-dim);">${esc(u.email)}${u.uf ? ' · ' + esc(u.uf) : ''}${(u.profs||[]).length ? ' · ' + esc(u.profs.join(', ')) : ''}${u.whatsapp ? ' · ' + esc(u.whatsapp) : ''}</div>
+        <div style="font-size:12px; color:var(--ink-muted); margin-top:3px;">Cadastro em ${cadastro}${info.origem ? ' · <strong>' + esc(info.origem) + '</strong>' : ''}${validade ? ' · ' + validade : ''}${stLabel && info.pro !== null ? ' · ' + stLabel : ''}</div>
+      </div>
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+        ${ped ? `<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="liberarProUsuario('${u.id}', ${ped.id})">✓ Aprovar Pro…</button><button type="button" class="btn-ghost" style="font-size:12px;" onclick="recusarPedidoPlano(${ped.id})">Recusar</button>` : ''}
+        ${!ped && !info.pro ? `<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="liberarProUsuario('${u.id}', null)">Liberar Pro…</button>` : ''}
+        ${info.pro ? `<button type="button" class="btn-ghost" style="font-size:12px;" onclick="liberarProUsuario('${u.id}', null)">Prorrogar…</button><button type="button" class="btn-ghost" style="font-size:12px;" onclick="voltarParaGratis('${u.id}')">Voltar para Grátis</button>` : ''}
+        <button type="button" class="btn-ghost" style="font-size:12px;" onclick="enviarLinkRedefinicaoUsuario('${esc(u.email)}', this)">🔑 Redefinir senha</button>
+      </div>`;
+    box.appendChild(row);
   });
   box.appendChild(pgUs.barra);
 }
@@ -8160,6 +8245,94 @@ async function recusarPedidoPlano(pedidoId){
   const { error } = await _sb.from('pedidos_plano').update({ status:'recusado', decidido_em:new Date().toISOString() }).eq('id', pedidoId);
   if(error){ toast('Erro: ' + error.message); return; }
   toast('Pedido recusado'); renderUsuariosAdmin(); carregarContagensHoje();
+}
+
+async function liberarProUsuario(id, pedidoId){
+  if(!_sb) return;
+  const resp = prompt('Liberar o Plano Pro por quantos dias?\n(deixe vazio para sem prazo)', '30');
+  if(resp === null) return;
+  const dias = parseInt(resp, 10);
+  if(resp.trim() !== '' && !(dias > 0)){ toast('Informe um número de dias válido.'); return; }
+  const hoje = hojeISOAdmin();
+  let ate = SEM_PRAZO_ISO;
+  if(resp.trim() !== ''){
+    const atual = (_usrAdmDados && _usrAdmDados.assinaturas || []).filter(a=>a.user_id === id && a.ativa_ate && a.ativa_ate >= hoje && a.ativa_ate < SEM_PRAZO_ISO).map(a=>a.ativa_ate).sort().pop();
+    const base = new Date((atual || hoje) + 'T12:00:00'); base.setDate(base.getDate() + dias);
+    ate = base.toISOString().slice(0,10);
+  }
+  const { error } = await _sb.from('assinaturas').insert({ user_id: id, ciclo: 'cortesia', status: 'ativa', ativa_ate: ate, valor: 0 });
+  if(error){ toast('Erro ao liberar (rode o SQL de permissão do admin): ' + error.message); return; }
+  const { error: e2 } = await _sb.from('usuarios_perfil').update({ plano: 'essencial' }).eq('id', id);
+  if(e2){ toast('Erro ao mudar o plano: ' + e2.message); return; }
+  if(pedidoId) await _sb.from('pedidos_plano').update({ status: 'aprovado', decidido_em: new Date().toISOString() }).eq('id', pedidoId);
+  toast('Plano Pro liberado ' + (ate >= SEM_PRAZO_ISO ? 'sem prazo.' : 'até ' + dataBR(ate) + '.'));
+  _usrAdmDados = null; renderUsuariosAdmin(); carregarContagensHoje();
+}
+async function voltarParaGratis(id){
+  if(!_sb) return;
+  if(!confirm('Voltar esta pessoa para o plano Grátis agora? Se ela tiver assinatura no Asaas, cancele também lá para não continuar sendo cobrada.')) return;
+  const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+  const { error } = await _sb.from('assinaturas').update({ status: 'cancelada', ativa_ate: ontem.toISOString().slice(0,10), atualizado_em: new Date().toISOString() }).eq('user_id', id).gte('ativa_ate', hojeISOAdmin());
+  if(error){ toast('Erro ao encerrar o prazo (rode o SQL de permissão do admin): ' + error.message); return; }
+  const { error: e2 } = await _sb.from('usuarios_perfil').update({ plano: 'gratuito' }).eq('id', id);
+  if(e2){ toast('Erro ao mudar o plano: ' + e2.message); return; }
+  toast('Voltou para o plano Grátis.');
+  _usrAdmDados = null; renderUsuariosAdmin(); carregarContagensHoje();
+}
+
+/* ---- Admin: códigos de acesso (isenção) ---- */
+function toggleCodigosPro(){
+  const body = document.getElementById('codigos-pro-body');
+  const arrow = document.getElementById('codigos-pro-arrow');
+  const abrir = body.style.display === 'none';
+  body.style.display = abrir ? 'block' : 'none';
+  arrow.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
+  if(abrir) renderCodigosPro();
+}
+async function renderCodigosPro(){
+  const box = document.getElementById('codigos-pro-lista');
+  if(!_sb){ box.textContent = 'Indisponível: configure o Supabase.'; return; }
+  box.textContent = 'Carregando...';
+  const { data, error } = await _sb.from('codigos_pro').select('*').order('criado_em', {ascending:false});
+  if(error){ box.textContent = 'Erro ao carregar: ' + error.message; return; }
+  if(!(data||[]).length){ box.innerHTML = '<div class="af-item-empty">Nenhum código criado ainda.</div>'; return; }
+  const hoje = hojeISOAdmin();
+  box.innerHTML = '';
+  data.forEach(c=>{
+    const esgotado = c.usos_max !== null && c.usos >= c.usos_max;
+    const expirado = c.valido_ate && c.valido_ate < hoje;
+    const situacao = !c.ativo ? 'desativado' : esgotado ? 'esgotado' : expirado ? 'expirado' : 'ativo';
+    const row = document.createElement('div');
+    row.className = 'af-item';
+    row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid var(--border-soft);';
+    row.innerHTML = `<div>
+        <div style="font-weight:600; font-family:var(--font-mono);">${esc(c.codigo)} <span class="plan-badge" ${situacao==='ativo' ? 'style="background:var(--teal); color:#000;"' : ''}>${situacao}</span></div>
+        <div style="font-size:12px; color:var(--ink-muted);">${c.dias} dia(s) de Pro · usado ${c.usos}${c.usos_max !== null ? ' de ' + c.usos_max : ''} vez(es)${c.valido_ate ? ' · resgatar até ' + dataBR(c.valido_ate) : ''}${c.observacao ? ' · ' + esc(c.observacao) : ''}</div>
+      </div>
+      <button type="button" class="btn-ghost" style="font-size:12px;" onclick="alternarCodigoPro('${esc(c.codigo)}', ${!c.ativo})">${c.ativo ? 'Desativar' : 'Reativar'}</button>`;
+    box.appendChild(row);
+  });
+}
+async function criarCodigoPro(){
+  const msg = document.getElementById('codigos-pro-msg');
+  const codigo = (document.getElementById('cod-novo-codigo').value || '').trim().toUpperCase().replace(/\s+/g,'');
+  const dias = parseInt(document.getElementById('cod-novo-dias').value, 10);
+  const usos = parseInt(document.getElementById('cod-novo-usos').value, 10);
+  const valido = document.getElementById('cod-novo-valido').value || null;
+  const obs = (document.getElementById('cod-novo-obs').value || '').trim() || null;
+  msg.style.color = 'var(--coral)';
+  if(codigo.length < 4){ msg.textContent = 'O código precisa ter pelo menos 4 caracteres.'; return; }
+  if(!(dias > 0)){ msg.textContent = 'Informe quantos dias de Pro o código libera.'; return; }
+  const { error } = await _sb.from('codigos_pro').insert({ codigo, dias, usos_max: usos > 0 ? usos : null, valido_ate: valido, observacao: obs });
+  if(error){ msg.textContent = error.code === '23505' ? 'Esse código já existe.' : 'Erro ao criar: ' + error.message; return; }
+  msg.style.color = 'var(--teal)'; msg.textContent = 'Código ' + codigo + ' criado.';
+  ['cod-novo-codigo','cod-novo-dias','cod-novo-usos','cod-novo-valido','cod-novo-obs'].forEach(i=>{ document.getElementById(i).value = ''; });
+  renderCodigosPro();
+}
+async function alternarCodigoPro(codigo, ativo){
+  const { error } = await _sb.from('codigos_pro').update({ ativo }).eq('codigo', codigo);
+  if(error){ toast('Erro: ' + error.message); return; }
+  renderCodigosPro();
 }
 
 /* ---- Admin: feedbacks do beta ---- */
