@@ -1835,6 +1835,16 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </div>
 </div>
 
+<div class="modal-overlay" id="planos-modal">
+  <div class="modal-box" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('planos-modal')">×</button>
+    <h3>Plano Transformare Pro</h3>
+    <p style="font-size:13px; color:var(--ink-muted); line-height:1.55;">Índice Transformare, aderência ao seu perfil, checklist de documentos e links das certidões. Pague com Pix, boleto ou cartão.</p>
+    <div id="planos-opcoes" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:14px 0;"></div>
+    <div id="planos-msg" style="font-size:12.5px; color:var(--coral); min-height:18px;"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- Biblioteca do Supabase carregada aqui (e não no <head>) para a página
@@ -3601,7 +3611,54 @@ function openDetalhe(id){
   renderOutrosEditais(id, el);
   nav('detalhe');
 }
+function brl(v){ return Number(v).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
 async function solicitarPlanoEssencial(){
+  if(!userProfile){ toast('Crie sua conta gratuita ou entre para assinar o plano Transformare Pro.'); nav('cadastro'); return; }
+  if(userProfile.plano === 'essencial'){ toast('Você já está no plano Transformare Pro.'); return; }
+  abrirPlanosModal();
+}
+async function abrirPlanosModal(){
+  const box = document.getElementById('planos-opcoes'), msg = document.getElementById('planos-msg');
+  msg.textContent = ''; box.innerHTML = '<div style="font-size:13px; color:var(--ink-dim);">Carregando planos...</div>';
+  openModal('planos-modal');
+  let cfg = null;
+  try{
+    const r = await fetch(SUPABASE_URL + '/functions/v1/asaas-assinatura', { headers:{ apikey: SUPABASE_ANON_KEY } });
+    cfg = await r.json();
+  }catch(e){ cfg = null; }
+  if(!cfg || !cfg.configurado){
+    box.innerHTML = '<div style="font-size:13px; color:var(--ink-muted); line-height:1.55; grid-column:1/-1;">O pagamento automático ainda não está disponível. Envie seu pedido e a equipe da Transformare entra em contato para combinar o pagamento e liberar o seu acesso.</div><div style="grid-column:1/-1;"><button class="btn-primary" onclick="closeModal(\'planos-modal\'); pedirPlanoManual();">Enviar pedido do plano Pro</button></div>';
+    return;
+  }
+  const economia = Math.max(0, Math.round((1 - cfg.anual / (cfg.mensal * 12)) * 100));
+  const card = (ciclo, titulo, valor, sub, destaque)=>`<div style="border:1px solid ${destaque?'var(--amber)':'var(--border)'}; border-radius:12px; padding:16px; background:${destaque?'rgba(245,169,62,0.08)':'transparent'}; display:flex; flex-direction:column; gap:6px;">
+    <div style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:${destaque?'var(--amber)':'var(--teal)'};">${titulo}</div>
+    <div style="font-family:var(--font-display); font-size:24px; font-weight:700;">${brl(valor)}</div>
+    <div style="font-size:12px; color:var(--ink-muted); min-height:32px;">${sub}</div>
+    <button class="btn-primary" style="margin-top:auto;" onclick="assinarPlano('${ciclo}')">Assinar ${titulo.toLowerCase()}</button></div>`;
+  box.innerHTML = card('mensal','Mensal',cfg.mensal,'Cobrado todo mês. Cancele quando quiser.',false)
+    + card('anual','Anual',cfg.anual, economia>0 ? `Cobrado uma vez por ano — economia de ${economia}% em relação ao mensal.` : 'Cobrado uma vez por ano.',true);
+}
+async function assinarPlano(ciclo){
+  const msg = document.getElementById('planos-msg');
+  msg.style.color = 'var(--ink-muted)'; msg.textContent = 'Preparando o pagamento...';
+  try{
+    const { data } = await _sb.auth.getSession();
+    const token = data && data.session ? data.session.access_token : '';
+    const r = await fetch(SUPABASE_URL + '/functions/v1/asaas-assinatura', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey: SUPABASE_ANON_KEY, Authorization:'Bearer ' + token },
+      body: JSON.stringify({ ciclo })
+    });
+    const j = await r.json();
+    if(j.url){ window.location.href = j.url; return; }
+    msg.style.color = 'var(--coral)';
+    msg.textContent = (j.erro || 'Não foi possível iniciar o pagamento.') + (j.detalhe ? ' (' + j.detalhe + ')' : '');
+  }catch(e){
+    msg.style.color = 'var(--coral)'; msg.textContent = 'Sem conexão. Tente de novo em instantes.';
+  }
+}
+async function pedirPlanoManual(){
   if(!userProfile){ toast('Crie sua conta gratuita ou entre para pedir o plano Transformare Pro.'); nav('cadastro'); return; }
   if(userProfile.plano === 'essencial'){ toast('Você já está no plano Transformare Pro.'); return; }
   if(!_sb){ toast('Indisponível sem conexão com o banco.'); return; }
@@ -3737,6 +3794,7 @@ function openLeadModalMulti(ids, origin){
   prefillLeadFromUser();
   document.getElementById('lead-modal').classList.add('open');
 }
+function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
 /* ================= FEEDBACK DO BETA ================= */
