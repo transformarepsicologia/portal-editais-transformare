@@ -1836,10 +1836,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 </div>
 
 <div class="modal-overlay" id="planos-modal">
-  <div class="modal-box" style="max-width:760px;">
+  <div class="modal-box" style="max-width:560px;">
     <button class="modal-close" onclick="closeModal('planos-modal')">×</button>
     <h3>Plano Transformare Pro</h3>
-    <p style="font-size:13px; color:var(--ink-muted); line-height:1.55;">Índice Transformare, aderência ao seu perfil, checklist de documentos e links das certidões. Pagamento seguro pelo Asaas.</p>
+    <p style="font-size:13px; color:var(--ink-muted); line-height:1.55;">Índice Transformare, aderência ao seu perfil, checklist de documentos e links das certidões. Pagamento seguro no cartão de crédito.</p>
     <div id="plano-cpf-box" style="margin:12px 0 0;">
       <label for="plano-cpf" style="font-size:12.5px; color:var(--ink-muted); display:block; margin-bottom:5px;">CPF ou CNPJ (necessário só para o plano mensal)</label>
       <input id="plano-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="Somente números" maxlength="18" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); font-size:14px;">
@@ -3663,10 +3663,7 @@ async function abrirPlanosModal(){
     <div style="font-size:12px; color:var(--ink-muted); min-height:64px; line-height:1.45;">${sub}</div>
     <button class="btn-primary" style="margin-top:auto;" onclick="assinarPlano('${ciclo}')">${botao}</button></div>`;
   let html = card('mensal','Mensal',cfg.mensal,'Cobrança automática no cartão a cada 30 dias. Cancele quando quiser.','Assinar mensal',false);
-  html += card('anual','Anual · Cartão',cfg.anual, `Use por 1 ano pagando em até 12x de ${brl(cfg.anual/12)} no cartão.${pct(cfg.anual)>0 ? ' Economia de ' + pct(cfg.anual) + '%.' : ''} Não renova sozinho.${aviso}`,'Assinar anual no cartão',true);
-  if(cfg.anualPix && cfg.pixLink){
-    html += card('anual_pix','Anual · Pix',cfg.anualPix, `À vista no Pix, para usar por 1 ano.${pct(cfg.anualPix)>0 ? ' Economia de ' + pct(cfg.anualPix) + '%.' : ''} Não renova sozinho. Na página de pagamento, use o mesmo e-mail da sua conta (${emailConta}).`,'Assinar anual no Pix',true);
-  }
+  html += card('anual','Anual',cfg.anual, `Use por 1 ano pagando em até 12x de ${brl(cfg.anual/12)} no cartão.${pct(cfg.anual)>0 ? ' Economia de ' + pct(cfg.anual) + '%.' : ''} Não renova sozinho.${aviso}`,'Assinar anual',true);
   box.innerHTML = html;
 }
 function cpfCnpjValido(v){
@@ -3686,7 +3683,7 @@ function cpfCnpjValido(v){
 async function assinarPlano(ciclo){
   const msg = document.getElementById('planos-msg');
   const cpfCnpj = (document.getElementById('plano-cpf').value || '').replace(/\D/g,'');
-  const anualPorLink = ciclo === 'anual_pix' || (ciclo === 'anual' && window._cfgPlanos && window._cfgPlanos.anualLink);
+  const anualPorLink = ciclo === 'anual' && window._cfgPlanos && window._cfgPlanos.anualLink;
   if(!anualPorLink && !cpfCnpjValido(cpfCnpj)){
     msg.style.color = 'var(--coral)'; msg.textContent = 'Informe um CPF ou CNPJ válido para emitir a cobrança.';
     document.getElementById('plano-cpf').focus(); return;
