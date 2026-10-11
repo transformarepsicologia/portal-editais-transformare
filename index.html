@@ -982,13 +982,15 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== CADASTRO ===================== -->
 <section class="view" id="view-cadastro">
-  <div class="page-head"><span class="eyebrow">Nova conta</span><h2>Criar minha conta</h2><p>Salve seu perfil para acompanhar editais, favoritos e alertas em um só lugar.</p></div>
+  <div class="page-head"><span class="eyebrow">Nova conta</span><h2>Criar minha conta</h2><p>Só o seu e-mail. Enviamos um link para você criar a senha e entrar — leva menos de 1 minuto.</p></div>
   <div class="form-card" style="max-width:560px;">
-    <div class="two-col">
+    <div class="form-row"><label>E-mail</label><input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
+    <!-- Campos antigos do cadastro completo: ficam ocultos (o perfil agora é completado depois, em "Editar perfil") -->
+    <div id="cad-campos-antigos" style="display:none;"><div class="two-col">
       <div class="form-row"><label>Nome</label><input type="text" id="cad-nome" placeholder="Seu nome completo" autocomplete="name"></div>
       <div class="form-row"><label>WhatsApp</label><input type="tel" id="cad-whats" placeholder="(00) 00000-0000" autocomplete="tel"></div>
     </div>
-    <div class="form-row"><label>E-mail</label><input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email"></div>
+    
     <div class="two-col">
       <div class="form-row"><label>Senha (mínimo 8 caracteres)</label><input type="password" id="cad-senha" autocomplete="new-password"></div>
       <div class="form-row"><label>Confirmar senha</label><input type="password" id="cad-senha2" autocomplete="new-password"></div>
@@ -1020,13 +1022,14 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row"><label>CNPJ</label><div style="display:flex; gap:6px;"><input type="text" id="cad-cnpj" placeholder="00.000.000/0000-00" inputmode="numeric" maxlength="18" style="flex:1; min-width:0;" oninput="cnpjDigitado('cad')"><button type="button" class="btn-ghost" onclick="buscarCnpjPerfil('cad')">Buscar dados</button></div></div>
       <div id="cad-empresa" class="empresa-box"></div>
     </div>
+    </div>
     <label style="display:flex; gap:9px; align-items:flex-start; font-size:12.5px; color:var(--ink-muted); line-height:1.5; margin:4px 0 12px; cursor:pointer;">
       <input type="checkbox" id="cad-aceite" style="margin-top:3px; accent-color:var(--teal);">
       <span>Li e concordo com a <a href="#privacidade" style="color:var(--teal);" onclick="event.preventDefault(); nav('privacidade')">Política de Privacidade e Segurança</a> e autorizo o tratamento dos meus dados para criar minha conta e receber recomendações de editais.</span>
     </label>
     <div id="cad-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
     <div class="form-actions">
-      <button class="btn-primary" style="flex:1;" onclick="userSignup()">Criar conta</button>
+      <button class="btn-primary" style="flex:1;" onclick="userSignup()">Receber meu link de acesso</button>
     </div>
     <p style="font-size:12.5px; color:var(--ink-dim); margin-top:14px;">Já tem conta? <a href="#login" style="color:var(--teal); cursor:pointer;" onclick="event.preventDefault(); nav('login')">Entrar</a></p>
   </div>
@@ -1096,6 +1099,16 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div id="admin-login-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
     <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="adminLogin()">Entrar</button></div>
     <p style="font-size:12px; margin-top:14px;"><a href="#esqueci-senha" style="color:var(--teal); cursor:pointer;" onclick="event.preventDefault(); adminForgotPassword()">Esqueci minha senha</a></p>
+  </div>
+</section>
+
+<section class="view" id="view-definir-senha">
+  <div class="page-head"><span class="eyebrow">Quase lá</span><h2>Crie sua senha</h2><p>Seu e-mail foi confirmado. Escolha uma senha para entrar nas próximas vezes.</p></div>
+  <div class="form-card" style="max-width:460px;">
+    <div class="form-row"><label>Senha (mínimo 8 caracteres)</label><input type="password" id="senha-inicial-1" autocomplete="new-password"></div>
+    <div class="form-row"><label>Confirmar senha</label><input type="password" id="senha-inicial-2" autocomplete="new-password"></div>
+    <div id="senha-inicial-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
+    <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="definirSenhaInicial()">Salvar senha</button><button class="btn-ghost" onclick="pularSenhaInicial()">Agora não</button></div>
   </div>
 </section>
 
@@ -2896,7 +2909,7 @@ function exigePro(recurso){
 function updateNavCta(){
   const ctaBtn = document.getElementById('nav-cta-btn');
   if(userProfile){
-    ctaBtn.textContent = userProfile.nome.split(' ')[0];
+    ctaBtn.textContent = (userProfile.nome || '').split(' ')[0] || 'Minha conta';
     ctaBtn.dataset.view = 'minha-conta';
   } else {
     ctaBtn.textContent = 'Entrar';
@@ -2936,8 +2949,8 @@ function renderMinhaConta(){
     <div class="account-grid">
       <div>
         <div class="profile-card">
-          <div class="profile-avatar">${esc(u.nome.charAt(0).toUpperCase())}</div>
-          <h3>${esc(u.nome)}</h3>
+          <div class="profile-avatar">${esc((u.nome || u.email || '?').charAt(0).toUpperCase())}</div>
+          <h3>${esc(u.nome || u.email)}</h3>
           <div class="sub">${esc((u.profs||[]).join(', ')) || 'Profissão não informada'}</div>
           <div class="profile-field"><span class="k">E-mail</span><span class="v">${esc(u.email)}</span></div>
           <div class="profile-field"><span class="k">Estado</span><span class="v">${esc(u.uf) || 'Não informado'}</span></div>
@@ -4126,7 +4139,9 @@ async function carregarPerfilUsuario(authUser){
       // guardados localmente (caso de confirmação de e-mail obrigatória), cria
       // o perfil completo agora que já existe uma sessão autenticada.
       const pendente = await storeGet('perfil_pendente_' + authUser.email);
-      const base = pendente || { nome:'', whatsapp:'', registro:'', uf:'', profs:[], mods:[] };
+      const meta = authUser.user_metadata || {};
+      const aceiteMeta = meta.aceite_privacidade_em ? { aceite_privacidade_em: meta.aceite_privacidade_em, versao_privacidade: meta.versao_privacidade || null } : {};
+      const base = pendente || { nome:'', whatsapp:'', registro:'', uf:'', profs:[], mods:[], ...aceiteMeta };
       const { data: criado } = await _sb.from('usuarios_perfil')
         .upsert({ id: authUser.id, email: authUser.email, ...base, plano:'gratuito' })
         .select().maybeSingle();
@@ -4172,70 +4187,55 @@ async function carregarPerfilUsuario(authUser){
 
 async function userSignup(){
   const msg = document.getElementById('cad-msg');
-  const nome = document.getElementById('cad-nome').value.trim();
+  msg.style.color = 'var(--coral)';
   const email = document.getElementById('cad-email').value.trim().toLowerCase();
-  const whatsapp = document.getElementById('cad-whats').value.trim();
-  const registro = document.getElementById('cad-registro').value.trim();
-  const uf = document.getElementById('cad-uf').value;
-  const senha = document.getElementById('cad-senha').value;
-  const senha2 = document.getElementById('cad-senha2').value;
-  const profs = [...document.querySelectorAll('#cad-prof .chip-opt.selected')].map(x=>x.textContent);
-  const mods = [...document.querySelectorAll('#cad-mod .chip-opt.selected')].map(x=>x.textContent);
-  const extra = lerPerfilExtraForm('cad');
-  const profOutra = lerProfissaoOutra('cad', profs);
-  if(profOutra) profs.push(profOutra);
-
   if(!_sb){ msg.textContent = 'Indisponível: configure SUPABASE_URL/SUPABASE_ANON_KEY neste arquivo.'; return; }
-  if(!nome){ msg.textContent = 'Informe seu nome.'; return; }
-  if(!document.getElementById('cad-aceite').checked){ msg.textContent = 'Para criar a conta, é preciso aceitar a Política de Privacidade.'; return; }
-  const aceite = { aceite_privacidade_em: new Date().toISOString(), versao_privacidade: VERSAO_PRIVACIDADE };
   if(!validEmail(email)){ msg.textContent = 'Informe um e-mail válido.'; return; }
-  if(senha.length < 8){ msg.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; return; }
-  if(senha !== senha2){ msg.textContent = 'As senhas não conferem.'; return; }
-  msg.textContent = 'Criando conta...';
-
-  const { data, error } = await _sb.auth.signUp({ email, password: senha });
-  if(error){ msg.textContent = traduzErroAuth(error); return; }
-  if(!data.user){ msg.textContent = 'Não foi possível criar a conta. Tente novamente.'; return; }
-  if(!data.session){
-    // Confirmação de e-mail está ativada no projeto: ainda não há sessão autenticada
-    // para gravar o perfil agora (a política exige auth.uid() = id). Guardamos os
-    // dados aqui neste navegador e completamos o perfil no primeiro login, depois
-    // que a pessoa confirmar o e-mail.
-    await storeSet('perfil_pendente_' + email, { nome, whatsapp, registro, uf, profs, mods, ...aceite });
-    await storeSet('perfil_extra_pendente_' + email, extra);
-    if(profOutra) await enviarSugestaoProfissao(profOutra, { email, nome });
-    msg.style.color = 'var(--teal)';
-    msg.textContent = 'Conta criada! Verifique seu e-mail para confirmar antes de entrar.';
+  if(!document.getElementById('cad-aceite').checked){ msg.textContent = 'Para criar a conta, é preciso aceitar a Política de Privacidade.'; return; }
+  msg.style.color = 'var(--ink-muted)';
+  msg.textContent = 'Enviando o link...';
+  // Cadastro simples: o Supabase envia um link de acesso por e-mail. Ao clicar, a pessoa
+  // entra já logada e o site pede para ela criar a senha (ver definirSenhaInicial).
+  const { error } = await _sb.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: window.location.origin + window.location.pathname,
+      data: { cadastro_simples: true, aceite_privacidade_em: new Date().toISOString(), versao_privacidade: VERSAO_PRIVACIDADE }
+    }
+  });
+  if(error){
+    msg.style.color = 'var(--coral)';
+    msg.textContent = /rate limit|too many|security purposes/i.test(error.message || '') ? 'Muitos pedidos em pouco tempo. Aguarde alguns minutos e tente de novo.' : traduzErroAuth(error);
     return;
   }
+  msg.style.color = 'var(--teal)';
+  msg.textContent = 'Pronto! Enviamos um link para ' + email + '. Abra seu e-mail, clique no link e crie sua senha. Se não encontrar, olhe também o spam.';
+  document.getElementById('cad-email').value = '';
+}
 
-  const { error: erroPerfil } = await _sb.from('usuarios_perfil').upsert({
-    id: data.user.id, nome, email, whatsapp, registro, uf, profs, mods, plano: 'gratuito', ...perfilExtraParaBanco(extra), ...aceite
-  });
-  if(erroPerfil){ msg.textContent = 'Conta criada, mas houve um erro ao salvar o perfil: ' + erroPerfil.message; }
-
-  await carregarPerfilUsuario(data.user);
-  Object.assign(userProfile, extra);
-  if(profOutra) await enviarSugestaoProfissao(profOutra, userProfile);
-  await storeSet(ukey('perfilExtra'), extra);
-
-  // o que a pessoa já tinha marcado antes de criar a conta (favoritos/alertas/checklist) passa a ser da conta
-  profs.forEach(x=>alertPrefs.prof.add(x));
-  if(uf) alertPrefs.uf.add(uf);
-  mods.forEach(x=>alertPrefs.mod.add(x));
-  await storeSet(ukey('favoritos'), [...favoritos]);
-  await storeSet(ukey('docChecks'), docChecks);
-  await saveAlertPrefs();
-
-  ['cad-nome','cad-email','cad-whats','cad-registro','cad-senha','cad-senha2','cad-cidade','cad-rem-min','cad-escolaridade','cad-anos-exp','cad-cnpj','cad-prof-outra','cad-meta','cad-regime'].forEach(id=>document.getElementById(id).value='');
-  empresaForm.cad = null; chipsAtuacaoPerfil('cad', []); renderEmpresaBox('cad');
-  document.getElementById('cad-aceite').checked = false;
-  document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected, #cad-abr .chip-opt.selected, #cad-esp .chip-opt.selected, #cad-formato .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
-  msg.textContent = '';
-  updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
-  toast('Conta criada — bem-vindo(a), ' + nome.split(' ')[0]);
+async function definirSenhaInicial(){
+  const msg = document.getElementById('senha-inicial-msg');
+  const s1 = document.getElementById('senha-inicial-1').value;
+  const s2 = document.getElementById('senha-inicial-2').value;
+  msg.style.color = 'var(--coral)';
+  if(s1.length < 8){ msg.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; return; }
+  if(s1 !== s2){ msg.textContent = 'As senhas não conferem.'; return; }
+  msg.style.color = 'var(--ink-muted)'; msg.textContent = 'Salvando...';
+  const { error } = await _sb.auth.updateUser({ password: s1, data: { senha_definida: true } });
+  if(error){ msg.style.color = 'var(--coral)'; msg.textContent = 'Não foi possível salvar: ' + error.message; return; }
+  document.getElementById('senha-inicial-1').value = ''; document.getElementById('senha-inicial-2').value = ''; msg.textContent = '';
+  toast('Senha criada! Complete seu perfil para ver os editais mais aderentes.');
   nav('minha-conta');
+}
+function pularSenhaInicial(){
+  try{ sessionStorage.setItem('senha_inicial_adiada','1'); }catch(e){}
+  nav('minha-conta');
+}
+function precisaDefinirSenha(authUser){
+  const m = (authUser && authUser.user_metadata) || {};
+  let adiada = false; try{ adiada = sessionStorage.getItem('senha_inicial_adiada') === '1'; }catch(e){}
+  return !!(m.cadastro_simples && !m.senha_definida && !adiada);
 }
 
 function traduzErroAuth(error){
@@ -7097,6 +7097,7 @@ if(_sb){
     await carregarPerfilUsuario(authUser);
     await loadUserData();
     updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
+    if(precisaDefinirSenha(authUser)) nav('definir-senha');
   });
 }
 
