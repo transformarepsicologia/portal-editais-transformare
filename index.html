@@ -982,17 +982,30 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== CADASTRO ===================== -->
 <section class="view" id="view-cadastro">
-  <div class="page-head"><span class="eyebrow">Nova conta</span><h2>Criar minha conta</h2><p>Salve seu perfil para acompanhar editais, favoritos e alertas em um só lugar.</p></div>
-  <div class="form-card" style="max-width:560px;">
-    <div class="two-col">
-      <div class="form-row"><label>Nome</label><input type="text" id="cad-nome" placeholder="Seu nome completo" autocomplete="name"></div>
-      <div class="form-row"><label>WhatsApp</label><input type="tel" id="cad-whats" placeholder="(00) 00000-0000" autocomplete="tel"></div>
+  <div class="page-head"><span class="eyebrow">Nova conta</span><h2>Criar minha conta</h2><p>Dois passos rápidos: seu acesso e seus dados de contato. O perfil profissional você completa depois.</p></div>
+  <div class="form-card" style="max-width:520px;">
+    <div id="cad-etapa-1">
+      <div style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--teal); margin-bottom:12px;">Etapa 1 de 2 · Acesso</div>
+      <div class="form-row"><label>E-mail</label><input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
+      <div class="two-col">
+        <div class="form-row"><label>Senha (mínimo 6 caracteres)</label><input type="password" id="cad-senha" autocomplete="new-password"></div>
+        <div class="form-row"><label>Confirmar senha</label><input type="password" id="cad-senha2" autocomplete="new-password"></div>
+      </div>
+      <div id="cad-senha-dica" style="font-size:12px; color:var(--ink-dim); margin:-2px 0 8px; line-height:1.5;">Mínimo de 6 caracteres. Quanto mais longa, mais segura: <strong style="color:var(--ink-muted);">8 ou mais é o ideal</strong>, misturando letras e números.</div>
+      <div id="cad-captcha" style="margin:4px 0 10px;"></div>
+      <div id="cad-msg1" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
+      <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="cadastroContinuar()">Continuar</button></div>
     </div>
-    <div class="form-row"><label>E-mail</label><input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email"></div>
-    <div class="two-col">
-      <div class="form-row"><label>Senha (mínimo 8 caracteres)</label><input type="password" id="cad-senha" autocomplete="new-password"></div>
-      <div class="form-row"><label>Confirmar senha</label><input type="password" id="cad-senha2" autocomplete="new-password"></div>
+    <div id="cad-etapa-2" style="display:none;">
+      <div style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--teal); margin-bottom:12px;">Etapa 2 de 2 · Seus dados</div>
+      <div class="form-row"><label>Nome completo</label><input type="text" id="cad-nome" placeholder="Seu nome completo" autocomplete="name"></div>
+      <div class="form-row"><label>WhatsApp</label><input type="tel" id="cad-whats" placeholder="(00) 00000-0000" autocomplete="tel" inputmode="tel"></div>
+      <div style="font-size:12px; color:var(--ink-dim); margin:-4px 0 12px; line-height:1.5;">Usamos seu e-mail e WhatsApp para confirmar que é você e ajudar a recuperar o acesso, se precisar.</div>
     </div>
+    <!-- Campos antigos do cadastro completo: ocultos (o perfil é completado depois, em "Editar perfil") -->
+    <div id="cad-campos-antigos" style="display:none;">
+    
+    
     <div class="two-col">
       <div class="form-row"><label>Estado</label><select id="cad-uf"></select></div>
       <div class="form-row"><label>Registro profissional</label><input type="text" id="cad-registro" placeholder="Ex: CRP 07/00000"></div>
@@ -1020,13 +1033,17 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="form-row"><label>CNPJ</label><div style="display:flex; gap:6px;"><input type="text" id="cad-cnpj" placeholder="00.000.000/0000-00" inputmode="numeric" maxlength="18" style="flex:1; min-width:0;" oninput="cnpjDigitado('cad')"><button type="button" class="btn-ghost" onclick="buscarCnpjPerfil('cad')">Buscar dados</button></div></div>
       <div id="cad-empresa" class="empresa-box"></div>
     </div>
+    </div>
+    <div id="cad-etapa-2-fim" style="display:none;">
     <label style="display:flex; gap:9px; align-items:flex-start; font-size:12.5px; color:var(--ink-muted); line-height:1.5; margin:4px 0 12px; cursor:pointer;">
       <input type="checkbox" id="cad-aceite" style="margin-top:3px; accent-color:var(--teal);">
       <span>Li e concordo com a <a href="#privacidade" style="color:var(--teal);" onclick="event.preventDefault(); nav('privacidade')">Política de Privacidade e Segurança</a> e autorizo o tratamento dos meus dados para criar minha conta e receber recomendações de editais.</span>
     </label>
     <div id="cad-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
     <div class="form-actions">
-      <button class="btn-primary" style="flex:1;" onclick="userSignup()">Criar conta</button>
+      <button class="btn-ghost" onclick="cadastroVoltar()">Voltar</button>
+      <button class="btn-primary" style="flex:1;" onclick="userSignup()">Confirmar cadastro</button>
+    </div>
     </div>
     <p style="font-size:12.5px; color:var(--ink-dim); margin-top:14px;">Já tem conta? <a href="#login" style="color:var(--teal); cursor:pointer;" onclick="event.preventDefault(); nav('login')">Entrar</a></p>
   </div>
@@ -2334,6 +2351,7 @@ function nav(view){
   document.getElementById('mainNav').classList.remove('open');
   window.scrollTo({top:0, behavior:'smooth'});
   const pc=document.getElementById('promo-cadastro'); if(pc) pc.style.display = userProfile ? 'none' : '';
+  if(view === 'cadastro') iniciarCaptchaCadastro();
   if(view === 'editais') applyFilters();
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
@@ -2896,7 +2914,7 @@ function exigePro(recurso){
 function updateNavCta(){
   const ctaBtn = document.getElementById('nav-cta-btn');
   if(userProfile){
-    ctaBtn.textContent = userProfile.nome.split(' ')[0];
+    ctaBtn.textContent = (userProfile.nome || '').split(' ')[0] || 'Minha conta';
     ctaBtn.dataset.view = 'minha-conta';
   } else {
     ctaBtn.textContent = 'Entrar';
@@ -2936,8 +2954,8 @@ function renderMinhaConta(){
     <div class="account-grid">
       <div>
         <div class="profile-card">
-          <div class="profile-avatar">${esc(u.nome.charAt(0).toUpperCase())}</div>
-          <h3>${esc(u.nome)}</h3>
+          <div class="profile-avatar">${esc((u.nome || u.email || '?').charAt(0).toUpperCase())}</div>
+          <h3>${esc(u.nome || u.email)}</h3>
           <div class="sub">${esc((u.profs||[]).join(', ')) || 'Profissão não informada'}</div>
           <div class="profile-field"><span class="k">E-mail</span><span class="v">${esc(u.email)}</span></div>
           <div class="profile-field"><span class="k">Estado</span><span class="v">${esc(u.uf) || 'Não informado'}</span></div>
@@ -4126,7 +4144,9 @@ async function carregarPerfilUsuario(authUser){
       // guardados localmente (caso de confirmação de e-mail obrigatória), cria
       // o perfil completo agora que já existe uma sessão autenticada.
       const pendente = await storeGet('perfil_pendente_' + authUser.email);
-      const base = pendente || { nome:'', whatsapp:'', registro:'', uf:'', profs:[], mods:[] };
+      const meta = authUser.user_metadata || {};
+      const aceiteMeta = meta.aceite_privacidade_em ? { aceite_privacidade_em: meta.aceite_privacidade_em, versao_privacidade: meta.versao_privacidade || null } : {};
+      const base = pendente || { nome:'', whatsapp:'', registro:'', uf:'', profs:[], mods:[], ...aceiteMeta };
       const { data: criado } = await _sb.from('usuarios_perfil')
         .upsert({ id: authUser.id, email: authUser.email, ...base, plano:'gratuito' })
         .select().maybeSingle();
@@ -4170,6 +4190,37 @@ async function carregarPerfilUsuario(authUser){
   renderQuickChips();
 }
 
+// ---- Cadastro em 2 etapas (acesso → dados de contato) com CAPTCHA (Cloudflare Turnstile) ----
+let _cadCaptchaToken = '', _cadCaptchaWidget = null;
+function iniciarCaptchaCadastro(){
+  const box = document.getElementById('cad-captcha');
+  if(!box || !TURNSTILE_SITE_KEY || _cadCaptchaWidget !== null) return;
+  const montar = ()=>{ _cadCaptchaWidget = window.turnstile.render('#cad-captcha', { sitekey: TURNSTILE_SITE_KEY, theme:'dark', callback: t=>{ _cadCaptchaToken = t; }, 'expired-callback': ()=>{ _cadCaptchaToken = ''; } }); };
+  if(window.turnstile){ montar(); return; }
+  const sc = document.createElement('script'); sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; sc.async = true; sc.onload = montar; document.head.appendChild(sc);
+}
+function cadastroContinuar(){
+  const msg = document.getElementById('cad-msg1');
+  msg.style.color = 'var(--coral)';
+  const email = document.getElementById('cad-email').value.trim().toLowerCase();
+  const s1 = document.getElementById('cad-senha').value, s2 = document.getElementById('cad-senha2').value;
+  if(!validEmail(email)){ msg.textContent = 'Informe um e-mail válido.'; return; }
+  if(s1.length < 6){ msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+  if(s1 !== s2){ msg.textContent = 'As senhas não conferem.'; return; }
+  if(TURNSTILE_SITE_KEY && !_cadCaptchaToken){ msg.textContent = 'Confirme que você não é um robô.'; return; }
+  msg.textContent = '';
+  document.getElementById('cad-etapa-1').style.display = 'none';
+  document.getElementById('cad-etapa-2').style.display = '';
+  document.getElementById('cad-etapa-2-fim').style.display = '';
+  document.getElementById('cad-msg').textContent = '';
+  setTimeout(()=>document.getElementById('cad-nome').focus(), 50);
+}
+function cadastroVoltar(){
+  document.getElementById('cad-etapa-2').style.display = 'none';
+  document.getElementById('cad-etapa-2-fim').style.display = 'none';
+  document.getElementById('cad-etapa-1').style.display = '';
+}
+
 async function userSignup(){
   const msg = document.getElementById('cad-msg');
   const nome = document.getElementById('cad-nome').value.trim();
@@ -4185,16 +4236,19 @@ async function userSignup(){
   const profOutra = lerProfissaoOutra('cad', profs);
   if(profOutra) profs.push(profOutra);
 
+  msg.style.color = 'var(--coral)';
   if(!_sb){ msg.textContent = 'Indisponível: configure SUPABASE_URL/SUPABASE_ANON_KEY neste arquivo.'; return; }
-  if(!nome){ msg.textContent = 'Informe seu nome.'; return; }
+  if(!nome || nome.split(' ').filter(Boolean).length < 2){ msg.textContent = 'Informe seu nome completo.'; return; }
+  if(whatsapp.replace(/\D/g,'').length < 10){ msg.textContent = 'Informe um WhatsApp válido, com DDD.'; return; }
   if(!document.getElementById('cad-aceite').checked){ msg.textContent = 'Para criar a conta, é preciso aceitar a Política de Privacidade.'; return; }
   const aceite = { aceite_privacidade_em: new Date().toISOString(), versao_privacidade: VERSAO_PRIVACIDADE };
   if(!validEmail(email)){ msg.textContent = 'Informe um e-mail válido.'; return; }
-  if(senha.length < 8){ msg.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; return; }
+  if(senha.length < 6){ msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
   if(senha !== senha2){ msg.textContent = 'As senhas não conferem.'; return; }
   msg.textContent = 'Criando conta...';
 
-  const { data, error } = await _sb.auth.signUp({ email, password: senha });
+  const { data, error } = await _sb.auth.signUp({ email, password: senha, options: _cadCaptchaToken ? { captchaToken: _cadCaptchaToken } : undefined });
+  if(error && _cadCaptchaWidget !== null && window.turnstile){ try{ window.turnstile.reset(_cadCaptchaWidget); }catch(e){} _cadCaptchaToken = ''; }
   if(error){ msg.textContent = traduzErroAuth(error); return; }
   if(!data.user){ msg.textContent = 'Não foi possível criar a conta. Tente novamente.'; return; }
   if(!data.session){
@@ -4233,6 +4287,7 @@ async function userSignup(){
   document.getElementById('cad-aceite').checked = false;
   document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected, #cad-abr .chip-opt.selected, #cad-esp .chip-opt.selected, #cad-formato .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
   msg.textContent = '';
+  cadastroVoltar();
   updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
   toast('Conta criada — bem-vindo(a), ' + nome.split(' ')[0]);
   nav('minha-conta');
@@ -4377,7 +4432,7 @@ async function changeUserPassword(){
   const n1 = document.getElementById('perfil-senha-nova').value;
   const n2 = document.getElementById('perfil-senha-nova2').value;
   if(!_sb){ toast('Indisponível: configure o Supabase.'); return; }
-  if(n1.length < 8){ toast('A nova senha precisa ter pelo menos 8 caracteres'); return; }
+  if(n1.length < 6){ toast('A nova senha precisa ter pelo menos 6 caracteres'); return; }
   if(n1 !== n2){ toast('As senhas novas não conferem'); return; }
   const { error: erroLogin } = await _sb.auth.signInWithPassword({ email: u.email, password: atual });
   if(erroLogin){ toast('Senha atual incorreta'); return; }
@@ -7073,6 +7128,8 @@ init();
    Edge Function "buscar-credenciamentos" publicada e agendada via cron).
    Preencha SUPABASE_URL e SUPABASE_ANON_KEY com os dados do seu projeto
    (Project Settings > API no painel do Supabase) antes de publicar. */
+// Chave PÚBLICA (site key) do Cloudflare Turnstile para o cadastro. Vazia = sem CAPTCHA.
+const TURNSTILE_SITE_KEY = "";
 const SUPABASE_URL = "https://cjtcfpiohhnvtqfktbsv.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_nOfG7Stoy-0lO8CSeW-_EQ_QLvDoeGN";
 
