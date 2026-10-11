@@ -1846,6 +1846,14 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
     <div id="planos-opcoes" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:14px 0;"></div>
     <div id="planos-msg" style="font-size:12.5px; color:var(--coral); min-height:18px;"></div>
+    <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
+      <label for="codigo-pro-modal" style="font-size:12.5px; color:var(--ink-muted); display:block; margin-bottom:5px;">Tem um código de acesso?</label>
+      <div style="display:flex; gap:8px;">
+        <input id="codigo-pro-modal" type="text" autocomplete="off" placeholder="Digite o código" maxlength="40" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); font-size:14px; text-transform:uppercase;">
+        <button class="btn-ghost" onclick="resgatarCodigo('codigo-pro-modal','codigo-pro-msg-modal')">Aplicar</button>
+      </div>
+      <div id="codigo-pro-msg-modal" style="font-size:12.5px; min-height:18px; margin-top:6px;"></div>
+    </div>
   </div>
 </div>
 
@@ -3003,7 +3011,15 @@ function renderMinhaConta(){
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui busca, favoritos, alertas dentro do portal e os principais documentos de cada edital.</p>
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"><strong>Plano Transformare Pro:</strong> checklist completo de todos os documentos exigidos e links dos portais de emissão (CND da Receita, FGTS, CNDT e outros).</p>
           <button class="btn-primary" id="btn-plano-essencial" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
-          <div id="plano-pedido-status" style="font-size:12px; color:var(--ink-dim); margin-top:6px;"></div>`}
+          <div id="plano-pedido-status" style="font-size:12px; color:var(--ink-dim); margin-top:6px;"></div>
+          <div style="margin-top:12px;">
+            <label for="codigo-pro-conta" style="font-size:12.5px; color:var(--ink-muted); display:block; margin-bottom:5px;">Tem um código de acesso?</label>
+            <div style="display:flex; gap:8px;">
+              <input id="codigo-pro-conta" type="text" autocomplete="off" placeholder="Digite o código" maxlength="40" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); font-size:14px; text-transform:uppercase;">
+              <button class="btn-ghost" onclick="resgatarCodigo('codigo-pro-conta','codigo-pro-msg-conta')">Aplicar</button>
+            </div>
+            <div id="codigo-pro-msg-conta" style="font-size:12.5px; min-height:18px; margin-top:6px;"></div>
+          </div>`}
         </div>
       </div>
       <div>
@@ -3690,13 +3706,37 @@ async function carregarMinhaAssinatura(){
   const a = data && data[0]; if(!a){ el.innerHTML = ''; return; }
   const ate = dataBR(a.ativa_ate);
   const venceEm = Math.round((new Date(a.ativa_ate + 'T12:00:00') - new Date()) / 86400000);
-  if(a.ciclo === 'mensal' && a.status !== 'cancelada'){
+  if(a.ciclo === 'cortesia'){
+    el.innerHTML = `<strong>Acesso cortesia</strong> — Plano Pro liberado até <strong>${ate}</strong>.` + (venceEm <= 30 ? `<br><button class="btn-primary" style="margin-top:8px;" onclick="abrirPlanosModal()">Assinar o plano</button>` : '');
+  } else if(a.ciclo === 'mensal' && a.status !== 'cancelada'){
     el.innerHTML = `<strong>Plano mensal</strong> — renovação automática no cartão. Acesso garantido até <strong>${ate}</strong>.<br><button class="btn-ghost" style="margin-top:8px;" onclick="cancelarAssinatura()">Cancelar assinatura</button>`;
   } else if(a.ciclo === 'mensal'){
     el.innerHTML = `<strong>Assinatura cancelada.</strong> Você continua com o Plano Pro até <strong>${ate}</strong>, sem novas cobranças.`;
   } else {
     el.innerHTML = `<strong>Plano anual</strong> — vale até <strong>${ate}</strong>. Não renova sozinho.` + (venceEm <= 30 ? `<br><button class="btn-primary" style="margin-top:8px;" onclick="abrirPlanosModal()">Renovar plano</button>` : '');
   }
+}
+async function resgatarCodigo(inputId, msgId){
+  const inp = document.getElementById(inputId), msg = document.getElementById(msgId);
+  const codigo = (inp.value || '').trim();
+  msg.style.color = 'var(--ink-muted)';
+  if(!userProfile){ msg.textContent = 'Entre na sua conta para usar um código.'; return; }
+  if(!codigo){ msg.textContent = 'Digite o código.'; return; }
+  if(!_sb){ msg.textContent = 'Indisponível sem conexão.'; return; }
+  msg.textContent = 'Verificando...';
+  const { data, error } = await _sb.rpc('resgatar_codigo', { p_codigo: codigo });
+  if(error || !data || !data.ok){
+    msg.style.color = 'var(--coral)';
+    msg.textContent = (data && data.erro) || 'Não foi possível aplicar o código. Tente de novo.';
+    return;
+  }
+  msg.style.color = 'var(--teal)';
+  msg.textContent = 'Código aplicado! Plano Pro liberado até ' + dataBR(data.ate) + '.';
+  const { data: u } = await _sb.auth.getUser();
+  if(u && u.user) await carregarPerfilUsuario(u.user);
+  closeModal('planos-modal');
+  toast('Plano Pro liberado até ' + dataBR(data.ate) + '.');
+  nav('minha-conta');
 }
 async function cancelarAssinatura(){
   if(!confirm('Cancelar a assinatura mensal? Você continua com o Plano Pro até o fim do período já pago e não será cobrado de novo.')) return;
