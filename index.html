@@ -367,7 +367,7 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .pro-lock{display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border-radius:10px; border:1px dashed var(--amber); background:rgba(245,169,62,0.08); color:var(--amber); font-size:12px; font-weight:600; cursor:pointer; line-height:1.3;}
 .pro-lock:hover{background:rgba(245,169,62,0.16);}
 .pro-lock-box{padding:16px 18px; border-radius:12px; border:1px dashed var(--amber); background:rgba(245,169,62,0.07);}
-.aderencia-faixa{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px; margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed var(--border); font-size:12px; color:var(--ink-muted);}
+.aderencia-faixa{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px; margin:14px 0 6px; padding-top:12px; border-top:1px dashed var(--border); font-size:12px; color:var(--ink-muted);}
 .aderencia-pct{font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--teal);}
 .aderencia-motivo{flex-basis:100%; font-family:var(--font-mono); font-size:11px; color:var(--ink-dim);}
 .empresa-box{font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:-4px 0 14px;}
@@ -3317,7 +3317,10 @@ function renderMinhaConta(){
     } else {
       altas.slice(0,20).forEach(({o, ad})=>{
         const card = renderCard(o);
-        card.insertAdjacentHTML('afterbegin', `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span></div>` + entendaNotaHTML(ad));
+        // Informações do edital e palavras-chave primeiro; nota e resumo logo abaixo; WhatsApp no rodapé.
+        const rodape = card.querySelector('.wa-btn') && card.querySelector('.wa-btn').parentElement;
+        const html = `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span></div>` + entendaNotaHTML(ad);
+        if(rodape) rodape.insertAdjacentHTML('beforebegin', html); else card.insertAdjacentHTML('beforeend', html);
         adBox.appendChild(card);
       });
       if(altas.length>20){ const m=document.getElementById('conta-aderentes-mais'); if(m) m.textContent = `Mostrando 20 de ${altas.length}.`; }
