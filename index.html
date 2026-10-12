@@ -2999,19 +2999,25 @@ function perfilCompletude(u){
   const faltam = campos.filter(c=>!c[1]).map(c=>c[0]);
   return { pct: Math.round((campos.length - faltam.length) / campos.length * 100), faltam };
 }
-const PESO_PERFIL_COMPLETO = 20;
 
 // Aderência edital × perfil (recurso do Plano Pro). Regras:
 //  - Pesos: profissão > localização > modalidade > abrangência > remuneração (+ contratação, instrução e experiência quando o edital pede).
-//  - Critério que o perfil não preencheu fica fora da conta; em troca, "Perfil completo" vale 20 pontos proporcionais ao % preenchido —
-//    por isso perfil incompleto reduz a nota.
+//  - Critério que o perfil não preencheu fica fora da conta (cadastro incompleto NÃO baixa a nota); só avisamos o que faltar e
+//    que importa para ESTE edital (campo que o edital não pede não gera aviso). A pontuação é só do administrador;
+//    o cliente vê o que faltou para chegar a 100%.
 //  - Informação que o edital não traz (valor, especialidade, formato, forma de contratação) vale metade dos pontos do critério.
 //  - Quem atende "Presencial e online" recebe nota cheia em editais só presenciais ou só online.
 //  - Exigência que o perfil não atende (instrução, experiência, PF/PJ) limita a nota a 40%.
 function calcularAderencia(o, u){
   let pontos = 0, total = 0;
-  const motivos = [], det = [];
+  const motivos = [], det = [], faltamPerfil = [];
+  const pede = (campo)=>{ if(!faltamPerfil.includes(campo)) faltamPerfil.push(campo); };
   const add = (rotulo, pts, max, nota)=>{ pontos += pts; total += max; det.push({rotulo, pts, max, nota: nota||''}); };
+  if(!(u.profs||[]).length) pede('Profissão');
+  if(!u.uf) pede('Estado');
+  else if(!u.cidade && o.abrangencia === 'Municipal') pede('Cidade');
+  if(!(u.mods||[]).length) pede('Modalidade');
+  if(!(u.abrs||[]).length) pede('Abrangência');
   if((u.profs||[]).length){
     const comuns = (o.profissoes||[]).filter(p=>u.profs.includes(p));
     if(comuns.length){ motivos.push(comuns.join('/')); add('Profissão', 35, 35, 'o edital é para a sua profissão'); }
@@ -3046,12 +3052,15 @@ function calcularAderencia(o, u){
   if(u.remMin){
     const campo = {atendimento:o.valorAtendimento, hora:o.valorHora, mensal:o.valorMensal}[u.remTipo || 'atendimento'];
     const valor = parseMoneyValue(campo);
-    if(valor === null) add('Remuneração', 5, 10, 'o edital não informa o valor: vale metade dos pontos');
+    if(valor === null) add('Remuneração', 5, 10, 'o edital não informa o valor da remuneração');
     else if(valor >= u.remMin){ motivos.push('remuneração compatível'); add('Remuneração', 10, 10, 'o valor atende o seu mínimo'); }
     else add('Remuneração', 0, 10, 'o valor está abaixo do seu mínimo');
   }
   // Instrução e tempo de atuação só entram quando o edital exige algo; se o perfil não atende, a nota fica limitada a 40%.
   let naoAtende = false;
+  if(!u.remMin && parseMoneyValue({atendimento:o.valorAtendimento, hora:o.valorHora, mensal:o.valorMensal}[u.remTipo || 'atendimento']) !== null) pede('Remuneração mínima');
+  if(o.escolaridadeMinima && !u.escolaridade) pede('Instrução');
+  if(o.experienciaMinimaAnos && u.anosExp == null) pede('Tempo de atuação');
   if(o.escolaridadeMinima){
     const exigido = ESCOLARIDADES.indexOf(o.escolaridadeMinima);
     if(u.escolaridade){
@@ -3078,24 +3087,30 @@ function calcularAderencia(o, u){
     if(!relevantes.length) return null;           // edital não cita
     return relevantes.filter(k=>escolhidas.includes(k));
   };
+  {
+    const doEd = Object.keys(kws).filter(k=>kws[k].some(w=>txt.includes(w)));
+    if(!(u.especialidades||[]).length && doEd.some(k=>ESPECIALIDADES.includes(k))) pede('Especialidades');
+    if(!(u.formatos||[]).length && doEd.some(k=>!ESPECIALIDADES.includes(k))) pede('Formato de atendimento');
+    if(!(u.atuacao||[]).length && (o.aceitaContratacao||[]).length) pede('Atuação (PF/PJ)');
+  }
   if((u.especialidades||[]).length){
     const lista = [...u.especialidades]; lista.__esp = true;
     const r = casar(lista);
-    if(r === null) add('Especialidades', 5, 10, 'o edital não cita especialidade: vale metade dos pontos');
+    if(r === null) add('Especialidades', 5, 10, 'o edital não cita a área de atuação');
     else if(r.length){ motivos.push('área: ' + r.join('/').toLowerCase()); add('Especialidades', 10, 10, 'a área do edital está entre as suas'); }
     else add('Especialidades', 0, 10, 'a área do edital não está entre as suas');
   }
   if((u.formatos||[]).length){
     const lista = [...u.formatos]; lista.__esp = false;
     const r = casar(lista);
-    if(r === null) add('Formato de atendimento', 2.5, 5, 'o edital não cita o formato: vale metade dos pontos');
+    if(r === null) add('Formato de atendimento', 2.5, 5, 'o edital não cita o formato de atendimento');
     else if(r.length){ motivos.push('formato: ' + r.join('/').toLowerCase()); add('Formato de atendimento', 5, 5, 'o formato do edital está entre os seus'); }
     else add('Formato de atendimento', 0, 5, 'o formato do edital não está entre os seus');
   }
   // Forma de contratação (PF/PJ/Clínica): requisito de habilitação. Edital que não informa vale metade.
   const aceita = o.aceitaContratacao || [];
   if((u.atuacao||[]).length){
-    if(!aceita.length) add('Forma de contratação', 7.5, 15, 'o edital não informa PF/PJ: vale metade dos pontos');
+    if(!aceita.length) add('Forma de contratação', 7.5, 15, 'o edital não informa se aceita PF ou PJ');
     else {
       const aceitaPF = aceita.includes('Pessoa Física (PF)'), aceitaPJ = aceita.includes('Pessoa Jurídica (PJ)');
       const soClinica = aceita.includes('Clínica (equipe multidisciplinar)') && !aceitaPF && !aceitaPJ;
@@ -3106,13 +3121,9 @@ function calcularAderencia(o, u){
       if(u.atuacao.includes('PJ') && u.empresa && u.empresa.situacao && u.empresa.situacao.toUpperCase() !== 'ATIVA') motivos.push('⚠ CNPJ não está ativo');
     }
   }
-  // Perfil completo: quem não preencheu todo o cadastro perde parte destes pontos.
-  const comp = perfilCompletude(u);
-  const ptsPerfil = Math.round(PESO_PERFIL_COMPLETO * comp.pct / 100 * 10) / 10;
-  add('Perfil completo', ptsPerfil, PESO_PERFIL_COMPLETO, comp.pct >= 100 ? 'seu perfil está completo' : `seu perfil está ${comp.pct}% preenchido`);
   let pct = total ? Math.round(pontos / total * 100) : null;
   if(naoAtende && pct !== null) pct = Math.min(pct, 40);
-  return { pct, motivos, det, pontos, total, faltam: comp.faltam, perfilPct: comp.pct, limitado: naoAtende };
+  return { pct, motivos, det, pontos, total, faltam: faltamPerfil, limitado: naoAtende };
 }
 
 /* ================= MINHA CONTA ================= */
@@ -3255,7 +3266,7 @@ function renderMinhaConta(){
   const adBox = document.getElementById('conta-aderentes');
   const adAviso = document.getElementById('conta-aderentes-aviso');
   if(adAviso && perfilInfo.pct < 100){
-    adAviso.innerHTML = `<div class="atencao-box" style="margin:0 0 14px;">⚠ <strong>Seu perfil está ${perfilInfo.pct}% preenchido.</strong> Perfil incompleto reduz a nota de aderência. Faltam: ${esc(perfilInfo.faltam.join(', '))}. <a style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="nav('perfil')">Completar meu perfil</a></div>`;
+    adAviso.innerHTML = `<div class="atencao-box" style="margin:0 0 14px;">⚠ <strong>Seu perfil está ${perfilInfo.pct}% preenchido.</strong> Perfil incompleto não reduz a nota, mas deixa a análise parcial. Faltam: ${esc(perfilInfo.faltam.join(', '))}. <a style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="nav('perfil')">Completar meu perfil</a></div>`;
   }
   if(adBox){
     const altas = todasAderencias.filter(x=>x.ad.pct >= 70);
@@ -3990,16 +4001,20 @@ const PORTAIS_DOCS = [
 function entendaNotaHTML(ad){
   if(!ad || !ad.det) return '';
   const f = n => String(Math.round(n*10)/10).replace('.', ',');
-  const linhas = ad.det.map(d=>{
-    const icone = d.pts >= d.max ? '✓' : d.pts > 0 ? '~' : '✕';
-    return `<li><span class="en-ic">${icone}</span><span><strong>${esc(d.rotulo)}</strong> — ${f(d.pts)} de ${f(d.max)} · ${esc(d.nota)}</span></li>`;
-  }).join('');
+  const adm = (typeof adminAuthed !== 'undefined') && adminAuthed;
+  const faltou = ad.det.filter(d=>d.pts < d.max);
+  // Cliente: só o que faltou para chegar a 100%. Pontuação detalhada: apenas administrador.
+  const linhas = faltou.map(d=>`<li><span class="en-ic">${d.pts > 0 ? '~' : '✕'}</span><span><strong>${esc(d.rotulo)}</strong> — ${esc(d.nota)}</span></li>`).join('');
+  const resumo = faltou.length
+    ? 'Para chegar a 100%, estes pontos não foram atendidos totalmente:'
+    : 'Nada faltou: o seu perfil atende tudo o que este edital pede.';
   const aviso = ad.faltam && ad.faltam.length
-    ? `<p class="en-aviso">⚠ Seu perfil está ${ad.perfilPct}% preenchido e isso reduz a nota. Complete: ${esc(ad.faltam.join(', '))}. <a style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="event.stopPropagation(); nav('perfil')">Completar perfil</a></p>` : '';
-  const lim = ad.limitado ? `<p class="en-aviso">⚠ A nota ficou limitada a 40% porque o edital faz uma exigência que o seu perfil não atende.</p>` : '';
+    ? `<p class="en-aviso">⚠ Seu cadastro está incompleto para este edital. Preencha: ${esc(ad.faltam.join(', '))} e veja a nota completa. <a style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="event.stopPropagation(); nav('perfil')">Completar perfil</a></p>` : '';
+  const lim = ad.limitado ? `<p class="en-aviso">⚠ A nota ficou limitada porque o edital faz uma exigência que o seu perfil não atende.</p>` : '';
+  const admBox = adm ? `<p class="en-resumo" style="opacity:.8;">[Admin] ${f(ad.pontos)} de ${f(ad.total)} pontos · ` + ad.det.map(d=>`${esc(d.rotulo)} ${f(d.pts)}/${f(d.max)}`).join(' · ') + '</p>' : '';
   return `<details class="entenda-nota"><summary>Entenda a nota</summary>
-    <p class="en-resumo">A nota é a soma dos pontos que este edital ganhou (<strong>${f(ad.pontos)} de ${f(ad.total)}</strong> possíveis). O que o edital não informa vale metade dos pontos, e perfil incompleto reduz a nota.</p>
-    <ul>${linhas}</ul>${aviso}${lim}</details>`;
+    <p class="en-resumo">${resumo}</p>
+    ${linhas ? `<ul>${linhas}</ul>` : ''}${aviso}${lim}${admBox}</details>`;
 }
 function portalDoDocumento(texto){
   const t = String(texto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
