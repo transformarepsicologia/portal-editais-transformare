@@ -579,6 +579,7 @@ input:disabled{opacity:.6; cursor:not-allowed;}
 .center-empty p{color:var(--ink-muted); font-size:13.5px; margin-bottom:20px;}
 
 /* ===== Sino de notificações ===== */
+.nav-icones{display:flex; align-items:center; gap:8px; flex-shrink:0;}
 .bell-wrap{position:relative;}
 .bell-btn{background:none; border:1px solid var(--border); color:var(--ink-muted); width:36px; height:36px; border-radius:9px; cursor:pointer; position:relative; display:flex; align-items:center; justify-content:center; font-size:15px;}
 .bell-btn:hover{color:var(--teal); border-color:var(--teal);}
@@ -779,6 +780,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <button data-view="minha-conta" id="nav-minha-conta">Minha Conta</button>
       <button data-view="login" class="nav-cta" id="nav-cta-btn">Entrar</button>
     </nav>
+    <div class="nav-icones">
     <div class="bell-wrap">
       <button class="bell-btn" onclick="toggleBell(event)" title="Alertas do portal (demonstrativo — não envia e-mail/WhatsApp)">🔔<span class="bell-badge" id="bell-badge" style="display:none;">0</span></button>
       <div class="bell-panel" id="bell-panel">
@@ -788,6 +790,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
     </div>
     <button class="theme-btn" id="theme-btn" onclick="alternarTema()" aria-label="Alternar entre tema escuro e claro" title="Tema claro / escuro">☀️</button>
+    </div>
     <button class="mobile-toggle" onclick="document.getElementById('mainNav').classList.toggle('open')">☰</button>
   </div>
 </header>
