@@ -2420,7 +2420,10 @@ function prazoCurtoDemais(o){
   const h0 = new Date(); h0.setHours(0,0,0,0);
   return Math.round((d - h0)/86400000) < PRAZO_MINIMO_DIAS;
 }
-const visivelAoCliente = o => adminAuthed || (!o.problemaDescricao && !prazoCurtoDemais(o));
+// Pendência marcada pela auditoria (Claude) só aparece na fila do admin e NÃO esconde o edital do cliente;
+// problema marcado pelo analista continua escondendo o edital até ser resolvido.
+const soPendenciaDeAuditoria = o => /^Claude \(auditoria/.test(o.problemaPor || '');
+const visivelAoCliente = o => adminAuthed || ((!o.problemaDescricao || soPendenciaDeAuditoria(o)) && !prazoCurtoDemais(o));
 let adminAuthed = false; // exige login (Supabase Auth) para acessar o painel administrativo
 let adminFails = 0, adminLockedUntil = 0;
 
@@ -7686,6 +7689,7 @@ function mapEditalSupabase(row){
     modalidade: normModalidade(row.modalidade) || 'Presencial',
     emailInscricao: row.email_inscricao || '',
     problemaDescricao: row.problema_descricao || '',
+    problemaPor: row.problema_por || '',
     atualizacaoPncp: row.atualizacao_pncp || '',
     atualizacaoPncpEm: row.atualizacao_pncp_em ? formatarDataBR(String(row.atualizacao_pncp_em).slice(0,10)) : '',
     problemaEm: row.problema_em ? formatarDataBR(String(row.problema_em).slice(0,10)) : '',
