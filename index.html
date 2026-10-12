@@ -2839,7 +2839,7 @@ function renderFavoritos(){
     return;
   }
   const pgFav = paginarLista('fav', items, 12, renderFavoritos);
-  pgFav.fatia.forEach(o=>list.appendChild(renderCard(o)));
+  pgFav.fatia.forEach(o=>{ const c = renderCard(o); if(ehPro() && userProfile) inserirNotaNoCard(c, calcularAderencia(o, userProfile)); list.appendChild(c); });
   list.appendChild(pgFav.barra);
 }
 async function clearFavoritos(){
@@ -3285,12 +3285,8 @@ function renderMinhaConta(){
           <div class="indicator-card" style="cursor:pointer;" onclick="nav('perfil')" title="Completar perfil"><div class="num">${perfilPct}%</div><div class="label">Perfil preenchido${perfilPct < 100 ? ' — completar ›' : ''}</div></div>
         </div>
 
-        <div class="section-title" style="font-size:17px;">Meus editais favoritos</div>
-        <p class="section-sub" style="margin-bottom:16px;">Marque a estrela ☆ em qualquer edital para ele aparecer aqui. <span id="conta-fav-mais"></span></p>
-        <div class="op-grid" id="conta-acompanhados"></div>
-
         ${ehPro() ? `<div class="section-title" style="font-size:17px; margin-top:32px;">Editais com alta aderência (70% ou mais)</div>
-        <p class="section-sub" style="margin-bottom:16px;">Mostra o quanto cada edital combina com o seu perfil. Em cada edital, abra <strong>“Entenda a nota”</strong> para ver como ela foi calculada. <span id="conta-aderentes-mais"></span></p>
+        <p class="section-sub" style="margin-bottom:16px;">Mostra o quanto cada edital combina com o seu perfil. Abaixo de cada edital você vê os pontos positivos e o que verificar para chegar à nota máxima. <span id="conta-aderentes-mais"></span></p>
         <div id="conta-aderentes-aviso"></div>
         <div class="op-grid" id="conta-aderentes"></div>` : ''}
 
@@ -3317,22 +3313,11 @@ function renderMinhaConta(){
     } else {
       altas.slice(0,20).forEach(({o, ad})=>{
         const card = renderCard(o);
-        // Informações do edital e palavras-chave primeiro; nota e resumo logo abaixo; WhatsApp no rodapé.
-        const rodape = card.querySelector('.wa-btn') && card.querySelector('.wa-btn').parentElement;
-        const html = `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span></div>` + entendaNotaHTML(ad);
-        if(rodape) rodape.insertAdjacentHTML('beforebegin', html); else card.insertAdjacentHTML('beforeend', html);
+        inserirNotaNoCard(card, ad);
         adBox.appendChild(card);
       });
       if(altas.length>20){ const m=document.getElementById('conta-aderentes-mais'); if(m) m.textContent = `Mostrando 20 de ${altas.length}.`; }
     }
-  }
-
-  const acBox = document.getElementById('conta-acompanhados');
-  if(acompanhados.length===0){
-    acBox.innerHTML = `<div class="empty-state">Você ainda não está acompanhando nenhum edital. <a style="color:var(--teal); cursor:pointer;" onclick="nav('editais')">Ver editais</a></div>`;
-  } else {
-    acompanhados.slice(0,3).forEach(o=>acBox.appendChild(renderCard(o)));
-    if(acompanhados.length>3){ const m=document.getElementById('conta-fav-mais'); if(m) m.innerHTML=`Mostrando 3 de ${acompanhados.length}. <a style="color:var(--teal); cursor:pointer;" onclick="nav('favoritos')">Ver todos os favoritos</a>`; }
   }
 }
 
@@ -4043,6 +4028,13 @@ const PORTAIS_DOCS = [
   {nome:'Compras.gov.br / SICAF (cadastro de fornecedores)', url:'https://www.gov.br/compras/pt-br'},
 ];
 /* Para cada item do checklist, acha o portal onde o documento é emitido (só Plano Pro): a pessoa clica, emite e depois marca o item. */
+/* Nota de aderência (Pro): vai logo abaixo das palavras-chave; o WhatsApp fica no rodapé do card. */
+function inserirNotaNoCard(card, ad){
+  if(!ad || ad.pct === null) return;
+  const rodape = card.querySelector('.wa-btn') && card.querySelector('.wa-btn').parentElement;
+  const html = `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span></div>` + entendaNotaHTML(ad);
+  if(rodape) rodape.insertAdjacentHTML('beforebegin', html); else card.insertAdjacentHTML('beforeend', html);
+}
 function entendaNotaHTML(ad){
   if(!ad || !ad.det) return '';
   const f = n => String(Math.round(n*10)/10).replace('.', ',');
