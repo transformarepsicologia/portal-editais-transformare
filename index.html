@@ -974,10 +974,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:var(--violet-texto);">⚠ <strong>Alertas demonstrativos.</strong> Neste protótipo, os alertas são exibidos dentro do portal (aqui e no sino do menu). E-mail, WhatsApp e notificações push serão implementados em uma versão futura.</div>
 
   <div class="filter-panel">
-    <div class="form-row"><label>Profissões de interesse</label><div class="chip-select" id="alert-prof"></div></div>
-    <div class="form-row"><label>Estados de interesse</label><div class="chip-select chip-select-uf" id="alert-uf"></div></div>
-    <div class="form-row"><label>Cidade</label><input type="text" id="alert-cidade" placeholder="Ex: Porto Alegre" oninput="onAlertCidadeInput(this.value)"></div>
-    <div class="form-row"><label>Modalidade</label><div class="chip-select" id="alert-mod"></div></div>
+    <div class="form-row"><label>Profissão de interesse</label><input type="text" id="alert-prof" list="alert-prof-lista" placeholder="Digite sua profissão (ex.: Psicologia, Dentista…)" autocomplete="off" oninput="onAlertProfInput(this.value)"><datalist id="alert-prof-lista"></datalist></div>
+    <div class="form-row"><label>Estados de interesse <span style="font-weight:400; color:var(--ink-dim);">(até 2)</span></label><div class="chip-select chip-select-uf" id="alert-uf"></div><div style="font-size:11.5px; color:var(--ink-dim); margin-top:6px;">Editais de abrangência nacional valem para todos os estados.</div></div>
+    <div class="form-row"><label>Modalidade <span style="font-weight:400; color:var(--ink-dim);">(marque todas de interesse)</span></label><div class="chip-select" id="alert-mod"></div></div>
     <div class="form-actions" style="margin-top:6px;"><button class="btn-ghost" onclick="clearAlertPrefs()">Limpar critérios</button></div>
   </div>
 
@@ -2368,7 +2367,26 @@ let oportunidades = [
 const IDS_EDITAIS_DEMO = new Set(oportunidades.map(o=>o.id));
 
 let favoritos = new Set();
-let alertPrefs = {prof:new Set(), uf:new Set(), mod:new Set(), cidade:''};
+let alertPrefs = {profTexto:'', uf:new Set(), mod:new Set()};
+const ALERTA_MAX_UF = 2;
+const _normAl = t => String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,'').trim();
+const ALERTA_SINONIMOS = { dentista:'odontologia', odontologo:'odontologia', odontologa:'odontologia', medico:'medicina', medica:'medicina', 'assistente social':'assistencia social', 'terapeuta ocupacional':'terapia ocupacional' };
+function alertaCombinaProfissao(o){
+  let t = _normAl(alertPrefs.profTexto);
+  if(!t) return true;
+  t = ALERTA_SINONIMOS[t] || t;
+  return (o.profissoes||[]).some(p=>{
+    const n = _normAl(p);
+    return n.includes(t) || t.includes(n) || (t.length>=5 && n.slice(0,5)===t.slice(0,5));
+  });
+}
+function alertaCombinaUf(o){
+  return alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf) || o.abrangencia==='Nacional';
+}
+function alertaCombina(o){
+  return alertaCombinaProfissao(o) && alertaCombinaUf(o) && (alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade));
+}
+function alertaSemCriterio(){ return !_normAl(alertPrefs.profTexto) && alertPrefs.uf.size===0 && alertPrefs.mod.size===0; }
 let userProfile = null;   // usuário logado (perfil vindo do Supabase Auth + usuarios_perfil) ou null
 function ukey(k){ return userProfile && userProfile.id ? 'u_'+userProfile.id+'_'+k : k; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
@@ -3231,9 +3249,7 @@ function renderMinhaConta(){
   const recomendadas = oportunidades.filter(o=>{
     if(!visivelAoCliente(o)) return false;
     if(situacaoExibida(o)==='Encerrado' || favoritos.has(o.id)) return false;
-    const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
-    const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
-    return mProf && mUf;
+    return alertaCombinaProfissao(o) && alertaCombinaUf(o);
   }).slice(0,4);
   const historico = oportunidades.filter(o=>docChecks[o.id] && Object.values(docChecks[o.id]).some(v=>v));
   const todasAderencias = oportunidades
@@ -4472,16 +4488,21 @@ function openLeadDetail(id){
 
 /* ================= ALERTAS ================= */
 function renderAlertChips(){
-  const profBox = document.getElementById('alert-prof'); profBox.innerHTML='';
-  profissoesAtivasNomes().forEach(p=>{
-    const c = document.createElement('div'); c.className='chip-opt'+(alertPrefs.prof.has(p)?' selected':''); c.textContent=p;
-    c.onclick = async ()=>{ alertPrefs.prof.has(p)?alertPrefs.prof.delete(p):alertPrefs.prof.add(p); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
-    profBox.appendChild(c);
-  });
+  const profInput = document.getElementById('alert-prof');
+  if(profInput && profInput.value !== alertPrefs.profTexto && document.activeElement !== profInput) profInput.value = alertPrefs.profTexto || '';
+  const lista = document.getElementById('alert-prof-lista');
+  if(lista && !lista.childElementCount){
+    profissoesAtivasNomes().forEach(p=>{ const op=document.createElement('option'); op.value=p; lista.appendChild(op); });
+  }
   const ufBox = document.getElementById('alert-uf'); ufBox.innerHTML='';
   UFS.forEach(u=>{
     const c = document.createElement('div'); c.className='chip-opt'+(alertPrefs.uf.has(u.sigla)?' selected':''); c.textContent=u.sigla; c.title=u.nome;
-    c.onclick = async ()=>{ alertPrefs.uf.has(u.sigla)?alertPrefs.uf.delete(u.sigla):alertPrefs.uf.add(u.sigla); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
+    c.onclick = async ()=>{
+      if(alertPrefs.uf.has(u.sigla)) alertPrefs.uf.delete(u.sigla);
+      else if(alertPrefs.uf.size>=ALERTA_MAX_UF){ toast('Escolha até '+ALERTA_MAX_UF+' estados. Desmarque um para trocar.'); return; }
+      else alertPrefs.uf.add(u.sigla);
+      await saveAlertPrefs(); renderAlertChips(); renderAlertas();
+    };
     ufBox.appendChild(c);
   });
 
@@ -4491,25 +4512,22 @@ function renderAlertChips(){
     c.onclick = async ()=>{ alertPrefs.mod.has(m)?alertPrefs.mod.delete(m):alertPrefs.mod.add(m); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
     modBox.appendChild(c);
   });
-
-  const cidadeInput = document.getElementById('alert-cidade');
-  if(cidadeInput && cidadeInput.value !== alertPrefs.cidade) cidadeInput.value = alertPrefs.cidade || '';
 }
-let _alertCidadeTimer = null;
-function onAlertCidadeInput(valor){
-  alertPrefs.cidade = valor.trim();
-  clearTimeout(_alertCidadeTimer);
-  _alertCidadeTimer = setTimeout(async ()=>{ await saveAlertPrefs(); renderAlertas(); }, 350);
+let _alertProfTimer = null;
+function onAlertProfInput(valor){
+  alertPrefs.profTexto = valor.trim();
+  clearTimeout(_alertProfTimer);
+  _alertProfTimer = setTimeout(async ()=>{ await saveAlertPrefs(); renderAlertas(); }, 350);
 }
 async function saveAlertPrefs(){
-  await storeSet(ukey('alertPrefs'), {prof:[...alertPrefs.prof], uf:[...alertPrefs.uf], mod:[...alertPrefs.mod], cidade: alertPrefs.cidade || ''});
+  await storeSet(ukey('alertPrefs'), {profTexto: alertPrefs.profTexto || '', uf:[...alertPrefs.uf], mod:[...alertPrefs.mod]});
   renderBell();
 }
 function renderAlertas(){
   const list = document.getElementById('alert-list');
   const countEl = document.getElementById('alert-count');
   list.innerHTML = '';
-  if(alertPrefs.prof.size===0 && alertPrefs.uf.size===0 && alertPrefs.mod.size===0 && !alertPrefs.cidade){
+  if(alertaSemCriterio()){
     countEl.textContent = '';
     list.innerHTML = `<div class="empty-state">Selecione ao menos um critério acima para ver oportunidades compatíveis.</div>`;
     return;
@@ -4517,11 +4535,7 @@ function renderAlertas(){
   const items = oportunidades.filter(o=>{
     if(!visivelAoCliente(o)) return false;
     if(situacaoExibida(o)==='Encerrado') return false;
-    const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
-    const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
-    const mMod = alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
-    const mCidade = !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
-    return mProf && mUf && mMod && mCidade;
+    return alertaCombina(o);
   });
   countEl.textContent = `${items.length} compatível(is)`;
   if(items.length===0){
@@ -4531,7 +4545,7 @@ function renderAlertas(){
   items.forEach(o=>list.appendChild(renderCard(o)));
 }
 async function clearAlertPrefs(){
-  alertPrefs = {prof:new Set(), uf:new Set(), mod:new Set(), cidade:''};
+  alertPrefs = {profTexto:'', uf:new Set(), mod:new Set()};
   await saveAlertPrefs();
   renderAlertChips();
   renderAlertas();
@@ -4540,15 +4554,11 @@ async function clearAlertPrefs(){
 
 /* ================= SINO DE NOTIFICAÇÕES ================= */
 function matchedAlertItems(){
-  if(alertPrefs.prof.size===0 && alertPrefs.uf.size===0 && alertPrefs.mod.size===0 && !alertPrefs.cidade) return [];
+  if(alertaSemCriterio()) return [];
   return oportunidades.filter(o=>{
     if(!visivelAoCliente(o)) return false;
     if(situacaoExibida(o)==='Encerrado') return false;
-    const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
-    const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
-    const mMod = alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
-    const mCidade = !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
-    return mProf && mUf && mMod && mCidade;
+    return alertaCombina(o);
   });
 }
 function renderBell(){
@@ -4595,7 +4605,7 @@ async function loadUserData(){
   const f = await storeGet(ukey('favoritos'));
   favoritos = new Set(f || []);
   const a = await storeGet(ukey('alertPrefs'));
-  alertPrefs = a ? {prof:new Set(a.prof||[]), uf:new Set(a.uf||[]), mod:new Set(a.mod||[]), cidade:a.cidade||''} : {prof:new Set(), uf:new Set(), mod:new Set(), cidade:''};
+  alertPrefs = a ? {profTexto:a.profTexto || (a.prof||[])[0] || '', uf:new Set((a.uf||[]).slice(0,ALERTA_MAX_UF)), mod:new Set(a.mod||[])} : {profTexto:'', uf:new Set(), mod:new Set()};
   const d = await storeGet(ukey('docChecks'));
   docChecks = d || {};
   updateNavCta();
@@ -4747,7 +4757,7 @@ async function userSignup(){
   await storeSet(ukey('perfilExtra'), extra);
 
   // o que a pessoa já tinha marcado antes de criar a conta (favoritos/alertas/checklist) passa a ser da conta
-  profs.forEach(x=>alertPrefs.prof.add(x));
+  if(profs && profs.length && !alertPrefs.profTexto) alertPrefs.profTexto = profs[0];
   if(uf) alertPrefs.uf.add(uf);
   mods.forEach(x=>alertPrefs.mod.add(x));
   await storeSet(ukey('favoritos'), [...favoritos]);
