@@ -883,8 +883,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="filter-panel">
     <div class="form-row"><label>Profissões de interesse</label><div class="chip-select" id="alert-prof"></div></div>
     <div class="form-row"><label>Estados de interesse</label><div class="chip-select chip-select-uf" id="alert-uf"></div></div>
-    <div class="form-row"><label>Cidade <span class="alert-pro-tag" style="color:var(--amber); font-size:11px;"></span></label><input type="text" id="alert-cidade" placeholder="Ex: Porto Alegre" oninput="onAlertCidadeInput(this.value)"></div>
-    <div class="form-row"><label>Modalidade <span class="alert-pro-tag" style="color:var(--amber); font-size:11px;"></span></label><div class="chip-select" id="alert-mod"></div></div>
+    <div class="form-row"><label>Cidade</label><input type="text" id="alert-cidade" placeholder="Ex: Porto Alegre" oninput="onAlertCidadeInput(this.value)"></div>
+    <div class="form-row"><label>Modalidade</label><div class="chip-select" id="alert-mod"></div></div>
     <div class="form-actions" style="margin-top:6px;"><button class="btn-ghost" onclick="clearAlertPrefs()">Limpar critérios</button></div>
   </div>
 
@@ -4260,17 +4260,15 @@ function renderAlertChips(){
   const modBox = document.getElementById('alert-mod'); modBox.innerHTML='';
   MODALIDADES.forEach(m=>{
     const c = document.createElement('div'); c.className='chip-opt'+(alertPrefs.mod.has(m)?' selected':''); c.textContent=m;
-    c.onclick = async ()=>{ if(!exigePro('Alerta por modalidade')) return; alertPrefs.mod.has(m)?alertPrefs.mod.delete(m):alertPrefs.mod.add(m); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
+    c.onclick = async ()=>{ alertPrefs.mod.has(m)?alertPrefs.mod.delete(m):alertPrefs.mod.add(m); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
     modBox.appendChild(c);
   });
 
-  document.querySelectorAll('.alert-pro-tag').forEach(t=>{ t.textContent = ehPro() ? '' : '🔒 Plano Pro'; });
   const cidadeInput = document.getElementById('alert-cidade');
   if(cidadeInput && cidadeInput.value !== alertPrefs.cidade) cidadeInput.value = alertPrefs.cidade || '';
 }
 let _alertCidadeTimer = null;
 function onAlertCidadeInput(valor){
-  if(!ehPro()){ const i=document.getElementById('alert-cidade'); if(i) i.value=''; exigePro('Alerta por cidade'); return; }
   alertPrefs.cidade = valor.trim();
   clearTimeout(_alertCidadeTimer);
   _alertCidadeTimer = setTimeout(async ()=>{ await saveAlertPrefs(); renderAlertas(); }, 350);
@@ -4293,8 +4291,8 @@ function renderAlertas(){
     if(situacaoExibida(o)==='Encerrado') return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
-    const mMod = !ehPro() || alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
-    const mCidade = !ehPro() || !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
+    const mMod = alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
+    const mCidade = !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
     return mProf && mUf && mMod && mCidade;
   });
   countEl.textContent = `${items.length} compatível(is)`;
@@ -4320,8 +4318,8 @@ function matchedAlertItems(){
     if(situacaoExibida(o)==='Encerrado') return false;
     const mProf = alertPrefs.prof.size===0 || o.profissoes.some(p=>alertPrefs.prof.has(p));
     const mUf = alertPrefs.uf.size===0 || alertPrefs.uf.has(o.uf);
-    const mMod = !ehPro() || alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
-    const mCidade = !ehPro() || !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
+    const mMod = alertPrefs.mod.size===0 || alertPrefs.mod.has(o.modalidade);
+    const mCidade = !alertPrefs.cidade || (o.cidade && o.cidade.toLowerCase().includes(alertPrefs.cidade.toLowerCase()));
     return mProf && mUf && mMod && mCidade;
   });
 }
