@@ -74,11 +74,15 @@ html[data-theme="light"] .nav-cta{background:var(--teal) !important; color:#fff 
 html[data-theme="light"] .nav-cta:hover{background:var(--teal-deep) !important; color:#fff !important;}
 /* Onde o dourado/verde-água ficaria apagado no claro, volta o azul-marinho original */
 html[data-theme="light"] .logo-mark{background:#0E1A2B; border-radius:14px; padding:4px; filter:none; box-shadow:0 1px 4px rgba(14,26,43,.25);}
-html[data-theme="light"] .radar-wrap{
+html[data-theme="light"] #home-painel{
   --bg:#0E1A2B; --bg-elevated:#142842; --bg-card:#16304C; --border:#23405F; --border-soft:#1C3350;
   --ink:#EAF2F6; --ink-muted:#8FA6BE; --ink-dim:#5F7893; --teal:#2FD9C4; --teal-deep:#17B6A3; --amber:#F5A93E; --coral:#F0654E; --violet:#8C7CF0; --gray:#6B7A8C;
-  background:#0E1A2B; border-radius:24px; padding:26px 26px 18px; box-shadow:0 6px 22px rgba(14,26,43,.22); zoom:.82; justify-self:center;
+  background:#0E1A2B; color:var(--ink); border-radius:18px; padding:34px 36px 8px; box-shadow:0 6px 22px rgba(14,26,43,.22);
 }
+html[data-theme="light"] #home-painel .radar-wrap{margin:0 0 30px;}
+html[data-theme="light"] #home-painel .indicators{margin-bottom:26px;}
+html[data-theme="light"] #view-home[data-azul] .hero{grid-template-columns:1fr; padding-bottom:20px;}
+html[data-theme="light"] #view-home[data-azul] .hero .lead{max-width:820px;}
 .theme-btn{background:none; border:1px solid var(--border); color:var(--ink-muted); width:36px; height:36px; border-radius:9px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px; margin-left:8px;}
 .theme-btn:hover{color:var(--teal); border-color:var(--teal);}
 *{box-sizing:border-box;}
@@ -772,7 +776,6 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <input type="text" id="home-search" placeholder="Busque por profissão, órgão, cidade ou palavra-chave...">
         <button onclick="searchFromHome()">Pesquisar</button>
       </div>
-      <div class="quick-chips" id="quick-chips"></div>
       <div style="display:flex; gap:22px; flex-wrap:wrap; margin-top:24px;">
         <div style="font-size:12.5px; color:var(--ink-muted); display:flex; align-items:center; gap:7px;"><span style="color:var(--teal);">●</span>Monitoramento diário do PNCP</div>
         <div style="font-size:12.5px; color:var(--ink-muted); display:flex; align-items:center; gap:7px;"><span style="color:var(--teal);">●</span>Dados organizados e comparáveis</div>
@@ -799,7 +802,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
   </div>
 
-  <div style="margin-top:44px;">
+  <div id="home-painel" style="margin-top:44px;">
+    <div id="home-radar-slot"></div>
     <h2 class="section-title" style="margin-bottom:4px;">Números do Radar</h2>
     <p class="section-sub" style="margin-bottom:18px;">Um retrato rápido do que está sendo monitorado agora.</p>
     <div class="indicators" id="indicators"></div>
@@ -8864,6 +8868,15 @@ async function removerMotivoPadrao(id){
 /* Marca: o último R de RADAR nasce espelhado e vira normal logo depois que o site abre (passar o mouse no logo espelha de novo). */
 setTimeout(function(){ document.querySelectorAll('.r-espelho').forEach(function(e){ e.classList.add('normal'); }); }, 1500);
 /* Logo do topo: RADAR nasce todo espelhado e as letras viram ao normal em onda; a cada página nova, uma das letras R/D dá uma volta de lado. */
+/* No tema claro, o gráfico do radar sobe para dentro do painel azul, acima dos "Números do Radar". */
+function posicionarRadarHome(){
+  var claro = document.documentElement.getAttribute('data-theme') === 'light';
+  var radar = document.querySelector('#view-home .radar-wrap'), slot = document.getElementById('home-radar-slot'),
+      hero = document.querySelector('#view-home .hero'), home = document.getElementById('view-home');
+  if(!radar || !slot || !hero || !home) return;
+  if(claro){ slot.appendChild(radar); home.setAttribute('data-azul',''); }
+  else { hero.appendChild(radar); home.removeAttribute('data-azul'); }
+}
 /* Tema claro/escuro: escolha guardada neste aparelho; o escuro é o padrão. */
 function atualizarBotaoTema(){
   var claro = document.documentElement.getAttribute('data-theme') === 'light';
@@ -8875,8 +8888,10 @@ function alternarTema(){
   if(claro) document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme','light');
   try{ localStorage.setItem('radar_tema', claro ? 'escuro' : 'claro'); }catch(e){}
   atualizarBotaoTema();
+  posicionarRadarHome();
 }
 atualizarBotaoTema();
+posicionarRadarHome();
 var _rl = Array.prototype.slice.call(document.querySelectorAll('.logo-text .rl'));
 var _rlPronto = false, _rlVez = 0;
 _rl.forEach(function(e,i){ e.style.transitionDelay = (i*0.22)+'s'; });
