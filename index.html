@@ -1782,7 +1782,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="two-col">
         <div class="form-row"><label>URL do edital</label><input type="text" id="af-url-edital" placeholder="https://...">
           <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-edital')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-edital')">Copiar</button></div></div>
-        <div class="form-row"><label>URL no PNCP</label><input type="text" id="af-url-pncp" placeholder="https://...">
+        <div class="form-row"><label>URL no PNCP</label><input type="text" id="af-url-pncp" placeholder="https://..." oninput="atualizarNumeroPncpForm()">
+          <div id="af-num-pncp" style="font-size:12px; color:var(--ink-dim); margin-top:4px;"></div>
           <div class="af-link-acoes"><button type="button" class="btn-ghost" onclick="abrirCampoLink('af-url-pncp')">Abrir ↗</button><button type="button" class="btn-ghost" onclick="copiarCampoLink('af-url-pncp')">Copiar</button></div></div>
       </div>
       <div class="form-row"><label>E-mail de inscrição (se a inscrição for por e-mail)</label><input type="email" id="af-email-inscricao" placeholder="Ex: credenciamento@prefeitura.gov.br"></div>
@@ -5869,6 +5870,7 @@ function openAdminForm(id){
     document.getElementById('af-pontos-atencao').value = (o.pontosAtencao && o.pontosAtencao !== 'Nenhum ponto de atenção informado.') ? o.pontosAtencao : '';
     document.getElementById('af-url-edital').value = o.urlEdital || '';
     document.getElementById('af-url-pncp').value = o.urlPncp || '';
+    atualizarNumeroPncpForm();
     document.getElementById('af-email-inscricao').value = o.emailInscricao || '';
 
     document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(o.profissoes.includes(c.dataset.prof)) c.classList.add('selected'); });
@@ -5991,11 +5993,33 @@ function _dataBRParaISO(valor){
   const [, dd, mm, yyyy] = m;
   return `${yyyy}-${mm}-${dd}`;
 }
+/* Número de controle do PNCP (CNPJ-ano-sequencial), tirado do link do edital — o mesmo que o banco guarda em numero_pncp. */
+function numeroPncpDeUrl(url){
+  const m = String(url||'').match(/editais\/(\d{14})\/(\d{4})\/(\d+)/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+}
+function editalComMesmoNumeroPncp(num, ignorarId){
+  if(!num) return null;
+  return oportunidades.find(o=>o.id !== ignorarId && (o.numeroPncp || numeroPncpDeUrl(o.urlPncp)) === num) || null;
+}
+function atualizarNumeroPncpForm(){
+  const el = document.getElementById('af-num-pncp'); if(!el) return;
+  const num = numeroPncpDeUrl((document.getElementById('af-url-pncp')||{}).value);
+  if(!num){ el.textContent = ''; return; }
+  const outro = editalComMesmoNumeroPncp(num, editingId);
+  el.innerHTML = `Nº PNCP: <strong>${esc(num)}</strong>` + (outro ? ` · <span style="color:var(--coral);">⚠ já existe: ${esc(outro.orgao)} (${esc(outro.cidade || outro.uf)})</span>` : '');
+}
 async function saveAdminForm(){
   const edital = document.getElementById('af-edital').value.trim();
   const orgao = document.getElementById('af-orgao').value.trim();
   const objeto = document.getElementById('af-objeto').value.trim();
   if(!edital || !orgao || !objeto){ toast('Preencha edital, órgão e objeto'); return; }
+  // Duplicado: mesmo número de controle do PNCP em outro edital.
+  {
+    const num = numeroPncpDeUrl((document.getElementById('af-url-pncp')||{}).value);
+    const outro = editalComMesmoNumeroPncp(num, editingId);
+    if(outro && !confirm(`Já existe um edital com este número do PNCP (${num}): ${outro.orgao} — ${outro.cidade || outro.uf}.\n\nSalvar mesmo assim?`)) return;
+  }
   const profs = [...document.querySelectorAll('#af-profs .chip-opt.selected')].map(c=>c.dataset.prof);
   const publico = [...document.querySelectorAll('#af-publico .chip-opt.selected')].map(c=>c.dataset.publico);
   const indiceRaw = document.getElementById('af-indice').value;
@@ -7691,6 +7715,7 @@ function mapEditalSupabase(row){
     urlOficial: row.url_oficial || row.url_pncp || 'https://pncp.gov.br/app/editais',
     urlEdital: row.url_edital || row.url_pncp || 'https://pncp.gov.br/app/editais',
     urlPncp: row.url_pncp || 'https://pncp.gov.br/app/editais',
+    numeroPncp: row.numero_pncp || '',
     urlInscricao: row.url_inscricao || row.url_pncp || 'https://pncp.gov.br/app/editais',
     movimentacoes: Array.isArray(row.movimentacoes) ? row.movimentacoes : []
   };
