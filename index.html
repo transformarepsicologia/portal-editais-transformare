@@ -107,6 +107,7 @@ header.topbar{
 }
 .topbar-inner{max-width:1240px; margin:0 auto; padding:16px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px;}
 .gated-oculto{display:none !important;}
+.en-sub{font-weight:700;font-size:.85rem;margin:10px 0 4px;}
 .entenda-nota{margin:-2px 0 12px; font-size:12.5px;}
 .entenda-nota summary{cursor:pointer; color:var(--teal); font-weight:600; list-style:none;}
 .entenda-nota summary::-webkit-details-marker{display:none;}
@@ -4002,19 +4003,22 @@ function entendaNotaHTML(ad){
   if(!ad || !ad.det) return '';
   const f = n => String(Math.round(n*10)/10).replace('.', ',');
   const adm = (typeof adminAuthed !== 'undefined') && adminAuthed;
+  const ok = ad.det.filter(d=>d.pts >= d.max);
   const faltou = ad.det.filter(d=>d.pts < d.max);
-  // Cliente: só o que faltou para chegar a 100%. Pontuação detalhada: apenas administrador.
-  const linhas = faltou.map(d=>`<li><span class="en-ic">${d.pts > 0 ? '~' : '✕'}</span><span><strong>${esc(d.rotulo)}</strong> — ${esc(d.nota)}</span></li>`).join('');
-  const resumo = faltou.length
-    ? 'Para chegar a 100%, estes pontos não foram atendidos totalmente:'
-    : 'Nada faltou: o seu perfil atende tudo o que este edital pede.';
+  const li = (ic, cls, d)=>`<li class="${cls}"><span class="en-ic">${ic}</span><span><strong>${esc(d.rotulo)}</strong> — ${esc(d.nota)}</span></li>`;
+  const resumo = ad.pct >= 100
+    ? 'Este edital tem 100% de aderência com o seu perfil.'
+    : `Este edital tem ${ad.pct}% de aderência com o seu perfil. Veja abaixo o que contribuiu e o que faltou para chegar a 100%.`;
+  const bloco = (tit, itens)=> itens ? `<p class="en-sub">${tit}</p><ul>${itens}</ul>` : '';
   const aviso = ad.faltam && ad.faltam.length
-    ? `<p class="en-aviso">⚠ Seu cadastro está incompleto para este edital. Preencha: ${esc(ad.faltam.join(', '))} e veja a nota completa. <a style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="event.stopPropagation(); nav('perfil')">Completar perfil</a></p>` : '';
+    ? `<p class="en-aviso">⚠ Seu cadastro está incompleto para este edital. Preencha: ${esc(ad.faltam.join(', '))} para uma análise completa. <a style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="event.stopPropagation(); nav('perfil')">Completar perfil</a></p>` : '';
   const lim = ad.limitado ? `<p class="en-aviso">⚠ A nota ficou limitada porque o edital faz uma exigência que o seu perfil não atende.</p>` : '';
   const admBox = adm ? `<p class="en-resumo" style="opacity:.8;">[Admin] ${f(ad.pontos)} de ${f(ad.total)} pontos · ` + ad.det.map(d=>`${esc(d.rotulo)} ${f(d.pts)}/${f(d.max)}`).join(' · ') + '</p>' : '';
   return `<details class="entenda-nota"><summary>Entenda a nota</summary>
     <p class="en-resumo">${resumo}</p>
-    ${linhas ? `<ul>${linhas}</ul>` : ''}${aviso}${lim}${admBox}</details>`;
+    ${bloco('✓ Pontos positivos', ok.map(d=>li('✓','en-ok',d)).join(''))}
+    ${bloco('O que falta para 100%', faltou.map(d=>li(d.pts > 0 ? '~' : '✕','en-falta',d)).join(''))}
+    ${aviso}${lim}${admBox}</details>`;
 }
 function portalDoDocumento(texto){
   const t = String(texto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
