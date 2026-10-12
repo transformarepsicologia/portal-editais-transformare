@@ -50,6 +50,7 @@ header.topbar{
 .logo-mark svg{width:100%; height:100%;}
 .logo-text{font-family:var(--font-display); font-weight:700; font-size:19px; letter-spacing:0.3px;}
 .logo-text span{color:var(--teal);}
+.r-espelho{display:inline-block; transform:scaleX(-1); color:inherit !important;}
 nav.main-nav{display:flex; align-items:center; gap:2px; flex-wrap:wrap;}
 nav.main-nav button{
   background:none; border:none; color:var(--ink-muted); font-size:13.5px; padding:9px 13px; border-radius:7px;
@@ -674,7 +675,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="logo-mark">
         <img src="assets/radar-marca.webp" alt="Radar Transformare" width="46" height="46" style="width:100%; height:100%; object-fit:contain;">
       </div>
-      <div class="logo-text">RADAR TRANSFORMARE<span>.</span></div>
+      <div class="logo-text">RADA<span class="r-espelho">R</span> TRANSFORMARE<span>.</span></div>
     </div>
     <nav class="main-nav" id="mainNav">
       <button data-view="home" class="active">Início</button>
@@ -1540,7 +1541,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <span style="color:var(--ink-dim);">×</span>
     <img src="assets/radar-marca.webp" alt="Radar Transformare" width="30" height="30" loading="lazy" style="width:30px; height:30px; object-fit:contain;">
   </div>
-  RADAR TRANSFORMARE — PORTAL DE EDITAIS
+  RADA<span class="r-espelho">R</span> TRANSFORMARE — PORTAL DE EDITAIS
   <div class="footer-links">
     <a href="#privacidade" onclick="event.preventDefault(); nav('privacidade')">Política de Privacidade e Segurança</a>
     <a href="#feedback" onclick="event.preventDefault(); openFeedbackModal()">Enviar feedback</a>
