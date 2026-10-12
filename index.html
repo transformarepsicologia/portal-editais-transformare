@@ -3120,6 +3120,8 @@ function renderMinhaConta(){
         <p class="section-sub" style="margin-bottom:16px;">Marque a estrela ☆ em qualquer edital para ele aparecer aqui. <span id="conta-fav-mais"></span></p>
         <div class="op-grid" id="conta-acompanhados"></div>
 
+        ${ehPro() ? '' : `<div class="pro-lock-box" style="margin-top:32px;"><div style="font-weight:600; margin-bottom:6px;">🔒 Editais mais aderentes ao seu perfil — Plano Pro</div><div style="font-size:13px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${todasAderencias.length ? `Encontramos ${todasAderencias.length} edital(is) ativo(s) com algum grau de aderência ao seu perfil` + (altaAderencia ? `, ${altaAderencia} com 70% ou mais` : '') + '.' : 'Complete seu perfil para a Transformare apontar onde você tem mais chance.'} Assine o Plano Pro para ver a lista ordenada, sem perder tempo procurando edital por edital.</div><button class="btn-primary" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button></div>`}
+
         <div class="lead-box" style="margin-top:32px;">
           <h4>Precisa de ajuda com alguma oportunidade?</h4>
           <p>Fale com a Transformare — podemos ajudar a avaliar requisitos, documentação e prazos.</p>
