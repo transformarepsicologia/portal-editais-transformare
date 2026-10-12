@@ -107,6 +107,8 @@ header.topbar{
 }
 .topbar-inner{max-width:1240px; margin:0 auto; padding:16px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px;}
 .gated-oculto{display:none !important;}
+.doc-emitir{display:inline-block; margin-left:8px; font-size:12px; font-weight:600; color:var(--teal); border:1px solid var(--teal); border-radius:20px; padding:1px 10px; white-space:nowrap;}
+.doc-emitir:hover{background:var(--teal); color:var(--bg);}
 body.logado .so-visitante{display:none !important;}
 body.pro .so-nao-pro{display:none !important;}
 .logo{display:flex; align-items:center; gap:10px; cursor:pointer;}
@@ -3716,7 +3718,7 @@ function openDetalhe(id){
           <ul class="doc-list" id="doc-list-${o.id}">
             ${docsVisiveis.map((d,i)=>`
               <li onclick="toggleDoc(${o.id},${i})" class="${checks[i]?'checked-text':''}" id="doc-item-${o.id}-${i}">
-                <span class="doc-check ${checks[i]?'checked':''}" id="doc-check-${o.id}-${i}">${checks[i]?'✓':''}</span>${d}
+                <span class="doc-check ${checks[i]?'checked':''}" id="doc-check-${o.id}-${i}">${checks[i]?'✓':''}</span>${d}${linkEmitirDocHTML(d)}
               </li>`).join('')}
           </ul>
           ${ocultos>0 ? `
@@ -3944,6 +3946,26 @@ const PORTAIS_DOCS = [
   {nome:'Certidão de quitação eleitoral — TSE', url:'https://www.tse.jus.br/servicos-eleitorais/certidoes/certidao-de-quitacao-eleitoral'},
   {nome:'Compras.gov.br / SICAF (cadastro de fornecedores)', url:'https://www.gov.br/compras/pt-br'},
 ];
+/* Para cada item do checklist, acha o portal onde o documento é emitido (só Plano Pro): a pessoa clica, emite e depois marca o item. */
+function portalDoDocumento(texto){
+  const t = String(texto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const por = nome => PORTAIS_DOCS.find(x=>x.nome.indexOf(nome)===0);
+  if(/\bfgts\b|\bcrf\b/.test(t)) return por('Certificado de Regularidade do FGTS');
+  if(/trabalhist|\bcndt\b/.test(t)) return por('Certidão Negativa de Débitos Trabalhistas');
+  if(/antecedentes criminais/.test(t)) return por('Certidão de antecedentes criminais');
+  if(/quitacao eleitoral|justica eleitoral/.test(t)) return por('Certidão de quitação eleitoral');
+  if(/sicaf/.test(t)) return por('Compras.gov.br');
+  if(/cnpj/.test(t) && /(inscricao|comprovante|cartao)/.test(t) && !/certidao negativa|regularidade/.test(t)) return por('Comprovante de inscrição no CNPJ');
+  if(/(debitos|tributos|creditos tributarios|divida ativa).*(federa|uniao|receita|pgfn)|(federa|uniao|receita|pgfn).*(debitos|tributos|creditos tributarios|divida ativa)|\bcnd\b/.test(t))
+    return /pessoa fisica|\bcpf\b/.test(t) && !/pessoa juridica|cnpj/.test(t) ? por('CND Federal — Receita/PGFN (pessoa física)') : por('CND Federal — Receita/PGFN (pessoa jurídica)');
+  return null;
+}
+function linkEmitirDocHTML(texto){
+  if(!ehPro()) return '';
+  const l = portalDoDocumento(texto);
+  if(!l) return '';
+  return ` <a class="doc-emitir" href="${l.url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>`;
+}
 function portaisDocsPanelHTML(){
   if(!ehEssencial()){
     return `<div class="panel"><h4><span class="dot"></span>Onde emitir cada documento</h4>
