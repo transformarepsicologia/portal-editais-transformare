@@ -73,7 +73,10 @@ html[data-theme="light"] .modal-overlay{background:rgba(19,36,58,0.45);}
 html[data-theme="light"] .nav-cta{background:var(--teal) !important; color:#fff !important;}
 html[data-theme="light"] .nav-cta:hover{background:var(--teal-deep) !important; color:#fff !important;}
 /* Onde o dourado/verde-água ficaria apagado no claro, volta o azul-marinho original */
-html[data-theme="light"] .logo-mark{background:#0E1A2B; border-radius:14px; padding:4px; filter:none; box-shadow:0 1px 4px rgba(14,26,43,.25);}
+html[data-theme="light"] .logo-mark{background:transparent; border-radius:0; padding:0; filter:none; box-shadow:none;}
+.marca-clara{display:none;}
+html[data-theme="light"] .marca-clara{display:block;}
+html[data-theme="light"] .marca-escura{display:none;}
 /* Computador: o radar fica à direita, num cartão azul-marinho menor */
 html[data-theme="light"] .radar-wrap{
   --bg:#0E1A2B; --bg-elevated:#142842; --bg-card:#16304C; --border:#23405F; --border-soft:#1C3350;
@@ -762,7 +765,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="topbar-inner">
     <div class="logo" onclick="nav('home')">
       <div class="logo-mark">
-        <img src="assets/radar-marca.webp" alt="Radar Transformare" width="56" height="56" style="width:100%; height:100%; object-fit:contain;">
+        <img class="marca-escura" src="assets/radar-marca.webp" alt="Radar Transformare" width="56" height="56" style="width:100%; height:100%; object-fit:contain;">
+        <img class="marca-clara" src="assets/radar-marca-verde.webp" alt="" aria-hidden="true" width="56" height="56" style="width:100%; height:100%; object-fit:contain;">
       </div>
       <div class="logo-text"><span class="rl" aria-hidden="true">R</span><span class="rl" aria-hidden="true">A</span><span class="rl" aria-hidden="true">D</span><span class="rl" aria-hidden="true">A</span><span class="rl ultimo" aria-hidden="true">R</span><span class="sr-only-rl">RADAR</span> TRANSFORMARE<span>.</span></div>
     </div>
