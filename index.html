@@ -45,6 +45,7 @@ header.topbar{
   border-bottom:1px solid var(--border-soft);
 }
 .topbar-inner{max-width:1240px; margin:0 auto; padding:16px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px;}
+.gated-oculto{display:none !important;}
 .logo{display:flex; align-items:center; gap:10px; cursor:pointer;}
 .logo-mark{width:56px;height:56px; position:relative; flex-shrink:0; filter:drop-shadow(0 0 6px rgba(255,190,40,0.35));}
 .logo-mark svg{width:100%; height:100%;}
@@ -823,6 +824,14 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <section class="view" id="view-comparar">
   <button class="back-link" onclick="nav('editais')">← Voltar aos editais</button>
   <div class="page-head" style="padding-top:0;"><span class="eyebrow">Comparação</span><h2>Comparar oportunidades</h2><p>Lado a lado, para decidir com mais clareza.</p></div>
+  <div class="gate-cadastro center-empty" style="display:none;">
+    <h3>Entre para comparar editais</h3>
+    <p>Crie sua conta gratuita para comparar até 3 oportunidades lado a lado.</p>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px;">
+      <button class="btn-primary" onclick="nav('cadastro')">Criar conta grátis</button>
+      <button class="btn-ghost" onclick="nav('login')">Já tenho conta</button>
+    </div>
+  </div>
   <div id="compare-content"></div>
 </section>
 
@@ -835,6 +844,14 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <!-- ===================== FAVORITOS ===================== -->
 <section class="view" id="view-favoritos">
   <div class="page-head"><span class="eyebrow">Sua seleção</span><h2>Favoritos</h2><p>Oportunidades que você salvou para acompanhar.</p></div>
+  <div class="gate-cadastro center-empty" style="display:none;">
+    <h3>Entre para salvar seus favoritos</h3>
+    <p>Crie sua conta gratuita para favoritar editais e acompanhar os que mais interessam a você.</p>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px;">
+      <button class="btn-primary" onclick="nav('cadastro')">Criar conta grátis</button>
+      <button class="btn-ghost" onclick="nav('login')">Já tenho conta</button>
+    </div>
+  </div>
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
     <div class="result-count" id="fav-count" style="margin-bottom:0;"></div>
     <div style="display:flex; gap:8px; align-items:center;">
@@ -852,6 +869,14 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <!-- ===================== ALERTAS ===================== -->
 <section class="view" id="view-alertas">
   <div class="page-head"><span class="eyebrow">Personalização</span><h2>Meus alertas</h2><p>Escolha seus critérios — avisamos quando surgir algo compatível.</p></div>
+  <div class="gate-cadastro center-empty" style="display:none;">
+    <h3>Entre para criar seus alertas</h3>
+    <p>Com uma conta gratuita você escolhe profissões e estados de interesse e vê aqui os editais compatíveis com o seu perfil.</p>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px;">
+      <button class="btn-primary" onclick="nav('cadastro')">Criar conta grátis</button>
+      <button class="btn-ghost" onclick="nav('login')">Já tenho conta</button>
+    </div>
+  </div>
 
   <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:#C7BFF5;">⚠ <strong>Alertas demonstrativos.</strong> Neste protótipo, os alertas são exibidos dentro do portal (aqui e no sino do menu). E-mail, WhatsApp e notificações push serão implementados em uma versão futura.</div>
 
@@ -2398,6 +2423,24 @@ document.addEventListener('keydown', e=>{
 
 /* ================= NAV ================= */
 let currentView = null;
+// Alertas, Favoritos e Comparar exigem cadastro (conta gratuita basta); visitante vê o convite para criar conta
+function ehCadastrado(){ return !!(userProfile || adminAuthed); }
+function aplicarGateCadastro(view){
+  const sec = document.getElementById('view-' + view); if(!sec) return false;
+  const bloqueado = !ehCadastrado();
+  [...sec.children].forEach(ch=>{
+    if(ch.classList.contains('page-head') || ch.classList.contains('back-link') || ch.classList.contains('gate-cadastro')) return;
+    ch.classList.toggle('gated-oculto', bloqueado);
+  });
+  const g = sec.querySelector('.gate-cadastro'); if(g) g.style.display = bloqueado ? '' : 'none';
+  return bloqueado;
+}
+function exigirCadastro(acao){
+  if(ehCadastrado()) return true;
+  toast('Crie sua conta gratuita para ' + acao + '.');
+  nav('cadastro');
+  return false;
+}
 function nav(view){
   if(view === 'admin' && !adminAuthed) view = 'admin-login';
   if(view === 'perfil' && !userProfile) view = 'login';
@@ -2414,6 +2457,7 @@ function nav(view){
   const pc=document.getElementById('promo-cadastro'); if(pc) pc.style.display = userProfile ? 'none' : '';
   if(view === 'cadastro') iniciarCaptchaCadastro();
   if(view === 'editais') applyFilters();
+  if(['favoritos','alertas','comparar'].includes(view)) aplicarGateCadastro(view);
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
   if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); adminTab(adminTabAtual||'hoje'); carregarContagensHoje(); renderUsuariosAdmin(); renderFeedbacksAdmin(); renderSugestoesProfissaoAdmin(); renderSolicitacoesIndiceAdmin(); }
@@ -2524,6 +2568,7 @@ function renderCard(o){
 /* ================= COMPARAR ================= */
 let compareSet = new Set();
 function toggleCompare(id){
+  if(!exigirCadastro('comparar editais')) return;
   if(compareSet.has(id)){ compareSet.delete(id); }
   else{
     if(compareSet.size>=3){ toast('Você pode comparar até 3 oportunidades por vez'); return; }
@@ -2668,6 +2713,7 @@ function shareWhatsApp(id){
 /* ================= FAVORITOS ================= */
 const MAX_FAVORITOS = 3;
 async function toggleFav(id){
+  if(!exigirCadastro('favoritar editais')) return;
   if(!favoritos.has(id) && favoritos.size >= MAX_FAVORITOS){
     toast(`Você já tem ${MAX_FAVORITOS} editais favoritados — remova um para adicionar outro`);
     return;
