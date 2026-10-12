@@ -89,8 +89,16 @@ html[data-theme="light"] .radar-sweep::before{background:conic-gradient(from 0de
 html[data-theme="light"] .blip{box-shadow:0 0 0 5px rgba(10,127,114,.18);}
 html[data-theme="light"] .blip.amber{box-shadow:0 0 0 5px rgba(196,120,10,.2);}
 html[data-theme="light"] .radar-center{background:var(--teal-deep);}
-html[data-theme="light"] .blip .blip-label{color:var(--ink);}
-html[data-theme="light"] .blip .blip-label.ambient{opacity:.6;}
+/* Radar legível no tema claro: pontos e textos maiores e mais escuros */
+html[data-theme="light"] .blip{width:15px; height:15px; box-shadow:0 0 0 6px rgba(10,127,114,.2);}
+html[data-theme="light"] .blip.amber{box-shadow:0 0 0 6px rgba(196,120,10,.22);}
+html[data-theme="light"] .blip .blip-label{top:23px; font-size:13px; font-weight:700; color:#15140F;}
+html[data-theme="light"] .blip .blip-label.ambient{opacity:.85;}
+html[data-theme="light"] .radar-center{width:11px; height:11px;}
+@media(max-width:600px){ html[data-theme="light"] .blip{width:13px; height:13px;} html[data-theme="light"] .blip .blip-label{font-size:11.5px; top:20px;} }
+html[data-theme="light"] .radar-wrap .radar-rodape-k{font-size:11.5px !important; font-weight:700; color:#3B3A35 !important;}
+html[data-theme="light"] .radar-wrap .radar-rodape-n{font-size:17px !important; font-weight:700; color:#15140F !important;}
+html[data-theme="light"] .radar-wrap img[class^="marca-"]{width:60px !important; height:60px !important;}
 html[data-theme="light"] #home-painel .radar-wrap{background:none; border:none; box-shadow:none; padding:0; zoom:1; border-radius:0;}
 /* Celular: o radar sobe para um painel azul retangular, acima dos Números do Radar */
 @media(max-width:900px){
@@ -834,8 +842,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div style="display:flex; align-items:center; gap:10px; margin-top:22px; opacity:0.92;">
         <img class="marca-escura" src="assets/radar-marca.webp" alt="Radar Transformare" width="44" height="44" style="width:44px; height:44px; object-fit:contain;"><img class="marca-clara" src="assets/radar-marca-verde.webp" alt="" aria-hidden="true" width="44" height="44" style="width:44px; height:44px; object-fit:contain;">
         <div>
-          <div style="font-family:var(--font-mono); font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-muted);">Motor de monitoramento</div>
-          <div style="font-family:var(--font-display); font-size:13.5px; font-weight:600; color:var(--ink-muted);">Radar Transformare</div>
+          <div class="radar-rodape-k" style="font-family:var(--font-mono); font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-muted);">Motor de monitoramento</div>
+          <div class="radar-rodape-n" style="font-family:var(--font-display); font-size:13.5px; font-weight:600; color:var(--ink-muted);">Radar Transformare</div>
         </div>
       </div>
     </div>
