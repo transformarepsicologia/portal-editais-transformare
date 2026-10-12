@@ -4127,6 +4127,11 @@ const DOCUMENTOS_PADRAO = [
   'Certificado de Regularidade do FGTS (CRF)',
   'Comprovante de inscrição no CNPJ (se for pessoa jurídica)'
 ];
+/* Vazio ou só um texto genérico ("Consulte o edital oficial") = documentos ainda não detalhados. */
+function documentosGenericos(docs){
+  if(!docs || !docs.length) return true;
+  return docs.every(d => /^\s*consulte\s+o\s+edital(\s+oficial)?\.?\s*$/i.test(String(d)));
+}
 function docsPreview(documentos){
   if(ehEssencial()) return documentos || [];   // plano Transformare Pro: checklist completo
   return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
@@ -7728,8 +7733,8 @@ function mapEditalSupabase(row){
     requisitos: row.requisitos || 'Consulte o edital oficial no PNCP para os requisitos completos.',
     pontosPositivos: row.pontos_positivos || '',
     pontosAtencao: row.pontos_atencao || '',
-    documentos: (row.documentos && row.documentos.length) ? row.documentos : DOCUMENTOS_PADRAO,
-    documentosPadrao: !(row.documentos && row.documentos.length),
+    documentos: documentosGenericos(row.documentos) ? DOCUMENTOS_PADRAO : row.documentos,
+    documentosPadrao: documentosGenericos(row.documentos),
     urlOficial: row.url_oficial || row.url_pncp || 'https://pncp.gov.br/app/editais',
     urlEdital: row.url_edital || row.url_pncp || 'https://pncp.gov.br/app/editais',
     urlPncp: row.url_pncp || 'https://pncp.gov.br/app/editais',
