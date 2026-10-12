@@ -107,6 +107,8 @@ header.topbar{
 }
 .topbar-inner{max-width:1240px; margin:0 auto; padding:16px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px;}
 .gated-oculto{display:none !important;}
+body.logado .so-visitante{display:none !important;}
+body.pro .so-nao-pro{display:none !important;}
 .logo{display:flex; align-items:center; gap:10px; cursor:pointer;}
 .logo-mark{width:56px;height:56px; position:relative; flex-shrink:0; filter:drop-shadow(0 0 6px rgba(255,190,40,0.35));}
 .logo-mark svg{width:100%; height:100%;}
@@ -818,7 +820,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="indicators" id="indicators"></div>
   </div>
 
-  <div class="promo-band" id="promo-cadastro">
+  <div class="promo-band so-visitante" id="promo-cadastro">
     <div><div class="promo-tag">Grátis · leva 2 minutos</div><h3>Crie sua conta e acompanhe as oportunidades da sua profissão</h3><p>Favorite editais, configure alertas e receba o que combina com o seu perfil.</p></div>
     <button class="btn-primary" onclick="nav('cadastro')">Criar conta grátis</button>
   </div>
@@ -835,7 +837,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
       </div>
 
-  <div class="promo-band pro">
+  <div class="promo-band pro so-nao-pro">
     <div><div class="promo-tag">🔒 Para assinantes</div><h3>Plano Transformare Pro</h3><p>Índice Transformare, checklist de documentos e links para emissão das principais certidões negativas para dar entrada na proposta — tudo para decidir e se credenciar com mais segurança.</p></div>
     <button class="btn-primary" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
   </div>
@@ -2511,6 +2513,7 @@ function exigirCadastro(acao){
   return false;
 }
 function nav(view){
+  if(typeof atualizarPromos==='function') atualizarPromos();
   if(typeof radarGira==='function') radarGira();
   if(view === 'admin' && !adminAuthed) view = 'admin-login';
   if(view === 'perfil' && !userProfile) view = 'login';
@@ -3088,7 +3091,13 @@ function exigePro(recurso){
   toast((recurso || 'Este recurso') + ' é do Plano Transformare Pro.');
   return false;
 }
+function atualizarPromos(){
+  // Quem já tem conta não vê o convite de cadastro; quem já é Pro não vê a oferta do Plano Pro.
+  document.body.classList.toggle('logado', !!userProfile || !!adminAuthed);
+  document.body.classList.toggle('pro', !!ehPro());
+}
 function updateNavCta(){
+  atualizarPromos();
   atualizarOrdenarPro();
   const ctaBtn = document.getElementById('nav-cta-btn');
   if(userProfile){
