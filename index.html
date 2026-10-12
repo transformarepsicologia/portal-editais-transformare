@@ -3625,19 +3625,19 @@ function openDetalhe(id){
           </ul>
           ${ocultos>0 ? `
           <div class="checklist-cta" style="margin-top:10px;">
-            <p>+ ${ocultos} outro${ocultos>1?'s':''} documento${ocultos>1?'s':''} exigido${ocultos>1?'s':''} neste edital. A lista completa de documentação pode ser organizada com o apoio da Transformare.</p>
+            <p>+ ${ocultos} outro${ocultos>1?'s':''} documento${ocultos>1?'s':''} exigido${ocultos>1?'s':''} neste edital. No plano Transformare Pro você recebe os links dos principais portais (CND da Receita, certificado do FGTS, CNDT e outros) junto com o checklist completo. Se você desejar, a lista completa de documentação pode ser organizada com o apoio da Transformare.</p>
             <button class="btn-primary" style="width:100%; margin-bottom:6px;" onclick="solicitarPlanoEssencial()">Quero o plano Pro (checklist completo)</button>
             <button class="btn-ghost" style="width:100%;" onclick="openLeadModal(${o.id},'detalhe_edital','Quero a lista completa de documentos')">Prefiro o apoio da Transformare</button>
           </div>` : ''}
           `; })()}
         </div>
 
-        ${portaisDocsPanelHTML()}
+        ${ehPro() ? portaisDocsPanelHTML() : ''}
 
-        <div class="panel">
+        ${o.movimentacoes.length ? `<div class="panel">
           <h4><span class="dot"></span>Histórico de movimentações</h4>
-          <ul class="timeline">${o.movimentacoes.length ? o.movimentacoes.map(m=>`<li><span class="date">${m.data}</span>${m.texto}</li>`).join('') : '<li class="af-item-empty">Nenhuma movimentação registrada.</li>'}</ul>
-        </div>
+          <ul class="timeline">${o.movimentacoes.map(m=>`<li><span class="date">${m.data}</span>${m.texto}</li>`).join('')}</ul>
+        </div>` : ''}
       </div>
 
       <div>
