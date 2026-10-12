@@ -3054,7 +3054,7 @@ function calcularAderencia(o, u){
     } else if(mod === 'Online'){
       motivos.push('sem deslocamento'); add('Localização', 25, 25, 'é online, sem deslocamento');
     } else if(o.abrangencia === 'Nacional'){
-      motivos.push('válido em todo o país'); add('Localização', 15, 25, 'é de outro estado, mas vale em todo o país');
+      motivos.push('válido em todo o país'); add('Localização', 25, 25, 'o edital vale em todo o país');
     } else add('Localização', 0, 25, 'é de outro estado');
   }
   if((u.mods||[]).length){
@@ -3097,19 +3097,30 @@ function calcularAderencia(o, u){
   }
   // Especialidades e formato de atendimento: comparam com o texto do edital; se o edital não cita, vale metade.
   const txt = normTxt([o.objeto, o.requisitos, o.edital].join(' '));
+  // Palavras-chave (regex sobre o texto sem acento). Usamos expressões específicas e limites de palavra
+  // para não confundir, p.ex., "domicílio" do candidato com atendimento domiciliar.
   const kws = {
-    'Infantil':['infantil','crianca'],'Adolescentes':['adolescente'],'Adultos':['adulto'],'Idosos':['idoso'],'TEA / autismo':['autismo','tea ','espectro autista'],
-    'Neuropsicologia':['neuropsic'],'Saúde mental':['saude mental','caps','psicossocial'],'Dependência química':['dependencia quimica','alcool e drogas','caps ad'],
-    'Avaliação psicológica':['avaliacao psicologica','psicodiagn'],'Saúde do trabalhador':['saude do trabalhador','ocupacional'],'Hospitalar':['hospitalar','hospital'],'Reabilitação':['reabilitacao'],
-    'Individual':['individual'],'Grupo':['em grupo','grupal','oficina'],'Domiciliar':['domiciliar','domicilio'],'Telessaúde / teleatendimento':['telessaude','teleatendimento','telemedicina','teleconsulta'],'Plantão':['plantao']};
+    'Infantil':[/\binfantil|\bcrianca/],'Adolescentes':[/\badolescente/],'Adultos':[/\badultos?\b/],'Idosos':[/\bidosos?\b|\bgeriatri/],
+    'TEA / autismo':[/\bautis|\btea\b|espectro autista|\btdah\b/],
+    'Neuropsicologia':[/neuropsic/],'Saúde mental':[/saude mental|\bcaps\b|psicossocial|psicoterapi|psiquiatri/],
+    'Dependência química':[/dependencia quimica|alcool e (outras )?drogas|\bcaps ad\b|usuarios de drogas/],
+    'Avaliação psicológica':[/avaliacao psicologica|psicodiagn|porte de arma|testagem|laudo psicologico|triagem psicologica/],
+    'Saúde do trabalhador':[/saude do trabalhador|saude ocupacional|medicina do trabalho/],
+    'Hospitalar':[/psicologia hospitalar|atendimento hospitalar|assistencia (medico[- ])?hospitalar|internacao|\buti\b/],
+    'Reabilitação':[/reabilitacao/],
+    'Individual':[/atendimento individual|psicoterapia individual|consulta individual|sessoes individuais|atendimento individualizado/],
+    'Grupo':[/atendimento em grupo|psicoterapia (em )?grupo|\bgrupal\b|grupos terapeuticos|oficinas terapeuticas/],
+    'Domiciliar':[/atendimento domiciliar|visita domiciliar|atendimento (em|no) domicilio|home care/],
+    'Telessaúde / teleatendimento':[/telessaude|teleatendimento|telemedicina|teleconsulta|telepsicologia|atendimento remoto/],
+    'Plantão':[/\bplantao|\bplantoes/]};
   const casar = (escolhidas)=>{
-    const doEdital = Object.keys(kws).filter(k=>kws[k].some(w=>txt.includes(w)));
+    const doEdital = Object.keys(kws).filter(k=>kws[k].some(w=>w.test(txt)));
     const relevantes = doEdital.filter(k=>ESPECIALIDADES.includes(k) === escolhidas.__esp);
     if(!relevantes.length) return null;           // edital não cita
     return relevantes.filter(k=>escolhidas.includes(k));
   };
   {
-    const doEd = Object.keys(kws).filter(k=>kws[k].some(w=>txt.includes(w)));
+    const doEd = Object.keys(kws).filter(k=>kws[k].some(w=>w.test(txt)));
     if(!(u.especialidades||[]).length && doEd.some(k=>ESPECIALIDADES.includes(k))) pede('Especialidades');
     if(!(u.formatos||[]).length && doEd.some(k=>!ESPECIALIDADES.includes(k))) pede('Formato de atendimento');
     if(!(u.atuacao||[]).length && (o.aceitaContratacao||[]).length) pede('Atuação (PF/PJ)');
@@ -3117,14 +3128,14 @@ function calcularAderencia(o, u){
   if((u.especialidades||[]).length){
     const lista = [...u.especialidades]; lista.__esp = true;
     const r = casar(lista);
-    if(r === null) add('Especialidades', 5, 10, 'o edital não cita a área de atuação');
+    if(r === null) add('Especialidades', 10, 10, 'o edital não restringe a área de atuação');
     else if(r.length){ motivos.push('área: ' + r.join('/').toLowerCase()); add('Especialidades', 10, 10, 'a área do edital está entre as suas'); }
     else add('Especialidades', 0, 10, 'a área do edital não está entre as suas');
   }
   if((u.formatos||[]).length){
     const lista = [...u.formatos]; lista.__esp = false;
     const r = casar(lista);
-    if(r === null) add('Tipo de atendimento', 2.5, 5, 'o edital não informa se é atendimento individual, em grupo, domiciliar etc.');
+    if(r === null) add('Tipo de atendimento', 5, 5, 'o edital não restringe o tipo de atendimento');
     else if(r.length){ motivos.push('tipo: ' + r.join('/').toLowerCase()); add('Tipo de atendimento', 5, 5, 'o tipo de atendimento do edital está entre os seus'); }
     else add('Tipo de atendimento', 0, 5, 'o tipo de atendimento do edital não está entre os que você oferece');
   }
@@ -3157,12 +3168,12 @@ function calcularAderencia(o, u){
       'Remuneração': ()=>'remuneração compatível',
       'Instrução': ()=>'exige nível de ' + lc(o.escolaridadeMinima),
       'Experiência': ()=>`exige ${o.experienciaMinimaAnos} anos de experiência`,
-      'Especialidades': ()=>'área de atuação compatível',
-      'Tipo de atendimento': ()=>'tipo de atendimento compatível',
+      'Especialidades': d=>/não restringe/.test(d.nota) ? 'sem restrição de área de atuação' : 'área de atuação compatível',
+      'Tipo de atendimento': d=>/não restringe/.test(d.nota) ? 'sem restrição de tipo de atendimento' : 'tipo de atendimento compatível',
       'Forma de contratação': ()=>{ const a=(o.aceitaContratacao||[]); const pf=a.includes('Pessoa Física (PF)'), pj=a.includes('Pessoa Jurídica (PJ)'); const usa = (u.atuacao||[]); return 'aceita ' + ((usa.includes('PF') && pf && usa.includes('PJ') && pj) ? 'pessoa física e jurídica' : (usa.includes('PJ') && pj) ? 'pessoa jurídica' : 'pessoa física'); }
     };
     const AJ = {'Profissão':'a profissão do edital','Localização':'a localização','Modalidade':'a modalidade','Abrangência':'a abrangência','Remuneração':'o valor da remuneração','Instrução':'a instrução exigida','Experiência':'a experiência exigida','Especialidades':'a área de atuação','Tipo de atendimento':'o tipo de atendimento aceito','Forma de contratação':'a forma de contratação aceita'};
-    d.pos = cheio && POS[d.rotulo] ? POS[d.rotulo]() : '';
+    d.pos = cheio && POS[d.rotulo] ? POS[d.rotulo](d) : '';
     d.aj = !cheio ? (AJ[d.rotulo] || lc(d.rotulo)) : '';
   });
   return { pct, motivos, det, pontos, total, faltam: faltamPerfil, limitado: naoAtende };
