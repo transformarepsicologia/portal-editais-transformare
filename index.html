@@ -2827,6 +2827,11 @@ function removeFromCompare(id){
 
 /* ================= WHATSAPP ================= */
 const SITE_URL = 'https://transformarepsicologia.github.io/portal-editais-transformare/';
+/* O botão "Ver edital oficial" só aparece quando o link do edital NÃO é uma página do PNCP (que já tem o botão "Ver no PNCP"). */
+function linkEditalDireto(o){
+  const u = (o && o.urlEdital) ? String(o.urlEdital).trim() : '';
+  return (u && !/pncp\.gov\.br/i.test(u)) ? u : '';
+}
 function shareWhatsApp(id){
   const o = oportunidades.find(x=>x.id===id);
   const link = o.urlEdital || o.urlOficial || o.urlPncp || 'https://pncp.gov.br/app/editais';
@@ -3774,9 +3779,9 @@ function openDetalhe(id){
           </div>
 
           <div class="link-row">
-            ${o.urlEdital
-              ? `<a class="official-link" href="${o.urlEdital}" target="_blank" rel="noopener">Ver edital oficial ↗</a>`
-              : `<span class="btn-ghost" style="opacity:0.5; cursor:default;">Link do edital não informado no protótipo</span>`}
+            ${linkEditalDireto(o)
+              ? `<a class="official-link" href="${linkEditalDireto(o)}" target="_blank" rel="noopener">Ver edital oficial ↗</a>`
+              : ''}
             ${o.urlPncp
               ? `<a class="btn-ghost" href="${o.urlPncp}" target="_blank" rel="noopener" style="display:inline-block;">Ver no PNCP ↗</a>`
               : ''}
