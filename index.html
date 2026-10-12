@@ -72,7 +72,13 @@ html[data-theme="light"] .badge.divulgada{color:#4A6178;}
 html[data-theme="light"] .modal-overlay{background:rgba(19,36,58,0.45);}
 html[data-theme="light"] .nav-cta{background:var(--teal) !important; color:#fff !important;}
 html[data-theme="light"] .nav-cta:hover{background:var(--teal-deep) !important; color:#fff !important;}
-html[data-theme="light"] .logo-mark{filter:brightness(.78) saturate(1.5) contrast(1.15) drop-shadow(0 0 1px rgba(90,50,0,.8));}
+/* Onde o dourado/verde-água ficaria apagado no claro, volta o azul-marinho original */
+html[data-theme="light"] .logo-mark{background:#0E1A2B; border-radius:14px; padding:4px; filter:none; box-shadow:0 1px 4px rgba(14,26,43,.25);}
+html[data-theme="light"] .radar-wrap{
+  --bg:#0E1A2B; --bg-elevated:#142842; --bg-card:#16304C; --border:#23405F; --border-soft:#1C3350;
+  --ink:#EAF2F6; --ink-muted:#8FA6BE; --ink-dim:#5F7893; --teal:#2FD9C4; --teal-deep:#17B6A3; --amber:#F5A93E; --coral:#F0654E; --violet:#8C7CF0; --gray:#6B7A8C;
+  background:#0E1A2B; border-radius:26px; padding:30px 30px 22px; box-shadow:0 6px 22px rgba(14,26,43,.22);
+}
 .theme-btn{background:none; border:1px solid var(--border); color:var(--ink-muted); width:36px; height:36px; border-radius:9px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px; margin-left:8px;}
 .theme-btn:hover{color:var(--teal); border-color:var(--teal);}
 *{box-sizing:border-box;}
