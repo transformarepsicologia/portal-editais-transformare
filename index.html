@@ -3670,7 +3670,7 @@ function openDetalhe(id){
         </div>
       </div>
     </div>
-    ${ehPro() ? '' : '<div style="margin-top:18px;">' + ctaProximoPasso + '</div>'}
+    ${ehPro() ? '' : '<div class="detail-grid" style="margin-top:0;"><div>' + ctaProximoPasso + '</div></div>'}
   `;
   renderOutrosEditais(id, el);
   nav('detalhe');
