@@ -3716,7 +3716,7 @@ function openDetalhe(id){
             <div>
               <div class="op-meta">${o.edital} · ${o.tipo}</div>
               <h3>${o.objeto}</h3>
-              <div class="detail-org">${esc(orgaoLocalTexto(o))} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${o.origemSupabase ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}${o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? ` · divulgado em ${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}` : ''}</div>
+              <div class="detail-org">${esc(orgaoLocalTexto(o))} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${o.origemSupabase ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}${o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? ` · divulgado em ${esc(o.publicacao)}` : ''}</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
               ${adminAuthed ? `<button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap;" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button><button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">🗑 Excluir</button>` : ''}
@@ -3737,7 +3737,7 @@ function openDetalhe(id){
             <div class="qf-item"><div class="qf-icon">💰</div><span class="qf-k">Remuneração</span><div class="qf-v">${remuneracaoResumo}</div></div>
             ${o.abertura ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Início das propostas</span><div class="qf-v">${esc(o.abertura)}</div></div>` : ''}
             <div class="qf-item"><div class="qf-icon">⏳</div><span class="qf-k">Prazo</span><div class="qf-v">${o.prazo}</div></div>
-            ${!o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}</div></div>` : ''}
+            ${!o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}</div></div>` : ''}
           </div>
 
           <div class="link-row">
