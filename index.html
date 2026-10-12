@@ -897,7 +897,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== MINHA CONTA ===================== -->
 <section class="view" id="view-minha-conta">
-  <div class="page-head"><span class="eyebrow">Minha área</span><h2>Minha conta</h2><p>Seu perfil, suas oportunidades recomendadas e seu histórico.</p></div>
+  <div class="page-head"><span class="eyebrow">Minha área</span><h2>Minha conta</h2><p>Seu perfil, seu plano e seus editais favoritos.</p></div>
   <div id="minha-conta-content"></div>
 </section>
 
@@ -3116,21 +3116,9 @@ function renderMinhaConta(){
           <div class="indicator-card" style="cursor:pointer;" onclick="nav('perfil')" title="Completar perfil"><div class="num">${perfilPct}%</div><div class="label">Perfil preenchido${perfilPct < 100 ? ' — completar ›' : ''}</div></div>
         </div>
 
-        <div class="section-title" style="font-size:17px;">Editais mais aderentes ao seu perfil</div>
-        <p class="section-sub" style="margin-bottom:16px;">Calculado pela sua profissão, localização, modalidade, abrangência, remuneração mínima, instrução, tempo de atuação e forma de atuação (PF/PJ). <a style="color:var(--teal); cursor:pointer;" onclick="nav('perfil')">Ajustar perfil</a></p>
-        <div class="op-grid" id="conta-aderentes"></div>
-
-        <div class="section-title" style="font-size:17px; margin-top:32px;">Editais que estou acompanhando</div>
-        <p class="section-sub" style="margin-bottom:16px;">Marque a estrela ☆ em qualquer edital para acompanhá-lo aqui.</p>
+        <div class="section-title" style="font-size:17px;">Meus editais favoritos</div>
+        <p class="section-sub" style="margin-bottom:16px;">Marque a estrela ☆ em qualquer edital para ele aparecer aqui. <span id="conta-fav-mais"></span></p>
         <div class="op-grid" id="conta-acompanhados"></div>
-
-        <div class="section-title" style="font-size:17px; margin-top:32px;">Oportunidades recomendadas para você</div>
-        <p class="section-sub" style="margin-bottom:16px;">Com base nas profissões e regiões dos seus alertas.</p>
-        <div class="op-grid" id="conta-recomendadas"></div>
-
-        <div class="section-title" style="font-size:17px; margin-top:32px;">Meu histórico</div>
-        <p class="section-sub" style="margin-bottom:16px;">Editais em que você já começou a organizar a documentação.</p>
-        <div class="op-grid" id="conta-historico"></div>
 
         <div class="lead-box" style="margin-top:32px;">
           <h4>Precisa de ajuda com alguma oportunidade?</h4>
@@ -3141,38 +3129,12 @@ function renderMinhaConta(){
     </div>
   `;
 
-  const adBox = document.getElementById('conta-aderentes');
-  if(!ehPro()){
-    adBox.innerHTML = `<div class="pro-lock-box"><div style="font-weight:600; margin-bottom:6px;">🔒 Editais mais aderentes ao seu perfil — Plano Pro</div><div style="font-size:13px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${todasAderencias.length ? `Encontramos ${todasAderencias.length} edital(is) ativo(s) com algum grau de aderência ao seu perfil` + (altaAderencia ? `, ${altaAderencia} com 70% ou mais` : '') + '.' : 'Complete seu perfil para a Transformare apontar onde você tem mais chance.'} Assine o Plano Pro para ver a lista ordenada, sem perder tempo procurando edital por edital.</div><button class="btn-primary" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button></div>`;
-  } else if(aderentes.length===0){
-    adBox.innerHTML = `<div class="empty-state">Complete seu perfil (profissão, estado, modalidade, abrangência e remuneração) para ver os editais mais aderentes. <a style="color:var(--teal); cursor:pointer;" onclick="nav('perfil')">Editar perfil</a></div>`;
-  } else {
-    aderentes.forEach(({o, ad})=>{
-      const card = renderCard(o);
-      card.insertAdjacentHTML('afterbegin', `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span><span class="aderencia-motivo">${esc(ad.motivos.join(' + ') || 'Poucos critérios em comum com o seu perfil')}</span></div>`);
-      adBox.appendChild(card);
-    });
-  }
-
   const acBox = document.getElementById('conta-acompanhados');
   if(acompanhados.length===0){
     acBox.innerHTML = `<div class="empty-state">Você ainda não está acompanhando nenhum edital. <a style="color:var(--teal); cursor:pointer;" onclick="nav('editais')">Ver editais</a></div>`;
   } else {
-    acompanhados.forEach(o=>acBox.appendChild(renderCard(o)));
-  }
-
-  const recBox = document.getElementById('conta-recomendadas');
-  if(recomendadas.length===0){
-    recBox.innerHTML = `<div class="empty-state">Configure seus <a style="color:var(--teal); cursor:pointer;" onclick="nav('alertas')">alertas</a> para receber recomendações.</div>`;
-  } else {
-    recomendadas.forEach(o=>recBox.appendChild(renderCard(o)));
-  }
-
-  const histBox = document.getElementById('conta-historico');
-  if(historico.length===0){
-    histBox.innerHTML = `<div class="empty-state">Nenhum edital com documentação em andamento ainda.</div>`;
-  } else {
-    historico.forEach(o=>histBox.appendChild(renderCard(o)));
+    acompanhados.slice(0,3).forEach(o=>acBox.appendChild(renderCard(o)));
+    if(acompanhados.length>3){ const m=document.getElementById('conta-fav-mais'); if(m) m.innerHTML=`Mostrando 3 de ${acompanhados.length}. <a style="color:var(--teal); cursor:pointer;" onclick="nav('favoritos')">Ver todos os favoritos</a>`; }
   }
 }
 
