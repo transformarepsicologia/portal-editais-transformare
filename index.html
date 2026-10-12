@@ -79,17 +79,23 @@ html[data-theme="light"] .marca-clara{display:block;}
 html[data-theme="light"] .marca-escura{display:none;}
 /* Computador: o radar fica à direita, num cartão azul-marinho menor */
 html[data-theme="light"] .radar-wrap{
-  --bg:#0E1A2B; --bg-elevated:#142842; --bg-card:#16304C; --border:#23405F; --border-soft:#1C3350;
-  --ink:#EAF2F6; --ink-muted:#8FA6BE; --ink-dim:#5F7893; --teal:#2FD9C4; --teal-deep:#17B6A3; --amber:#F5A93E; --coral:#F0654E; --violet:#8C7CF0; --gray:#6B7A8C;
-  background:#0E1A2B; border-radius:24px; padding:26px 26px 18px; box-shadow:0 6px 22px rgba(14,26,43,.22); zoom:.82; justify-self:center;
+  background:transparent; border:1px solid var(--border); border-radius:24px; padding:26px 26px 18px; box-shadow:none; zoom:.82; justify-self:center;
 }
-html[data-theme="light"] #home-painel .radar-wrap{background:none; box-shadow:none; padding:0; zoom:1; border-radius:0;}
+/* Radar em destaque no tema claro: círculos e varredura em verde bem marcados */
+html[data-theme="light"] .radar{border:2px solid rgba(10,127,114,.6); background:radial-gradient(circle, rgba(10,127,114,.12) 0%, rgba(10,127,114,.03) 70%, transparent 100%);}
+html[data-theme="light"] .radar::before, html[data-theme="light"] .radar::after{border:1.5px solid rgba(10,127,114,.5);}
+html[data-theme="light"] .radar-ring-outer{border:1.5px solid rgba(10,127,114,.6);}
+html[data-theme="light"] .radar-sweep::before{background:conic-gradient(from 0deg, rgba(10,127,114,.6) 0deg, rgba(10,127,114,.22) 28deg, transparent 55deg, transparent 360deg);}
+html[data-theme="light"] .blip{box-shadow:0 0 0 5px rgba(10,127,114,.18);}
+html[data-theme="light"] .blip.amber{box-shadow:0 0 0 5px rgba(196,120,10,.2);}
+html[data-theme="light"] .radar-center{background:var(--teal-deep);}
+html[data-theme="light"] .blip .blip-label{color:var(--ink);}
+html[data-theme="light"] .blip .blip-label.ambient{opacity:.6;}
+html[data-theme="light"] #home-painel .radar-wrap{background:none; border:none; box-shadow:none; padding:0; zoom:1; border-radius:0;}
 /* Celular: o radar sobe para um painel azul retangular, acima dos Números do Radar */
 @media(max-width:900px){
 html[data-theme="light"] #home-painel{
-  --bg:#0E1A2B; --bg-elevated:#142842; --bg-card:#16304C; --border:#23405F; --border-soft:#1C3350;
-  --ink:#EAF2F6; --ink-muted:#8FA6BE; --ink-dim:#5F7893; --teal:#2FD9C4; --teal-deep:#17B6A3; --amber:#F5A93E; --coral:#F0654E; --violet:#8C7CF0; --gray:#6B7A8C;
-  background:#0E1A2B; color:var(--ink); border-radius:18px; padding:28px 20px 8px; box-shadow:0 6px 22px rgba(14,26,43,.22);
+  background:transparent; border:1px solid var(--border); border-radius:18px; padding:28px 20px 8px; box-shadow:none;
 }
 html[data-theme="light"] #home-painel .radar-wrap{margin:0 0 26px;}
 html[data-theme="light"] #home-painel .indicators{margin-bottom:22px;}
@@ -826,7 +832,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <div class="blip amber" id="radar-blip-3" style="top:20%; left:30%; animation-delay:1.8s;" onclick="nav('editais')"><div class="blip-label"></div></div>
       </div>
       <div style="display:flex; align-items:center; gap:10px; margin-top:22px; opacity:0.92;">
-        <img src="assets/radar-marca.webp" alt="Radar Transformare" width="44" height="44" style="width:44px; height:44px; object-fit:contain;">
+        <img class="marca-escura" src="assets/radar-marca.webp" alt="Radar Transformare" width="44" height="44" style="width:44px; height:44px; object-fit:contain;"><img class="marca-clara" src="assets/radar-marca-verde.webp" alt="" aria-hidden="true" width="44" height="44" style="width:44px; height:44px; object-fit:contain;">
         <div>
           <div style="font-family:var(--font-mono); font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-muted);">Motor de monitoramento</div>
           <div style="font-family:var(--font-display); font-size:13.5px; font-weight:600; color:var(--ink-muted);">Radar Transformare</div>
