@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Transformare — Portal de Editais</title>
+<title>Radar Transformare — Portal de Editais</title>
 <meta name="description" content="Radar Transformare: editais, chamamentos e credenciamentos da área da saúde (Psicologia, Nutrição, Fonoaudiologia e mais) monitorados no PNCP, organizados e comparáveis, com Índice de atratividade e aderência ao seu perfil.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -673,8 +673,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="logo-mark">
         <img src="assets/logo-transformare.webp" alt="Transformare" width="34" height="34" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
       </div>
-      <div class="logo-text">TRANSFORMARE<span>.</span></div>
-      <span class="beta-tag" title="Versão de testes — clique para enviar sua opinião" onclick="event.stopPropagation(); openFeedbackModal()">BETA</span>
+      <div class="logo-text">RADAR TRANSFORMARE<span>.</span></div>
     </div>
     <nav class="main-nav" id="mainNav">
       <button data-view="home" class="active">Início</button>
@@ -939,8 +938,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <h3>10. Público</h3>
     <p>O Portal é destinado a profissionais maiores de 18 anos. Não coletamos intencionalmente dados de crianças ou adolescentes.</p>
 
-    <h3>11. Versão beta</h3>
-    <p>O Portal está em fase de testes (beta). Funcionalidades podem mudar e as informações sobre editais podem conter imprecisões — confira sempre o edital oficial antes de se inscrever. Seu feedback nos ajuda a melhorar.</p>
+    <h3>11. Precisão das informações</h3>
+    <p>As informações sobre editais vêm de fontes públicas oficiais, mas podem conter imprecisões ou ficar desatualizadas — confira sempre o edital oficial antes de se inscrever. Funcionalidades podem mudar ao longo do tempo. Seu feedback nos ajuda a melhorar.</p>
 
     <h3>12. Alterações desta política</h3>
     <p>Podemos atualizar esta política. A versão e a data de vigência ficam sempre no topo desta página; mudanças relevantes serão avisadas no Portal ou por e-mail.</p>
@@ -956,7 +955,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p style="color:var(--ink);">O edital é a matéria-prima. A Transformare agrega valor ao encontrar, filtrar, organizar, analisar e explicar — conectando cada oportunidade ao profissional certo.</p>
     <p>Monitoramos continuamente o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, cobrindo inicialmente Psicologia, Nutrição, Fonoaudiologia, Farmácia e Enfermagem — com arquitetura pronta para novas profissões.</p>
     <p>Quando avaliada, cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong> — uma nota de 1 a 5 que leva em conta retorno financeiro, facilidade de entrada, aderência aos serviços da Transformare e complexidade documental. É um indicador interno, atribuído manualmente por um analista da Transformare — não é uma informação oficial do órgão responsável, não representa classificação oficial e não substitui o julgamento previsto no edital. Nem todo edital publicado já foi avaliado; quando ainda não foi, isso fica informado na página do edital, com a opção de solicitar a avaliação.</p>
-    <p>O Portal está em versão beta: os editais vêm de fontes públicas oficiais, mas podem conter imprecisões — confira sempre o edital oficial antes de se inscrever. Encontrou algo estranho? <a style="color:var(--teal); cursor:pointer;" onclick="openFeedbackModal()">Envie seu feedback</a>.</p>
+    <p>Os editais vêm de fontes públicas oficiais, mas podem conter imprecisões — confira sempre o edital oficial antes de se inscrever. Encontrou algo estranho? <a style="color:var(--teal); cursor:pointer;" onclick="openFeedbackModal()">Envie seu feedback</a>.</p>
     <div style="background:rgba(47,217,196,0.08); border:1px solid rgba(47,217,196,0.3); border-radius:14px; padding:18px 20px; margin-top:22px;">
       <p style="color:var(--ink); margin:0 0 6px; font-weight:600;">⇄ Compare oportunidades lado a lado</p>
       <p style="margin:0;">Encontrou mais de um edital interessante? Clique em "Comparar" nos cards que te chamaram atenção e veja prazo, remuneração, índice de atratividade e requisitos lado a lado — sem precisar abrir cada um separadamente.</p>
@@ -1132,7 +1131,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <button class="btn-ghost" onclick="adminRequestOwnPasswordReset()">Redefinir minha senha</button>
     <button class="btn-ghost" onclick="adminLogout()">Sair do admin</button>
   </div>
-  <div class="admin-flag">⚠ Área restrita — acesso por login e senha (Supabase Auth), liberado apenas para e-mails autorizados.</div>
+  <div class="admin-flag">⚠ Área restrita — acesso exclusivo da equipe Transformare.</div>
 
   <div class="admin-tabs" id="admin-tabs" role="tablist">
     <button class="admin-tab active" data-tab="hoje" onclick="adminTab('hoje')">Hoje</button>
@@ -1306,10 +1305,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
   <div style="margin-top:44px; border-top:1px solid var(--border-soft); padding-top:28px;">
     <div class="section-title" style="font-size:19px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleFeedbacksAdmin()">
-      <span>💬 Feedbacks do beta <span id="feedbacks-badge" class="plan-badge" style="display:none;"></span></span>
+      <span>💬 Feedbacks dos usuários <span id="feedbacks-badge" class="plan-badge" style="display:none;"></span></span>
       <span id="feedbacks-arrow" style="transition:transform .2s; display:inline-block; transform:rotate(180deg);">▾</span>
     </div>
-    <p class="section-sub" style="margin-bottom:12px;">Mensagens enviadas pelo botão BETA, pelo rodapé ou pela página Sobre.</p>
+    <p class="section-sub" style="margin-bottom:12px;">Mensagens enviadas pelo rodapé ou pela página Sobre.</p>
     <div id="feedbacks-body" style="display:block;">
       <div id="feedbacks-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
       <div style="overflow-x:auto;">
@@ -1540,7 +1539,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <span style="color:var(--ink-dim);">×</span>
     <img src="assets/logo-radar.webp" alt="Radar Transformare" width="26" height="26" loading="lazy" style="width:26px; height:26px; border-radius:50%; object-fit:cover;">
   </div>
-  TRANSFORMARE — PORTAL DE EDITAIS · VERSÃO BETA
+  RADAR TRANSFORMARE — PORTAL DE EDITAIS
   <div class="footer-links">
     <a href="#privacidade" onclick="event.preventDefault(); nav('privacidade')">Política de Privacidade e Segurança</a>
     <a href="#feedback" onclick="event.preventDefault(); openFeedbackModal()">Enviar feedback</a>
@@ -1817,7 +1816,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <div class="modal-overlay" id="feedback-modal">
   <div class="modal-box" style="max-width:460px;">
     <button class="modal-close" onclick="closeModal('feedback-modal')">×</button>
-    <h3>Sua opinião sobre o beta</h3>
+    <h3>Sua opinião</h3>
     <p>Encontrou um erro, algo confuso ou tem uma ideia? Conte pra gente — leva 1 minuto.</p>
     <div class="form-row"><label>Tipo</label>
       <select id="feedback-tipo">
@@ -7026,6 +7025,7 @@ async function init(){
   iniciarCicloRadarHome();
   // Link direto para a política (ex.: .../#privacidade em e-mails e mensagens do beta).
   if(location.hash === '#privacidade') nav('privacidade');
+  if(location.hash === '#admin') nav('admin'); // atalho: radartransformare.com.br/#admin abre o login do administrador
   carregarEditaisSupabase();
   carregarStatusFontes();
 }
