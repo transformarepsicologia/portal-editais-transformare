@@ -7492,16 +7492,27 @@ function mostrarAvisoCacheEditais(emIso){
   el.textContent = 'Não foi possível atualizar agora. Você está vendo a última lista salva' + (quando ? ' em ' + quando : '') + '. Tente novamente em alguns minutos.';
   document.body.insertBefore(el, document.body.firstChild);
 }
+async function lerCacheEstaticoEditais(){
+  // Cópia da lista publicada junto com o site (atualizada de tempos em tempos): serve a quem abre o portal pela primeira vez com o banco fora do ar.
+  try{
+    const r = await fetch('editais-cache.json', { cache:'no-store' });
+    if(!r.ok) return null;
+    const c = await r.json();
+    return (c && Array.isArray(c.data) && c.data.length) ? c : null;
+  }catch(e){ return null; }
+}
 async function carregarEditaisSupabase(){
-  if(!_sb) return;
-  const { data, error } = await _sb
-    .from('editais')
-    .select('*')
-    .order('criado_em', { ascending: false });
+  let data = null, error = null;
+  if(_sb){
+    ({ data, error } = await _sb
+      .from('editais')
+      .select('*')
+      .order('criado_em', { ascending: false }));
+  } else { error = true; }
   let linhas = data;
   if(error || !data){
-    // Banco fora do ar ou sem rede: usa a última cópia salva neste aparelho (se existir).
-    const c = lerCacheEditais();
+    // Banco fora do ar ou sem rede: usa a última cópia salva neste aparelho; se não houver, a cópia publicada com o site.
+    const c = lerCacheEditais() || await lerCacheEstaticoEditais();
     if(!c) return;
     linhas = c.data;
     mostrarAvisoCacheEditais(c.em);
