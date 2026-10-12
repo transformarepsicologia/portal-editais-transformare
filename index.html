@@ -3464,22 +3464,9 @@ function irParaEditaisComFiltro(filtro){
 // navegar sem voltar à lista.
 let _listaNavegacao = [];
 function renderOutrosEditais(id, el){
-  const ids = _listaNavegacao.length ? _listaNavegacao : oportunidades.map(x=>x.id);
-  const idx = ids.indexOf(id);
-  const ant = idx > 0 ? ids[idx-1] : null;
-  const prox = (idx >= 0 && idx < ids.length - 1) ? ids[idx+1] : null;
-  const nome = x => { const o = oportunidades.find(v=>v.id===x); return o ? esc(o.edital) : ''; };
-  const temOutros = ids.filter(x=>x!==id).length > 0;
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'margin-top:32px; padding-top:20px; border-top:1px solid var(--border-soft);';
-  wrap.innerHTML = `
-    ${temOutros ? `<p class="section-sub" style="margin:0 0 12px;">${idx >= 0 ? `Edital ${idx+1} de ${ids.length} na sua lista` : `${ids.length} editais`} (mesmos filtros e ordem da lista).</p>` : ''}
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-      ${temOutros ? `<button class="btn-ghost" ${ant==null?'disabled style="opacity:.4;"':''} onclick="openDetalhe(${ant})" title="${ant!=null?nome(ant):''}">‹ Anterior</button>
-      <button class="btn-ghost" ${prox==null?'disabled style="opacity:.4;"':''} onclick="openDetalhe(${prox})" title="${prox!=null?nome(prox):''}">Próximo ›</button>
-      <button class="btn-ghost" onclick="nav('editais')">Ver toda a lista</button>` : ''}
-      <button class="btn-ghost" style="margin-left:auto;" onclick="window.scrollTo({top:0, behavior:'smooth'})">↑ Voltar ao topo</button>
-    </div>`;
+  wrap.style.cssText = 'margin-top:32px; padding-top:20px; border-top:1px solid var(--border-soft); display:flex; justify-content:flex-end;';
+  wrap.innerHTML = `<button class="btn-ghost" onclick="window.scrollTo({top:0, behavior:'smooth'})">↑ Voltar ao topo</button>`;
   el.appendChild(wrap);
 }
 function openDetalhe(id){
