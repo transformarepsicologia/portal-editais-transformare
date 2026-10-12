@@ -3317,7 +3317,7 @@ function renderMinhaConta(){
     } else {
       altas.slice(0,20).forEach(({o, ad})=>{
         const card = renderCard(o);
-        card.insertAdjacentHTML('afterbegin', `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span><span class="aderencia-motivo">${esc(ad.motivos.join(' + ') || 'Poucos critérios em comum com o seu perfil')}</span></div>` + entendaNotaHTML(ad));
+        card.insertAdjacentHTML('afterbegin', `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span></div>` + entendaNotaHTML(ad));
         adBox.appendChild(card);
       });
       if(altas.length>20){ const m=document.getElementById('conta-aderentes-mais'); if(m) m.textContent = `Mostrando 20 de ${altas.length}.`; }
