@@ -2167,7 +2167,7 @@ const TIPOS = ["Credenciamento","Edital","Chamamento Público","Pregão","Contra
 const MODALIDADES = ["Presencial","Presencial (in company)","Itinerante","Presencial e online","Online","Home care"];
 // Valores antigos viram os novos (perfil salvo no navegador, favoritos, etc.).
 function normModalidade(m){ return ({'Híbrido':'Presencial e online','Presencial e Online':'Presencial e online'})[m] || m; }
-const ABRANGENCIAS = ["Nacional","Estadual","Municipal"];
+const ABRANGENCIAS = ["Nacional","Estadual","Regional","Municipal"];
 // "Para quem é" — que tipo de contratado o edital aceita (coluna aceita_contratacao no Supabase).
 // PF/PJ = o profissional se credencia sozinho (como pessoa física ou com CNPJ próprio);
 // Clínica = o edital exige equipe multidisciplinar, então só uma clínica consegue atender.
@@ -2861,7 +2861,7 @@ function normEscolaridade(v){ return v === 'Especialização / Residência' ? 'E
 const REM_TIPOS = {atendimento:'por atendimento', hora:'por hora', mensal:'por mês'};
 function chipsAbrangenciaPerfil(boxId, selecionadas){
   const box = document.getElementById(boxId); box.innerHTML = '';
-  ['Municipal','Estadual','Nacional'].forEach(a=>{
+  ['Municipal','Regional','Estadual','Nacional'].forEach(a=>{
     const c = document.createElement('div');
     c.className = 'chip-opt' + ((selecionadas||[]).includes(a) ? ' selected' : '');
     c.textContent = a;
@@ -3068,7 +3068,7 @@ function calcularAderencia(o, u){
     else add('Modalidade', 0, 15, 'a modalidade não é a que você atende');
   }
   if((u.abrs||[]).length){
-    if(u.abrs.includes(o.abrangencia)){ motivos.push('abrangência ' + String(o.abrangencia).toLowerCase()); add('Abrangência', 15, 15, 'é a abrangência que você escolheu'); }
+    if(u.abrs.includes(String(o.abrangencia||'').split(/[\s(]/)[0])){ motivos.push('abrangência ' + String(o.abrangencia).toLowerCase()); add('Abrangência', 15, 15, 'é a abrangência que você escolheu'); }
     else add('Abrangência', 0, 15, 'não é uma abrangência que você escolheu');
   }
   if(u.remMin){
