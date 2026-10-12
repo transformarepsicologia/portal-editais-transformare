@@ -54,7 +54,13 @@ header.topbar{
 .r-espelho{display:inline-block; color:inherit !important; transform:perspective(220px) rotateY(180deg); transition:transform .9s cubic-bezier(.4,0,.2,1);}
 .r-espelho.normal{transform:perspective(220px) rotateY(0deg);}
 .logo:hover .r-espelho.normal{transform:perspective(220px) rotateY(180deg);}
-@media (prefers-reduced-motion: reduce){ .r-espelho{transition:none;} }
+.rl{display:inline-block; color:inherit !important; transform:perspective(220px) rotateY(180deg); transition:transform .8s cubic-bezier(.4,0,.2,1);}
+.rl.normal{transform:perspective(220px) rotateY(0deg);}
+.logo:hover .rl.ultimo.normal{transform:perspective(220px) rotateY(180deg);}
+.rl.gira{animation:rlGira .9s cubic-bezier(.4,0,.2,1);}
+@keyframes rlGira{from{transform:perspective(220px) rotateY(0deg);} to{transform:perspective(220px) rotateY(360deg);}}
+.sr-only-rl{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
+@media (prefers-reduced-motion: reduce){ .r-espelho,.rl{transition:none;} .rl.gira{animation:none;} }
 nav.main-nav{display:flex; align-items:center; gap:2px; flex-wrap:wrap;}
 nav.main-nav button{
   background:none; border:none; color:var(--ink-muted); font-size:13.5px; padding:9px 13px; border-radius:7px;
@@ -679,7 +685,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="logo-mark">
         <img src="assets/radar-marca.webp" alt="Radar Transformare" width="56" height="56" style="width:100%; height:100%; object-fit:contain;">
       </div>
-      <div class="logo-text">RADA<span class="r-espelho">R</span> TRANSFORMARE<span>.</span></div>
+      <div class="logo-text"><span class="rl" aria-hidden="true">R</span><span class="rl" aria-hidden="true">A</span><span class="rl" aria-hidden="true">D</span><span class="rl" aria-hidden="true">A</span><span class="rl ultimo" aria-hidden="true">R</span><span class="sr-only-rl">RADAR</span> TRANSFORMARE<span>.</span></div>
     </div>
     <nav class="main-nav" id="mainNav">
       <button data-view="home" class="active">Início</button>
@@ -2442,6 +2448,7 @@ function exigirCadastro(acao){
   return false;
 }
 function nav(view){
+  if(typeof radarGira==='function') radarGira();
   if(view === 'admin' && !adminAuthed) view = 'admin-login';
   if(view === 'perfil' && !userProfile) view = 'login';
   if((view === 'login' || view === 'cadastro') && userProfile) view = 'minha-conta';
@@ -8759,6 +8766,19 @@ async function removerMotivoPadrao(id){
 <script>
 /* Marca: o último R de RADAR nasce espelhado e vira normal logo depois que o site abre (passar o mouse no logo espelha de novo). */
 setTimeout(function(){ document.querySelectorAll('.r-espelho').forEach(function(e){ e.classList.add('normal'); }); }, 1500);
+/* Logo do topo: RADAR nasce todo espelhado e as letras viram ao normal em onda; a cada página nova, uma das letras R/D dá uma volta de lado. */
+var _rl = Array.prototype.slice.call(document.querySelectorAll('.logo-text .rl'));
+var _rlPronto = false, _rlVez = 0;
+_rl.forEach(function(e,i){ e.style.transitionDelay = (i*0.14)+'s'; });
+setTimeout(function(){ _rl.forEach(function(e){ e.classList.add('normal'); }); }, 900);
+setTimeout(function(){ _rl.forEach(function(e){ e.style.transitionDelay=''; }); _rlPronto = true; }, 900 + 4*140 + 900);
+function radarGira(){
+  if(!_rlPronto || !_rl.length) return;
+  var ordem = [0,2,4]; // R, D, R (o A é simétrico)
+  var e = _rl[ordem[_rlVez++ % ordem.length]];
+  e.classList.remove('gira'); void e.offsetWidth; e.classList.add('gira');
+  setTimeout(function(){ e.classList.remove('gira'); }, 1000);
+}
 </script>
 </body>
 </html>
