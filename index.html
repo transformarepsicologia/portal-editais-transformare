@@ -3567,7 +3567,7 @@ function openDetalhe(id){
           ${(temIndice && !ehPro()) ? `
           <div class="score-hero-body" style="flex:1;">
             <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — nota de 1 a 5 disponível no Plano Pro</div>
-            <div class="caption">Este edital já foi avaliado pela Transformare (retorno financeiro, facilidade de entrada, aderência e complexidade documental). Assine o Plano Transformare Pro para ver a nota.</div>
+            <div class="caption">Este edital já foi avaliado pela Transformare (retorno financeiro, facilidade de entrada, aderência e complexidade documental). Assine o Plano Transformare Pro para ver a nota e os pontos de destaque do edital.</div>
             <button class="btn-primary" style="margin-top:10px;" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
           </div>
           ` : temIndice ? `
@@ -3598,13 +3598,13 @@ function openDetalhe(id){
           </div>
         </details>
 
-        <div class="panel">
+        ${ehPro() ? `<div class="panel">
           <h4><span class="dot"></span>Pontos de destaque</h4>
           <div class="pontos-grid">
             <div class="pontos-box positivo" style="white-space:pre-line;"><span class="pb-title">✓ Ponto positivo</span>${o.pontosPositivos || 'Nenhum destaque adicional identificado.'}</div>
             <div class="pontos-box atencao" style="white-space:pre-line;"><span class="pb-title">⚠ Ponto de atenção</span>${o.pontosAtencao || 'Nenhum ponto de atenção informado.'}</div>
           </div>
-        </div>
+        </div>` : ''}
 
         ${ehPro() ? ctaProximoPasso : ''}
 
