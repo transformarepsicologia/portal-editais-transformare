@@ -3728,8 +3728,6 @@ function openDetalhe(id){
           `; })()}
         </div>
 
-        ${ehPro() ? portaisDocsPanelHTML() : ''}
-
         ${o.movimentacoes.length ? `<div class="panel">
           <h4><span class="dot"></span>Histórico de movimentações</h4>
           <ul class="timeline">${o.movimentacoes.map(m=>`<li><span class="date">${m.data}</span>${m.texto}</li>`).join('')}</ul>
