@@ -58,7 +58,7 @@ header.topbar{
 .rl.normal{transform:perspective(500px) rotateY(0deg);}
 .logo:hover .rl.ultimo.normal{transform:perspective(500px) rotateY(180deg);}
 .rl.gira{animation:rlGira 1.8s cubic-bezier(.45,.05,.25,1);}
-@keyframes rlGira{from{transform:perspective(500px) rotateY(0deg);} to{transform:perspective(500px) rotateY(360deg);}}
+@keyframes rlGira{from{transform:perspective(500px) rotateY(180deg); opacity:.45;} to{transform:perspective(500px) rotateY(0deg); opacity:1;}}
 .sr-only-rl{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
 @media (prefers-reduced-motion: reduce){ .r-espelho,.rl{transition:none;} .rl.gira{animation:none;} }
 nav.main-nav{display:flex; align-items:center; gap:2px; flex-wrap:wrap;}
