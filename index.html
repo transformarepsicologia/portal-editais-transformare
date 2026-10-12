@@ -107,6 +107,17 @@ header.topbar{
 }
 .topbar-inner{max-width:1240px; margin:0 auto; padding:16px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px;}
 .gated-oculto{display:none !important;}
+.entenda-nota{margin:-2px 0 12px; font-size:12.5px;}
+.entenda-nota summary{cursor:pointer; color:var(--teal); font-weight:600; list-style:none;}
+.entenda-nota summary::-webkit-details-marker{display:none;}
+.entenda-nota summary::before{content:"▸ "; }
+.entenda-nota[open] summary::before{content:"▾ "; }
+.entenda-nota .en-resumo{color:var(--ink-muted); line-height:1.55; margin:8px 0;}
+.entenda-nota ul{list-style:none; padding:0; margin:0;}
+.entenda-nota li{display:flex; gap:8px; padding:4px 0; border-bottom:1px dashed var(--border-soft); color:var(--ink-muted); line-height:1.45;}
+.entenda-nota li strong{color:var(--ink);}
+.entenda-nota .en-ic{width:16px; flex-shrink:0; color:var(--teal); font-weight:700;}
+.entenda-nota .en-aviso{background:rgba(245,169,62,.1); border:1px solid rgba(245,169,62,.35); color:var(--amber); border-radius:8px; padding:8px 10px; margin:10px 0 0; line-height:1.5;}
 .doc-emitir{display:inline-block; margin-left:8px; font-size:12px; font-weight:600; color:var(--teal); border:1px solid var(--teal); border-radius:20px; padding:1px 10px; white-space:nowrap;}
 .doc-emitir:hover{background:var(--teal); color:var(--bg);}
 body.logado .so-visitante{display:none !important;}
@@ -2977,69 +2988,84 @@ function perfilExtraParaBanco(e){
 }
 function normTxt(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase(); }
 
-// Aderência edital × perfil. Pesos seguem a prioridade: profissão > localização >
-// modalidade > abrangência > remuneração. Critério que a pessoa não preencheu no
-// perfil fica fora da conta (não pesa contra o edital).
+// Campos do perfil que contam para "perfil completo" (os mesmos da barra "Perfil preenchido").
+function perfilCompletude(u){
+  const campos = [
+    ['Profissão', (u.profs||[]).length], ['Estado', u.uf], ['Cidade', u.cidade], ['Modalidade', (u.mods||[]).length],
+    ['Abrangência', (u.abrs||[]).length], ['Remuneração mínima', u.remMin], ['Instrução', u.escolaridade],
+    ['Tempo de atuação', u.anosExp != null], ['Atuação (PF/PJ)', (u.atuacao||[]).length],
+    ['Especialidades', (u.especialidades||[]).length], ['Formato de atendimento', (u.formatos||[]).length], ['Meta mensal', u.metaMensal]
+  ];
+  const faltam = campos.filter(c=>!c[1]).map(c=>c[0]);
+  return { pct: Math.round((campos.length - faltam.length) / campos.length * 100), faltam };
+}
+const PESO_PERFIL_COMPLETO = 20;
+
+// Aderência edital × perfil (recurso do Plano Pro). Regras:
+//  - Pesos: profissão > localização > modalidade > abrangência > remuneração (+ contratação, instrução e experiência quando o edital pede).
+//  - Critério que o perfil não preencheu fica fora da conta; em troca, "Perfil completo" vale 20 pontos proporcionais ao % preenchido —
+//    por isso perfil incompleto reduz a nota.
+//  - Informação que o edital não traz (valor, especialidade, formato, forma de contratação) vale metade dos pontos do critério.
+//  - Quem atende "Presencial e online" recebe nota cheia em editais só presenciais ou só online.
+//  - Exigência que o perfil não atende (instrução, experiência, PF/PJ) limita a nota a 40%.
 function calcularAderencia(o, u){
   let pontos = 0, total = 0;
-  const motivos = [];
+  const motivos = [], det = [];
+  const add = (rotulo, pts, max, nota)=>{ pontos += pts; total += max; det.push({rotulo, pts, max, nota: nota||''}); };
   if((u.profs||[]).length){
-    total += 35;
     const comuns = (o.profissoes||[]).filter(p=>u.profs.includes(p));
-    if(comuns.length){ pontos += 35; motivos.push(comuns.join('/')); }
+    if(comuns.length){ motivos.push(comuns.join('/')); add('Profissão', 35, 35, 'o edital é para a sua profissão'); }
+    else add('Profissão', 0, 35, 'o edital não cita a sua profissão');
   }
   if(u.uf){
-    total += 25;
     const mesmaCidade = u.cidade && o.cidade && normTxt(u.cidade) === normTxt(o.cidade);
     if(o.uf === u.uf){
       const outraCidadeMunicipal = u.cidade && o.cidade && !mesmaCidade && o.abrangencia === 'Municipal';
-      pontos += outraCidadeMunicipal ? 18 : 25;
       motivos.push(mesmaCidade ? `${o.cidade}/${o.uf}` : o.uf);
+      add('Localização', outraCidadeMunicipal ? 18 : 25, 25, outraCidadeMunicipal ? 'mesmo estado, mas é de outra cidade' : (mesmaCidade ? 'é na sua cidade' : 'é no seu estado'));
     } else if(o.modalidade === 'Online'){
-      pontos += 25; motivos.push('sem deslocamento');
+      motivos.push('sem deslocamento'); add('Localização', 25, 25, 'é online, sem deslocamento');
     } else if(o.abrangencia === 'Nacional'){
-      pontos += 15; motivos.push('válido em todo o país');
-    }
+      motivos.push('válido em todo o país'); add('Localização', 15, 25, 'é de outro estado, mas vale em todo o país');
+    } else add('Localização', 0, 25, 'é de outro estado');
   }
   if((u.mods||[]).length){
-    total += 15;
-    if(u.mods.includes(o.modalidade)){ pontos += 15; motivos.push('atendimento ' + String(o.modalidade).toLowerCase()); }
-    else if(o.modalidade === 'Presencial e online' && u.mods.some(m=>m==='Presencial' || m==='Online')){ pontos += 10; motivos.push('atendimento presencial e online'); }
-    else if(String(o.modalidade).startsWith('Presencial') && u.mods.includes('Presencial')){ pontos += 12; motivos.push('atendimento presencial'); }
-    else if(u.mods.includes('Presencial e online') && (o.modalidade === 'Presencial' || o.modalidade === 'Online')){ pontos += 10; motivos.push('atendimento ' + String(o.modalidade).toLowerCase()); }
+    const m = String(o.modalidade);
+    if(u.mods.includes(o.modalidade)){ motivos.push('atendimento ' + m.toLowerCase()); add('Modalidade', 15, 15, 'a modalidade é a que você atende'); }
+    else if(u.mods.includes('Presencial e online') && (m === 'Presencial' || m === 'Online' || m.startsWith('Presencial'))){
+      motivos.push('atendimento ' + m.toLowerCase()); add('Modalidade', 15, 15, 'você atende presencial e online, então cobre este edital');
+    }
+    else if(m === 'Presencial e online' && u.mods.some(x=>x==='Presencial' || x==='Online')){ motivos.push('atendimento presencial e online'); add('Modalidade', 10, 15, 'o edital pede presencial e online e você atende só uma das duas'); }
+    else if(m.startsWith('Presencial') && u.mods.includes('Presencial')){ motivos.push('atendimento presencial'); add('Modalidade', 12, 15, 'presencial, com variação'); }
+    else add('Modalidade', 0, 15, 'a modalidade não é a que você atende');
   }
   if((u.abrs||[]).length){
-    total += 15;
-    if(u.abrs.includes(o.abrangencia)){ pontos += 15; motivos.push('abrangência ' + String(o.abrangencia).toLowerCase()); }
+    if(u.abrs.includes(o.abrangencia)){ motivos.push('abrangência ' + String(o.abrangencia).toLowerCase()); add('Abrangência', 15, 15, 'é a abrangência que você escolheu'); }
+    else add('Abrangência', 0, 15, 'não é uma abrangência que você escolheu');
   }
   if(u.remMin){
-    total += 10;
     const campo = {atendimento:o.valorAtendimento, hora:o.valorHora, mensal:o.valorMensal}[u.remTipo || 'atendimento'];
     const valor = parseMoneyValue(campo);
-    if(valor === null) pontos += 5; // edital não informa nesse formato: neutro
-    else if(valor >= u.remMin){ pontos += 10; motivos.push('remuneração compatível'); }
+    if(valor === null) add('Remuneração', 5, 10, 'o edital não informa o valor: vale metade dos pontos');
+    else if(valor >= u.remMin){ motivos.push('remuneração compatível'); add('Remuneração', 10, 10, 'o valor atende o seu mínimo'); }
+    else add('Remuneração', 0, 10, 'o valor está abaixo do seu mínimo');
   }
-  // Instrução e tempo de atuação só entram quando o edital exige algo. São
-  // requisitos de habilitação: se o perfil não atende, a aderência fica limitada
-  // a 40% e a justificativa avisa; se o perfil não informou, só avisa.
+  // Instrução e tempo de atuação só entram quando o edital exige algo; se o perfil não atende, a nota fica limitada a 40%.
   let naoAtende = false;
   if(o.escolaridadeMinima){
     const exigido = ESCOLARIDADES.indexOf(o.escolaridadeMinima);
     if(u.escolaridade){
-      total += 15;
-      if(ESCOLARIDADES.indexOf(u.escolaridade) >= exigido){ pontos += 15; motivos.push(o.escolaridadeMinima.toLowerCase() + ' ok'); }
-      else { naoAtende = true; motivos.push('⚠ exige ' + o.escolaridadeMinima.toLowerCase()); }
+      if(ESCOLARIDADES.indexOf(u.escolaridade) >= exigido){ motivos.push(o.escolaridadeMinima.toLowerCase() + ' ok'); add('Instrução', 15, 15, 'você atende a instrução exigida'); }
+      else { naoAtende = true; motivos.push('⚠ exige ' + o.escolaridadeMinima.toLowerCase()); add('Instrução', 0, 15, 'o edital exige ' + o.escolaridadeMinima.toLowerCase()); }
     } else motivos.push('⚠ exige ' + o.escolaridadeMinima.toLowerCase());
   }
   if(o.experienciaMinimaAnos){
     if(u.anosExp != null){
-      total += 15;
-      if(u.anosExp >= o.experienciaMinimaAnos){ pontos += 15; motivos.push(o.experienciaMinimaAnos + '+ anos de experiência'); }
-      else { naoAtende = true; motivos.push('⚠ exige ' + o.experienciaMinimaAnos + ' anos de experiência'); }
+      if(u.anosExp >= o.experienciaMinimaAnos){ motivos.push(o.experienciaMinimaAnos + '+ anos de experiência'); add('Experiência', 15, 15, 'você atende a experiência exigida'); }
+      else { naoAtende = true; motivos.push('⚠ exige ' + o.experienciaMinimaAnos + ' anos de experiência'); add('Experiência', 0, 15, 'o edital exige ' + o.experienciaMinimaAnos + ' anos de experiência'); }
     } else motivos.push('⚠ exige ' + o.experienciaMinimaAnos + ' anos de experiência');
   }
-  // Especialidades e formato de atendimento: comparam com o texto do edital.
-  // Se o edital não cita nenhuma especialidade/formato, fica neutro.
+  // Especialidades e formato de atendimento: comparam com o texto do edital; se o edital não cita, vale metade.
   const txt = normTxt([o.objeto, o.requisitos, o.edital].join(' '));
   const kws = {
     'Infantil':['infantil','crianca'],'Adolescentes':['adolescente'],'Adultos':['adulto'],'Idosos':['idoso'],'TEA / autismo':['autismo','tea ','espectro autista'],
@@ -3049,35 +3075,44 @@ function calcularAderencia(o, u){
   const casar = (escolhidas)=>{
     const doEdital = Object.keys(kws).filter(k=>kws[k].some(w=>txt.includes(w)));
     const relevantes = doEdital.filter(k=>ESPECIALIDADES.includes(k) === escolhidas.__esp);
-    if(!relevantes.length) return null;           // edital não cita: neutro
+    if(!relevantes.length) return null;           // edital não cita
     return relevantes.filter(k=>escolhidas.includes(k));
   };
   if((u.especialidades||[]).length){
     const lista = [...u.especialidades]; lista.__esp = true;
-    const r = casar(lista); total += 10;
-    if(r === null) pontos += 5; else if(r.length){ pontos += 10; motivos.push('área: ' + r.join('/').toLowerCase()); }
+    const r = casar(lista);
+    if(r === null) add('Especialidades', 5, 10, 'o edital não cita especialidade: vale metade dos pontos');
+    else if(r.length){ motivos.push('área: ' + r.join('/').toLowerCase()); add('Especialidades', 10, 10, 'a área do edital está entre as suas'); }
+    else add('Especialidades', 0, 10, 'a área do edital não está entre as suas');
   }
   if((u.formatos||[]).length){
     const lista = [...u.formatos]; lista.__esp = false;
-    const r = casar(lista); total += 5;
-    if(r === null) pontos += 3; else if(r.length){ pontos += 5; motivos.push('formato: ' + r.join('/').toLowerCase()); }
+    const r = casar(lista);
+    if(r === null) add('Formato de atendimento', 2.5, 5, 'o edital não cita o formato: vale metade dos pontos');
+    else if(r.length){ motivos.push('formato: ' + r.join('/').toLowerCase()); add('Formato de atendimento', 5, 5, 'o formato do edital está entre os seus'); }
+    else add('Formato de atendimento', 0, 5, 'o formato do edital não está entre os seus');
   }
-  // Forma de contratação (PF/PJ/Clínica): só conta quando o edital informa e o
-  // perfil diz como a pessoa atua. Também é requisito de habilitação.
+  // Forma de contratação (PF/PJ/Clínica): requisito de habilitação. Edital que não informa vale metade.
   const aceita = o.aceitaContratacao || [];
-  if(aceita.length && (u.atuacao||[]).length){
-    total += 15;
-    const aceitaPF = aceita.includes('Pessoa Física (PF)'), aceitaPJ = aceita.includes('Pessoa Jurídica (PJ)');
-    const soClinica = aceita.includes('Clínica (equipe multidisciplinar)') && !aceitaPF && !aceitaPJ;
-    if(u.atuacao.includes('PJ') && aceitaPJ){ pontos += 15; motivos.push('aceita PJ'); }
-    else if(u.atuacao.includes('PF') && aceitaPF){ pontos += 15; motivos.push('aceita PF'); }
-    else if(soClinica && u.atuacao.includes('PJ')){ pontos += 7; motivos.push('⚠ exige clínica com equipe multidisciplinar'); }
-    else { naoAtende = true; motivos.push('⚠ ' + (soClinica ? 'exige clínica com equipe multidisciplinar' : aceitaPJ ? 'só aceita PJ' : 'só aceita PF')); }
-    if(u.atuacao.includes('PJ') && u.empresa && u.empresa.situacao && u.empresa.situacao.toUpperCase() !== 'ATIVA') motivos.push('⚠ CNPJ não está ativo');
+  if((u.atuacao||[]).length){
+    if(!aceita.length) add('Forma de contratação', 7.5, 15, 'o edital não informa PF/PJ: vale metade dos pontos');
+    else {
+      const aceitaPF = aceita.includes('Pessoa Física (PF)'), aceitaPJ = aceita.includes('Pessoa Jurídica (PJ)');
+      const soClinica = aceita.includes('Clínica (equipe multidisciplinar)') && !aceitaPF && !aceitaPJ;
+      if(u.atuacao.includes('PJ') && aceitaPJ){ motivos.push('aceita PJ'); add('Forma de contratação', 15, 15, 'o edital aceita PJ'); }
+      else if(u.atuacao.includes('PF') && aceitaPF){ motivos.push('aceita PF'); add('Forma de contratação', 15, 15, 'o edital aceita PF'); }
+      else if(soClinica && u.atuacao.includes('PJ')){ motivos.push('⚠ exige clínica com equipe multidisciplinar'); add('Forma de contratação', 7, 15, 'o edital pede clínica com equipe multidisciplinar'); }
+      else { naoAtende = true; const m = soClinica ? 'exige clínica com equipe multidisciplinar' : aceitaPJ ? 'só aceita PJ' : 'só aceita PF'; motivos.push('⚠ ' + m); add('Forma de contratação', 0, 15, 'o edital ' + m); }
+      if(u.atuacao.includes('PJ') && u.empresa && u.empresa.situacao && u.empresa.situacao.toUpperCase() !== 'ATIVA') motivos.push('⚠ CNPJ não está ativo');
+    }
   }
+  // Perfil completo: quem não preencheu todo o cadastro perde parte destes pontos.
+  const comp = perfilCompletude(u);
+  const ptsPerfil = Math.round(PESO_PERFIL_COMPLETO * comp.pct / 100 * 10) / 10;
+  add('Perfil completo', ptsPerfil, PESO_PERFIL_COMPLETO, comp.pct >= 100 ? 'seu perfil está completo' : `seu perfil está ${comp.pct}% preenchido`);
   let pct = total ? Math.round(pontos / total * 100) : null;
   if(naoAtende && pct !== null) pct = Math.min(pct, 40);
-  return { pct, motivos };
+  return { pct, motivos, det, pontos, total, faltam: comp.faltam, perfilPct: comp.pct, limitado: naoAtende };
 }
 
 /* ================= MINHA CONTA ================= */
@@ -3135,8 +3170,8 @@ function renderMinhaConta(){
   // Indicadores do topo: alta aderência (70%+), melhor % e quanto do perfil está preenchido.
   const altaAderencia = todasAderencias.filter(x=>x.ad.pct >= 70).length;
   const melhorAderencia = todasAderencias.length ? todasAderencias[0].ad.pct : null;
-  const camposPerfil = [(u.profs||[]).length, u.uf, u.cidade, (u.mods||[]).length, (u.abrs||[]).length, u.remMin, u.escolaridade, u.anosExp != null, (u.atuacao||[]).length, (u.especialidades||[]).length, (u.formatos||[]).length, u.metaMensal];
-  const perfilPct = Math.round(camposPerfil.filter(Boolean).length / camposPerfil.length * 100);
+  const perfilInfo = perfilCompletude(u);
+  const perfilPct = perfilInfo.pct;
   const desde = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : '—';
 
   el.innerHTML = `
@@ -3193,7 +3228,7 @@ function renderMinhaConta(){
       <div>
         <div class="account-stats">
           <div class="indicator-card"><div class="num">${ehPro() ? altaAderencia : '🔒'}</div><div class="label">Editais com alta aderência (70%+)${ehPro() ? '' : ' — Plano Pro'}</div></div>
-          <div class="indicator-card"><div class="num">${melhorAderencia !== null ? melhorAderencia + '%' : '—'}</div><div class="label">Maior aderência ao seu perfil</div></div>
+          <div class="indicator-card"><div class="num">${ehPro() ? (melhorAderencia !== null ? melhorAderencia + '%' : '—') : '🔒'}</div><div class="label">Maior aderência ao seu perfil${ehPro() ? '' : ' — Plano Pro'}</div></div>
           <div class="indicator-card" style="cursor:pointer;" onclick="nav('perfil')" title="Completar perfil"><div class="num">${perfilPct}%</div><div class="label">Perfil preenchido${perfilPct < 100 ? ' — completar ›' : ''}</div></div>
         </div>
 
@@ -3202,7 +3237,8 @@ function renderMinhaConta(){
         <div class="op-grid" id="conta-acompanhados"></div>
 
         ${ehPro() ? `<div class="section-title" style="font-size:17px; margin-top:32px;">Editais com alta aderência (70% ou mais)</div>
-        <p class="section-sub" style="margin-bottom:16px;">Calculado pela sua profissão, localização, modalidade, abrangência, remuneração mínima, instrução, tempo de atuação e forma de atuação (PF/PJ). <a style="color:var(--teal); cursor:pointer;" onclick="nav('perfil')">Ajustar perfil</a> <span id="conta-aderentes-mais"></span></p>
+        <p class="section-sub" style="margin-bottom:16px;">Mostra o quanto cada edital combina com o seu perfil. Em cada edital, abra <strong>“Entenda a nota”</strong> para ver como ela foi calculada. <span id="conta-aderentes-mais"></span></p>
+        <div id="conta-aderentes-aviso"></div>
         <div class="op-grid" id="conta-aderentes"></div>` : ''}
 
         ${ehPro() ? '' : `<div class="pro-lock-box" style="margin-top:32px;"><div style="font-weight:600; margin-bottom:6px;">🔒 Editais mais aderentes ao seu perfil — Plano Pro</div><div style="font-size:13px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${todasAderencias.length ? `Encontramos ${todasAderencias.length} edital(is) ativo(s) com algum grau de aderência ao seu perfil` + (altaAderencia ? `, ${altaAderencia} com 70% ou mais` : '') + '.' : 'Complete seu perfil para a Transformare apontar onde você tem mais chance.'} Assine o Plano Pro para ver a lista ordenada, sem perder tempo procurando edital por edital.</div><button class="btn-primary" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button></div>`}
@@ -3217,6 +3253,10 @@ function renderMinhaConta(){
   `;
 
   const adBox = document.getElementById('conta-aderentes');
+  const adAviso = document.getElementById('conta-aderentes-aviso');
+  if(adAviso && perfilInfo.pct < 100){
+    adAviso.innerHTML = `<div class="atencao-box" style="margin:0 0 14px;">⚠ <strong>Seu perfil está ${perfilInfo.pct}% preenchido.</strong> Perfil incompleto reduz a nota de aderência. Faltam: ${esc(perfilInfo.faltam.join(', '))}. <a style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="nav('perfil')">Completar meu perfil</a></div>`;
+  }
   if(adBox){
     const altas = todasAderencias.filter(x=>x.ad.pct >= 70);
     if(altas.length===0){
@@ -3224,7 +3264,7 @@ function renderMinhaConta(){
     } else {
       altas.slice(0,20).forEach(({o, ad})=>{
         const card = renderCard(o);
-        card.insertAdjacentHTML('afterbegin', `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span><span class="aderencia-motivo">${esc(ad.motivos.join(' + ') || 'Poucos critérios em comum com o seu perfil')}</span></div>`);
+        card.insertAdjacentHTML('afterbegin', `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span><span class="aderencia-motivo">${esc(ad.motivos.join(' + ') || 'Poucos critérios em comum com o seu perfil')}</span></div>` + entendaNotaHTML(ad));
         adBox.appendChild(card);
       });
       if(altas.length>20){ const m=document.getElementById('conta-aderentes-mais'); if(m) m.textContent = `Mostrando 20 de ${altas.length}.`; }
@@ -3947,6 +3987,20 @@ const PORTAIS_DOCS = [
   {nome:'Compras.gov.br / SICAF (cadastro de fornecedores)', url:'https://www.gov.br/compras/pt-br'},
 ];
 /* Para cada item do checklist, acha o portal onde o documento é emitido (só Plano Pro): a pessoa clica, emite e depois marca o item. */
+function entendaNotaHTML(ad){
+  if(!ad || !ad.det) return '';
+  const f = n => String(Math.round(n*10)/10).replace('.', ',');
+  const linhas = ad.det.map(d=>{
+    const icone = d.pts >= d.max ? '✓' : d.pts > 0 ? '~' : '✕';
+    return `<li><span class="en-ic">${icone}</span><span><strong>${esc(d.rotulo)}</strong> — ${f(d.pts)} de ${f(d.max)} · ${esc(d.nota)}</span></li>`;
+  }).join('');
+  const aviso = ad.faltam && ad.faltam.length
+    ? `<p class="en-aviso">⚠ Seu perfil está ${ad.perfilPct}% preenchido e isso reduz a nota. Complete: ${esc(ad.faltam.join(', '))}. <a style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="event.stopPropagation(); nav('perfil')">Completar perfil</a></p>` : '';
+  const lim = ad.limitado ? `<p class="en-aviso">⚠ A nota ficou limitada a 40% porque o edital faz uma exigência que o seu perfil não atende.</p>` : '';
+  return `<details class="entenda-nota"><summary>Entenda a nota</summary>
+    <p class="en-resumo">A nota é a soma dos pontos que este edital ganhou (<strong>${f(ad.pontos)} de ${f(ad.total)}</strong> possíveis). O que o edital não informa vale metade dos pontos, e perfil incompleto reduz a nota.</p>
+    <ul>${linhas}</ul>${aviso}${lim}</details>`;
+}
 function portalDoDocumento(texto){
   const t = String(texto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const por = nome => PORTAIS_DOCS.find(x=>x.nome.indexOf(nome)===0);
