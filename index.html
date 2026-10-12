@@ -807,7 +807,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="filter-field"><label>UF</label><select id="f-uf"><option value="">Todas</option></select></div>
       <div class="filter-field filtro-oculto" id="ff-org"><label>Órgão</label><select id="f-org"><option value="">Todos</option></select></div>
       <div class="filter-field"><label>Situação</label><select id="f-sit"><option value="">Todas</option></select></div>
-      <div class="filter-field"><label>Ordenar por</label><select id="f-sort"><option value="">Padrão</option><option value="prazo">Prazo mais próximo</option><option value="indice">Maior Índice Transformare</option><option value="recentes">Publicação mais recente</option></select></div>
+      <div class="filter-field" id="f-sort-field" style="display:none;"><label>Ordenar por</label><select id="f-sort"><option value="">Padrão</option><option value="prazo">Prazo mais próximo</option><option value="indice">Maior Índice Transformare</option><option value="recentes">Publicação mais recente</option></select></div>
     </div>
     <div class="filter-row" style="margin-top:10px; align-items:center;">
       <button class="btn-ghost" id="btn-limpar-filtros" onclick="clearAllFilters()">Limpar filtros</button>
@@ -2973,6 +2973,7 @@ function exigePro(recurso){
   return false;
 }
 function updateNavCta(){
+  atualizarOrdenarPro();
   const ctaBtn = document.getElementById('nav-cta-btn');
   if(userProfile){
     ctaBtn.textContent = (userProfile.nome || '').split(' ')[0] || 'Minha conta';
@@ -3278,7 +3279,15 @@ function eAbreEmBreve(o){
 // senão a lista mostra mais itens do que o número anunciado no quadrado.
 let indicadoresUsandoDemo = false;
 
+// "Ordenar por" é recurso do Plano Pro: some do filtro (e é zerado) para quem não é Pro
+function atualizarOrdenarPro(){
+  const campo = document.getElementById('f-sort-field'); if(!campo) return;
+  const pro = ehPro();
+  campo.style.display = pro ? '' : 'none';
+  if(!pro){ const sel = document.getElementById('f-sort'); if(sel && sel.value) sel.value = ''; }
+}
 function applyFilters(){
+  atualizarOrdenarPro();
   const busca = document.getElementById('ed-search').value.trim().toLowerCase();
   const prof = document.getElementById('f-prof').value;
   const tipo = document.getElementById('f-tipo').value;
