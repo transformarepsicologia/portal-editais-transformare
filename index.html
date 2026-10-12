@@ -7466,15 +7466,51 @@ function mapEditalSupabase(row){
     movimentacoes: Array.isArray(row.movimentacoes) ? row.movimentacoes : []
   };
 }
+/* Cópia salva dos editais neste aparelho: se o banco ou a internet falharem, o portal continua mostrando
+   a última lista carregada (com aviso de data), em vez de ficar vazio. */
+const CACHE_EDITAIS_CHAVE = 'radar_cache_editais_v1';
+function salvarCacheEditais(data){
+  try{
+    const txt = JSON.stringify({ em: new Date().toISOString(), data });
+    if(txt.length > 3500000) return;   // grande demais para o armazenamento do navegador
+    localStorage.setItem(CACHE_EDITAIS_CHAVE, txt);
+  }catch(e){}
+}
+function lerCacheEditais(){
+  try{
+    const c = JSON.parse(localStorage.getItem(CACHE_EDITAIS_CHAVE) || 'null');
+    return (c && Array.isArray(c.data) && c.data.length) ? c : null;
+  }catch(e){ return null; }
+}
+function mostrarAvisoCacheEditais(emIso){
+  if(document.getElementById('aviso-cache-editais')) return;
+  const d = new Date(emIso);
+  const quando = isNaN(d) ? '' : d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  const el = document.createElement('div');
+  el.id = 'aviso-cache-editais';
+  el.style.cssText = 'background:#3a2e12; color:#f5d98a; border-bottom:1px solid #6b5420; padding:8px 16px; font-size:13px; text-align:center;';
+  el.textContent = 'Não foi possível atualizar agora. Você está vendo a última lista salva' + (quando ? ' em ' + quando : '') + '. Tente novamente em alguns minutos.';
+  document.body.insertBefore(el, document.body.firstChild);
+}
 async function carregarEditaisSupabase(){
   if(!_sb) return;
   const { data, error } = await _sb
     .from('editais')
     .select('*')
     .order('criado_em', { ascending: false });
-  if(error || !data) return;
+  let linhas = data;
+  if(error || !data){
+    // Banco fora do ar ou sem rede: usa a última cópia salva neste aparelho (se existir).
+    const c = lerCacheEditais();
+    if(!c) return;
+    linhas = c.data;
+    mostrarAvisoCacheEditais(c.em);
+  } else {
+    if(!adminAuthed) salvarCacheEditais(data);
+    const av = document.getElementById('aviso-cache-editais'); if(av) av.remove();
+  }
 
-  const reais = data.map(mapEditalSupabase);
+  const reais = linhas.map(mapEditalSupabase);
   // remove versões antigas dos mesmos editais reais; os editais de demonstração
   // do protótipo só continuam aparecendo se o banco ainda não tiver nenhum edital real.
   oportunidades = oportunidades.filter(o => !o.origemSupabase && !(reais.length && IDS_EDITAIS_DEMO.has(o.id)));
