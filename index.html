@@ -2369,6 +2369,13 @@ const IDS_EDITAIS_DEMO = new Set(oportunidades.map(o=>o.id));
 let favoritos = new Set();
 let alertPrefs = {profTexto:'', uf:new Set(), mod:new Set()};
 const ALERTA_MAX_UF = 2;
+/* Na tela de alertas, as modalidades de deslocamento aparecem agrupadas; os valores gravados nos editais não mudam. */
+const ALERTA_MODALIDADES = [
+  {rotulo:'Presencial', valores:['Presencial']},
+  {rotulo:'Presencial com deslocamento (ex: in company, home care, hospitalar, Unidades de Saúde)', valores:['Presencial (in company)','Home care','Itinerante']},
+  {rotulo:'Presencial e online', valores:['Presencial e online']},
+  {rotulo:'Online', valores:['Online']}
+];
 const _normAl = t => String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,'').trim();
 const ALERTA_SINONIMOS = { dentista:'odontologia', odontologo:'odontologia', odontologa:'odontologia', medico:'medicina', medica:'medicina', 'assistente social':'assistencia social', 'terapeuta ocupacional':'terapia ocupacional' };
 function alertaCombinaProfissao(o){
@@ -4507,9 +4514,10 @@ function renderAlertChips(){
   });
 
   const modBox = document.getElementById('alert-mod'); modBox.innerHTML='';
-  MODALIDADES.forEach(m=>{
-    const c = document.createElement('div'); c.className='chip-opt'+(alertPrefs.mod.has(m)?' selected':''); c.textContent=m;
-    c.onclick = async ()=>{ alertPrefs.mod.has(m)?alertPrefs.mod.delete(m):alertPrefs.mod.add(m); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
+  ALERTA_MODALIDADES.forEach(g=>{
+    const marcado = g.valores.every(v=>alertPrefs.mod.has(v));
+    const c = document.createElement('div'); c.className='chip-opt'+(marcado?' selected':''); c.textContent=g.rotulo;
+    c.onclick = async ()=>{ g.valores.forEach(v=> marcado ? alertPrefs.mod.delete(v) : alertPrefs.mod.add(v)); await saveAlertPrefs(); renderAlertChips(); renderAlertas(); };
     modBox.appendChild(c);
   });
 }
