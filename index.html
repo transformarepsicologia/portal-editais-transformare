@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Radar Transformare — Portal de Editais</title>
 <meta name="description" content="Radar Transformare: editais, chamamentos e credenciamentos da área da saúde (Psicologia, Nutrição, Fonoaudiologia e mais) monitorados no PNCP, organizados e comparáveis, com Índice de atratividade e aderência ao seu perfil.">
+<link rel="icon" type="image/png" href="assets/radar-marca-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -45,10 +46,11 @@ header.topbar{
 }
 .topbar-inner{max-width:1240px; margin:0 auto; padding:16px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px;}
 .logo{display:flex; align-items:center; gap:10px; cursor:pointer;}
-.logo-mark{width:34px;height:34px; position:relative; border-radius:50%; overflow:hidden; border:1.5px solid rgba(255,255,255,0.15); background:#F4F1E9; flex-shrink:0;}
+.logo-mark{width:46px;height:46px; position:relative; flex-shrink:0; filter:drop-shadow(0 0 6px rgba(255,190,40,0.35));}
 .logo-mark svg{width:100%; height:100%;}
 .logo-text{font-family:var(--font-display); font-weight:700; font-size:19px; letter-spacing:0.3px;}
 .logo-text span{color:var(--teal);}
+.r-espelho{display:inline-block; transform:scaleX(-1); color:inherit !important;}
 nav.main-nav{display:flex; align-items:center; gap:2px; flex-wrap:wrap;}
 nav.main-nav button{
   background:none; border:none; color:var(--ink-muted); font-size:13.5px; padding:9px 13px; border-radius:7px;
@@ -671,9 +673,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="topbar-inner">
     <div class="logo" onclick="nav('home')">
       <div class="logo-mark">
-        <img src="assets/logo-transformare.webp" alt="Transformare" width="34" height="34" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+        <img src="assets/radar-marca.webp" alt="Radar Transformare" width="46" height="46" style="width:100%; height:100%; object-fit:contain;">
       </div>
-      <div class="logo-text">RADAR TRANSFORMARE<span>.</span></div>
+      <div class="logo-text">RADA<span class="r-espelho">R</span> TRANSFORMARE<span>.</span></div>
     </div>
     <nav class="main-nav" id="mainNav">
       <button data-view="home" class="active">Início</button>
@@ -728,7 +730,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <div class="blip amber" id="radar-blip-3" style="top:20%; left:30%; animation-delay:1.8s;" onclick="nav('editais')"><div class="blip-label"></div></div>
       </div>
       <div style="display:flex; align-items:center; gap:10px; margin-top:22px; opacity:0.92;">
-        <img src="assets/logo-radar.webp" alt="Radar Transformare" width="38" height="38" style="width:38px; height:38px; border-radius:50%; object-fit:cover;">
+        <img src="assets/radar-marca.webp" alt="Radar Transformare" width="44" height="44" style="width:44px; height:44px; object-fit:contain;">
         <div>
           <div style="font-family:var(--font-mono); font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-muted);">Motor de monitoramento</div>
           <div style="font-family:var(--font-display); font-size:13.5px; font-weight:600; color:var(--ink-muted);">Radar Transformare</div>
@@ -1537,9 +1539,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:12px;">
     <img src="assets/logo-transformare.webp" alt="Transformare" width="26" height="26" loading="lazy" style="width:26px; height:26px; border-radius:50%; object-fit:cover;">
     <span style="color:var(--ink-dim);">×</span>
-    <img src="assets/logo-radar.webp" alt="Radar Transformare" width="26" height="26" loading="lazy" style="width:26px; height:26px; border-radius:50%; object-fit:cover;">
+    <img src="assets/radar-marca.webp" alt="Radar Transformare" width="30" height="30" loading="lazy" style="width:30px; height:30px; object-fit:contain;">
   </div>
-  RADAR TRANSFORMARE — PORTAL DE EDITAIS
+  RADA<span class="r-espelho">R</span> TRANSFORMARE — PORTAL DE EDITAIS
   <div class="footer-links">
     <a href="#privacidade" onclick="event.preventDefault(); nav('privacidade')">Política de Privacidade e Segurança</a>
     <a href="#feedback" onclick="event.preventDefault(); openFeedbackModal()">Enviar feedback</a>
