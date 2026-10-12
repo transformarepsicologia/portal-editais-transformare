@@ -3363,7 +3363,7 @@ function reconstruirOpcoesSelect(select, opcoes){
 }
 function refreshProfFilterSelect(){
   const fp = document.getElementById('f-prof');
-  const opcoes = ordenarComPresentes(profissoesAtivasNomes(), valoresPresentesEmOportunidades(o=>o.profissoes));
+  const opcoes = [...valoresPresentesEmOportunidades(o=>o.profissoes)].sort((a,b)=>String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})); // menu em ordem alfabética
   reconstruirOpcoesSelect(fp, opcoes);
 }
 function refreshCadProfChips(){
@@ -5052,7 +5052,7 @@ function adminMudarPagina(delta, totalPaginas){
 }
 function popularFiltrosAdmin(){
   const ufs = [...new Set(oportunidades.map(o=>o.uf).filter(Boolean))].sort();
-  const profissoesTodas = [...new Set(oportunidades.flatMap(o=>o.profissoes||[]))].sort();
+  const profissoesTodas = [...new Set(oportunidades.flatMap(o=>o.profissoes||[]))].sort((a,b)=>String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'}));
   const situacoes = [...new Set(oportunidades.map(o=>situacaoExibida(o)).filter(Boolean))].sort();
   const selUf = document.getElementById('admin-filtro-uf');
   const selProf = document.getElementById('admin-filtro-profissao');
