@@ -76,8 +76,9 @@ nav.main-nav button.active{color:var(--teal); background:rgba(47,217,196,0.1);}
 
 main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
 .view{display:none;}
-.view.active{display:block; animation:fade .3s ease;}
-@keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+.view.active{display:block; animation:fade .7s cubic-bezier(.25,.1,.25,1);}
+@keyframes fade{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
+@media (prefers-reduced-motion: reduce){ .view.active{animation:none;} }
 
 /* ===== Hero / Radar signature ===== */
 .hero{
