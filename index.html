@@ -3199,6 +3199,10 @@ function renderMinhaConta(){
         <p class="section-sub" style="margin-bottom:16px;">Marque a estrela ☆ em qualquer edital para ele aparecer aqui. <span id="conta-fav-mais"></span></p>
         <div class="op-grid" id="conta-acompanhados"></div>
 
+        ${ehPro() ? `<div class="section-title" style="font-size:17px; margin-top:32px;">Editais com alta aderência (70% ou mais)</div>
+        <p class="section-sub" style="margin-bottom:16px;">Calculado pela sua profissão, localização, modalidade, abrangência, remuneração mínima, instrução, tempo de atuação e forma de atuação (PF/PJ). <a style="color:var(--teal); cursor:pointer;" onclick="nav('perfil')">Ajustar perfil</a> <span id="conta-aderentes-mais"></span></p>
+        <div class="op-grid" id="conta-aderentes"></div>` : ''}
+
         ${ehPro() ? '' : `<div class="pro-lock-box" style="margin-top:32px;"><div style="font-weight:600; margin-bottom:6px;">🔒 Editais mais aderentes ao seu perfil — Plano Pro</div><div style="font-size:13px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${todasAderencias.length ? `Encontramos ${todasAderencias.length} edital(is) ativo(s) com algum grau de aderência ao seu perfil` + (altaAderencia ? `, ${altaAderencia} com 70% ou mais` : '') + '.' : 'Complete seu perfil para a Transformare apontar onde você tem mais chance.'} Assine o Plano Pro para ver a lista ordenada, sem perder tempo procurando edital por edital.</div><button class="btn-primary" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button></div>`}
 
         <div class="lead-box" style="margin-top:32px;">
@@ -3209,6 +3213,21 @@ function renderMinhaConta(){
       </div>
     </div>
   `;
+
+  const adBox = document.getElementById('conta-aderentes');
+  if(adBox){
+    const altas = todasAderencias.filter(x=>x.ad.pct >= 70);
+    if(altas.length===0){
+      adBox.innerHTML = `<div class="empty-state">Nenhum edital com 70% ou mais de aderência no momento. Quanto mais completo o seu perfil, mais preciso fica o cálculo. <a style="color:var(--teal); cursor:pointer;" onclick="nav('perfil')">Completar perfil</a></div>`;
+    } else {
+      altas.slice(0,20).forEach(({o, ad})=>{
+        const card = renderCard(o);
+        card.insertAdjacentHTML('afterbegin', `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span><span class="aderencia-motivo">${esc(ad.motivos.join(' + ') || 'Poucos critérios em comum com o seu perfil')}</span></div>`);
+        adBox.appendChild(card);
+      });
+      if(altas.length>20){ const m=document.getElementById('conta-aderentes-mais'); if(m) m.textContent = `Mostrando 20 de ${altas.length}.`; }
+    }
+  }
 
   const acBox = document.getElementById('conta-acompanhados');
   if(acompanhados.length===0){
