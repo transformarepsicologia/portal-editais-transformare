@@ -3817,7 +3817,8 @@ function openDetalhe(id){
                 <span class="doc-check ${checks[i]?'checked':''}" id="doc-check-${o.id}-${i}">${checks[i]?'✓':''}</span>${d}${linkEmitirDocHTML(d)}
               </li>`).join('')}
           </ul>
-          ${ocultos>0 ? `
+          ${o.documentosPadrao ? `<p style="font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5;">Lista padrão: este edital ainda não teve os documentos detalhados pela Transformare. Confira a lista oficial no edital.</p>` : ''}
+          ${(ocultos>0 && !o.documentosPadrao) ? `
           <div class="checklist-cta" style="margin-top:10px;">
             <p>+ ${ocultos} outro${ocultos>1?'s':''} documento${ocultos>1?'s':''} exigido${ocultos>1?'s':''} neste edital. No plano Transformare Pro você recebe os links dos principais portais (CND da Receita, certificado do FGTS, CNDT e outros) junto com o checklist completo. Se você desejar, a lista completa de documentação pode ser organizada com o apoio da Transformare.</p>
             <button class="btn-primary" style="width:100%; margin-bottom:6px;" onclick="solicitarPlanoEssencial()">Quero o plano Pro (checklist completo)</button>
@@ -4116,6 +4117,16 @@ const DOC_PREVIEW_LIMIT = 5;
 // Mostra apenas os principais documentos no público (gostinho) — a lista
 // completa é tratada como algo a organizar com o apoio da Transformare
 // (sem falar em plano pago por enquanto).
+/* Checklist padrão para editais cujos documentos ainda não foram cadastrados pelo analista. */
+const DOCUMENTOS_PADRAO = [
+  'Documento de identidade e CPF',
+  'Registro ativo no conselho profissional',
+  'Certidão negativa do conselho profissional',
+  'Comprovante de endereço',
+  'CND Federal (Receita/PGFN)',
+  'Certificado de Regularidade do FGTS (CRF)',
+  'Comprovante de inscrição no CNPJ (se for pessoa jurídica)'
+];
 function docsPreview(documentos){
   if(ehEssencial()) return documentos || [];   // plano Transformare Pro: checklist completo
   return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
@@ -7717,7 +7728,8 @@ function mapEditalSupabase(row){
     requisitos: row.requisitos || 'Consulte o edital oficial no PNCP para os requisitos completos.',
     pontosPositivos: row.pontos_positivos || '',
     pontosAtencao: row.pontos_atencao || '',
-    documentos: (row.documentos && row.documentos.length) ? row.documentos : ['Consulte o edital oficial'],
+    documentos: (row.documentos && row.documentos.length) ? row.documentos : DOCUMENTOS_PADRAO,
+    documentosPadrao: !(row.documentos && row.documentos.length),
     urlOficial: row.url_oficial || row.url_pncp || 'https://pncp.gov.br/app/editais',
     urlEdital: row.url_edital || row.url_pncp || 'https://pncp.gov.br/app/editais',
     urlPncp: row.url_pncp || 'https://pncp.gov.br/app/editais',
