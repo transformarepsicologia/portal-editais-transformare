@@ -2180,6 +2180,17 @@ const SITUACAO_PNCP = {'revogada':'Revogado','revogado':'Revogado','anulada':'An
 // A situação exibida sai do prazo: vencido = Encerrado; até 7 dias = Próximo do encerramento;
 // prazo futuro = Aberto; sem prazo válido = Prazo não informado. Situações manuais
 // (Em análise, Retificado, Suspenso) e "Aberto" sem prazo (fluxo contínuo) são mantidas.
+/* Texto do prazo para o cliente: datas muito distantes costumam ser vigência do credenciamento, não data de inscrição. */
+function prazoRotulo(o, curto){
+  const raw = o && o.prazo;
+  if(!raw) return 'Não informado';
+  const d = parseDate(raw);
+  if(isNaN(d.getTime())) return raw;
+  const anos = (d.getTime() - Date.now()) / (365.25*24*3600*1000);
+  if(anos > 5) return 'Fluxo contínuo';
+  if(anos > 1.5) return (curto ? 'Vigência até ' : 'Vigência até ') + raw;
+  return raw;
+}
 function situacaoExibida(o){
   let s = o.situacao || '';
   s = SITUACAO_PNCP[String(s).trim().toLowerCase()] || s;
@@ -2647,7 +2658,7 @@ function renderCard(o){
           <span class="tag">${o.modalidade}</span>
           ${(o.aceitaContratacao||[]).map(p=>`<span class="tag">${p}</span>`).join('')}
           ${o.abertura ? `<span class="tag">Início: ${esc(o.abertura)}</span>` : ''}
-          <span class="tag">Prazo: ${o.prazo}</span>
+          <span class="tag">Prazo: ${prazoRotulo(o)}</span>
         </div>
         <div style="margin-top:10px;"><button class="wa-btn" onclick="shareWhatsApp(${o.id})">↗ WhatsApp</button>${adminAuthed ? `<button class="btn-editar-adm" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button><button class="btn-editar-adm" style="color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">🗑 Excluir</button>` : ''}</div>
       </div>
@@ -2764,7 +2775,7 @@ function openCompare(){
     ['Para quem é', o=>publicoTexto(o), ()=>false],
     ['Abrangência', o=>o.abrangencia, o=>abrDestacavel && (abrangenciaRank[o.abrangencia]||0)===maxAbr],
     ['Situação', o=>situacaoExibida(o), ()=>false],
-    ['Prazo', o=>o.prazo, o=>maxPrazo!==null && prazoValsMap[o.id]===maxPrazo],
+    ['Prazo', o=>prazoRotulo(o), o=>maxPrazo!==null && prazoValsMap[o.id]===maxPrazo],
     ['Índice Transformare', o=>(o.indice!=null && !ehPro() ? '🔒 Plano Pro' : o.indice!=null ? `${Math.round(Number(o.indice))}/5 — ${o.indiceLabel}` : 'Ainda não avaliado'), o=>ehPro() && indiceDestacavel && o.indice!=null && o.indice===maxIndice],
     ['Valor por atendimento', o=>o.valorAtendimento, o=>maxRem!==null && tipoRemuneracao(o)==='atendimento' && remValsMap[o.id]===maxRem],
     ['Remuneração (outros valores)', o=>(o.remuneracao && o.remuneracao.length) ? o.remuneracao.join(' · ') : '—', ()=>false],
@@ -2799,7 +2810,7 @@ function shareWhatsApp(id){
     `*${o.edital}*`,
     o.objeto,
     `Órgão: ${o.orgao} — ${o.uf}`,
-    `Prazo: ${o.prazo}`,
+    `Prazo: ${prazoRotulo(o)}`,
     '',
     `🔗 Edital: ${link}`,
     '',
@@ -3736,7 +3747,7 @@ function openDetalhe(id){
             <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}</div></div>
             <div class="qf-item"><div class="qf-icon">💰</div><span class="qf-k">Remuneração</span><div class="qf-v">${remuneracaoResumo}</div></div>
             ${o.abertura ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Início das propostas</span><div class="qf-v">${esc(o.abertura)}</div></div>` : ''}
-            <div class="qf-item"><div class="qf-icon">⏳</div><span class="qf-k">Prazo</span><div class="qf-v">${o.prazo}</div></div>
+            <div class="qf-item"><div class="qf-icon">⏳</div><span class="qf-k">Prazo</span><div class="qf-v">${prazoRotulo(o)}</div></div>
             ${!o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}${o.horaPublicacao ? ' às ' + esc(o.horaPublicacao) : ''}</div></div>` : ''}
           </div>
 
