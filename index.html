@@ -2410,7 +2410,7 @@ function sha256(str){
 // Para dar acesso a mais alguém, crie a conta dela em Supabase > Authentication > Users
 // e adicione o e-mail nesta lista.
 const ADMIN_EMAILS = ['transformarepsicologia1@gmail.com'];
-// Editais sinalizados com problema ficam ocultos para clientes; só o administrador vê.
+// Editais sinalizados com problema pelo analista ficam ocultos para clientes; os sinalizados pela auditoria (Claude) continuam visíveis. O administrador vê tudo.
 // Regra de exibição: o cliente não vê edital sinalizado com problema nem edital cujo prazo de
 // recebimento de propostas termina em menos de 30 dias (inclui os já encerrados). O administrador vê tudo.
 const PRAZO_MINIMO_DIAS = 30;
@@ -7038,8 +7038,9 @@ function renderHoje(){
                                    .sort((a,b)=>prazoDe(a)-prazoDe(b));
   const fornecedores = oportunidades.filter(o=>ehContratacaoDeFornecedor(o.objeto));
   const fornecedoresPend = _contagensHoje.fornecedorPendentes || [];
-  const sinalizados = oportunidades.filter(o=>o.problemaDescricao);
-  const problemas = suspeitos.length + vencidos.length + semPrazo.length + semSituacao.length + fornecedores.length + fornecedoresPend.length + sinalizados.length;
+  const sinalizados = oportunidades.filter(o=>o.problemaDescricao && !soPendenciaDeAuditoria(o));
+  const sinalizadosClaude = oportunidades.filter(o=>o.problemaDescricao && soPendenciaDeAuditoria(o));
+  const problemas = suspeitos.length + vencidos.length + semPrazo.length + semSituacao.length + fornecedores.length + fornecedoresPend.length + sinalizados.length + sinalizadosClaude.length;
   const fmt = n => n == null ? '—' : n;
   const cards = [
     {num:fmt(_contagensHoje.pncp), label:'Achados do PNCP para triar', cls:_contagensHoje.pncp?'alerta':'', ir:()=>adminIrPara('triagem','caixa-entrada-body')},
@@ -7058,7 +7059,8 @@ function renderHoje(){
   });
   const linhas = [
     ['Prazo de 2040 em diante a confirmar', suspeitos], ['Prazo vencido e ainda "Aberto"', vencidos],
-    ['Sinalizados pelo analista', sinalizados],
+    ['Sinalizados pelo analista (ocultos ao cliente)', sinalizados],
+    ['Sinalizados pelo Claude (continuam visíveis ao cliente)', sinalizadosClaude],
     ['Sem prazo definido', semPrazo], ['Sem situação', semSituacao],
     ['Contratação de fornecedor já definido, no catálogo (não é edital aberto)', fornecedores],
   ];
