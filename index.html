@@ -3105,9 +3105,9 @@ function calcularAderencia(o, u){
   if((u.formatos||[]).length){
     const lista = [...u.formatos]; lista.__esp = false;
     const r = casar(lista);
-    if(r === null) add('Formato de atendimento', 2.5, 5, 'o edital não cita o formato de atendimento');
-    else if(r.length){ motivos.push('formato: ' + r.join('/').toLowerCase()); add('Formato de atendimento', 5, 5, 'o formato do edital está entre os seus'); }
-    else add('Formato de atendimento', 0, 5, 'o formato do edital não está entre os seus');
+    if(r === null) add('Tipo de atendimento', 2.5, 5, 'o edital não informa se é atendimento individual, em grupo, domiciliar etc.');
+    else if(r.length){ motivos.push('tipo: ' + r.join('/').toLowerCase()); add('Tipo de atendimento', 5, 5, 'o tipo de atendimento do edital está entre os seus'); }
+    else add('Tipo de atendimento', 0, 5, 'o tipo de atendimento do edital não está entre os que você oferece');
   }
   // Forma de contratação (PF/PJ/Clínica): requisito de habilitação. Edital que não informa vale metade.
   const aceita = o.aceitaContratacao || [];
