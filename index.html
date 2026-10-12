@@ -923,7 +923,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== DETALHE ===================== -->
 <section class="view" id="view-detalhe">
-  <button class="back-link" onclick="nav('editais')">← Voltar aos editais</button>
+  <button class="back-link" id="detalhe-voltar" onclick="voltarDetalhe()">← Voltar aos editais</button>
   <div id="detalhe-content"></div>
 </section>
 
@@ -1129,7 +1129,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <input type="text" id="cad-prof-outra" maxlength="80" placeholder="Não encontrou a sua? Escreva aqui sua profissão" style="margin-top:8px;"></div>
     <div class="form-row"><label>Modalidade de interesse</label><div class="chip-select" id="cad-mod"></div></div>
     <div class="two-col">
-      <div class="form-row"><label>Cidade</label><input type="text" id="cad-cidade" placeholder="Ex: Porto Alegre"></div>
+      <div class="form-row"><label>Cidade(s) de atendimento</label><input type="text" id="cad-cidade" placeholder="Ex: Porto Alegre, Canoas, Alvorada (cidades até 20 km)"></div>
       <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="cad-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="cad-rem-tipo" style="flex:1; min-width:0;"><option value="atendimento">por atendimento</option><option value="hora">por hora</option><option value="mensal">por mês</option></select></div></div>
     </div>
     <div class="form-row"><label>Abrangência de interesse</label><div class="chip-select" id="cad-abr"></div></div>
@@ -1182,7 +1182,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <input type="text" id="perfil-prof-outra" maxlength="80" placeholder="Não encontrou a sua? Escreva aqui sua profissão" style="margin-top:8px;"></div>
     <div class="form-row"><label>Modalidade de interesse</label><div class="chip-select" id="perfil-mod"></div></div>
     <div class="two-col">
-      <div class="form-row"><label>Cidade</label><input type="text" id="perfil-cidade" placeholder="Ex: Porto Alegre"></div>
+      <div class="form-row"><label>Cidade(s) de atendimento</label><input type="text" id="perfil-cidade" placeholder="Ex: Porto Alegre, Canoas, Alvorada (cidades até 20 km)"></div>
       <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="perfil-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="perfil-rem-tipo" style="flex:1; min-width:0;"><option value="atendimento">por atendimento</option><option value="hora">por hora</option><option value="mensal">por mês</option></select></div></div>
     </div>
     <div class="form-row"><label>Abrangência de interesse</label><div class="chip-select" id="perfil-abr"></div></div>
@@ -2527,6 +2527,12 @@ function exigirCadastro(acao){
   nav('cadastro');
   return false;
 }
+let detalheOrigem = {view:'editais', y:null};
+function voltarDetalhe(){
+  const o = detalheOrigem || {view:'editais', y:null};
+  nav(o.view);
+  if(o.y != null) setTimeout(()=>window.scrollTo({top:o.y, behavior:'auto'}), 80);
+}
 function nav(view){
   if(typeof atualizarPromos==='function') atualizarPromos();
   if(typeof radarGira==='function') radarGira();
@@ -2537,6 +2543,12 @@ function nav(view){
   // Os filtros de Editais permanecem como a pessoa deixou ao navegar entre telas —
   // ela só perde o filtro se clicar em "Limpar filtros" de propósito.
 
+  if(view === 'detalhe' && typeof currentView !== 'undefined' && currentView !== 'detalhe'){
+    const ROT = {'minha-conta':'minha conta','favoritos':'favoritos','alertas':'alertas','comparar':'comparação','home':'início'};
+    detalheOrigem = ROT[currentView] ? {view: currentView, y: window.scrollY} : {view:'editais', y:null};
+    const bv = document.getElementById('detalhe-voltar');
+    if(bv) bv.textContent = '← Voltar ' + (detalheOrigem.view === 'editais' ? 'aos editais' : detalheOrigem.view === 'minha-conta' ? 'à minha conta' : detalheOrigem.view === 'home' ? 'ao início' : detalheOrigem.view === 'comparar' ? 'à comparação' : 'aos ' + ROT[detalheOrigem.view]);
+  }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
@@ -3011,7 +3023,7 @@ function perfilCompletude(u){
 //  - Quem atende "Presencial e online" recebe nota cheia em editais só presenciais ou só online.
 //  - Exigência que o perfil não atende (instrução, experiência, PF/PJ) limita a nota a 40%.
 function calcularAderencia(o, u){
-  let pontos = 0, total = 0;
+  let pontos = 0, total = 0, naoAtende = false;
   const motivos = [], det = [], faltamPerfil = [];
   const pede = (campo)=>{ if(!faltamPerfil.includes(campo)) faltamPerfil.push(campo); };
   const add = (rotulo, pts, max, nota)=>{ pontos += pts; total += max; det.push({rotulo, pts, max, nota: nota||''}); };
@@ -3026,12 +3038,20 @@ function calcularAderencia(o, u){
     else add('Profissão', 0, 35, 'o edital não cita a sua profissão');
   }
   if(u.uf){
-    const mesmaCidade = u.cidade && o.cidade && normTxt(u.cidade) === normTxt(o.cidade);
-    if(o.uf === u.uf){
-      const outraCidadeMunicipal = u.cidade && o.cidade && !mesmaCidade && o.abrangencia === 'Municipal';
+    // Cidades de atendimento: o perfil aceita várias separadas por vírgula (inclua as vizinhas, até ~20 km).
+    const minhasCidades = String(u.cidade||'').split(/[,;\/]/).map(normTxt).filter(Boolean);
+    const mesmaCidade = !!(o.cidade && minhasCidades.includes(normTxt(o.cidade)));
+    const mod = String(o.modalidade||'');
+    const soPresencial = mod.startsWith('Presencial') && mod !== 'Presencial e online';
+    if(soPresencial && o.cidade && !(o.uf === u.uf && (mesmaCidade || !minhasCidades.length))){
+      // Edital presencial fora das cidades de atendimento: não é aderente (nota limitada).
+      naoAtende = true; motivos.push(`⚠ presencial em ${o.cidade}/${o.uf}`);
+      add('Localização', 0, 25, `o edital é presencial em ${o.cidade}/${o.uf}, fora das cidades onde você atende`);
+    } else if(o.uf === u.uf){
+      const outraCidadeMunicipal = minhasCidades.length && o.cidade && !mesmaCidade && o.abrangencia === 'Municipal';
       motivos.push(mesmaCidade ? `${o.cidade}/${o.uf}` : o.uf);
       add('Localização', outraCidadeMunicipal ? 18 : 25, 25, outraCidadeMunicipal ? 'mesmo estado, mas é de outra cidade' : (mesmaCidade ? 'é na sua cidade' : 'é no seu estado'));
-    } else if(o.modalidade === 'Online'){
+    } else if(mod === 'Online'){
       motivos.push('sem deslocamento'); add('Localização', 25, 25, 'é online, sem deslocamento');
     } else if(o.abrangencia === 'Nacional'){
       motivos.push('válido em todo o país'); add('Localização', 15, 25, 'é de outro estado, mas vale em todo o país');
@@ -3059,7 +3079,6 @@ function calcularAderencia(o, u){
     else add('Remuneração', 0, 10, 'o valor está abaixo do seu mínimo');
   }
   // Instrução e tempo de atuação só entram quando o edital exige algo; se o perfil não atende, a nota fica limitada a 40%.
-  let naoAtende = false;
   if(!u.remMin && parseMoneyValue({atendimento:o.valorAtendimento, hora:o.valorHora, mensal:o.valorMensal}[u.remTipo || 'atendimento']) !== null) pede('Remuneração mínima');
   if(o.escolaridadeMinima && !u.escolaridade) pede('Instrução');
   if(o.experienciaMinimaAnos && u.anosExp == null) pede('Tempo de atuação');
