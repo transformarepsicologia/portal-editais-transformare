@@ -3144,6 +3144,27 @@ function calcularAderencia(o, u){
   }
   let pct = total ? Math.round(pontos / total * 100) : null;
   if(naoAtende && pct !== null) pct = Math.min(pct, 40);
+  // Frases em linguagem natural para o resumo da nota (positivo e o que verificar).
+  const minhasC = String(u.cidade||'').split(/[,;\/]/).map(normTxt).filter(Boolean);
+  const lc = x => String(x||'').toLowerCase();
+  det.forEach(d=>{
+    const cheio = d.pts >= d.max;
+    const POS = {
+      'Profissão': ()=>'edital para ' + (o.profissoes||[]).filter(x=>(u.profs||[]).includes(x)).join('/'),
+      'Localização': ()=> (o.cidade && minhasC.includes(normTxt(o.cidade))) ? `em ${o.cidade}/${o.uf}` : (o.uf === u.uf ? `no seu estado (${o.uf})` : (o.modalidade === 'Online' ? 'sem necessidade de deslocamento' : 'válido em todo o país')),
+      'Modalidade': ()=>'atendimento ' + lc(o.modalidade),
+      'Abrangência': ()=>'abrangência ' + lc(o.abrangencia),
+      'Remuneração': ()=>'remuneração compatível',
+      'Instrução': ()=>'exige nível de ' + lc(o.escolaridadeMinima),
+      'Experiência': ()=>`exige ${o.experienciaMinimaAnos} anos de experiência`,
+      'Especialidades': ()=>'área de atuação compatível',
+      'Tipo de atendimento': ()=>'tipo de atendimento compatível',
+      'Forma de contratação': ()=>{ const a=(o.aceitaContratacao||[]); const pf=a.includes('Pessoa Física (PF)'), pj=a.includes('Pessoa Jurídica (PJ)'); const usa = (u.atuacao||[]); return 'aceita ' + ((usa.includes('PF') && pf && usa.includes('PJ') && pj) ? 'pessoa física e jurídica' : (usa.includes('PJ') && pj) ? 'pessoa jurídica' : 'pessoa física'); }
+    };
+    const AJ = {'Profissão':'a profissão do edital','Localização':'a localização','Modalidade':'a modalidade','Abrangência':'a abrangência','Remuneração':'o valor da remuneração','Instrução':'a instrução exigida','Experiência':'a experiência exigida','Especialidades':'a área de atuação','Tipo de atendimento':'o tipo de atendimento aceito','Forma de contratação':'a forma de contratação aceita'};
+    d.pos = cheio && POS[d.rotulo] ? POS[d.rotulo]() : '';
+    d.aj = !cheio ? (AJ[d.rotulo] || lc(d.rotulo)) : '';
+  });
   return { pct, motivos, det, pontos, total, faltam: faltamPerfil, limitado: naoAtende };
 }
 
@@ -4023,20 +4044,21 @@ function entendaNotaHTML(ad){
   if(!ad || !ad.det) return '';
   const f = n => String(Math.round(n*10)/10).replace('.', ',');
   const adm = (typeof adminAuthed !== 'undefined') && adminAuthed;
-  const ok = ad.det.filter(d=>d.pts >= d.max).map(d=>d.rotulo.toLowerCase());
-  const faltou = ad.det.filter(d=>d.pts < d.max);
   const lista = a => a.length > 1 ? a.slice(0,-1).join(', ') + ' e ' + a[a.length-1] : (a[0]||'');
+  const pos = ad.det.filter(d=>d.pos).map(d=>d.pos);
+  const ver = ad.det.filter(d=>d.aj && d.pts > 0).map(d=>d.aj);        // parcial: o edital não informa / combina em parte
+  const nao = ad.det.filter(d=>d.aj && d.pts <= 0).map(d=>d.aj + ' (' + d.nota + ')'); // não atende
   let t = '';
-  if(ad.pct >= 100) t = 'Nota máxima: o edital combina com o seu perfil em tudo o que ele pede.';
+  if(pos.length) t += `<strong>Pontos positivos:</strong> ${esc(lista(pos))}. `;
+  if(ad.pct >= 100) t += 'Nota máxima: nada a ajustar neste edital.';
   else {
-    t = ok.length ? `<strong>Pontos positivos:</strong> ${esc(lista(ok))}. ` : '';
-    t += faltou.length ? `<strong>Para chegar a 100%:</strong> ${esc(lista(faltou.map(d=>d.rotulo.toLowerCase() + ' (' + d.nota + ')')))}.` : '';
+    if(ver.length) t += `<strong>Para chegar à nota máxima,</strong> verifique ${esc(lista(ver))}. `;
+    if(nao.length) t += `<strong>Atenção:</strong> ${esc(lista(nao))}. `;
   }
-  const aviso = ad.faltam && ad.faltam.length
-    ? ` <strong>Cadastro incompleto para este edital:</strong> preencha ${esc(lista(ad.faltam))}. <a style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="event.stopPropagation(); nav('perfil')">Completar perfil</a>.` : '';
-  const lim = ad.limitado ? ' A nota ficou limitada porque o edital faz uma exigência que o seu perfil não atende.' : '';
+  if(ad.limitado) t += 'A nota ficou limitada porque o edital faz uma exigência que o seu perfil não atende. ';
+  if(ad.faltam && ad.faltam.length) t += `<strong>Cadastro incompleto para este edital:</strong> preencha ${esc(lista(ad.faltam))}. <a style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="event.stopPropagation(); nav('perfil')">Completar perfil</a>.`;
   const admBox = adm ? `<br><span style="opacity:.7;">[Admin] ${f(ad.pontos)} de ${f(ad.total)} pontos · ` + ad.det.map(d=>`${esc(d.rotulo)} ${f(d.pts)}/${f(d.max)}`).join(' · ') + '</span>' : '';
-  return `<p class="nota-resumo">${t}${lim}${aviso}${admBox}</p>`;
+  return `<p class="nota-resumo">${t}${admBox}</p>`;
 }
 function portalDoDocumento(texto){
   const t = String(texto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
