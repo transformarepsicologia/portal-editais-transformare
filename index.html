@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Transformare — Portal de Editais</title>
+<title>Radar Transformare — Portal de Editais</title>
 <meta name="description" content="Radar Transformare: editais, chamamentos e credenciamentos da área da saúde (Psicologia, Nutrição, Fonoaudiologia e mais) monitorados no PNCP, organizados e comparáveis, com Índice de atratividade e aderência ao seu perfil.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -673,7 +673,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="logo-mark">
         <img src="assets/logo-transformare.webp" alt="Transformare" width="34" height="34" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
       </div>
-      <div class="logo-text">TRANSFORMARE<span>.</span></div>
+      <div class="logo-text">RADAR TRANSFORMARE<span>.</span></div>
     </div>
     <nav class="main-nav" id="mainNav">
       <button data-view="home" class="active">Início</button>
@@ -1539,7 +1539,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <span style="color:var(--ink-dim);">×</span>
     <img src="assets/logo-radar.webp" alt="Radar Transformare" width="26" height="26" loading="lazy" style="width:26px; height:26px; border-radius:50%; object-fit:cover;">
   </div>
-  TRANSFORMARE — PORTAL DE EDITAIS
+  RADAR TRANSFORMARE — PORTAL DE EDITAIS
   <div class="footer-links">
     <a href="#privacidade" onclick="event.preventDefault(); nav('privacidade')">Política de Privacidade e Segurança</a>
     <a href="#feedback" onclick="event.preventDefault(); openFeedbackModal()">Enviar feedback</a>
@@ -7025,6 +7025,7 @@ async function init(){
   iniciarCicloRadarHome();
   // Link direto para a política (ex.: .../#privacidade em e-mails e mensagens do beta).
   if(location.hash === '#privacidade') nav('privacidade');
+  if(location.hash === '#admin') nav('admin'); // atalho: radartransformare.com.br/#admin abre o login do administrador
   carregarEditaisSupabase();
   carregarStatusFontes();
 }
