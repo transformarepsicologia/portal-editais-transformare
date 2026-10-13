@@ -107,7 +107,16 @@ html[data-theme="light"] #home-painel{
 }
 html[data-theme="light"] #home-painel .radar-wrap{margin:0 0 26px;}
 html[data-theme="light"] #home-painel .indicators{margin-bottom:22px;}
-html[data-theme="light"] #view-home[data-azul] .hero{padding-bottom:20px;}
+html[data-theme="light"] #view-home[data-azul] .hero{padding-bottom:6px;}
+/* Celular (tema claro): painel mais perto do texto, radar maior, letras menores e marca discreta */
+html[data-theme="light"] #home-painel{margin-top:12px !important;}
+html[data-theme="light"] #home-painel .radar{width:min(310px,84vw); height:min(310px,84vw);}
+html[data-theme="light"] #home-painel .blip .blip-label{font-size:9.5px; font-weight:600; top:19px;}
+html[data-theme="light"] #home-painel .radar-wrap > div:last-child{margin-top:12px !important; opacity:.8 !important;}
+html[data-theme="light"] #home-painel .radar-wrap img[class^="marca-"]{width:32px !important; height:32px !important;}
+html[data-theme="light"] #home-painel .radar-wrap .radar-rodape-k{font-size:9px !important; letter-spacing:1.2px !important;}
+html[data-theme="light"] #home-painel .radar-wrap .radar-rodape-n{font-size:12.5px !important;}
+html[data-theme="light"] #home-painel .radar-wrap{margin-bottom:18px;}
 }
 .theme-btn{background:none; border:1px solid var(--border); color:var(--ink-muted); width:36px; height:36px; border-radius:9px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px; margin-left:8px;}
 .theme-btn:hover{color:var(--teal); border-color:var(--teal);}
