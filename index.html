@@ -3554,6 +3554,10 @@ let filtroSomenteComIndice = false;
 let filtroRadar = null; // 'novas7' | 'embreve' — vindos dos Números do Radar
 const DIAS_NOVAS = 7, DIAS_ABRE_EM_BREVE = 7;
 function _diasDesde(txt){ const d = parseDate(txt); if(isNaN(d.getTime())) return null; const h = new Date(); h.setHours(0,0,0,0); return Math.round((h - d)/86400000); }
+// Edital ativo = está recebendo propostas agora.
+function editalAtivo(o){
+  return ['Aberto','Próximo do encerramento','Retificado'].includes(situacaoExibida(o));
+}
 function eNovaAberta(o){
   const dias = _diasDesde(o.publicacao);
   return dias !== null && dias >= 0 && dias <= DIAS_NOVAS && ['Aberto','Próximo do encerramento'].includes(situacaoExibida(o));
@@ -3602,6 +3606,7 @@ function applyFilters(){
     if(filtroSomenteComIndice){
       if(o.indice===null || o.indice===undefined) return false;
       if(!indicadoresUsandoDemo && !o.origemSupabase) return false;
+      if(!editalAtivo(o)) return false;
     }
     if(filtroRadar === 'novas7' && !eNovaAberta(o)) return false;
     if(filtroRadar === 'embreve' && !eAbreEmBreve(o)) return false;
@@ -3702,17 +3707,19 @@ function renderIndicators(){
   const reais = oportunidades.filter(o=>o.origemSupabase && visivelAoCliente(o));
   const usandoDemo = reais.length === 0;
   indicadoresUsandoDemo = usandoDemo;
-  // Só contam as oportunidades ativas: encerradas, revogadas e anuladas saem dos números.
-  const ativa = o => !['Encerrado','Revogado','Anulado'].includes(situacaoExibida(o));
-  const base = (usandoDemo ? oportunidades.filter(visivelAoCliente) : reais).filter(ativa);
+  // Só contam os editais ATIVOS (recebendo propostas agora): saem dos números os
+  // encerrados, revogados, anulados, suspensos, em análise, sem prazo confirmado e
+  // os que ainda vão abrir (esses aparecem só em "abrem em breve").
+  const todos = (usandoDemo ? oportunidades.filter(visivelAoCliente) : reais);
+  const base = todos.filter(editalAtivo);
   const orgaos = new Set(base.map(o=>o.orgao)).size;
   const comIndice = base.filter(o=>o.indice !== null && o.indice !== undefined).length;
   const novas = base.filter(eNovaAberta).length;
-  const abrem = base.filter(eAbreEmBreve).length;
+  const abrem = todos.filter(eAbreEmBreve).length;
   // "Novas oportunidades" cede lugar a "órgãos e instituições" quando não há nenhuma
   // nova nos últimos 7 dias. "Abrem em breve" só aparece quando há ao menos uma.
   const stats = [
-    {num:base.length, label:'oportunidades monitoradas', filtro:null},
+    {num:base.length, label:'editais ativos', filtro:null},
     novas > 0
       ? {num:novas, label:'novas oportunidades', filtro:'novas7'}
       : {num:orgaos, label:'órgãos e instituições', filtro:'orgao'},
