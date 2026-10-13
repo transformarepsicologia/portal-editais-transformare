@@ -3260,6 +3260,9 @@ function updateNavCta(){
   atualizarPromos();
   atualizarOrdenarPro();
   const ctaBtn = document.getElementById('nav-cta-btn');
+  // Logado: o botão com o nome já leva para a conta, então "Conta" sai do menu (não aparecem os dois).
+  const navConta = document.getElementById('nav-minha-conta');
+  if(navConta) navConta.style.display = userProfile ? 'none' : '';
   if(userProfile){
     ctaBtn.textContent = (userProfile.nome || '').split(' ')[0] || 'Minha conta';
     ctaBtn.dataset.view = 'minha-conta';
