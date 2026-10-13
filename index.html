@@ -2106,11 +2106,27 @@ function profissoesAtivasNomes(){ return profissoes.filter(p=>p.ativa).map(p=>p.
    devagar, e nunca repete uma profissão que já esteja aparecendo em
    outro ponto. Os nomes só ficam visíveis no instante em que a luz do
    radar passa por cima daquele ponto. */
+/* Nomes que circulam no radar: as profissões ativas do catálogo + todas as profissões/especialidades
+   que aparecem nos editais visíveis (ex.: Cardiologista, Dermatologista...). Ordem embaralhada uma vez
+   por carregamento, para não mostrar especialidades parecidas em sequência. */
+let _radarNomesChave = '', _radarNomesOrdem = [];
+function nomesDoRadar(){
+  const set = new Set(profissoesAtivasNomes());
+  try { (oportunidades||[]).forEach(o=>{ if(visivelAoCliente(o)) (o.profissoes||[]).forEach(p=>{ if(p) set.add(p); }); }); } catch(e){}
+  const base = [...set].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const chave = base.join('|');
+  if(chave !== _radarNomesChave){
+    _radarNomesChave = chave;
+    _radarNomesOrdem = base.slice();
+    for(let i=_radarNomesOrdem.length-1; i>0; i--){ const j=Math.floor(Math.random()*(i+1)); [_radarNomesOrdem[i],_radarNomesOrdem[j]]=[_radarNomesOrdem[j],_radarNomesOrdem[i]]; }
+  }
+  return _radarNomesOrdem;
+}
 function iniciarCicloRadarHome(){
   const blips = [0,1,2,3].map(i=>document.getElementById('radar-blip-'+i));
   if(blips.some(b=>!b)) return;
 
-  const nomes0 = profissoesAtivasNomes();
+  const nomes0 = nomesDoRadar();
   if(nomes0.length === 0) return;
 
   // nomes atualmente exibidos em cada blip
@@ -2122,7 +2138,7 @@ function iniciarCicloRadarHome(){
   let proximoBlip = 0; // qual blip será trocado na próxima vez (round-robin)
 
   const trocarUmBlip = () => {
-    const nomes = profissoesAtivasNomes();
+    const nomes = nomesDoRadar();
     if(nomes.length === 0) return;
     // com poucas profissões ativas não há como evitar repetição — não mexe
     if(nomes.length <= blips.length) return;
