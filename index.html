@@ -664,10 +664,13 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   .topbar-inner .logo{order:1; flex:1 1 0; min-width:0;}
   .topbar-inner .logo-text{min-width:0;}
   .topbar-inner .nav-icones{order:2; margin-left:auto;}
-  nav.main-nav{order:3; flex:1 1 100%; display:flex; flex-direction:row; flex-wrap:nowrap; overflow-x:auto; gap:2px; margin:0 -16px; padding:0 16px 2px; scrollbar-width:none; -webkit-overflow-scrolling:touch; -webkit-mask-image:linear-gradient(to right,#000 92%,transparent); mask-image:linear-gradient(to right,#000 92%,transparent);}
+  nav.main-nav{order:3; flex:1 1 100%; display:flex; flex-direction:row; flex-wrap:nowrap; overflow-x:auto; gap:2px; margin:0 -16px; padding:0 16px 2px; scrollbar-width:none; -webkit-overflow-scrolling:touch;}
+  @media(max-width:405px){ nav.main-nav{-webkit-mask-image:linear-gradient(to right,#000 94%,transparent); mask-image:linear-gradient(to right,#000 94%,transparent);} }
   nav.main-nav::-webkit-scrollbar{display:none;}
-  nav.main-nav button{white-space:nowrap; flex:0 0 auto; padding:8px 11px; font-size:13px;}
-  nav.main-nav button.nav-cta{margin-left:6px; padding:8px 16px;}
+  nav.main-nav button{white-space:nowrap; flex:1 1 auto; padding:8px 3px; font-size:12px; text-align:center;}
+  nav.main-nav button.nav-cta{flex:0 0 auto; margin-left:2px; padding:8px 9px;}
+  nav.main-nav .nav-minha{display:none;}
+  nav.main-nav{padding-left:4px; padding-right:4px; margin-left:-16px; margin-right:-16px; gap:0;}
   .mobile-toggle{display:none;}
   .hero h1{font-size:28px;}
   .hero .lead{font-size:14.5px;}
@@ -798,7 +801,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <button data-view="favoritos">Favoritos</button>
       <button data-view="alertas">Alertas</button>
       <button data-view="sobre">Como funciona</button>
-      <button data-view="minha-conta" id="nav-minha-conta">Minha Conta</button>
+      <button data-view="minha-conta" id="nav-minha-conta"><span class="nav-minha">Minha </span>Conta</button>
       <button data-view="login" class="nav-cta" id="nav-cta-btn">Entrar</button>
     </nav>
     <div class="nav-icones">
