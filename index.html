@@ -6138,6 +6138,27 @@ async function saveAdminForm(){
   const indice = indiceRaw === '' ? null : parseInt(indiceRaw,10);
   const labels = {1:'Baixa oportunidade',2:'Baixa oportunidade',3:'Média oportunidade',4:'Alta oportunidade',5:'Alta oportunidade'};
 
+  // Campos obrigatórios: todo edital precisa de prazo e data de divulgação no PNCP;
+  // edital com índice Transformare precisa de TODAS as informações preenchidas.
+  {
+    const val = id => (document.getElementById(id) ? document.getElementById(id).value.trim() : '');
+    const dataOk = v => /^\d{2}\/\d{2}\/\d{4}$/.test(v);
+    const faltam = [];
+    if(!val('af-prazo') || /^n[aã]o informado$/i.test(val('af-prazo'))) faltam.push('Prazo (data dd/mm/aaaa ou texto, ex.: fluxo contínuo)');
+    if(!dataOk(val('af-publicacao'))) faltam.push('Publicação/divulgação no PNCP (dd/mm/aaaa)');
+    if(indice != null){
+      if(!dataOk(val('af-abertura'))) faltam.push('Início das propostas');
+      if(!publico.length) faltam.push('Forma de contratação');
+      if(!document.getElementById('af-escolaridade').value) faltam.push('Escolaridade mínima');
+      if(!val('af-valor-atendimento') || /^n[aã]o informado$/i.test(val('af-valor-atendimento'))) faltam.push('Valor de atendimento');
+      if(!val('af-requisitos')) faltam.push('Requisitos');
+      if(!val('af-pontos-positivos')) faltam.push('Pontos positivos');
+      if(!val('af-pontos-atencao')) faltam.push('Pontos de atenção');
+      if(!profs.length) faltam.push('Profissões');
+    }
+    if(faltam.length){ toast((indice != null ? 'Edital com índice precisa de tudo preenchido. Falta: ' : 'Falta preencher: ') + faltam.join(', ')); return; }
+  }
+
   const valorAtendimento = document.getElementById('af-valor-atendimento').value.trim();
   const volume = document.getElementById('af-volume').value.trim();
   const requisitos = document.getElementById('af-requisitos').value.trim();
