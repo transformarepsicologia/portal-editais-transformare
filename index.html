@@ -99,24 +99,24 @@ html[data-theme="light"] .radar-center{width:11px; height:11px;}
 html[data-theme="light"] .radar-wrap .radar-rodape-k{font-size:11.5px !important; font-weight:700; color:#3B3A35 !important;}
 html[data-theme="light"] .radar-wrap .radar-rodape-n{font-size:17px !important; font-weight:700; color:#15140F !important;}
 html[data-theme="light"] .radar-wrap img[class^="marca-"]{width:60px !important; height:60px !important;}
-html[data-theme="light"] #home-painel .radar-wrap{background:none; border:none; box-shadow:none; padding:0; zoom:1; border-radius:0;}
+#home-painel .radar-wrap{background:none; border:none; box-shadow:none; padding:0; zoom:1; border-radius:0;}
 /* Celular: o radar sobe para um painel azul retangular, acima dos Números do Radar */
 @media(max-width:900px){
-html[data-theme="light"] #home-painel{
+#home-painel{
   background:transparent; border:1px solid var(--border); border-radius:18px; padding:28px 20px 8px; box-shadow:none;
 }
-html[data-theme="light"] #home-painel .radar-wrap{margin:0 0 26px;}
-html[data-theme="light"] #home-painel .indicators{margin-bottom:22px;}
-html[data-theme="light"] #view-home[data-azul] .hero{padding-bottom:6px;}
+#home-painel .radar-wrap{margin:0 0 26px;}
+#home-painel .indicators{margin-bottom:22px;}
+#view-home[data-azul] .hero{padding-bottom:6px;}
 /* Celular (tema claro): painel mais perto do texto, radar maior, letras menores e marca discreta */
-html[data-theme="light"] #home-painel{margin-top:12px !important;}
-html[data-theme="light"] #home-painel .radar{width:min(310px,84vw); height:min(310px,84vw);}
-html[data-theme="light"] #home-painel .blip .blip-label{font-size:9.5px; font-weight:600; top:19px;}
-html[data-theme="light"] #home-painel .radar-wrap > div:last-child{margin-top:12px !important; opacity:.8 !important;}
-html[data-theme="light"] #home-painel .radar-wrap img[class^="marca-"]{width:32px !important; height:32px !important;}
-html[data-theme="light"] #home-painel .radar-wrap .radar-rodape-k{font-size:9px !important; letter-spacing:1.2px !important;}
-html[data-theme="light"] #home-painel .radar-wrap .radar-rodape-n{font-size:12.5px !important;}
-html[data-theme="light"] #home-painel .radar-wrap{margin-bottom:18px;}
+#home-painel{margin-top:12px !important;}
+#home-painel .radar{width:min(310px,84vw); height:min(310px,84vw);}
+#home-painel .blip .blip-label{font-size:9.5px; font-weight:600; top:19px;}
+#home-painel .radar-wrap > div:last-child{margin-top:12px !important; opacity:.8 !important;}
+#home-painel .radar-wrap img[class^="marca-"]{width:32px !important; height:32px !important;}
+#home-painel .radar-wrap .radar-rodape-k{font-size:9px !important; letter-spacing:1.2px !important;}
+#home-painel .radar-wrap .radar-rodape-n{font-size:12.5px !important;}
+#home-painel .radar-wrap{margin-bottom:18px;}
 }
 .theme-btn{background:none; border:1px solid var(--border); color:var(--ink-muted); width:36px; height:36px; border-radius:9px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px; margin-left:8px;}
 .theme-btn:hover{color:var(--teal); border-color:var(--teal);}
@@ -9174,7 +9174,7 @@ function posicionarRadarHome(){
   var radar = document.querySelector('#view-home .radar-wrap'), slot = document.getElementById('home-radar-slot'),
       hero = document.querySelector('#view-home .hero'), home = document.getElementById('view-home');
   if(!radar || !slot || !hero || !home) return;
-  if(claro && celular){ slot.appendChild(radar); home.setAttribute('data-azul',''); }
+  if(celular){ slot.appendChild(radar); home.setAttribute('data-azul',''); }
   else { hero.appendChild(radar); home.removeAttribute('data-azul'); }
 }
 if(window.matchMedia){ var _mqCel = window.matchMedia('(max-width:900px)'); (_mqCel.addEventListener ? _mqCel.addEventListener('change', posicionarRadarHome) : _mqCel.addListener(posicionarRadarHome)); }
