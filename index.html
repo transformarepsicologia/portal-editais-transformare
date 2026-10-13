@@ -659,9 +659,16 @@ input:disabled{opacity:.6; cursor:not-allowed;}
 footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; text-align:center; font-family:var(--font-mono); font-size:10.5px; color:var(--ink-muted); letter-spacing:.5px;}
 
 @media(max-width:760px){
-  nav.main-nav{display:none; position:absolute; top:64px; left:0; right:0; background:var(--bg); flex-direction:column; border-bottom:1px solid var(--border-soft); padding:8px; z-index:120;}
-  nav.main-nav.open{display:flex;}
-  .mobile-toggle{display:block;}
+  /* Celular: o menu fica numa única linha rolável, igual ao do computador, sem ocupar a tela */
+  .topbar-inner{flex-wrap:wrap; row-gap:6px;}
+  .topbar-inner .logo{order:1; flex:1 1 0; min-width:0;}
+  .topbar-inner .logo-text{min-width:0;}
+  .topbar-inner .nav-icones{order:2; margin-left:auto;}
+  nav.main-nav{order:3; flex:1 1 100%; display:flex; flex-direction:row; flex-wrap:nowrap; overflow-x:auto; gap:2px; margin:0 -16px; padding:0 16px 2px; scrollbar-width:none; -webkit-overflow-scrolling:touch; -webkit-mask-image:linear-gradient(to right,#000 92%,transparent); mask-image:linear-gradient(to right,#000 92%,transparent);}
+  nav.main-nav::-webkit-scrollbar{display:none;}
+  nav.main-nav button{white-space:nowrap; flex:0 0 auto; padding:8px 11px; font-size:13px;}
+  nav.main-nav button.nav-cta{margin-left:6px; padding:8px 16px;}
+  .mobile-toggle{display:none;}
   .hero h1{font-size:28px;}
   .hero .lead{font-size:14.5px;}
   .resumo-grid, .fin-grid, .two-col{grid-template-columns:1fr;}
@@ -2596,6 +2603,7 @@ function nav(view){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   document.getElementById('mainNav').classList.remove('open');
+  (function(){ const nv=document.getElementById('mainNav'), ativo=nv.querySelector('button.active'); if(ativo && nv.scrollWidth>nv.clientWidth){ nv.scrollTo({left: ativo.offsetLeft - (nv.clientWidth-ativo.offsetWidth)/2, behavior:'smooth'}); } })();
   window.scrollTo({top:0, behavior:'smooth'});
   const pc=document.getElementById('promo-cadastro'); if(pc) pc.style.display = userProfile ? 'none' : '';
   if(view === 'cadastro') iniciarCaptchaCadastro();
