@@ -4225,16 +4225,55 @@ function portalDoDocumento(texto){
 }
 function _chaveDoc(texto){ return String(texto||'').normalize('NFC').replace(/\s+/g,' ').trim().toLowerCase(); }
 function linkEmitirDocHTML(texto, o, i){
-  const lapis = (o && o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed)
-    ? ` <button type="button" class="doc-edit-link" title="Editar o link deste documento neste edital" onclick="event.stopPropagation(); editarLinkChecklist(${o.id}, ${i})">✎ link</button>` : '';
+  const adm = (o && o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed);
   if(!ehPro()) return '';
   const ov = o && o.linksDocs ? o.linksDocs[_chaveDoc(texto)] : undefined;
-  let url = null, proprio = false;
-  if(ov === '') url = null;                       // admin escondeu o botão neste edital
-  else if(ov){ url = ov; proprio = true; }        // link definido para este edital
+  let url = null;
+  if(ov === '') url = null;                       // admin removeu o link neste edital
+  else if(ov) url = ov;                           // link definido para este edital
   else { const l = portalDoDocumento(texto); url = l ? l.url : null; }
-  if(!url) return lapis;
-  return ` <a class="doc-emitir" href="${esc(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>${lapis}`;
+  const bt = (cls, titulo, fn, rotulo) => ` <button type="button" class="doc-edit-link" title="${titulo}" onclick="event.stopPropagation(); ${fn}(${o.id}, ${i})">${rotulo}</button>`;
+  const ferr = adm ? bt('', 'Editar o texto deste item do checklist', 'editarItemChecklist', '✎ item')
+                     + bt('', 'Cadastrar ou alterar o link deste documento neste edital', 'editarLinkChecklist', '✎ link')
+                     + (url ? bt('', 'Excluir o link deste documento neste edital', 'excluirLinkChecklist', '🗑 link') : '') : '';
+  if(!url) return ferr;
+  return ` <a class="doc-emitir" href="${esc(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>${ferr}`;
+}
+async function _gravarLinksDocs(o, oppId, novo){
+  const { data, error } = await _sb.from('editais').update({ links_docs: novo }).eq('id', oppId - 900000).select('id');
+  if(error || !data || !data.length){ toast('Não gravou' + (error ? ' (' + error.message + ')' : '')); return false; }
+  o.linksDocs = novo; return true;
+}
+async function excluirLinkChecklist(oppId, i){
+  const o = oportunidades.find(x=>x.id===oppId); if(!o || !_sb || oppId < 900000) return;
+  const texto = docsPreview(o.documentos)[i]; if(texto == null) return;
+  if(!confirm('Excluir o link deste documento neste edital?\n\n"' + texto + '"\n\nO botão "Emitir aqui" some só neste edital. Para voltar, use "✎ link" e deixe o campo vazio.')) return;
+  const novo = { ...(o.linksDocs || {}), [_chaveDoc(texto)]: '' };
+  if(!(await _gravarLinksDocs(o, oppId, novo))) return;
+  const alvo = document.getElementById('doc-link-' + oppId + '-' + i);
+  if(alvo) alvo.innerHTML = linkEmitirDocHTML(texto, o, i);
+  toast('Link excluído');
+}
+async function editarItemChecklist(oppId, i){
+  const o = oportunidades.find(x=>x.id===oppId); if(!o || !_sb || oppId < 900000) return;
+  const lista = [...(o.documentos || [])]; const texto = lista[i]; if(texto == null) return;
+  const resp = prompt('Editar o texto deste item do checklist:', texto);
+  if(resp === null) return;
+  const v = resp.replace(/\s+/g,' ').trim();
+  if(!v){ toast('O texto não pode ficar vazio'); return; }
+  if(v === texto) return;
+  lista[i] = v;
+  const { data, error } = await _sb.from('editais').update({ documentos: lista }).eq('id', oppId - 900000).select('id');
+  if(error || !data || !data.length){ toast('Não gravou o item' + (error ? ' (' + error.message + ')' : '')); return; }
+  // o link próprio do item acompanha o novo texto
+  const antiga = _chaveDoc(texto), nova = _chaveDoc(v);
+  if(o.linksDocs && o.linksDocs[antiga] !== undefined && antiga !== nova){
+    const novo = { ...o.linksDocs }; novo[nova] = novo[antiga]; delete novo[antiga];
+    await _gravarLinksDocs(o, oppId, novo);
+  }
+  o.documentos = lista; o.documentosPadrao = false;
+  openDetalhe(oppId);
+  toast('Item do checklist salvo');
 }
 async function editarLinkChecklist(oppId, i){
   const o = oportunidades.find(x=>x.id===oppId); if(!o || !_sb || oppId < 900000) return;
