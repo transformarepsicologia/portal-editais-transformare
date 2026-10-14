@@ -1558,6 +1558,29 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </div>
 
   <div style="margin-top:28px; border-top:1px solid var(--border-soft); padding-top:20px;">
+    <div class="section-title" style="font-size:15px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleLinksDocs()">
+      <span>🔗 Links dos documentos (botão "Emitir aqui")</span>
+      <span id="links-docs-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
+    </div>
+    <p class="section-sub" style="margin-bottom:12px;">Portais onde o profissional emite cada documento do checklist (aparecem no plano Pro). Cadastre, edite, desative ou exclua.</p>
+    <div id="links-docs-body" style="display:none;">
+      <div class="panel" style="margin-top:0;">
+        <input type="hidden" id="ld-id">
+        <div class="form-row"><label>Nome do documento / portal</label><input type="text" id="ld-nome" placeholder="Ex.: Certidão Negativa de Débitos Estaduais — SEFAZ-RS"></div>
+        <div class="form-row"><label>Link (https://...)</label><input type="text" id="ld-url" placeholder="https://..."></div>
+        <div class="form-row" id="ld-palavras-row"><label>Palavras que ligam este link a um item do checklist (separe por vírgula)</label><input type="text" id="ld-palavras" placeholder="Ex.: certidao estadual, debitos estaduais, sefaz"></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn-primary" id="ld-salvar" onclick="salvarLinkDoc()">+ Adicionar link</button>
+          <button type="button" class="btn-ghost" id="ld-cancelar" style="display:none;" onclick="limparFormLinkDoc()">Cancelar edição</button>
+        </div>
+        <div id="links-docs-status" style="font-size:12px; color:var(--ink-dim); margin:10px 0;"></div>
+        <ul class="af-item-list" id="links-docs-lista"></ul>
+        <p style="font-size:11px; color:var(--ink-dim); margin-top:10px;">Os 8 links padrão (CND, FGTS, CNDT, CNPJ, antecedentes, quitação eleitoral, SICAF) já têm regra automática para achar o item certo — dá para trocar o endereço deles. Links novos usam as palavras que você escrever: se algum item do checklist tiver uma delas, o botão aparece.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:28px; border-top:1px solid var(--border-soft); padding-top:20px;">
     <div class="section-title" style="font-size:15px; margin:0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;" onclick="toggleTermosBusca()">
       <span>🔍 Palavras-chave de busca no PNCP</span>
       <span id="termos-busca-arrow" style="transition:transform .2s; display:inline-block;">▾</span>
@@ -4134,16 +4157,27 @@ function continuarParaEdital(){
   closeModal('credenciar-modal');
   if(o && o.urlInscricao) window.open(o.urlInscricao, '_blank');
 }
-const PORTAIS_DOCS = [
-  {nome:'CND Federal — Receita/PGFN (pessoa jurídica)', url:'https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PJ/Emitir'},
-  {nome:'CND Federal — Receita/PGFN (pessoa física)', url:'https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PF/Emitir'},
-  {nome:'Certificado de Regularidade do FGTS (CRF)', url:'https://consulta-crf.caixa.gov.br/consultacrf/pages/consultaEmpregador.jsf'},
-  {nome:'Certidão Negativa de Débitos Trabalhistas (CNDT)', url:'https://www.tst.jus.br/certidao'},
-  {nome:'Comprovante de inscrição no CNPJ', url:'https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp'},
-  {nome:'Certidão de antecedentes criminais — Polícia Federal', url:'https://servicos.dpf.gov.br/antecedentes-criminais/certidao'},
-  {nome:'Certidão de quitação eleitoral — TSE', url:'https://www.tse.jus.br/servicos-eleitorais/certidoes/certidao-de-quitacao-eleitoral'},
-  {nome:'Compras.gov.br / SICAF (cadastro de fornecedores)', url:'https://www.gov.br/compras/pt-br'},
+const PORTAIS_DOCS_PADRAO = [
+  {chave:'cnd_pj', nome:'CND Federal — Receita/PGFN (pessoa jurídica)', url:'https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PJ/Emitir'},
+  {chave:'cnd_pf', nome:'CND Federal — Receita/PGFN (pessoa física)', url:'https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PF/Emitir'},
+  {chave:'fgts', nome:'Certificado de Regularidade do FGTS (CRF)', url:'https://consulta-crf.caixa.gov.br/consultacrf/pages/consultaEmpregador.jsf'},
+  {chave:'cndt', nome:'Certidão Negativa de Débitos Trabalhistas (CNDT)', url:'https://www.tst.jus.br/certidao'},
+  {chave:'cnpj', nome:'Comprovante de inscrição no CNPJ', url:'https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp'},
+  {chave:'antecedentes', nome:'Certidão de antecedentes criminais — Polícia Federal', url:'https://servicos.dpf.gov.br/antecedentes-criminais/certidao'},
+  {chave:'eleitoral', nome:'Certidão de quitação eleitoral — TSE', url:'https://www.tse.jus.br/servicos-eleitorais/certidoes/certidao-de-quitacao-eleitoral'},
+  {chave:'sicaf', nome:'Compras.gov.br / SICAF (cadastro de fornecedores)', url:'https://www.gov.br/compras/pt-br'},
 ];
+// Lista em uso: vem da tabela links_documentos (editável no painel admin); se o banco falhar, vale a lista padrão acima.
+let PORTAIS_DOCS = PORTAIS_DOCS_PADRAO.map(x=>({...x, palavras:[]}));
+async function carregarLinksDocs(){
+  if(typeof _sb === 'undefined' || !_sb) return;
+  try{
+    const { data, error } = await _sb.from('links_documentos').select('*').eq('ativo', true).order('ordem').order('id');
+    if(!error && Array.isArray(data) && data.length){
+      PORTAIS_DOCS = data.map(r=>({ id:r.id, chave:r.chave || null, nome:r.nome, url:r.url, palavras:r.palavras || [] }));
+    }
+  }catch(e){}
+}
 /* Para cada item do checklist, acha o portal onde o documento é emitido (só Plano Pro): a pessoa clica, emite e depois marca o item. */
 /* Nota de aderência (Pro): vai logo abaixo das palavras-chave; o WhatsApp fica no rodapé do card. */
 function inserirNotaNoCard(card, ad){
@@ -4174,15 +4208,17 @@ function entendaNotaHTML(ad){
 }
 function portalDoDocumento(texto){
   const t = String(texto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-  const por = nome => PORTAIS_DOCS.find(x=>x.nome.indexOf(nome)===0);
-  if(/\bfgts\b|\bcrf\b/.test(t)) return por('Certificado de Regularidade do FGTS');
-  if(/trabalhist|\bcndt\b/.test(t)) return por('Certidão Negativa de Débitos Trabalhistas');
-  if(/antecedentes criminais/.test(t)) return por('Certidão de antecedentes criminais');
-  if(/quitacao eleitoral|justica eleitoral/.test(t)) return por('Certidão de quitação eleitoral');
-  if(/sicaf/.test(t)) return por('Compras.gov.br');
-  if(/cnpj/.test(t) && /(inscricao|comprovante|cartao)/.test(t) && !/certidao negativa|regularidade/.test(t)) return por('Comprovante de inscrição no CNPJ');
+  const por = chave => PORTAIS_DOCS.find(x=>x.chave===chave) || null;
+  const proprio = PORTAIS_DOCS.find(x=>!x.chave && (x.palavras||[]).some(p=>{ const q = String(p||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); return q && t.includes(q); }));
+  if(proprio) return proprio;
+  if(/\bfgts\b|\bcrf\b/.test(t)) return por('fgts');
+  if(/trabalhist|\bcndt\b/.test(t)) return por('cndt');
+  if(/antecedentes criminais/.test(t)) return por('antecedentes');
+  if(/quitacao eleitoral|justica eleitoral/.test(t)) return por('eleitoral');
+  if(/sicaf/.test(t)) return por('sicaf');
+  if(/cnpj/.test(t) && /(inscricao|comprovante|cartao)/.test(t) && !/certidao negativa|regularidade/.test(t)) return por('cnpj');
   if(/(debitos|tributos|creditos tributarios|divida ativa).*(federa|uniao|receita|pgfn)|(federa|uniao|receita|pgfn).*(debitos|tributos|creditos tributarios|divida ativa)|\bcnd\b/.test(t))
-    return /pessoa fisica|\bcpf\b/.test(t) && !/pessoa juridica|cnpj/.test(t) ? por('CND Federal — Receita/PGFN (pessoa física)') : por('CND Federal — Receita/PGFN (pessoa jurídica)');
+    return /pessoa fisica|\bcpf\b/.test(t) && !/pessoa juridica|cnpj/.test(t) ? por('cnd_pf') : por('cnd_pj');
   return null;
 }
 function linkEmitirDocHTML(texto){
@@ -7784,6 +7820,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_nOfG7Stoy-0lO8CSeW-_EQ_QLvDoeGN";
 const _sb = (typeof window !== 'undefined' && window.supabase && !SUPABASE_URL.includes('SEU-PROJETO'))
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
+if(_sb) carregarLinksDocs();
 
 /* ============ Login do admin via Supabase Auth ============ */
 if(_sb){
@@ -9217,6 +9254,89 @@ async function removerMotivoPadrao(id){
   if(error){ toast('Erro ao remover: ' + error.message); return; }
   toast('Removido');
   renderMotivosPadraoAdmin();
+}
+
+/* ---- Admin: links dos documentos ("Emitir aqui") ---- */
+let _linksDocsAdmin = [];
+function toggleLinksDocs(){
+  const body = document.getElementById('links-docs-body');
+  const arrow = document.getElementById('links-docs-arrow');
+  const abrir = body.style.display === 'none';
+  body.style.display = abrir ? 'block' : 'none';
+  arrow.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
+  if(abrir) renderLinksDocsAdmin();
+}
+async function renderLinksDocsAdmin(){
+  const status = document.getElementById('links-docs-status'); const lista = document.getElementById('links-docs-lista');
+  if(!status || !lista) return;
+  if(!_sb){ status.textContent = 'Indisponível: configure o Supabase.'; return; }
+  status.textContent = 'Carregando...';
+  const { data, error } = await _sb.from('links_documentos').select('*').order('ordem').order('id');
+  if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
+  status.textContent = '';
+  _linksDocsAdmin = data || [];
+  lista.innerHTML = _linksDocsAdmin.length ? _linksDocsAdmin.map(l=>`
+    <li class="af-item" style="${l.ativo ? '' : 'opacity:.55;'}">
+      <div style="flex:1; min-width:0;">
+        <strong>${esc(l.nome)}</strong>${l.chave ? ' <span style="font-size:10.5px; color:var(--ink-dim);">(padrão)</span>' : ''}${l.ativo ? '' : ' <span style="font-size:10.5px; color:var(--amber);">desativado</span>'}
+        <div style="font-size:12px; word-break:break-all;"><a href="${esc(l.url)}" target="_blank" rel="noopener" style="color:var(--teal);">${esc(l.url)}</a></div>
+        ${(l.palavras||[]).length ? `<div style="font-size:11.5px; color:var(--ink-dim);">Palavras: ${esc(l.palavras.join(', '))}</div>` : ''}
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button type="button" class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="editarLinkDoc(${l.id})">Editar</button>
+        <button type="button" class="btn-ghost" style="font-size:12px; padding:3px 10px;" onclick="alternarLinkDoc(${l.id}, ${!l.ativo})">${l.ativo ? 'Desativar' : 'Ativar'}</button>
+        <button type="button" class="btn-ghost" style="font-size:12px; padding:3px 10px; color:var(--coral); border-color:var(--coral);" onclick="excluirLinkDoc(${l.id})">Excluir</button>
+      </div>
+    </li>`).join('') : '<div class="af-item-empty">Nenhum link cadastrado.</div>';
+}
+function limparFormLinkDoc(){
+  ['ld-id','ld-nome','ld-url','ld-palavras'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('ld-salvar').textContent = '+ Adicionar link';
+  document.getElementById('ld-cancelar').style.display = 'none';
+  document.getElementById('ld-palavras-row').style.display = '';
+}
+function editarLinkDoc(id){
+  const l = _linksDocsAdmin.find(x=>x.id===id); if(!l) return;
+  document.getElementById('ld-id').value = String(l.id);
+  document.getElementById('ld-nome').value = l.nome;
+  document.getElementById('ld-url').value = l.url;
+  document.getElementById('ld-palavras').value = (l.palavras||[]).join(', ');
+  document.getElementById('ld-palavras-row').style.display = l.chave ? 'none' : '';
+  document.getElementById('ld-salvar').textContent = 'Salvar alterações';
+  document.getElementById('ld-cancelar').style.display = '';
+  document.getElementById('ld-nome').scrollIntoView({behavior:'smooth', block:'center'});
+}
+async function salvarLinkDoc(){
+  if(!_sb) return;
+  const id = document.getElementById('ld-id').value;
+  const nome = document.getElementById('ld-nome').value.trim();
+  let url = document.getElementById('ld-url').value.trim();
+  const palavras = document.getElementById('ld-palavras').value.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean);
+  if(!nome){ toast('Digite o nome do documento ou portal'); return; }
+  if(url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+  if(!/^https?:\/\/[^\s/]+\.[^\s/]+/i.test(url)){ toast('Link inválido — use um endereço completo, como https://...'); return; }
+  const atual = id ? _linksDocsAdmin.find(x=>x.id===Number(id)) : null;
+  if(!id && !palavras.length){ toast('Escreva ao menos uma palavra para ligar este link a um item do checklist'); return; }
+  const reg = { nome, url, atualizado_em: new Date().toISOString() };
+  if(!atual || !atual.chave) reg.palavras = palavras;
+  const { error } = id ? await _sb.from('links_documentos').update(reg).eq('id', Number(id))
+                       : await _sb.from('links_documentos').insert({ ...reg, ordem: 200 });
+  if(error){ toast('Erro ao salvar: ' + error.message); return; }
+  toast(id ? 'Link atualizado' : 'Link adicionado');
+  limparFormLinkDoc(); await renderLinksDocsAdmin(); carregarLinksDocs();
+}
+async function alternarLinkDoc(id, ativo){
+  const { error } = await _sb.from('links_documentos').update({ ativo, atualizado_em: new Date().toISOString() }).eq('id', id);
+  if(error){ toast('Erro ao salvar: ' + error.message); return; }
+  await renderLinksDocsAdmin(); carregarLinksDocs();
+}
+async function excluirLinkDoc(id){
+  const l = _linksDocsAdmin.find(x=>x.id===id); if(!l) return;
+  if(!confirm('Excluir o link "' + l.nome + '"? O botão "Emitir aqui" deixa de aparecer para esse documento.')) return;
+  const { error } = await _sb.from('links_documentos').delete().eq('id', id);
+  if(error){ toast('Erro ao excluir: ' + error.message); return; }
+  toast('Link excluído');
+  await renderLinksDocsAdmin(); carregarLinksDocs();
 }
 </script>
 <script>
