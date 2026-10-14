@@ -8378,6 +8378,9 @@ function abrirRevisaoCompleta(id, tipo, item){
   set('af-abr', item.abrangencia || 'Municipal');
   if(item.situacao && [...document.getElementById('af-sit').options].some(o=>o.value===item.situacao)) set('af-sit', item.situacao);
   set('af-prazo', item.data_encerramento_proposta ? formatarDataBR(item.data_encerramento_proposta) : '');
+  // Datas que o robô do PNCP já traz: divulgação (publicação) e início do recebimento de propostas.
+  set('af-publicacao', item.data_publicacao ? formatarDataBR(String(item.data_publicacao).slice(0,10)) : '');
+  set('af-abertura', item.abertura ? formatarDataBR(String(item.abertura).slice(0,10)) : '');
   set('af-indice', item.indice_sugerido ? String(item.indice_sugerido) : '');
   set('af-url-pncp', tipo === 'diario' ? '' : (item.link_pncp || ''));
   set('af-url-edital', '');
