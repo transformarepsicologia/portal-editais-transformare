@@ -147,6 +147,8 @@ header.topbar{
 .entenda-nota .en-ic{width:16px; flex-shrink:0; color:var(--teal); font-weight:700;}
 .entenda-nota .en-aviso{background:rgba(245,169,62,.1); border:1px solid rgba(245,169,62,.35); color:var(--amber); border-radius:8px; padding:8px 10px; margin:10px 0 0; line-height:1.5;}
 .doc-emitir{display:inline-block; margin-left:8px; font-size:12px; font-weight:600; color:var(--teal); border:1px solid var(--teal); border-radius:20px; padding:1px 10px; white-space:nowrap;}
+.doc-edit-link{margin-left:6px; font-size:11px; color:var(--ink-dim); background:none; border:1px dashed var(--border); border-radius:20px; padding:0 8px; cursor:pointer;}
+.doc-edit-link:hover{color:var(--teal); border-color:var(--teal);}
 .doc-emitir:hover{background:var(--teal); color:var(--bg);}
 body.logado .so-visitante{display:none !important;}
 body.pro .so-nao-pro{display:none !important;}
@@ -3938,7 +3940,7 @@ function openDetalhe(id){
           <ul class="doc-list" id="doc-list-${o.id}">
             ${docsVisiveis.map((d,i)=>`
               <li onclick="toggleDoc(${o.id},${i})" class="${checks[i]?'checked-text':''}" id="doc-item-${o.id}-${i}">
-                <span class="doc-check ${checks[i]?'checked':''}" id="doc-check-${o.id}-${i}">${checks[i]?'✓':''}</span>${d}${linkEmitirDocHTML(d)}
+                <span class="doc-check ${checks[i]?'checked':''}" id="doc-check-${o.id}-${i}">${checks[i]?'✓':''}</span>${d}<span id="doc-link-${o.id}-${i}">${linkEmitirDocHTML(d, o, i)}</span>
               </li>`).join('')}
           </ul>
           ${o.documentosPadrao ? `<p style="font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5;">Lista padrão: este edital ainda não teve os documentos detalhados pela Transformare. Confira a lista oficial no edital.</p>` : ''}
@@ -4221,11 +4223,43 @@ function portalDoDocumento(texto){
     return /pessoa fisica|\bcpf\b/.test(t) && !/pessoa juridica|cnpj/.test(t) ? por('cnd_pf') : por('cnd_pj');
   return null;
 }
-function linkEmitirDocHTML(texto){
+function _chaveDoc(texto){ return String(texto||'').normalize('NFC').replace(/\s+/g,' ').trim().toLowerCase(); }
+function linkEmitirDocHTML(texto, o, i){
+  const lapis = (o && o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed)
+    ? ` <button type="button" class="doc-edit-link" title="Editar o link deste documento neste edital" onclick="event.stopPropagation(); editarLinkChecklist(${o.id}, ${i})">✎ link</button>` : '';
   if(!ehPro()) return '';
-  const l = portalDoDocumento(texto);
-  if(!l) return '';
-  return ` <a class="doc-emitir" href="${l.url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>`;
+  const ov = o && o.linksDocs ? o.linksDocs[_chaveDoc(texto)] : undefined;
+  let url = null, proprio = false;
+  if(ov === '') url = null;                       // admin escondeu o botão neste edital
+  else if(ov){ url = ov; proprio = true; }        // link definido para este edital
+  else { const l = portalDoDocumento(texto); url = l ? l.url : null; }
+  if(!url) return lapis;
+  return ` <a class="doc-emitir" href="${esc(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>${lapis}`;
+}
+async function editarLinkChecklist(oppId, i){
+  const o = oportunidades.find(x=>x.id===oppId); if(!o || !_sb || oppId < 900000) return;
+  const docs = docsPreview(o.documentos); const texto = docs[i]; if(texto == null) return;
+  const chave = _chaveDoc(texto);
+  const atual = (o.linksDocs && o.linksDocs[chave] !== undefined) ? o.linksDocs[chave] : null;
+  const auto = portalDoDocumento(texto);
+  const dica = 'Link do botão para:\n"' + texto + '"\n\n• Escreva o endereço (https://...) para usar neste edital.\n• Deixe vazio para voltar ao automático' + (auto ? ' (' + auto.nome + ')' : ' (sem botão)') + '.\n• Escreva - para não mostrar o botão neste edital.';
+  const resp = prompt(dica, atual === null ? '' : (atual === '' ? '-' : atual));
+  if(resp === null) return;
+  const v = resp.trim();
+  const novo = { ...(o.linksDocs || {}) };
+  if(v === '') delete novo[chave];
+  else if(v === '-') novo[chave] = '';
+  else {
+    const u = /^https?:\/\//i.test(v) ? v : 'https://' + v;
+    if(!/^https?:\/\/[^\s/]+\.[^\s/]+/i.test(u)){ toast('Link inválido — use um endereço completo, como https://...'); return; }
+    novo[chave] = u;
+  }
+  const { data, error } = await _sb.from('editais').update({ links_docs: novo }).eq('id', oppId - 900000).select('id');
+  if(error || !data || !data.length){ toast('Não gravou o link' + (error ? ' (' + error.message + ')' : '')); return; }
+  o.linksDocs = novo;
+  const alvo = document.getElementById('doc-link-' + oppId + '-' + i);
+  if(alvo) alvo.innerHTML = linkEmitirDocHTML(texto, o, i);
+  toast('Link do checklist salvo');
 }
 function portaisDocsPanelHTML(){
   if(!ehEssencial()){
@@ -7904,7 +7938,8 @@ function mapEditalSupabase(row){
     urlPncp: row.url_pncp || 'https://pncp.gov.br/app/editais',
     numeroPncp: row.numero_pncp || '',
     urlInscricao: row.url_inscricao || row.url_pncp || 'https://pncp.gov.br/app/editais',
-    movimentacoes: Array.isArray(row.movimentacoes) ? row.movimentacoes : []
+    movimentacoes: Array.isArray(row.movimentacoes) ? row.movimentacoes : [],
+    linksDocs: (row.links_docs && typeof row.links_docs === 'object') ? row.links_docs : {}
   };
 }
 /* Cópia salva dos editais neste aparelho: se o banco ou a internet falharem, o portal continua mostrando
