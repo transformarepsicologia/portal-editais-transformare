@@ -3771,11 +3771,14 @@ function renderIndicators(){
     el.innerHTML = usandoDemo
       ? `<div class="num">${s.num}</div><div class="label">${s.label}</div><div class="demo-flag">Dado demonstrativo</div>`
       : `<div class="num">${s.num}</div><div class="stat-badge">${s.label}</div>`;
+    // O filtro por Índice Transformare é recurso do Plano Pro (admin conta como Pro);
+    // quem não é Pro vai para a lista geral de editais, sem o filtro.
     el.onclick = ()=> irParaEditaisComFiltro(s.filtro);
     box.appendChild(el);
   });
 }
 function irParaEditaisComFiltro(filtro){
+  if(filtro === 'indice' && !ehPro()) filtro = null;   // sem Plano Pro: lista geral
   ['ed-search'].forEach(id=>document.getElementById(id).value='');
   ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
   filtroSomenteComIndice = (filtro === 'indice');
@@ -4836,6 +4839,7 @@ async function carregarPerfilUsuario(authUser){
     plano: perfil?.plano || 'gratuito',
     criadoEm: perfil?.criado_em || null,
   };
+  try{ renderIndicators(); }catch(e){}   // atualiza o cadeado do Índice conforme o plano
   const doBanco = (perfil && (perfil.cidade || (perfil.abrangencias||[]).length || perfil.rem_min != null || perfil.escolaridade || perfil.anos_experiencia != null || (perfil.atuacao||[]).length || perfil.cnpj || (perfil.especialidades||[]).length || (perfil.formatos||[]).length || perfil.meta_mensal != null || perfil.regime))
     ? { cidade: perfil.cidade || '', abrs: perfil.abrangencias || [], remMin: perfil.rem_min != null ? Number(perfil.rem_min) : null, remTipo: perfil.rem_tipo || 'atendimento',
         escolaridade: perfil.escolaridade || '', anosExp: perfil.anos_experiencia ?? null,
