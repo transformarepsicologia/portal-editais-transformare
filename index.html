@@ -5607,6 +5607,8 @@ function aplicarFichaRadar(f){
   // link do PNCP a partir do número de controle
   const lp = (typeof linkPncpDoEdital === 'function') ? linkPncpDoEdital(c.edital || '') : null;
   if(lp){ const el = document.getElementById('af-url-pncp'); if(!el.value || /pncp\.gov\.br\/app\/editais\/?$/.test(el.value)){ el.value = lp; ok.push('URL no PNCP'); } }
+  const tx = document.getElementById('af-texto-md');
+  if(tx && tx.value){ const d = afPreencherDatasDoTexto(tx.value); if(d.length) ok.push('Datas do texto do edital (' + d.join(', ') + ')'); }
   atualizarLinksPortais();
   return { ok, falta };
 }
@@ -6057,13 +6059,12 @@ function afTextoLimpar(){
   afTextoStatus();
 }
 // Marcadores de citação que ferramentas como NotebookLM/Gemini deixam no texto — não fazem parte do edital.
-const _limpaCitacoes = t => String(t||'').replace(/\s*\[cite:[^\]]*\]/gi, '');
-function afTextoPreencherFicha(){
-  const t = _limpaCitacoes(document.getElementById('af-texto-md').value).trim();
-  if(!t){ toast('Anexe ou cole o texto do edital primeiro'); return; }
-  // Do texto cru do edital só se deduz o que é seguro, e só nos campos que estão vazios.
-  // (Requisitos, pontos de destaque/atenção e documentação NÃO são copiados do edital: isso vem da análise.)
-  const ok = [];
+// Também junta letra + acento soltos (texto copiado do PNCP costuma vir assim e quebra as buscas por "início", "divulgação").
+const _limpaCitacoes = t => String(t||'').normalize('NFC').replace(/\s*\[cite:[^\]]*\]/gi, '');
+// Lê do texto do edital (como no PNCP) as três datas e preenche só os campos vazios.
+function afPreencherDatasDoTexto(textoBruto){
+  const t = _limpaCitacoes(textoBruto).trim(); const ok = [];
+  if(!t) return ok;
   const dataApos = re => { const m = t.match(re); return m ? m[1] : null; };
   const pares = [
     ['af-prazo', dataApos(/fim de recebimento de propostas[^0-9]{0,15}(\d{2}\/\d{2}\/\d{4})/i), 'Prazo'],
@@ -6071,6 +6072,15 @@ function afTextoPreencherFicha(){
     ['af-publicacao', dataApos(/divulga[cç][aã]o no PNCP[^0-9]{0,15}(\d{2}\/\d{2}\/\d{4})/i), 'Publicação'],
   ];
   pares.forEach(([id, v, nome])=>{ const el = document.getElementById(id); if(v && el && !el.value.trim()){ el.value = v; ok.push(nome); } });
+  return ok;
+}
+function afTextoPreencherFicha(){
+  const t = _limpaCitacoes(document.getElementById('af-texto-md').value).trim();
+  if(!t){ toast('Anexe ou cole o texto do edital primeiro'); return; }
+  // Do texto cru do edital só se deduz o que é seguro, e só nos campos que estão vazios.
+  // (Requisitos, pontos de destaque/atenção e documentação NÃO são copiados do edital: isso vem da análise.)
+  const ok = [];
+  ok.push(...afPreencherDatasDoTexto(t));
   const inf = inferirDoTexto(t);
   ok.push(...inf.ok);
   afProfSelecionadasNoTopo();
