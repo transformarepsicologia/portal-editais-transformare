@@ -5497,7 +5497,18 @@ function removeAfDocumento(i){
 function _posicaoHeadersAnaliseIA(texto, headers){
   const achados = [];
   headers.forEach(h => {
-    const m = texto.match(h.regex);
+    // 1) título no começo da linha, em MAIÚSCULAS (formato do prompt), com enfeites como #, 1), emoji ou dois-pontos
+    // 2) título no começo da linha em qualquer caixa, mas só se a linha for curta (não é item de lista nem frase)
+    // 3) busca solta em qualquer ponto (comportamento antigo, para texto colado em um parágrafo só)
+    const src = h.regex.source;
+    const pref = '^[ \\t>#_]*(?:\\d{1,2}[.)]\\s*)?[^\\w\\n]{0,4}';
+    let m = texto.match(new RegExp(pref + '(' + src + ')[ \\t*_:：]*', 'm'));
+    if(m && m[1] !== m[1].toUpperCase()) m = null;
+    if(!m){
+      const m2 = texto.match(new RegExp(pref + '(' + src + ')([^\\n]{0,40})$', 'im'));
+      if(m2 && !/[.;]\s*\S/.test(m2[2])){ const r = new RegExp(pref + '(' + src + ')[ \\t*_:：]*', 'im'); m = texto.match(r); }
+    }
+    if(!m) m = texto.match(h.regex);
     if(m && typeof m.index === 'number'){
       achados.push({ nome: h.nome, inicio: m.index, fimHeader: m.index + m[0].length });
     }
@@ -5530,7 +5541,7 @@ function _corpoEntreHeadersAnaliseIA(achados, nome, textoTotal){
 function _listaDeBullets(texto){
   if(!texto) return [];
   const partes = texto.includes('\n') ? texto.split('\n') : texto.split(/\s{2,}/);
-  return partes.map(l => l.replace(/^[\s>]*[-•*]\s*/, '').trim()).filter(Boolean);
+  return partes.map(l => l.replace(/^[\s>]*(?:[-•*]|\d{1,2}[.)])\s*/, '').trim()).filter(Boolean);
 }
 function parseAnaliseIAEdital(textoOriginal){
   const t = (textoOriginal || '').replace(/\r\n/g, '\n').replace(/\*\*|__/g, '').trim();   // sem negrito (**TÍTULO**)
@@ -5551,7 +5562,11 @@ function parseAnaliseIAEdital(textoOriginal){
   resultado.atencao = _listaDeBullets(_corpoEntreHeadersAnaliseIA(achados, 'atencao', t));
 
   const requisitosTxt = _corpoEntreHeadersAnaliseIA(achados, 'requisitos', t);
-  if(requisitosTxt) resultado.requisitos = requisitosTxt.replace(/\s{2,}/g, ' ').replace(/\n+/g, ' ').trim();
+  if(requisitosTxt){
+    resultado.requisitos = /^[ \t>]*(?:[-•*]|\d{1,2}[.)])\s+/m.test(requisitosTxt)
+      ? _listaDeBullets(requisitosTxt).join('; ')   // requisitos em lista viram uma frase só, separada por ;
+      : requisitosTxt.replace(/\s{2,}/g, ' ').replace(/\n+/g, ' ').trim();
+  }
 
   resultado.documentos = _listaDeBullets(_corpoEntreHeadersAnaliseIA(achados, 'documentacao', t));
 
