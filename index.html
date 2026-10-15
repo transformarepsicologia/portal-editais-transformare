@@ -1811,7 +1811,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
       <div class="form-row"><label>Início do recebimento de propostas</label><input type="text" id="af-abertura" placeholder="dd/mm/aaaa (deixe em branco se não houver)"></div>
       <div class="form-row"><label>Profissões contempladas <span id="af-prof-conta" style="font-weight:400; color:var(--ink-dim); text-transform:none; letter-spacing:0;"></span></label>
-        <input type="search" id="af-prof-busca" placeholder="🔍 Pesquisar profissão..." oninput="afProfFiltrar()" style="width:100%; box-sizing:border-box; padding:13px 16px; font-size:15px; border-radius:12px; margin-bottom:10px;">
+        <input type="search" id="af-prof-busca" placeholder="🔍 Pesquisar profissão..." oninput="afProfFiltrar()" onkeydown="if(event.key==='Enter'){ if(/[,;\n]/.test(this.value)){ event.preventDefault(); afProfNova(); } }" style="width:100%; box-sizing:border-box; padding:13px 16px; font-size:15px; border-radius:12px; margin-bottom:10px;">
+        <div id="af-prof-dica" style="display:none; font-size:12px; color:var(--teal); margin:-4px 0 8px;"></div>
         <div class="chip-select" id="af-profs" style="max-height:150px; overflow-y:auto;"></div>
         <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
           <input type="text" id="af-prof-nova" placeholder="Não achou? Digite uma nova profissão" style="flex:1; min-width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();afProfNova();}">
@@ -5468,11 +5469,23 @@ function renderAfDocList(){
     ? afDocumentos.map((d,i)=>`<li class="af-item-row"><span>${d}</span><div><button type="button" class="af-item-btn" onclick="editAfDocumento(${i})" title="Editar">✎</button><button type="button" class="af-item-btn del" onclick="removeAfDocumento(${i})" title="Remover">×</button></div></li>`).join('')
     : `<li class="af-item-empty">Nenhum documento adicionado ainda.</li>`;
 }
+// Divide um texto com vários documentos em itens: por linha, por ";" ou — quando vem tudo corrido —
+// logo depois da indicação de quem precisa entregar, como "(PF)", "(PJ)" ou "(PF / PJ - Corpo Técnico)".
+function _dividirDocumentos(texto){
+  let t = String(texto||'').replace(/\r\n?/g,'\n').trim();
+  if(!t) return [];
+  t = t.replace(/(\((?:PF|PJ)\b[^()]*\))[ \t]+(?=[A-ZÀ-Ú0-9])/g, '$1\n');
+  if(!/\n/.test(t) && /\s2[.)]\s+\S/.test(t) && /^\s*1[.)]\s+\S/.test(t)) t = t.split(/\s+(?=\d{1,2}[.)]\s+\S)/).join('\n');
+  const itens = t.split(/\n|;|\s•\s/).map(x=>x.replace(/^[\s>]*(?:[-•*]|\d{1,2}[.)])\s*/,'').trim()).filter(Boolean);
+  return itens.filter((x,i)=>itens.indexOf(x)===i);
+}
 function addAfDocumento(){
   const input = document.getElementById('af-doc-input');
   const val = input.value.trim();
   if(!val) return;
-  afDocumentos.push(val);
+  const novos = _dividirDocumentos(val).filter(x=>!afDocumentos.includes(x));
+  afDocumentos.push(...novos);
+  if(novos.length > 1) toast(novos.length + ' documentos adicionados, um embaixo do outro');
   input.value = '';
   input.focus();
   renderAfDocList();
@@ -5570,7 +5583,7 @@ function parseAnaliseIAEdital(textoOriginal){
       : requisitosTxt.replace(/\s{2,}/g, ' ').replace(/\n+/g, ' ').trim();
   }
 
-  resultado.documentos = _listaDeBullets(_corpoEntreHeadersAnaliseIA(achados, 'documentacao', t));
+  resultado.documentos = _listaDeBullets(_corpoEntreHeadersAnaliseIA(achados, 'documentacao', t)).flatMap(_dividirDocumentos);
 
   return resultado;
 }
@@ -6107,9 +6120,12 @@ function refreshAfProfChips(extraNomes){
 }
 const _semAcento = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 function afProfFiltrar(){
-  const q = _semAcento((document.getElementById('af-prof-busca')||{}).value || '').trim();
+  const qBruto = (document.getElementById('af-prof-busca')||{}).value || '';
+  const termos = _semAcento(qBruto).split(_sepLista).map(x=>x.trim()).filter(Boolean);
   const chips = [...document.querySelectorAll('#af-profs .chip-opt')];
-  chips.forEach(c=>{ c.style.display = (!q || _semAcento(c.dataset.prof).includes(q)) ? '' : 'none'; });
+  chips.forEach(c=>{ c.style.display = (!termos.length || termos.some(q=>_semAcento(c.dataset.prof).includes(q))) ? '' : 'none'; });
+  const dica = document.getElementById('af-prof-dica');
+  if(dica){ const lista = _sepLista.test(qBruto) && termos.length > 1; dica.style.display = lista ? '' : 'none'; if(lista) dica.textContent = 'Lista com ' + termos.length + ' profissões — aperte Enter ou “+ Cadastrar nova” para marcar as que existem e cadastrar as novas.'; }
   const n = chips.filter(c=>c.classList.contains('selected')).length;
   const el = document.getElementById('af-prof-conta');
   if(el) el.textContent = n ? '— ' + n + ' selecionada(s)' : '';
@@ -6123,27 +6139,33 @@ function afProfSelecionadasNoTopo(){
   box.scrollTop = 0;
   afProfFiltrar();
 }
+// Aceita uma profissão ou várias de uma vez, separadas por vírgula, ponto e vírgula ou linha.
+// As que já existem só são marcadas (e reativadas, se estavam inativas); as novas são cadastradas.
+const _sepLista = /[,;\n]/;
 async function afProfNova(){
   const input = document.getElementById('af-prof-nova');
-  const nome = input.value.trim(); if(!nome) return;
-  const jaTem = profissoes.find(p=>p.nome.toLowerCase()===nome.toLowerCase());
+  const busca = document.getElementById('af-prof-busca');
+  let bruto = input.value;
+  if(!bruto.trim() && busca && _sepLista.test(busca.value)) bruto = busca.value;   // lista colada na caixa de pesquisa
+  const nomes = bruto.split(_sepLista).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean)
+    .filter((x,i,a)=>a.findIndex(y=>_semAcento(y)===_semAcento(x))===i);
+  if(!nomes.length) return;
   const marcadas = [...document.querySelectorAll('#af-profs .chip-opt.selected')].map(c=>c.dataset.prof);
-  let alvo = nome;
-  if(jaTem){
-    alvo = jaTem.nome;
-    if(!jaTem.ativa){ jaTem.ativa = true; await persistProfissoes(); afterProfissoesChanged(); }
-    toast('Essa profissão já existe — marquei para você');
-  } else {
-    profissoes.push({nome, ativa:true});
-    await persistProfissoes();
-    afterProfissoesChanged();
-    toast('Profissão cadastrada e adicionada ao painel');
-  }
+  const alvos = []; let novas = 0, jaExistiam = 0, reativadas = false;
+  nomes.forEach(nome=>{
+    const jaTem = profissoes.find(p=>_semAcento(p.nome)===_semAcento(nome));
+    if(jaTem){ jaExistiam++; if(!jaTem.ativa){ jaTem.ativa = true; reativadas = true; } alvos.push(jaTem.nome); }
+    else { profissoes.push({nome, ativa:true}); novas++; alvos.push(nome); }
+  });
+  if(novas || reativadas){ await persistProfissoes(); afterProfissoesChanged(); }
   refreshAfProfChips(marcadas);
-  document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(marcadas.includes(c.dataset.prof) || c.dataset.prof===alvo) c.classList.add('selected'); });
+  document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(marcadas.includes(c.dataset.prof) || alvos.includes(c.dataset.prof)) c.classList.add('selected'); });
   input.value = '';
-  document.getElementById('af-prof-busca').value = '';
+  if(busca) busca.value = '';
   afProfSelecionadasNoTopo();
+  toast(nomes.length === 1
+    ? (jaExistiam ? 'Essa profissão já existe — marquei para você' : 'Profissão cadastrada e adicionada ao painel')
+    : novas + ' nova(s) cadastrada(s)' + (jaExistiam ? ' e ' + jaExistiam + ' que já existiam marcada(s)' : '') + ' — todas marcadas neste edital');
 }
 // Atalho pro admin editar um edital direto da página de detalhe (menu
 // Editais), sem sair de onde está — o formulário abre como uma janela por
