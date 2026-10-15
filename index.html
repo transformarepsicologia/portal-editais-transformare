@@ -5532,6 +5532,8 @@ function _corpoEntreHeadersAnaliseIA(achados, nome, textoTotal){
   const fimBruto = temProximo ? achados[idx + 1].inicio : textoTotal.length;
   if(fimBruto <= inicio) return '';
   let corpo = textoTotal.slice(inicio, fimBruto);
+  // se um campo da ficha (ex.: "Profissões contempladas: ...") vier depois da seção, ele não faz parte dela
+  corpo = corpo.split(/\n(?=[ \t]*(?:Profiss|Para quem|Valor por atend|Volume estimado|Remunera[çc][ãa]o|Instru[çc][ãa]o m|Escolaridade m|Experi[êe]ncia m|E-?mail de inscri)[^\n:]{0,40}[:：])/i)[0];
   if(temProximo) corpo = _removerDebrisDoProximoTitulo(corpo);
   return corpo.trim();
 }
@@ -5955,8 +5957,42 @@ function _restaurarGrupoAnalise(g, sn, soSeTinhaValor){
   if(g.lista === 'rem' && (!soSeTinhaValor || sn.rem.length)){ afRemuneracao = [...sn.rem]; renderAfRemuneracaoList(); }
   if(g.lista === 'docs' && (!soSeTinhaValor || sn.docs.length)){ afDocumentos = [...sn.docs]; renderAfDocList(); }
 }
+/* Quando a análise é colada "tudo junto" (um parágrafo só, sem quebras de linha, ou com os campos
+   emendados na mesma linha), recoloca cada campo e cada seção em sua própria linha antes de ler.
+   Texto que já vem organizado em linhas não muda. */
+function _normalizarAnaliseColada(bruto){
+  let t = String(bruto||'').replace(/\r\n?/g,'\n').replace(/\*\*|__/g,'');
+  const jaTemLista = /^[ \t>]*(?:[-•*]|\d{1,2}[.)])\s+\S/m.test(t);   // lista de verdade, em linhas separadas
+  const semQuebras = !/\n/.test(t.trim());
+  const ev = '(?<![-•*]\\s{0,3})';                                        // não quebra no meio de um item de lista
+  // campos da ficha (Profissões para baixo): "Rótulo:" no meio da linha começa linha nova
+  const baixo = 'Profiss[õo]es(?: contempladas)?|Para quem [eé]|Valor por atendimento|Volume estimado|Remunera[çc][ãa]o(?:, outras faixas e valores)?|(?:Instru[çc][ãa]o|Escolaridade|Forma[çc][ãa]o) m[ií]nima|Experi[êe]ncia m[ií]nima(?: \\(anos\\))?|E-?mail de inscri[çc][ãa]o';
+  t = t.replace(new RegExp('(\\S)[ \\t]+' + ev + '(' + '(?:' + baixo + ')' + ')\\s*[:：]', 'gi'), '$1\n$2:');
+  if(semQuebras){
+    // texto em um parágrafo só: também separa os campos do topo da ficha
+    const topo = 'Edital|[ÓO]rg[ãa]o|Objeto|UF e Cidade|UF|Cidade|Tipo|Modalidade|Abrang[êe]ncia|Situa[çc][ãa]o|[ÍI]ndice(?: Transformare)?(?: \\(1 a 5\\))?|Prazo|Publica[çc][ãa]o';
+    t = t.replace(new RegExp('(\\S)[ \\t]+' + ev + '((?:' + topo + '))\\s*[:：]', 'gi'), '$1\n$2:');
+  }
+  // títulos das seções: MAIÚSCULAS em qualquer ponto, ou "Título:" com dois-pontos
+  const tit = 'PONTOS?\\s+DE\\s+DESTAQUE|PONTOS?\\s+DE\\s+ATEN[ÇC][ÃA]O|DOCUMENTA[ÇC][ÃA]O\\s+NECESS[ÁA]RIA|REQUISITOS';
+  t = t.replace(new RegExp('[ \\t]*(' + tit + ')[ \\t]*[:：]?[ \\t]*', 'g'), '\n$1\n');
+  t = t.replace(new RegExp('[ \\t]*' + ev + '((?:Pontos? de destaque|Pontos? de aten[çc][ãa]o|Documenta[çc][ãa]o necess[áa]ria|Requisitos))[ \\t]*[:：][ \\t]*', 'gi'), '\n$1\n');
+  // itens emendados na mesma linha ("- A - B - C" ou "1. A 2. B 3. C"), só quando o texto não tinha lista em linhas
+  if(!jaTemLista){
+    t = t.split('\n').map(l=>{
+      const m = l.match(/^((?:(?!-)[^:\n]{2,70}[:：]\s*)?)(-\s+.+)$/);
+      if(m && /\s-\s+\S/.test(m[2])){
+        const itens = m[2].split(/\s+-\s+(?=\S)/).map(x=>'- ' + x.replace(/^-\s*/,'').trim());
+        return (m[1].trim() ? m[1].trim() + '\n' : '') + itens.join('\n');
+      }
+      if(/^\s*1[.)]\s+\S/.test(l) && /\s2[.)]\s+\S/.test(l)) return l.trim().split(/\s+(?=\d{1,2}[.)]\s+\S)/).join('\n');
+      return l;
+    }).join('\n');
+  }
+  return t.replace(/\n{3,}/g,'\n\n').trim();
+}
 function preencherComAnaliseIA(){
-  const texto = document.getElementById('af-analise-ia').value.trim();
+  const texto = _normalizarAnaliseColada(document.getElementById('af-analise-ia').value);
   const status = document.getElementById('af-analise-ia-status');
   if(!texto){ toast('Cole o texto da análise primeiro'); return; }
 
@@ -5967,7 +6003,7 @@ function preencherComAnaliseIA(){
   const r = parseAnaliseIAEdital(texto);
   const preenchidos = [];
   const ficha = parseFichaRadar(texto);
-  const temFicha = Object.keys(ficha.campos).length >= 3;
+  const temFicha = Object.keys(ficha.campos).length >= 3 || ['profissoes','paraquem','valor','volume','remuneracao','escolaridade','expanos','email'].some(k=>k in ficha.campos);
   let rel = null;
   if(temFicha){ rel = aplicarFichaRadar(ficha); preenchidos.push(...rel.ok); }
 
