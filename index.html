@@ -1776,13 +1776,14 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
 
       <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
-        <label>Colar a análise (Analista de Editais Transformare ou Gemini) — preenche a ficha inteira: Edital, Órgão, Objeto, UF, Cidade, Tipo, Modalidade, Abrangência, Situação, Índice, Prazo, Publicação, Profissões, valores, pontos e documentação</label>
-        <textarea id="af-analise-ia" rows="4" placeholder="Cole aqui o resultado completo da análise (as 5 seções: Índice Transformare, Pontos de destaque, Ponto de atenção, Requisitos, Documentação necessária)..."></textarea>
+        <label>Colar a análise (Gemini ou Analista de Editais Transformare) — preenche da seção “Profissões contempladas” para baixo: profissões, para quem é, valores, requisitos, pontos de destaque e atenção, documentação e e-mail de inscrição</label>
+        <textarea id="af-analise-ia" rows="4" placeholder="Clique em “Copiar prompt da análise”, cole no Gemini junto com o edital e cole aqui a resposta (profissões, valores, requisitos, pontos de destaque e atenção, documentação)..."></textarea>
         <div style="margin-top:10px; font-size:12px; color:var(--ink-dim);">Preencher quais partes? <a href="#" style="color:var(--teal); cursor:pointer;" onclick="marcarGruposAnalise(true); return false;">todas</a> · <a href="#" style="color:var(--teal); cursor:pointer;" onclick="marcarGruposAnalise(false); return false;">nenhuma</a></div>
         <div class="chip-select" id="af-analise-grupos" style="margin-top:6px;"></div>
         <label style="display:flex; gap:8px; align-items:center; font-size:12px; color:var(--ink-muted); margin-top:8px; cursor:pointer;"><input type="checkbox" id="af-analise-so-vazios"> Só preencher campos que estão vazios (não sobrescrever o que já digitei)</label>
         <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="preencherComAnaliseIA()">⇩ Preencher campos com a análise</button>
-        <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="copiarPromptAnalise()" title="Copia o pedido que faz a IA devolver todos os campos no formato certo">📋 Copiar prompt da análise</button>
+        <button type="button" class="btn-ghost" id="af-btn-copiar-prompt" style="margin-top:8px;" onclick="copiarPromptAnalise()" title="Copia o pedido que faz a IA devolver, no formato certo, tudo da seção Profissões contempladas para baixo">📋 Copiar prompt da análise</button>
+        <textarea id="af-prompt-copia" readonly rows="6" style="display:none; margin-top:8px; font-size:12px;" onclick="this.select()"></textarea>
         <div id="af-analise-ia-status" style="font-size:11.5px; color:var(--ink-dim); margin-top:6px;"></div>
       </div>
 
@@ -5532,7 +5533,7 @@ function _listaDeBullets(texto){
   return partes.map(l => l.replace(/^[\s>]*[-•*]\s*/, '').trim()).filter(Boolean);
 }
 function parseAnaliseIAEdital(textoOriginal){
-  const t = (textoOriginal || '').replace(/\r\n/g, '\n').trim();
+  const t = (textoOriginal || '').replace(/\r\n/g, '\n').replace(/\*\*|__/g, '').trim();   // sem negrito (**TÍTULO**)
   const headers = [
     { nome:'destaque', regex: /PONTOS?\s+DE\s+DESTAQUE/i },
     { nome:'atencao', regex: /PONTOS?\s+DE\s+ATEN[ÇC][ÃA]O/i },
@@ -5569,7 +5570,7 @@ const _FICHA_ROTULOS = [
   ['profissoes',/^profiss[oõ]es(?: contempladas)?$/],['valor',/^valor por atendimento$/],['volume',/^volume estimado$/],
   ['remuneracao',/^remunera[cç][aã]o(?:,? outras faixas.*)?$/],['paraquem',/^para quem [eé](?: \(.*\))?$|^quem pode (?:se credenciar|entrar|participar)$|^p[uú]blico(?:-alvo)?$/],['escolaridade',/^(?:instru[cç][aã]o|escolaridade|forma[cç][aã]o) m[ií]nima(?: exigida)?$/],['expanos',/^experi[eê]ncia m[ií]nima(?: \(anos\))?$/],['email',/^(?:e-?mail(?: de inscri[cç][aã]o)?|inscri[cç][aã]o por e-?mail)$/],
 ];
-function _fSemRotuloLinha(l){ return _fLimpa(l.replace(/^[\s>]*(?:[-•*]|\d+[.)])\s*/,'')); }
+function _fSemRotuloLinha(l){ return _fLimpa(String(l).replace(/\*\*|__|`/g,'').replace(/^[\s>]*(?:[-•*]|\d+[.)])\s*/,'')); }  // tira o negrito do Gemini (**Campo:**) antes de ler
 function parseFichaRadar(texto){
   const linhas = String(texto||'').replace(/\r\n/g,'\n').split('\n');
   const campos = {}; const sobra = {};
@@ -5657,9 +5658,13 @@ function _fData(s){ const m = String(s||'').match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4
 function aplicarFichaRadar(f){
   const ok = [], falta = [];
   const c = f.campos;
-  const setTxt = (id, rot, v)=>{ if(v && /^n[aã]o informad/i.test(v)) v = ''; if(v){ document.getElementById(id).value = v; ok.push(rot); } else falta.push(rot + ' — não veio na ficha'); };
+  // Edital, Órgão, Objeto, UF, Cidade, Tipo, Modalidade, Abrangência, Situação, Índice, Prazo e Publicação
+  // normalmente já vêm do PNCP/cadastro: só cobra esses campos se a análise colada trouxer algum deles.
+  const temTopo = ['edital','orgao','objeto','ufcidade','uf','cidade','tipo','modalidade','abrangencia','situacao','indice','prazo','publicacao'].some(k=>k in c);
+  const faltaTopo = msg => { if(temTopo) falta.push(msg); };
+  const setTxt = (id, rot, v)=>{ if(v && /^n[aã]o informad/i.test(v)) v = ''; if(v){ document.getElementById(id).value = v; ok.push(rot); } else if(!['af-edital','af-orgao','af-objeto'].includes(id) || temTopo) falta.push(rot + ' — não veio na ficha'); };
   const setSel = (id, rot, v, opcoes)=>{
-    if(!v){ falta.push(rot + ' — não veio na ficha'); return; }
+    if(!v){ faltaTopo(rot + ' — não veio na ficha'); return; }
     if(id === 'af-sit'){ v = v.replace(/abertura em breve|em breve|pr[oó]xim[oa] (?:d?a )?abertura/i, 'Próximo da abertura').replace(/^(revogad|anulad|suspens)a\b/i, m=>m.slice(0,-1)+'o'); }
     const sel = document.getElementById(id), nv = _fNorm(v);
     const op = [...sel.options].find(o=>nv.startsWith(_fNorm(o.value||o.textContent)) || _fNorm(o.value||o.textContent) === nv);
@@ -5676,13 +5681,13 @@ function aplicarFichaRadar(f){
   }
   if(c.uf){ const m = c.uf.match(/\b([A-Z]{2})\b/); if(m) uf = m[1]; else { const u = UFS.find(x=>_fNorm(x.nome)===_fNorm(c.uf)); if(u) uf = u.sigla; } }
   if(c.cidade) cidade = c.cidade;
-  if(uf && UFS.some(x=>x.sigla===uf)){ document.getElementById('af-uf').value = uf; ok.push('UF'); } else falta.push('UF — não reconhecida na ficha');
-  if(cidade){ document.getElementById('af-cidade').value = cidade; ok.push('Cidade'); } else falta.push('Cidade — não veio na ficha');
+  if(uf && UFS.some(x=>x.sigla===uf)){ document.getElementById('af-uf').value = uf; ok.push('UF'); } else faltaTopo('UF — não reconhecida na ficha');
+  if(cidade){ document.getElementById('af-cidade').value = cidade; ok.push('Cidade'); } else faltaTopo('Cidade — não veio na ficha');
   // Tipo
   if(c.tipo){
     const hit = _TIPOS_SINON.find(([re])=>re.test(_fNorm(c.tipo)));
     if(hit){ document.getElementById('af-tipo').value = hit[1]; ok.push('Tipo'); } else falta.push('Tipo — "' + c.tipo + '" não existe nas opções; escolha à mão');
-  } else falta.push('Tipo — não veio na ficha');
+  } else faltaTopo('Tipo — não veio na ficha');
   // Modalidade e deslocamento (vocabulário novo: Presencial, Presencial e online, Online, Home care)
   if(c.modalidade){
     const nm = _fNorm(c.modalidade);
@@ -5694,29 +5699,40 @@ function aplicarFichaRadar(f){
       : /presencial/.test(nm) ? 'Presencial' : null;
     if(mod){ document.getElementById('af-mod').value = mod; ok.push('Modalidade'); }
     else falta.push('Modalidade — "' + c.modalidade + '" não reconhecida; escolha à mão');
-  } else falta.push('Modalidade — não veio na ficha');
+  } else faltaTopo('Modalidade — não veio na ficha');
   if(c.email){ const em = (c.email.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/)||[])[0]; if(em){ document.getElementById('af-email-inscricao').value = em; ok.push('E-mail de inscrição'); } }
   setSel('af-abr','Abrangência', c.abrangencia);
   setSel('af-sit','Situação', c.situacao);
   const ix = indiceDaAnalise(f);
   if(ix){ document.getElementById('af-indice').value = String(ix.valor); ok.push('Índice ' + ix.valor + ' (' + ix.origem + ')'); }
-  else falta.push('Índice — não achei o número de 1 a 5 nem a soma da Parte 9; escolha à mão');
+  else faltaTopo('Índice — não achei o número de 1 a 5 nem a soma da Parte 9; escolha à mão');
   // Prazo e Publicação
   const pz = c.prazo ? (_fData((c.prazo.match(/at[eé]\s+(\d{1,2}\/\d{1,2}\/\d{4})/i)||[])[1]) || _fData(c.prazo)) : null;
   if(pz){ document.getElementById('af-prazo').value = pz; ok.push('Prazo'); }
-  else falta.push('Prazo — ' + (c.prazo ? '"' + c.prazo + '" não tem data; deixei em branco' : 'não veio na ficha'));
+  else if(c.prazo || temTopo) falta.push('Prazo — ' + (c.prazo ? '"' + c.prazo + '" não tem data; deixei em branco' : 'não veio na ficha'));
   const datasPub = (c.publicacao||'').match(/\d{1,2}\/\d{1,2}\/\d{4}/g) || [];
   if(datasPub.length){ document.getElementById('af-publicacao').value = _fData(datasPub[0]); ok.push('Publicação' + (datasPub.length>1 ? ' (a ficha trouxe duas datas — usei a primeira: ' + datasPub.join(' e ') + ')' : '')); }
-  else falta.push('Publicação — não veio na ficha');
-  // Profissões
+  else faltaTopo('Publicação — não veio na ficha');
+  // Profissões: compara item por item com o nome exato do botão (e com o nome da pessoa: Médico → Medicina etc.)
   if(c.profissoes){
-    const nv = _fNorm(c.profissoes); let n = 0;
-    document.querySelectorAll('#af-profs .chip-opt').forEach(ch=>{
-      const base = _fNorm(ch.dataset.prof).slice(0,5);
-      const marcar = nv.includes(base) || (base==='medic' && /medic|m[eé]dic/.test(nv));
-      if(marcar){ ch.classList.add('selected'); n++; }
+    const chips = [...document.querySelectorAll('#af-profs .chip-opt')];
+    const ALIAS = [[/^psicolog/,'psicologia'],[/^medic/,'medicina'],[/^fisioterap/,'fisioterapia'],[/^nutri/,'nutricao'],[/^fonoaudi/,'fonoaudiologia'],[/^enfermeir|^enfermagem/,'enfermagem'],[/^farmac/,'farmacia'],[/^terapeuta ocupacional|^terapia ocupacional/,'terapia ocupacional'],[/^dentista|^cirurgia?o?-? ?dentista|^odontolog/,'odontologia'],[/^biomedic/,'biomedicina'],[/^assistente social|^assistencia social/,'assistencia social'],[/^psiquiatr/,'psiquiatria']];
+    const itens = String(c.profissoes).split(/\s*(?:,|;|\/|\se\s|\n)\s*/).map(x=>_fNorm(x.replace(/\(.*?\)/g,'')).trim()).filter(Boolean);
+    const marcadas = new Set(), sem = [];
+    itens.forEach(it=>{
+      let hit = chips.filter(ch=>_fNorm(ch.dataset.prof) === it);
+      if(!hit.length){ const al = ALIAS.find(([re])=>re.test(it)); if(al) hit = chips.filter(ch=>_fNorm(ch.dataset.prof) === al[1]); }
+      if(!hit.length && !/^(nao informad|nenhum|todas?)/.test(it)){
+        const sing = it.replace(/s$/,'');
+        hit = chips.filter(ch=>{ const nm = _fNorm(ch.dataset.prof); return nm === sing || nm.replace(/s$/,'') === sing; });
+      }
+      if(hit.length) hit.forEach(h=>marcadas.add(h)); else if(!/^(nao informad|nenhum)/.test(it)) sem.push(it);
     });
-    if(n) ok.push('Profissões (' + n + ')'); else falta.push('Profissões — nenhuma reconhecida em "' + c.profissoes + '"');
+    marcadas.forEach(ch=>ch.classList.add('selected'));
+    afProfFiltrar();
+    if(marcadas.size) ok.push('Profissões (' + marcadas.size + ')');
+    if(sem.length) falta.push('Profissões que não existem nos botões: ' + sem.join(', ') + ' — use “Cadastrar nova” se precisar');
+    if(!marcadas.size && !sem.length) falta.push('Profissões — nenhuma reconhecida em "' + c.profissoes + '"');
   } else falta.push('Profissões — não veio na ficha');
   setTxt('af-valor-atendimento','Valor por atendimento', c.valor); setTxt('af-volume','Volume estimado', c.volume);
   if(f.remuneracao.length){ f.remuneracao.forEach(r=>{ if(!afRemuneracao.includes(r)) afRemuneracao.push(r); }); renderAfRemuneracaoList(); ok.push('Remuneração (' + f.remuneracao.length + ')'); }
@@ -5828,28 +5844,25 @@ function inferirDoTexto(texto){
   }
   return { ok, falta };
 }
-const PROMPT_ANALISE = `Analise o edital e responda EXATAMENTE neste formato, uma informação por linha, sem tabelas. Use só as opções indicadas. Se não souber, escreva "não informado".
+// Monta o pedido para a IA com as profissões e os públicos que existem HOJE no formulário
+// (assim a resposta já vem com os nomes exatos dos botões e o preenchimento reconhece tudo).
+// Cobre só da seção "Profissões contempladas" para baixo: o que está acima vem do PNCP/cadastro.
+function montarPromptAnalise(){
+  const profs = (typeof profissoesAtivasNomes === 'function' ? profissoesAtivasNomes() : []).slice().sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const pubs = (typeof PUBLICOS !== 'undefined' ? PUBLICOS : []);
+  return `Analise o edital anexo e responda EXATAMENTE neste formato, uma informação por linha, sem tabelas e sem texto antes ou depois. Use só as opções indicadas. Se não souber, escreva "não informado".
 
-FICHA
-Edital: número de controle do PNCP ou número do edital
-Órgão: nome do órgão
-Objeto: resumo em uma linha
-UF e Cidade: Cidade/UF
-Tipo: Credenciamento | Chamamento Público | Edital | Pregão | Contratação | Convênio | Processo seletivo
-Modalidade: Presencial | Presencial (in company) | Itinerante | Presencial e online | Online | Home care
-Abrangência: Municipal | Regional | Estadual | Nacional
-Situação: Próximo da abertura | Aberto | Próximo do encerramento | Encerrado | Suspenso | Revogado | Anulado
-Índice Transformare (1 a 5): somente o número, de 1 a 5
-Prazo: dd/mm/aaaa
-Publicação: dd/mm/aaaa
-Profissões contempladas: só as que o edital aceita, separadas por vírgula (Psicologia, Psiquiatria, Fisioterapia, Nutrição, Fonoaudiologia, Enfermagem, Farmácia, Medicina, Terapia Ocupacional, Odontologia, Biomedicina, Assistência Social)
-Para quem é: Pessoa Física (PF), Pessoa Jurídica (PJ), Clínica (equipe multidisciplinar) — só os aceitos
+Profissões contempladas: só as que o edital aceita, separadas por vírgula, escolhendo SOMENTE entre estas (use o nome exato): ${profs.join(', ')}. Se o edital aceitar outra profissão, escreva o nome dela também.
+Para quem é: ${pubs.join(' | ')} — só os aceitos, separados por vírgula
 Valor por atendimento: ex. R$ 52,82 por sessão (30 a 40 min)
 Volume estimado: ex. 1.920 sessões/ano (cerca de 160/mês, dividido entre credenciados)
 Remuneração, outras faixas e valores: só se houver mais de um valor (um por linha, começando com "- ")
 Instrução mínima: Graduação | Especialização | Residência | Mestrado | Doutorado | não exige
 Experiência mínima (anos): número ou "não exige"
-E-mail de inscrição: se a inscrição for por e-mail
+E-mail de inscrição: só se a inscrição for por e-mail
+
+REQUISITOS
+um parágrafo curto
 
 PONTOS DE DESTAQUE
 - de 3 a 5 itens
@@ -5857,14 +5870,36 @@ PONTOS DE DESTAQUE
 PONTOS DE ATENÇÃO
 - de 3 a 5 itens (valor baixo, rodízio, documentação pesada, riscos)
 
-REQUISITOS
-um parágrafo curto
-
 DOCUMENTAÇÃO NECESSÁRIA
 - um documento por linha`;
+}
+// Copia texto de 3 jeitos (API moderna → comando antigo → caixa para copiar à mão).
+async function _copiarTexto(txt){
+  try{ if(navigator.clipboard && window.isSecureContext){ await navigator.clipboard.writeText(txt); return true; } }catch(e){}
+  try{
+    const ta = document.createElement('textarea'); ta.value = txt; ta.setAttribute('readonly','');
+    ta.style.cssText = 'position:fixed; top:0; left:0; width:1px; height:1px; opacity:0;';
+    const alvo = document.getElementById('admin-form-modal') || document.body;
+    alvo.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, txt.length);
+    const ok = document.execCommand('copy'); ta.remove();
+    if(ok) return true;
+  }catch(e){}
+  return false;
+}
 async function copiarPromptAnalise(){
-  try{ await navigator.clipboard.writeText(PROMPT_ANALISE); toast('Prompt copiado — cole no Gemini ou no Analista junto com o edital'); }
-  catch(e){ const ta = document.getElementById('af-analise-ia'); ta.value = PROMPT_ANALISE; ta.select(); toast('Copie o texto da caixa (Ctrl+C) e depois limpe a caixa'); }
+  const txt = montarPromptAnalise();
+  const btn = document.getElementById('af-btn-copiar-prompt');
+  const box = document.getElementById('af-prompt-copia');
+  const ok = await _copiarTexto(txt);
+  if(ok){
+    if(box) box.style.display = 'none';
+    toast('Prompt copiado — cole no Gemini ou no Analista junto com o edital');
+    if(btn){ const t0 = btn.dataset.t0 || btn.textContent; btn.dataset.t0 = t0; btn.textContent = '✓ Prompt copiado'; setTimeout(()=>{ btn.textContent = t0; }, 2200); }
+  } else if(box){
+    // Nenhum jeito automático funcionou: mostra o texto selecionado para copiar à mão (sem mexer na caixa da análise).
+    box.style.display = ''; box.value = txt; box.focus(); box.select();
+    toast('Não consegui copiar sozinho — o texto está selecionado abaixo, é só copiar');
+  }
 }
 /* ---- Escolher quais partes da análise preencher ---- */
 const _GRUPOS_ANALISE = {
@@ -5935,7 +5970,7 @@ function preencherComAnaliseIA(){
   const inf = inferirDoTexto(texto);
   preenchidos.push(...inf.ok);
   if(!rel) rel = { ok: [], falta: [] };
-  if(!temFicha) rel.falta.push('Edital, Órgão, Objeto, UF, Cidade, Tipo, Modalidade, Abrangência, Situação, Prazo e Publicação — o texto colado não traz a ficha. Use o botão "Copiar prompt" e peça a análise nesse formato');
+  if(!temFicha) rel.falta.push('Profissões, Para quem é, valores, instrução e experiência — o texto colado não está no formato do prompt. Use o botão "Copiar prompt da análise" e cole a resposta aqui');
   inf.falta.forEach(x=>{ if(!rel.falta.some(y=>y.startsWith(x.split(' — ')[0]))) rel.falta.push(x); });
 
   // Desfaz as partes que não foram marcadas (e, se pedido, o que já estava preenchido) e filtra o relatório.
@@ -5954,7 +5989,7 @@ function preencherComAnaliseIA(){
     status.style.color = 'var(--coral)';
     return;
   }
-  status.innerHTML = `<div>✓ Preenchido: ${esc(preenchidos.join(', '))}.</div>` +
+  status.innerHTML = `<div>✓ Preenchido: ${esc([...new Set(preenchidos)].join(', '))}.</div>` +
     (rel && rel.falta.length ? `<div style="color:var(--amber); margin-top:6px;">⚠ Preencha à mão:<ul style="margin:4px 0 0 18px; padding:0;">${rel.falta.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul></div>` : '') +
     `<div style="margin-top:6px;">Revise os campos antes de salvar.</div>`;
   status.style.color = 'var(--ink-dim)';
@@ -6090,6 +6125,7 @@ function openAdminForm(id){
   document.getElementById('af-mov-data').value = '';
   document.getElementById('af-mov-texto').value = '';
   document.getElementById('af-analise-ia').value = '';
+  { const bx = document.getElementById('af-prompt-copia'); if(bx) bx.style.display = 'none'; }
   document.getElementById('af-analise-ia-status').textContent = '';
   afTextoCarregar(id);
   renderGruposAnalise();
