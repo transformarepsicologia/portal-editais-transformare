@@ -2918,7 +2918,7 @@ function removeFromCompare(id){
 }
 
 /* ================= WHATSAPP ================= */
-const SITE_URL = 'https://transformarepsicologia.github.io/portal-editais-transformare/';
+const SITE_URL = 'https://radartransformare.com.br';
 /* O botão "Ver edital oficial" só aparece quando o link do edital NÃO é uma página do PNCP (que já tem o botão "Ver no PNCP"). */
 function linkEditalDireto(o){
   const u = (o && o.urlEdital) ? String(o.urlEdital).trim() : '';
@@ -2927,16 +2927,18 @@ function linkEditalDireto(o){
 function shareWhatsApp(id){
   const o = oportunidades.find(x=>x.id===id);
   const link = o.urlEdital || o.urlOficial || o.urlPncp || 'https://pncp.gov.br/app/editais';
+  // O WhatsApp monta a pré-visualização (logo do Radar) com o PRIMEIRO link da mensagem:
+  // por isso o link do Radar vem logo no topo, antes do link do edital.
   const partes = [
+    `📡 *Radar Transformare — Portal de Editais*`,
+    SITE_URL,
+    '',
     `*${o.edital}*`,
     o.objeto,
     `Órgão: ${o.orgao} — ${o.uf}`,
     `Prazo: ${o.prazo}`,
     '',
     `🔗 Edital: ${link}`,
-    '',
-    `📡 Veja essa e outras oportunidades de credenciamento no Radar Transformare:`,
-    SITE_URL,
   ];
   const texto = encodeURIComponent(partes.join('\n'));
   window.open(`https://wa.me/?text=${texto}`, '_blank');
