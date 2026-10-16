@@ -5685,6 +5685,7 @@ function indiceDaAnalise(f){
 }
 const _TIPOS_SINON = [[/chamamento/,'Chamamento Público'],[/credenciamento/,'Credenciamento'],[/preg[aã]o/,'Pregão'],[/processo seletivo/,'Processo seletivo'],[/conv[eê]nio/,'Convênio'],[/contrata[cç][aã]o/,'Contratação'],[/^edital/,'Edital']];
 function _fData(s){ const m = String(s||'').match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/); return m ? String(m[1]).padStart(2,'0')+'/'+String(m[2]).padStart(2,'0')+'/'+m[3] : null; }
+let _profsFichaRejeitadas = false;   // a IA devolveu a lista inteira de profissões: não deduzir do texto no lugar
 function aplicarFichaRadar(f){
   const ok = [], falta = [];
   const c = f.campos;
@@ -5758,6 +5759,11 @@ function aplicarFichaRadar(f){
       }
       if(hit.length) hit.forEach(h=>marcadas.add(h)); else if(!/^(nao informad|nenhum)/.test(it)) sem.push(it);
     });
+    if(chips.length >= 10 && marcadas.size >= Math.max(10, Math.ceil(chips.length * 0.6))){
+      // a IA devolveu quase a lista inteira em vez de só as do edital: não marca nada para não encher o edital de profissão errada
+      falta.push('Profissões — a análise trouxe ' + marcadas.size + ' de ' + chips.length + ' profissões (parece a lista inteira, não só as do edital); não marquei nenhuma. Peça de novo só as que o edital cita ou marque à mão');
+      marcadas.clear(); _profsFichaRejeitadas = true;
+    }
     marcadas.forEach(ch=>ch.classList.add('selected'));
     afProfFiltrar();
     if(marcadas.size) ok.push('Profissões (' + marcadas.size + ')');
@@ -5799,7 +5805,7 @@ function aplicarFichaRadar(f){
 function inferirDoTexto(texto){
   const ok = [], falta = [];
   const t = _fNorm(texto);
-  if(!document.querySelector('#af-profs .chip-opt.selected')){
+  if(!_profsFichaRejeitadas && !document.querySelector('#af-profs .chip-opt.selected')){
     let n = 0;
     document.querySelectorAll('#af-profs .chip-opt').forEach(ch=>{
       const base = _fNorm(ch.dataset.prof).slice(0,5);
@@ -5882,7 +5888,8 @@ function montarPromptAnalise(){
   const pubs = (typeof PUBLICOS !== 'undefined' ? PUBLICOS : []);
   return `Analise o edital anexo e responda EXATAMENTE neste formato, uma informação por linha, sem tabelas e sem texto antes ou depois. Use só as opções indicadas. Se não souber, escreva "não informado".
 
-Profissões contempladas: só as que o edital aceita, separadas por vírgula e em ordem alfabética, escolhendo SOMENTE entre estas (use o nome exato): ${profs.join(', ')}. Se o edital aceitar outra profissão, escreva o nome dela também.
+Profissões contempladas: liste APENAS as profissões que este edital cita ou aceita (normalmente poucas), separadas por vírgula e em ordem alfabética. NÃO liste as que o edital não menciona. Para escrever cada uma, use o nome exato da lista de referência abaixo; se o edital aceitar uma profissão que não está na lista, escreva o nome dela mesmo assim. Se o edital não disser quais profissões, escreva "não informado".
+Lista de referência (não copie a lista inteira): ${profs.join(', ')}.
 
 Para quem é: ${pubs.join(' | ')} — só os aceitos, separados por vírgula
 
@@ -6025,6 +6032,7 @@ function preencherComAnaliseIA(){
   const ficha = parseFichaRadar(texto);
   const temFicha = Object.keys(ficha.campos).length >= 3 || ['profissoes','paraquem','valor','volume','remuneracao','escolaridade','expanos','email'].some(k=>k in ficha.campos);
   let rel = null;
+  _profsFichaRejeitadas = false;
   if(temFicha){ rel = aplicarFichaRadar(ficha); preenchidos.push(...rel.ok); }
 
   if(r.indice && !temFicha){ document.getElementById('af-indice').value = String(r.indice); preenchidos.push('Índice'); }
