@@ -2152,6 +2152,24 @@ const PROFISSOES_SEED = ["Psicologia","Psiquiatria","Fisioterapia","Nutrição",
 const limparNomeProf = n => String(n||'').replace(/\s+(?:Ativa|Inativa)\s*$/i, '').trim();
 let profissoes = []; // [{nome, ativa}], carregado/persistido via localStorage (chave "profissoes")
 function profissoesAtivasNomes(){ return profissoes.filter(p=>p.ativa).map(p=>p.nome); }
+// Leva um nome de profissão (inclusive sinônimo: Cardiologista, Psicólogo, Clínico Geral...) para o nome
+// que está na lista do painel administrativo (Cadastros auxiliares). Se não houver equivalente na lista, devolve o nome como veio.
+function canonProfissao(nome){
+  const sa = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+  const lista = profissoes.map(p=>p.nome);
+  const n = sa(nome); if(!n) return nome;
+  const acha = v => lista.find(x=>sa(x) === v);
+  let r = acha(n); if(r) return r;
+  const FIXOS = { 'psicologo':'psicologia','psicologa':'psicologia','medico':'medicina','medica':'medicina','dentista':'odontologia','cirurgiao dentista':'odontologia','odontologo':'odontologia',
+    'fisioterapeuta':'fisioterapia','nutricionista':'nutricao','fonoaudiologo':'fonoaudiologia','fonoaudiologa':'fonoaudiologia','enfermeiro':'enfermagem','enfermeira':'enfermagem',
+    'farmaceutico':'farmacia','farmaceutica':'farmacia','biomedico':'biomedicina','biomedica':'biomedicina','assistente social':'assistencia social','terapeuta ocupacional':'terapia ocupacional',
+    'psicopedagogo':'psicopedagogia','psicopedagoga':'psicopedagogia','musicoterapeuta':'musicoterapia','clinico geral':'clinica geral','clinica medica':'clinica geral','obstetra':'obstetricia',
+    'anestesiologista':'anestesista','anestesiologia':'anestesista','cirurgiao':'cirurgia geral','cirurgiao geral':'cirurgia geral','medico do trabalho':'medicina do trabalho',
+    'ginecologista e obstetra':'gineco-obstetricia','ginecologia e obstetricia':'gineco-obstetricia','ortopedia e traumatologia':'ortopedia','traumatologista':'traumatologia','tecnico em enfermagem':'tecnico de enfermagem' };
+  const cand = [FIXOS[n], n.replace(/ologista$/,'ologia'), n.replace(/iatra$/,'iatria'), n.replace(/ista$/,'ia'), n.replace(/^cirurgiao /,'cirurgia '), n.replace(/ologo$/,'ologia')].filter(Boolean);
+  for(const v of cand){ r = acha(v); if(r) return r; }
+  return nome;
+}
 
 /* Radar da home: 4 pontos fixos, alternando entre TODAS as profissões
    ativas cadastradas (não só 6 fixas), pra passar a ideia de que o
@@ -5196,6 +5214,7 @@ async function addProfissaoAdmin(){
   const novas = [], repetidas = [];
   nomes.forEach(nome=>{
     if(profissoes.some(p=>p.nome.toLowerCase()===nome.toLowerCase()) || novas.some(n=>n.toLowerCase()===nome.toLowerCase())) repetidas.push(nome);
+    else if(canonProfissao(nome) !== nome){ repetidas.push(nome + ' (já existe como ' + canonProfissao(nome) + ')'); }   // sinônimo de uma profissão já cadastrada
     else novas.push(nome);
   });
   if(!novas.length){ toast(repetidas.length > 1 ? 'Essas profissões já estão cadastradas' : 'Essa profissão já está cadastrada'); return; }
@@ -5757,6 +5776,7 @@ function aplicarFichaRadar(f){
         const sing = it.replace(/s$/,'');
         hit = chips.filter(ch=>{ const nm = _fNorm(ch.dataset.prof); return nm === sing || nm.replace(/s$/,'') === sing; });
       }
+      if(!hit.length){ const cn = _fNorm(canonProfissao(it)); hit = chips.filter(ch=>_fNorm(ch.dataset.prof) === cn); }
       if(hit.length) hit.forEach(h=>marcadas.add(h)); else if(!/^(nao informad|nenhum)/.test(it)) sem.push(it);
     });
     if(chips.length >= 10 && marcadas.size >= Math.max(10, Math.ceil(chips.length * 0.6))){
@@ -6168,7 +6188,8 @@ async function afProfNova(){
   const marcadas = [...document.querySelectorAll('#af-profs .chip-opt.selected')].map(c=>c.dataset.prof);
   const alvos = []; let novas = 0, jaExistiam = 0, reativadas = false;
   nomes.forEach(nome=>{
-    const jaTem = profissoes.find(p=>_semAcento(p.nome)===_semAcento(nome));
+    const canon = canonProfissao(nome);
+    const jaTem = profissoes.find(p=>_semAcento(p.nome)===_semAcento(canon));
     if(jaTem){ jaExistiam++; if(!jaTem.ativa){ jaTem.ativa = true; reativadas = true; } alvos.push(jaTem.nome); }
     else { profissoes.push({nome, ativa:true}); novas++; alvos.push(nome); }
   });
@@ -6219,7 +6240,7 @@ function openAdminForm(id){
   renderGruposAnalise();
   document.getElementById('af-analise-so-vazios').checked = false;
   { const b = document.getElementById('af-prof-busca'); if(b) b.value = ''; const n = document.getElementById('af-prof-nova'); if(n) n.value = ''; }
-  refreshAfProfChips(id ? oportunidades.find(x=>x.id===id).profissoes : []);
+  refreshAfProfChips(id ? [...new Set(oportunidades.find(x=>x.id===id).profissoes.map(canonProfissao))] : []);
   refreshAfPublicoChips(id ? (oportunidades.find(x=>x.id===id).aceitaContratacao||[]) : []);
 
   if(id){
@@ -6249,7 +6270,7 @@ function openAdminForm(id){
     atualizarNumeroPncpForm();
     document.getElementById('af-email-inscricao').value = o.emailInscricao || '';
 
-    document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(o.profissoes.includes(c.dataset.prof)) c.classList.add('selected'); });
+    { const canon = o.profissoes.map(canonProfissao); document.querySelectorAll('#af-profs .chip-opt').forEach(c=>{ if(canon.includes(c.dataset.prof)) c.classList.add('selected'); }); }
     afProfSelecionadasNoTopo();
     afDocumentos = [...(o.documentos||[])];
     afMovimentacoes = (o.movimentacoes||[]).map(m=>({...m}));
