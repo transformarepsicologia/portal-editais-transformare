@@ -1323,6 +1323,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <button class="admin-tab" data-tab="triagem" onclick="adminTab('triagem')">Triagem<span class="admin-tab-badge" id="tabbadge-triagem" style="display:none;"></span></button>
     <button class="admin-tab" data-tab="editais" onclick="adminTab('editais')">Editais<span class="admin-tab-badge neutral" id="tabbadge-editais" style="display:none;"></span></button>
     <button class="admin-tab" data-tab="leads" onclick="adminTab('leads')">Leads e usuários<span class="admin-tab-badge" id="tabbadge-leads" style="display:none;"></span></button>
+    <button class="admin-tab" data-tab="prospeccao" onclick="adminTab('prospeccao')">Prospecção WhatsApp</button>
     <button class="admin-tab" data-tab="aae" onclick="adminTab('aae')">Aderência (AAE)</button>
     <button class="admin-tab" data-tab="config" onclick="adminTab('config')">Configurações</button>
   </div>
@@ -1539,6 +1540,44 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
   </div>
 
+  </div>
+
+  <div class="admin-tabpanel" id="admin-tab-prospeccao">
+    <div class="section-title" style="font-size:17px; margin-top:4px;">Prospecção por WhatsApp</div>
+    <p class="section-sub">Envio manual, um contato por vez, pelo seu WhatsApp. O sistema escolhe os editais abertos que combinam com a profissão e a região de cada profissional e monta a mensagem. Só envia se houver edital compatível.</p>
+
+    <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
+      <label>1. Adicionar contatos</label>
+      <div class="two-col">
+        <div class="form-row"><label>Profissão (padrão da lista)</label><select id="pr-prof"></select></div>
+        <div class="two-col" style="gap:8px;">
+          <div class="form-row"><label>Cidade (padrão)</label><input type="text" id="pr-cidade" placeholder="Ex: Canoas"></div>
+          <div class="form-row"><label>UF (padrão)</label><select id="pr-uf"></select></div>
+        </div>
+      </div>
+      <textarea id="pr-lista" rows="4" placeholder="Um contato por linha: Nome; telefone&#10;ou completo: Nome; telefone; profissão; cidade; UF&#10;Ex.: Dra. Ana Souza; (51) 99999-1234"></textarea>
+      <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="prospAdicionar()">+ Adicionar à lista</button>
+      <span id="pr-add-status" style="font-size:12px; color:var(--ink-dim); margin-left:8px;"></span>
+    </div>
+
+    <div class="form-row" style="margin-top:14px;">
+      <label>2. Modelo da mensagem <span style="font-weight:400; color:var(--ink-dim);">— campos: {nome} {profissao} {cidade} {uf} {n_editais} {editais} {site}</span></label>
+      <textarea id="pr-modelo" rows="9" oninput="prospSalvarModelo()"></textarea>
+      <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:6px; font-size:12.5px; color:var(--ink-muted);">
+        <label style="display:flex; gap:6px; align-items:center; cursor:pointer;"><input type="checkbox" id="pr-incluir-medicina" onchange="prospRender()"> Para especialidades médicas, incluir também editais de Medicina (geral)</label>
+        <label style="display:flex; gap:6px; align-items:center;">Limite de envios por dia <input type="number" id="pr-limite" min="1" max="100" style="width:64px;" oninput="prospSalvarLimite()"></label>
+        <span id="pr-contador" style="font-weight:700; color:var(--teal);"></span>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:14px 0 8px;">
+      <label style="font-weight:600;">3. Contatos</label>
+      <select id="pr-f-status" onchange="prospRender()"><option value="">Todos os status</option><option value="novo">Novo</option><option value="enviado">Enviado</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
+      <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; cursor:pointer;"><input type="checkbox" id="pr-f-comedital" onchange="prospRender()"> Só com edital compatível</label>
+      <span id="pr-resumo" style="font-size:12.5px; color:var(--ink-dim);"></span>
+    </div>
+    <div style="overflow-x:auto;"><table class="admin-table" id="pr-tabela"><thead><tr><th>Contato</th><th>Profissão / local</th><th>Editais compatíveis</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p class="section-sub" style="margin-top:10px;">Boas práticas: poucos envios por dia, uma única mensagem por contato, identifique-se e respeite o pedido de "SAIR" (marque como <em>Não contatar</em>). A lista guarda a origem de cada contato (LGPD).</p>
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-aae">
@@ -7412,11 +7451,149 @@ async function aaeExcluir(){
   aaeAtual = null; toast('Cliente excluída'); await aaeCarregar(); aaeRenderForm();
 }
 
+/* ================= PROSPECÇÃO POR WHATSAPP (envio manual) ================= */
+let prospectos = [];
+const PROSP_MODELO_PADRAO = `Olá, {nome}! Aqui é o Douglas, da Transformare 😊
+Acompanho todo dia os editais públicos de credenciamento na área da saúde e separei {n_editais} aberto(s) para {profissao} em {cidade}/{uf}:
+
+{editais}
+
+Reúno tudo no Radar Transformare ({site}): é só criar uma conta grátis para ver requisitos, documentos e prazos.
+Se não quiser receber minhas mensagens, responda SAIR.`;
+const PROSP_NAO_MEDICAS = new Set(['psicologia','fisioterapia','fonoaudiologia','nutricao','enfermagem','tecnico de enfermagem','farmacia','terapia ocupacional','odontologia','biomedicina','assistencia social','psicopedagogia','musicoterapia']);
+function _prospNorm(t){ return String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); }
+function prospTelefone(txt){
+  let d = String(txt||'').replace(/\D/g,'');
+  if(d.startsWith('00')) d = d.slice(2);
+  if(d.length === 10 || d.length === 11) d = '55' + d;
+  if(/^55\d{10}$/.test(d)){ const n = d.slice(4); if(/^[6-9]/.test(n)) d = d.slice(0,4) + '9' + n; else return null; }   // celular antigo sem o 9; fixo (começa com 2 a 5) não tem WhatsApp
+  return /^55\d{2}9\d{8}$/.test(d) ? d : null;
+}
+function prospIniciar(){
+  const sp = document.getElementById('pr-prof'); if(!sp) return;
+  if(!sp.options.length) sp.innerHTML = '<option value="">— escolha —</option>' + profissoesAtivasNomes().slice().sort((a,b)=>a.localeCompare(b,'pt-BR')).map(n=>`<option>${esc(n)}</option>`).join('');
+  const su = document.getElementById('pr-uf'); if(su && !su.options.length) su.innerHTML = '<option value="">—</option>' + UFS.map(u=>`<option value="${u.sigla}">${u.sigla}</option>`).join('');
+  const m = document.getElementById('pr-modelo'); if(m && !m.value){ let v = null; try{ v = localStorage.getItem('pr_modelo'); }catch(e){} m.value = v || PROSP_MODELO_PADRAO; }
+  const l = document.getElementById('pr-limite'); if(l && !l.value){ let v = null; try{ v = localStorage.getItem('pr_limite'); }catch(e){} l.value = v || 15; }
+}
+function prospSalvarModelo(){ try{ localStorage.setItem('pr_modelo', document.getElementById('pr-modelo').value); }catch(e){} }
+function prospSalvarLimite(){ try{ localStorage.setItem('pr_limite', document.getElementById('pr-limite').value); }catch(e){} prospAtualizarContador(); }
+async function prospCarregar(){
+  prospIniciar();
+  if(!_sb){ return; }
+  const { data, error } = await _sb.from('prospectos_whatsapp').select('*').order('criado_em', { ascending:false }).limit(1000);
+  if(error){ toast('Não consegui carregar os contatos'); return; }
+  prospectos = data || [];
+  prospRender();
+  prospAtualizarContador();
+}
+async function prospEnviosHoje(){
+  if(!_sb) return 0;
+  const ini = new Date(); ini.setHours(0,0,0,0);
+  const { count } = await _sb.from('prospectos_envios').select('id', { count:'exact', head:true }).gte('enviado_em', ini.toISOString());
+  return count || 0;
+}
+async function prospAtualizarContador(){
+  const el = document.getElementById('pr-contador'); if(!el) return;
+  const n = await prospEnviosHoje();
+  const lim = parseInt((document.getElementById('pr-limite')||{}).value,10) || 15;
+  el.textContent = 'Hoje: ' + n + ' de ' + lim + ' envios';
+  el.style.color = n >= lim ? 'var(--coral)' : 'var(--teal)';
+}
+async function prospAdicionar(){
+  const st = document.getElementById('pr-add-status');
+  const prof = document.getElementById('pr-prof').value, cidadeP = document.getElementById('pr-cidade').value.trim(), ufP = document.getElementById('pr-uf').value;
+  const linhas = document.getElementById('pr-lista').value.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  if(!linhas.length){ st.textContent = 'Cole ao menos um contato.'; return; }
+  const novos = [], invalidos = [];
+  linhas.forEach(l=>{
+    const c = l.split(/\s*[;\t|]\s*/);
+    const tel = prospTelefone(c[1] !== undefined ? c[1] : c[0]);
+    const nome = (c[1] !== undefined ? c[0] : '').trim();
+    if(!tel){ invalidos.push(l.slice(0,40)); return; }
+    const profL = c[2] ? canonProfissao(c[2]) : prof;
+    const cidadeL = c[3] || cidadeP, ufL = (c[4] || ufP || '').toUpperCase().slice(0,2);
+    if(!profL || !ufL){ invalidos.push(l.slice(0,40) + ' (falta profissão ou UF)'); return; }
+    if(!novos.some(n=>n.telefone===tel)) novos.push({ nome: nome || null, telefone: tel, profissao: profL, cidade: cidadeL || null, uf: ufL, origem: 'Google' });
+  });
+  if(novos.length){
+    const { error } = await _sb.from('prospectos_whatsapp').upsert(novos, { onConflict:'telefone', ignoreDuplicates:true });
+    if(error){ st.textContent = 'Erro ao salvar: ' + error.message; return; }
+  }
+  st.textContent = novos.length + ' contato(s) processado(s) (repetidos são ignorados)' + (invalidos.length ? ' · ' + invalidos.length + ' linha(s) com problema: ' + invalidos.slice(0,3).join(' | ') : '');
+  if(!invalidos.length) document.getElementById('pr-lista').value = '';
+  await prospCarregar();
+}
+// Editais abertos que combinam com a profissão e a região do contato (no máximo 3, os mais próximos primeiro).
+function prospEditaisDoContato(p){
+  const prof = _prospNorm(canonProfissao(p.profissao));
+  const medicinaGeral = document.getElementById('pr-incluir-medicina') && document.getElementById('pr-incluir-medicina').checked && !PROSP_NAO_MEDICAS.has(prof) && prof !== 'medicina';
+  const peso = o => (o.cidade && p.cidade && _prospNorm(o.cidade) === _prospNorm(p.cidade) ? 0 : o.uf === p.uf && /municipal|regional/i.test(o.abrangencia||'') ? 1 : o.uf === p.uf ? 2 : 3);
+  return oportunidades.filter(o=>{
+    if(!editalAtivo(o) || !visivelAoCliente(o)) return false;
+    const profs = (o.profissoes||[]).map(x=>_prospNorm(canonProfissao(x)));
+    if(!(profs.includes(prof) || (medicinaGeral && profs.includes('medicina')))) return false;
+    return o.uf === p.uf || /nacional/i.test(o.abrangencia||'');
+  }).sort((a,b)=>peso(a)-peso(b)).slice(0,3);
+}
+function prospMensagem(p, eds){
+  const linhas = eds.map(o=>`• ${o.orgao}${o.cidade ? ' (' + o.cidade + '/' + o.uf + ')' : ' (' + o.uf + ')'} — prazo ${o.prazo}`).join('\n');
+  const m = (document.getElementById('pr-modelo').value || PROSP_MODELO_PADRAO);
+  return m.replace(/\{nome\}/g, p.nome ? p.nome.split(/\s+/).slice(0, /^(dr|dra)\.?$/i.test(p.nome.split(/\s+/)[0]) ? 2 : 1).join(' ') : 'tudo bem')
+    .replace(/\{profissao\}/g, p.profissao || '').replace(/\{cidade\}/g, p.cidade || p.uf).replace(/\{uf\}/g, p.uf)
+    .replace(/\{n_editais\}/g, String(eds.length)).replace(/\{editais\}/g, linhas).replace(/\{site\}/g, SITE_URL);
+}
+const PROSP_ROTULO = { novo:'Novo', enviado:'Enviado', respondeu:'Respondeu', assinou:'Assinou ✅', nao_contatar:'Não contatar' };
+function prospRender(){
+  const tb = document.querySelector('#pr-tabela tbody'); if(!tb) return;
+  const fs = document.getElementById('pr-f-status').value, soEd = document.getElementById('pr-f-comedital').checked;
+  let lista = prospectos.map(p=>({ p, eds: prospEditaisDoContato(p) }));
+  const total = lista.length, comEd = lista.filter(x=>x.eds.length).length;
+  if(fs) lista = lista.filter(x=>x.p.status === fs);
+  if(soEd) lista = lista.filter(x=>x.eds.length);
+  document.getElementById('pr-resumo').textContent = total + ' contato(s) · ' + comEd + ' com edital compatível';
+  tb.innerHTML = lista.length ? lista.slice(0,200).map(({p,eds})=>{
+    const dias = p.ultimo_envio ? Math.floor((Date.now() - new Date(p.ultimo_envio)) / 86400000) : null;
+    let acao;
+    if(p.status === 'nao_contatar') acao = '<span style="color:var(--ink-dim);">bloqueado</span>';
+    else if(dias !== null && dias < 14) acao = `<span style="color:var(--ink-dim);">enviado há ${dias} dia(s)</span>`;
+    else if(!eds.length) acao = '<span style="color:var(--ink-dim);">sem edital compatível</span>';
+    else acao = `<button class="btn-ghost" onclick="prospEnviar(${p.id})">📲 Enviar</button>`;
+    const opcoes = Object.entries(PROSP_ROTULO).map(([v,r])=>`<option value="${v}" ${p.status===v?'selected':''}>${r}</option>`).join('');
+    return `<tr><td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${esc(p.telefone)}</span></td>
+      <td>${esc(p.profissao||'')}<br><span style="color:var(--ink-dim); font-size:12px;">${esc((p.cidade||'') + (p.cidade?'/':'') + p.uf)}</span></td>
+      <td style="font-size:12px;">${eds.length ? eds.map(o=>esc(o.orgao.slice(0,38))+' — '+esc(o.prazo)).join('<br>') : '—'}</td>
+      <td><select onchange="prospMudarStatus(${p.id}, this.value)">${opcoes}</select></td><td>${acao}</td></tr>`;
+  }).join('') : '<tr><td colspan="5" style="color:var(--ink-dim);">Nenhum contato com esses filtros.</td></tr>';
+}
+async function prospMudarStatus(id, status){
+  const { error } = await _sb.from('prospectos_whatsapp').update({ status }).eq('id', id);
+  if(error){ toast('Erro ao salvar o status'); return; }
+  const p = prospectos.find(x=>x.id===id); if(p) p.status = status;
+  prospRender();
+}
+async function prospEnviar(id){
+  const p = prospectos.find(x=>x.id===id); if(!p) return;
+  const eds = prospEditaisDoContato(p);
+  if(!eds.length){ toast('Sem edital compatível para este contato'); return; }
+  const n = await prospEnviosHoje(), lim = parseInt(document.getElementById('pr-limite').value,10) || 15;
+  if(n >= lim && !confirm('Você já fez ' + n + ' envios hoje (limite ' + lim + '). Enviar mesmo assim?')) return;
+  const msg = prospMensagem(p, eds);
+  window.open('https://wa.me/' + p.telefone + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+  const agora = new Date().toISOString();
+  await _sb.from('prospectos_envios').insert({ prospecto_id: p.id, editais: eds.map(o=>o.edital), mensagem: msg });
+  const { error } = await _sb.from('prospectos_whatsapp').update({ status: p.status === 'novo' ? 'enviado' : p.status, qtd_envios: (p.qtd_envios||0) + 1, ultimo_envio: agora }).eq('id', p.id);
+  if(!error){ p.status = p.status === 'novo' ? 'enviado' : p.status; p.qtd_envios = (p.qtd_envios||0) + 1; p.ultimo_envio = agora; }
+  toast('WhatsApp aberto — marcado como enviado. Se não enviou, volte o status para "Novo".');
+  prospRender(); prospAtualizarContador();
+}
+
 /* ================= PAINEL DO ANALISTA: abas, "Hoje" e confirmação de edição ================= */
 let adminTabAtual = 'hoje';
 function adminTab(nome){
   adminTabAtual = nome;
   if(nome==='aae') aaeCarregar();
+  if(nome==='prospeccao') prospCarregar();
   document.querySelectorAll('#admin-tabs .admin-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab === nome));
   document.querySelectorAll('.admin-tabpanel').forEach(p=>p.classList.toggle('active', p.id === 'admin-tab-'+nome));
 }
