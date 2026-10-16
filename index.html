@@ -5203,6 +5203,26 @@ function renderProfissoesAdmin(){
       </div>
     </li>`).join('');
 }
+// As profissões usadas nos editais entram sozinhas na lista do painel (Cadastros auxiliares).
+// Sinônimo de uma profissão que já está na lista (Cardiologista × Cardiologia) não entra; nomes que
+// parecem lixo (valor em R$, números, barras, texto longo) também não.
+async function sincronizarProfissoesDosEditais(){
+  if(!adminAuthed) return;
+  const forma = n => /(ologista|iatra|ista|etra)$/i.test(n) ? 1 : 0;   // nome da pessoa vai depois do nome da área
+  const nomes = [...new Set(oportunidades.flatMap(o=>o.profissoes||[]).map(x=>String(x).replace(/\s+/g,' ').trim()).filter(Boolean))]
+    .filter(n=>n.length <= 40 && !/R\$|\d|\//.test(n))
+    .sort((a,b)=>forma(a)-forma(b) || a.localeCompare(b,'pt-BR'));
+  const novas = [];
+  nomes.forEach(n=>{
+    if(profissoes.some(p=>_semAcento(p.nome)===_semAcento(n))) return;
+    if(canonProfissao(n) !== n) return;
+    profissoes.push({nome:n, ativa:true}); novas.push(n);
+  });
+  if(!novas.length) return;
+  await persistProfissoes();
+  afterProfissoesChanged();
+  toast(novas.length + ' profissão(ões) dos editais adicionada(s) à lista do painel: ' + novas.slice(0,4).join(', ') + (novas.length>4 ? '…' : ''));
+}
 async function addProfissaoAdmin(){
   const input = document.getElementById('prof-admin-input');
   // Aceita uma ou várias: separa por quebra de linha, vírgula ou ponto e vírgula; tira marcadores (-, •, 1.).
@@ -5384,6 +5404,7 @@ function renderAdminTabela(){
 
 function renderAdmin(){
   renderProfissoesAdmin();
+  sincronizarProfissoesDosEditais();
   const stats = [
     {num:oportunidades.length, label:'Total de oportunidades'},
     {num:oportunidades.filter(o=>['Aberto','Próximo do encerramento'].includes(situacaoExibida(o))).length, label:'Abertas'},
@@ -8222,7 +8243,7 @@ async function carregarEditaisSupabase(){
   populateSelects();
   applyFilters();
   renderIndicators();
-  if(adminAuthed) carregarIdsComTexto();
+  if(adminAuthed){ carregarIdsComTexto(); sincronizarProfissoesDosEditais(); }
 }
 
 // Prioridade máxima: índice sugerido 5 (da análise rápida feita fora do site,
