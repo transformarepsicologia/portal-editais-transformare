@@ -7600,10 +7600,16 @@ async function prospAdicionar(){
   // Quem já está na lista (mesmo telefone) é atualizado com os dados desta importação; o status e o histórico de envios ficam como estão.
   let criados = 0, atualizados = 0;
   if(novos.length){
-    const { data: ja, error: e0 } = await _sb.from('prospectos_whatsapp').select('id, telefone').in('telefone', novos.map(n=>n.telefone));
+    const { data: ja, error: e0 } = await _sb.from('prospectos_whatsapp').select('id, telefone, nome, status').in('telefone', novos.map(n=>n.telefone));
     if(e0){ st.textContent = 'Erro ao consultar a lista: ' + e0.message; return; }
     const idPorTel = new Map((ja||[]).map(x=>[x.telefone, x.id]));
     const inserir = novos.filter(n=>!idPorTel.has(n.telefone));
+    // Aviso ao ADM antes de salvar: contatos repetidos
+    if(ja && ja.length){
+      const lista = ja.slice(0,8).map(x=>'• ' + (x.nome || 'sem nome') + ' — ' + x.telefone + ' (' + (PROSP_ROTULO[x.status]||x.status) + ')').join('\n') + (ja.length>8 ? '\n… e mais ' + (ja.length-8) : '');
+      const ok = confirm(ja.length + ' contato(s) desta lista já existe(m) na Prospecção:\n\n' + lista + '\n\nOK = atualizar esses com os dados da lista (status e histórico de envios são mantidos)' + (inserir.length ? ' e adicionar os ' + inserir.length + ' novo(s).' : '.') + '\nCancelar = não salvar nada.');
+      if(!ok){ st.textContent = 'Nada foi salvo: ' + ja.length + ' contato(s) já existia(m). Revise a lista.'; return; }
+    }
     if(inserir.length){
       const { error } = await _sb.from('prospectos_whatsapp').insert(inserir);
       if(error){ st.textContent = 'Erro ao salvar: ' + error.message; return; }
