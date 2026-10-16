@@ -5882,13 +5882,20 @@ function montarPromptAnalise(){
   const pubs = (typeof PUBLICOS !== 'undefined' ? PUBLICOS : []);
   return `Analise o edital anexo e responda EXATAMENTE neste formato, uma informação por linha, sem tabelas e sem texto antes ou depois. Use só as opções indicadas. Se não souber, escreva "não informado".
 
-Profissões contempladas: só as que o edital aceita, separadas por vírgula, escolhendo SOMENTE entre estas (use o nome exato): ${profs.join(', ')}. Se o edital aceitar outra profissão, escreva o nome dela também.
+Profissões contempladas: só as que o edital aceita, separadas por vírgula e em ordem alfabética, escolhendo SOMENTE entre estas (use o nome exato): ${profs.join(', ')}. Se o edital aceitar outra profissão, escreva o nome dela também.
+
 Para quem é: ${pubs.join(' | ')} — só os aceitos, separados por vírgula
+
 Valor por atendimento: ex. R$ 52,82 por sessão (30 a 40 min)
+
 Volume estimado: ex. 1.920 sessões/ano (cerca de 160/mês, dividido entre credenciados)
+
 Remuneração, outras faixas e valores: só se houver mais de um valor (um por linha, começando com "- ")
+
 Instrução mínima: Graduação | Especialização | Residência | Mestrado | Doutorado | não exige
+
 Experiência mínima (anos): número ou "não exige"
+
 E-mail de inscrição: só se a inscrição for por e-mail
 
 REQUISITOS
@@ -5901,7 +5908,7 @@ PONTOS DE ATENÇÃO
 - de 3 a 5 itens (valor baixo, rodízio, documentação pesada, riscos)
 
 DOCUMENTAÇÃO NECESSÁRIA
-- um documento por linha`;
+- um documento por linha estilo checklist`;
 }
 // Copia texto de 3 jeitos (API moderna → comando antigo → caixa para copiar à mão).
 async function _copiarTexto(txt){
