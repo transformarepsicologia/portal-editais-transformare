@@ -7597,11 +7597,25 @@ async function prospAdicionar(){
     if(!profL || !ufL){ invalidos.push(l.slice(0,40) + ' (falta profissão ou UF)'); return; }
     if(!novos.some(n=>n.telefone===tel)) novos.push({ nome: nome || null, telefone: tel, profissao: profL, cidade: cidadeL || null, uf: ufL, origem: 'Google' });
   });
+  // Quem já está na lista (mesmo telefone) é atualizado com os dados desta importação; o status e o histórico de envios ficam como estão.
+  let criados = 0, atualizados = 0;
   if(novos.length){
-    const { error } = await _sb.from('prospectos_whatsapp').upsert(novos, { onConflict:'telefone', ignoreDuplicates:true });
-    if(error){ st.textContent = 'Erro ao salvar: ' + error.message; return; }
+    const { data: ja, error: e0 } = await _sb.from('prospectos_whatsapp').select('id, telefone').in('telefone', novos.map(n=>n.telefone));
+    if(e0){ st.textContent = 'Erro ao consultar a lista: ' + e0.message; return; }
+    const idPorTel = new Map((ja||[]).map(x=>[x.telefone, x.id]));
+    const inserir = novos.filter(n=>!idPorTel.has(n.telefone));
+    if(inserir.length){
+      const { error } = await _sb.from('prospectos_whatsapp').insert(inserir);
+      if(error){ st.textContent = 'Erro ao salvar: ' + error.message; return; }
+      criados = inserir.length;
+    }
+    for(const n of novos.filter(n=>idPorTel.has(n.telefone))){
+      const campos = { profissao: n.profissao, uf: n.uf }; if(n.nome) campos.nome = n.nome; if(n.cidade) campos.cidade = n.cidade;
+      const { error } = await _sb.from('prospectos_whatsapp').update(campos).eq('id', idPorTel.get(n.telefone));
+      if(!error) atualizados++;
+    }
   }
-  st.textContent = novos.length + ' contato(s) processado(s) (repetidos são ignorados)' + (invalidos.length ? ' · ' + invalidos.length + ' linha(s) com problema: ' + invalidos.slice(0,3).join(' | ') : '');
+  st.textContent = criados + ' contato(s) novo(s)' + (atualizados ? ' · ' + atualizados + ' já existia(m) e foi(ram) atualizado(s) com os dados desta lista' : '') + (invalidos.length ? ' · ' + invalidos.length + ' linha(s) com problema: ' + invalidos.slice(0,3).join(' | ') : '');
   if(!invalidos.length) document.getElementById('pr-lista').value = '';
   await prospCarregar();
 }
