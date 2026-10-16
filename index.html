@@ -1556,6 +1556,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         </div>
       </div>
       <textarea id="pr-lista" rows="4" placeholder="Um contato por linha: Nome; telefone&#10;ou completo: Nome; telefone; profissão; cidade; UF&#10;Ex.: Dra. Ana Souza; (51) 99999-1234"></textarea>
+      <div style="margin-top:8px; font-size:12.5px; color:var(--ink-muted);">Ou importe uma planilha (.xlsx ou .csv) com colunas como <em>Nome, Telefone, Profissão, Cidade, UF</em>: <input type="file" id="pr-arquivo" accept=".xlsx,.csv,.txt" onchange="prospLerArquivo(this)" style="font-size:12.5px;"></div>
       <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="prospAdicionar()">+ Adicionar à lista</button>
       <span id="pr-add-status" style="font-size:12px; color:var(--ink-dim); margin-left:8px;"></span>
     </div>
@@ -7499,6 +7500,86 @@ async function prospAtualizarContador(){
   const lim = parseInt((document.getElementById('pr-limite')||{}).value,10) || 15;
   el.textContent = 'Hoje: ' + n + ' de ' + lim + ' envios';
   el.style.color = n >= lim ? 'var(--coral)' : 'var(--teal)';
+}
+// ---- Importar planilha (.xlsx ou .csv): lida no próprio navegador, sem enviar o arquivo a lugar nenhum ----
+function _csvLinhas(txt){
+  const sep = (txt.split('\n')[0].match(/;/g)||[]).length >= (txt.split('\n')[0].match(/,/g)||[]).length ? ';' : ',';
+  const linhas = []; let lin = [], cel = '', asp = false;
+  for(let i=0;i<txt.length;i++){
+    const c = txt[i];
+    if(asp){ if(c === '"'){ if(txt[i+1] === '"'){ cel += '"'; i++; } else asp = false; } else cel += c; }
+    else if(c === '"') asp = true;
+    else if(c === sep){ lin.push(cel); cel = ''; }
+    else if(c === '\n' || c === '\r'){ if(c === '\r' && txt[i+1] === '\n') i++; lin.push(cel); cel = ''; linhas.push(lin); lin = []; }
+    else cel += c;
+  }
+  if(cel !== '' || lin.length){ lin.push(cel); linhas.push(lin); }
+  return linhas;
+}
+async function _zipArquivos(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let eocd = -1; for(let i = u8.length - 22; i >= Math.max(0, u8.length - 70000); i--){ if(dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; } }
+  if(eocd < 0) throw new Error('arquivo inválido');
+  const n = dv.getUint16(eocd + 10, true); let pos = dv.getUint32(eocd + 16, true);
+  const out = {}, dec = new TextDecoder();
+  for(let k=0;k<n;k++){
+    if(dv.getUint32(pos, true) !== 0x02014b50) break;
+    const metodo = dv.getUint16(pos + 10, true), tam = dv.getUint32(pos + 20, true), nl = dv.getUint16(pos + 28, true), el = dv.getUint16(pos + 30, true), cl = dv.getUint16(pos + 32, true), off = dv.getUint32(pos + 42, true);
+    const nome = dec.decode(u8.subarray(pos + 46, pos + 46 + nl));
+    pos += 46 + nl + el + cl;
+    if(!/^xl\/(sharedStrings\.xml|worksheets\/sheet\d+\.xml)$/.test(nome)) continue;
+    const ini = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true);
+    const dados = u8.subarray(ini, ini + tam);
+    if(metodo === 0) out[nome] = dec.decode(dados);
+    else { const ds = new DecompressionStream('deflate-raw'); const w = ds.writable.getWriter(); w.write(dados); w.close(); out[nome] = dec.decode(await new Response(ds.readable).arrayBuffer()); }
+  }
+  return out;
+}
+async function _xlsxLinhas(buf){
+  const arqs = await _zipArquivos(buf);
+  const folha = Object.keys(arqs).filter(n=>/worksheets\/sheet\d+\.xml$/.test(n)).sort((a,b)=>parseInt(a.match(/(\d+)\.xml/)[1]) - parseInt(b.match(/(\d+)\.xml/)[1]))[0];
+  if(!folha) throw new Error('planilha sem abas');
+  const parse = t => new DOMParser().parseFromString(t, 'application/xml');
+  const ss = arqs['xl/sharedStrings.xml'] ? [...parse(arqs['xl/sharedStrings.xml']).getElementsByTagName('si')].map(si=>[...si.getElementsByTagName('t')].map(t=>t.textContent).join('')) : [];
+  const col = ref => { let n = 0; for(const ch of ref.replace(/\d/g,'')) n = n*26 + ch.charCodeAt(0) - 64; return n - 1; };
+  const linhas = [];
+  [...parse(arqs[folha]).getElementsByTagName('row')].forEach(r=>{
+    const lin = [];
+    [...r.getElementsByTagName('c')].forEach(c=>{
+      const t = c.getAttribute('t'), v = c.getElementsByTagName('v')[0], is = c.getElementsByTagName('is')[0];
+      let val = '';
+      if(t === 's' && v) val = ss[parseInt(v.textContent,10)] || '';
+      else if(t === 'inlineStr' && is) val = [...is.getElementsByTagName('t')].map(x=>x.textContent).join('');
+      else if(v) val = v.textContent;
+      lin[col(c.getAttribute('r') || 'A1')] = val;
+    });
+    linhas.push(Array.from(lin, x=>x === undefined ? '' : x));
+  });
+  return linhas;
+}
+async function prospLerArquivo(input){
+  const st = document.getElementById('pr-add-status'); const f = input.files && input.files[0]; if(!f) return;
+  try{
+    let linhas;
+    if(/\.xlsx$/i.test(f.name)) linhas = await _xlsxLinhas(await f.arrayBuffer());
+    else if(/\.(csv|txt)$/i.test(f.name)) linhas = _csvLinhas((await f.text()).replace(/^﻿/,''));
+    else { st.textContent = 'Formato não aceito: salve a planilha como .xlsx ou .csv.'; input.value = ''; return; }
+    linhas = linhas.filter(l=>l.some(c=>String(c).trim()));
+    if(!linhas.length){ st.textContent = 'A planilha está vazia.'; return; }
+    // acha as colunas pelos títulos (português ou inglês); sem títulos, assume Nome, Telefone, Profissão, Cidade, UF
+    const norm = _prospNorm;
+    const ach = re => linhas[0].findIndex(h=>re.test(norm(h)));
+    const idx = { nome: ach(/^(nome|name|titulo|title|profissional)/), tel: ach(/telefone|celular|whatsapp|fone|phone|^tel/), prof: ach(/profiss|especialidade|categoria|category/), cid: ach(/cidade|city|municipio/), uf: ach(/^uf$|^estado|^state/) };
+    const temTitulo = idx.tel >= 0;
+    const dados = temTitulo ? linhas.slice(1) : linhas;
+    if(!temTitulo){ idx.nome = 0; idx.tel = 1; idx.prof = 2; idx.cid = 3; idx.uf = 4; }
+    const g = (l,i)=> i >= 0 && l[i] !== undefined ? String(l[i]).replace(/[;\n\r\t]+/g,' ').trim() : '';
+    const txt = dados.map(l=>[g(l,idx.nome), g(l,idx.tel), g(l,idx.prof), g(l,idx.cid), g(l,idx.uf)].join('; ').replace(/(;\s*)+$/,'')).filter(x=>x.replace(/[;\s]/g,''));
+    const ta = document.getElementById('pr-lista');
+    ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + txt.join('\n');
+    st.textContent = txt.length + ' linha(s) lida(s) de "' + f.name + '" — confira o texto acima e clique em "+ Adicionar à lista". Profissão, cidade e UF em branco usam os padrões acima.';
+  }catch(e){ st.textContent = 'Não consegui ler o arquivo (' + (e.message||e) + '). Salve como .csv e tente de novo.'; }
+  input.value = '';
 }
 async function prospAdicionar(){
   const st = document.getElementById('pr-add-status');
