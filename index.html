@@ -1034,7 +1034,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
   </div>
 
-  <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:var(--violet-texto);">ℹ Os alertas aparecem aqui e no sino do menu. Assinantes do <strong>Plano Pro</strong> também podem receber um e-mail sempre que surgir um edital novo com 80% ou mais de aderência ao perfil. WhatsApp e notificações push virão em uma versão futura.</div>
+  <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:var(--violet-texto);">ℹ Os alertas aparecem aqui e no sino do menu. Assinantes do <strong>Plano Pro</strong> também podem receber um e-mail sempre que surgir um edital novo com 70% ou mais de aderência ao perfil. WhatsApp e notificações push virão em uma versão futura.</div>
   <div id="alert-email-box" style="margin:12px 0;"></div>
 
   <div class="filter-panel">
@@ -4810,7 +4810,7 @@ async function saveAlertPrefs(){
   await storeSet(ukey('alertPrefs'), {profTexto: alertPrefs.profTexto || '', uf:[...alertPrefs.uf], mod:[...alertPrefs.mod]});
   renderBell();
 }
-// ===== Aviso por e-mail (Plano Pro): sempre que surge edital novo com 80%+ de aderência ao perfil (o cálculo roda no servidor) =====
+// ===== Aviso por e-mail (Plano Pro): sempre que surge edital novo com 70%+ de aderência ao perfil (o cálculo roda no servidor) =====
 let alertEmailAtivo = false;
 function alertEmailPro(){ return !!(userProfile && userProfile.plano === 'essencial' && typeof _sb !== 'undefined' && _sb); }
 async function alertEmailCarregar(){
@@ -4833,10 +4833,10 @@ function renderAlertEmailBox(){
   const el = document.getElementById('alert-email-box'); if(!el) return;
   if(!userProfile){ el.innerHTML = ''; return; }
   if(userProfile.plano !== 'essencial'){
-    el.innerHTML = `<div class="admin-flag" style="background:rgba(245,169,62,0.08); border-color:rgba(245,169,62,0.35);">🔒 <strong>Plano Pro:</strong> receba um e-mail sempre que surgir um edital novo com 80% ou mais de aderência ao seu perfil. <a href="#" onclick="abrirPlanosModal();return false;">Conhecer o plano</a></div>`;
+    el.innerHTML = `<div class="admin-flag" style="background:rgba(245,169,62,0.08); border-color:rgba(245,169,62,0.35);">🔒 <strong>Plano Pro:</strong> receba um e-mail sempre que surgir um edital novo com 70% ou mais de aderência ao seu perfil. <a href="#" onclick="abrirPlanosModal();return false;">Conhecer o plano</a></div>`;
     return;
   }
-  el.innerHTML = `<label style="display:flex; gap:10px; align-items:flex-start; cursor:pointer; border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px;"><input type="checkbox" ${alertEmailAtivo?'checked':''} onchange="alertEmailToggle(this.checked)" style="margin-top:3px;"><span><strong>Avisar por e-mail quando surgir edital com 80%+ de aderência</strong><br><span style="font-size:12.5px; color:var(--ink-muted);">Enviamos para ${esc(userProfile.email||'o e-mail da sua conta')} só quando um edital novo atingir 80% ou mais de aderência ao seu perfil (quanto mais completo o perfil, mais preciso). Você pode desligar a qualquer momento.</span></span></label>`;
+  el.innerHTML = `<label style="display:flex; gap:10px; align-items:flex-start; cursor:pointer; border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px;"><input type="checkbox" ${alertEmailAtivo?'checked':''} onchange="alertEmailToggle(this.checked)" style="margin-top:3px;"><span><strong>Avisar por e-mail quando surgir edital com 70%+ de aderência</strong><br><span style="font-size:12.5px; color:var(--ink-muted);">Enviamos para ${esc(userProfile.email||'o e-mail da sua conta')} só quando um edital novo atingir 70% ou mais de aderência ao seu perfil (quanto mais completo o perfil, mais preciso). Você pode desligar a qualquer momento.</span></span></label>`;
 }
 function renderAlertas(){
   renderAlertEmailBox();
