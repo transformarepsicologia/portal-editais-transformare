@@ -7807,6 +7807,119 @@ function consAbrirAAE(){
   const c = consCliente(); if(!c) return; adminTab('aae'); aaeAbrir(c.id);
   const det = document.querySelector('#admin-tab-aae details'); if(det) det.open = true;
 }
+
+// ===== DEH — Diagnóstico Estratégico de Habilitação (formulário de uso interno, sem as perguntas específicas de editais) =====
+const DEH_POS = new Set(['Possuo','Válida','Ativo','Sim','Atende']);
+const DEH_LACUNA = new Set(['Não possuo','Vencida','Não','Não atende']);
+const DEH_SECOES = [
+ { id:'s1', titulo:'1. Identificação profissional', campos:[
+   {t:'texto', id:'nome', r:'Nome completo do responsável', pre:'nome'},
+   {t:'texto', id:'empresa', r:'Nome da clínica ou empresa e CNPJ (se houver)'},
+   {t:'texto', id:'registro', r:'Profissão, registro no conselho e número', pre:'profissoes'},
+   {t:'um', id:'situacao', r:'Situação atual', o:['Autônomo sem CNPJ','MEI','ME ou EPP','Clínica ou empresa (LTDA, SLU)','Outro']},
+   {t:'um', id:'regime', r:'Regime tributário', o:['Simples Nacional','Lucro presumido','Não sei']},
+   {t:'texto', id:'cidade', r:'Cidade e estado de atuação', pre:'cidade'},
+   {t:'texto', id:'contato', r:'Telefone e e-mail', pre:'contato'} ]},
+ { id:'s2', titulo:'2. Perfil de atuação', campos:[
+   {t:'varios', id:'modalidade', r:'Modalidade que pretende atuar', o:['Presencial','Teleatendimento','Domiciliar']},
+   {t:'um', id:'participa', r:'Participará como', o:['Pessoa Física','Pessoa Jurídica','Ainda não sei']},
+   {t:'varios', id:'publico', r:'Público atendido', o:['Crianças','Adolescentes','Adultos','Idosos']},
+   {t:'texto', id:'atuacao', r:'Atuação principal'},
+   {t:'varios', id:'interesse', r:'Interesse por tipo de credenciamento', o:['Hospitais e forças armadas','Polícias e órgãos federais','Prefeituras e estados','Planos de saúde próprios','Todos']},
+   {t:'texto', id:'horas', r:'Horas por semana disponíveis para estes atendimentos'} ]},
+ { id:'s3', titulo:'3. IPT: Índice de Prontidão Transformare', sigla:'IPT', meta:'Avalia se o cliente cumpre os requisitos formais de habilitação.', campos:[
+   {t:'sub', r:'3.1 Documentação básica'},
+   {t:'grade', id:'doc', o:['Possuo','Não possuo','Preciso verificar'], l:['Documento de identidade e CPF','Comprovante de endereço','Registro ativo no conselho profissional, sem pendências','Diploma e certificados de formação e especialização','Cartão do CNPJ, com atividade de saúde descrita (se tiver)','Contrato social e alterações registradas (se for empresa)','Documentos de identidade e CPF dos sócios e representantes (se for empresa)','Conta bancária em nome do titular ou da empresa']},
+   {t:'sub', r:'3.2 Certidões'},
+   {t:'grade', id:'cert', o:['Válida','Vencida','Não possuo','Não sei'], l:['Certidão federal (Receita Federal e PGFN)','Certificado de Regularidade do FGTS (se tiver empregados)','Certidão trabalhista (CNDT)','Certidão estadual','Certidão municipal','Certidão negativa de falência (empresas)']},
+   {t:'sub', r:'3.3 Sistemas e cadastros'},
+   {t:'grade', id:'sist', o:['Ativo','Em andamento','Não possuo','Não sei'], l:['Conta gov.br (nível prata ou ouro)','SICAF (cadastro federal de fornecedores)','Certificado digital (e-CPF ou e-CNPJ)','CNES (Cadastro Nacional de Estabelecimentos de Saúde)','Inscrição municipal','E-mail profissional e assinatura eletrônica','Emissão de nota fiscal eletrônica de serviços']},
+   {t:'sub', r:'3.4 Evidências profissionais'},
+   {t:'grade', id:'evid', o:['Possuo','Não possuo','Não sei'], l:['Atestados de capacidade técnica na sua área','Declarações de prestação de serviço','Contratos anteriores com órgãos públicos, operadoras ou convênios','Vínculo comprovado (carteira de trabalho, contrato ou nota fiscal)','Notas fiscais de serviços prestados']},
+   {t:'area', id:'atestados', r:'Se possui atestados, quantos são, para quem foram emitidos e que atendimentos comprovam:'} ]},
+ { id:'s4', titulo:'4. IPO: Índice de Prontidão Operacional', sigla:'IPO', meta:'Avalia se o cliente consegue executar os serviços com estrutura e organização.', campos:[
+   {t:'sub', r:'4.1 Estrutura de atendimento'},
+   {t:'grade', id:'estr', o:['Sim','Não','Parcialmente'], l:['Possui consultório ou clínica para atendimento presencial','O endereço do CNPJ, do alvará e do conselho é o mesmo','Possui alvará de funcionamento com a atividade descrita','Possui alvará sanitário vigente','Possui certificado ou laudo do Corpo de Bombeiros','O espaço tem acessibilidade e instalações seguras','Possui estrutura para teleatendimento (plataforma, internet estável, sala reservada)','Possui equipe de apoio ou multiprofissional','Tem substituto para cobrir faltas ou férias']},
+   {t:'sub', r:'4.2 Gestão operacional'},
+   {t:'grade', id:'gest', o:['Sim','Não','Parcialmente'], l:['Possui modelo de prontuário ou registro de atendimento','Possui modelo de relatório de evolução ou parecer','Guarda os comprovantes de cada atendimento (guias, assinaturas, registros)','Segue rotinas de proteção de dados pessoais (LGPD)']} ]},
+ { id:'s5', titulo:'5. ICA: Índice de Competitividade Curricular', sigla:'ICA', meta:'Avalia a aderência e a competitividade do currículo para os editais.', campos:[
+   {t:'sub', r:'5.1 Profissionais que atenderiam'},
+   {t:'area', id:'equipe', r:'Liste quem prestaria os atendimentos (um por linha: nome, registro, formação e pós-graduação, título de especialista, anos de experiência). Os editais costumam pedir relação nominal.'},
+   {t:'sub', r:'5.2 Currículo e experiência'},
+   {t:'grade', id:'curr', o:['Sim','Não','Parcialmente'], l:['O currículo destaca a experiência na área do edital','Possui especialização ou título de especialista na área','Possui residência, mestrado ou doutorado','Já atendeu servidores públicos, militares ou beneficiários de planos de saúde','Tem experiência com o público do edital (por exemplo infantil, TEA, idosos, saúde mental)']},
+   {t:'um', id:'orient', r:'Deseja receber orientação para fortalecer o currículo?', o:['Sim','Não']},
+   {t:'area', id:'diferenciais', r:'Descreva brevemente a experiência e os diferenciais:'} ]},
+ { id:'s6', titulo:'6. Exigências comuns à maioria dos editais', sigla:'Exigências', campos:[
+   {t:'grade', id:'exig', o:['Possuo','Não possuo','Preciso verificar'], l:['Responsável técnico definido, com inscrição ativa no conselho','Declaração de idoneidade (sem sanção que impeça contratar com o poder público)','Declaração de que não emprega menor, salvo aprendiz','Declaração de concordância com o edital e seus anexos','Declaração de inexistência de vínculo ou conflito com o órgão contratante','Carta proposta ou requerimento de credenciamento, assinado pelo representante legal','Proposta de trabalho com dias, horários e modalidades de atendimento','Aceitação da tabela de valores do órgão','Capacidade de cumprir duração mínima e periodicidade das sessões','Disponibilidade para entrevista, vistoria ou análise documental']} ]},
+ { id:'s7', titulo:'7. Riscos e dificuldades', campos:[
+   {t:'area', id:'risco1', r:'Qual a maior preocupação para participar de credenciamentos?'},
+   {t:'area', id:'risco2', r:'Existe alguma pendência que possa dificultar a habilitação?'},
+   {t:'area', id:'risco3', r:'Existe alguma pendência que possa dificultar a execução dos atendimentos?'} ]}
+];
+function dehPre(c, chave){
+  const f = c.ficha||{};
+  return ({ nome:c.nome, profissoes:f.profissoes, cidade:f.cidade, contato:[f.telefone, f.email].filter(Boolean).join(' · ') })[chave] || '';
+}
+// Resumo por seção (indicativo): resposta positiva vale 1, intermediária (parcial, a verificar, em andamento) 0,5, lacuna 0.
+function dehResumo(d){
+  const r = (d.deh && d.deh.r) || {};
+  return DEH_SECOES.map(sec=>{
+    let pos=0, mid=0, lac=0, total=0, resp=0; const faltas = [];
+    sec.campos.filter(x=>x.t==='grade').forEach(g=>g.l.forEach((txt,i)=>{
+      total++; const v = r[g.id+'.'+i];
+      if(!v) return; resp++;
+      if(DEH_POS.has(v)) pos++; else if(DEH_LACUNA.has(v)){ lac++; faltas.push('✖ '+txt+' — '+v); } else { mid++; faltas.push('⚠ '+txt+' — '+v); }
+    }));
+    return { sec, pos, mid, lac, total, resp, faltas, pct: total ? Math.round((pos + mid*0.5)/total*100) : null };
+  });
+}
+function dehResumoHTML(d){
+  const linhas = dehResumo(d).filter(x=>x.total);
+  return `<div style="overflow-x:auto;"><table class="admin-table"><thead><tr><th>Bloco</th><th>Respondidas</th><th>✔ Atende</th><th>⚠ Parcial / verificar</th><th>✖ Lacuna</th><th>Prontidão (indicativo)</th></tr></thead><tbody>${
+    linhas.map(x=>`<tr><td>${esc(x.sec.sigla||x.sec.titulo)}</td><td>${x.resp}/${x.total}</td><td>${x.pos}</td><td>${x.mid}</td><td>${x.lac}</td><td><strong>${x.resp===x.total ? x.pct+'%' : (x.resp ? x.pct+'% (parcial)' : '—')}</strong></td></tr>`).join('')
+  }</tbody></table></div>`;
+}
+function dehCampoHTML(c, d, sec, cp){
+  const r = (d.deh && d.deh.r) || {};
+  const val = k => r[k];
+  if(cp.t==='sub') return `<div style="font-weight:700; margin:14px 0 6px;">${esc(cp.r)}</div>`;
+  if(cp.t==='texto'){ const v = val(cp.id) != null ? val(cp.id) : (cp.pre ? dehPre(c, cp.pre) : ''); return `<div class="form-row"><label>${esc(cp.r)}</label><input type="text" data-deh="${cp.id}" value="${esc(v)}" onchange="dehMudou(this)"></div>`; }
+  if(cp.t==='area') return `<div class="form-row"><label>${esc(cp.r)}</label><textarea rows="3" data-deh="${cp.id}" onchange="dehMudou(this)">${esc(val(cp.id)||'')}</textarea></div>`;
+  if(cp.t==='um') return `<div class="form-row"><label>${esc(cp.r)}</label><select data-deh="${cp.id}" onchange="dehMudou(this)"><option value="">—</option>${cp.o.map(o=>`<option ${val(cp.id)===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
+  if(cp.t==='varios'){ const sel = new Set(val(cp.id)||[]); return `<div class="form-row"><label>${esc(cp.r)}</label><div style="display:flex; gap:12px; flex-wrap:wrap;">${cp.o.map(o=>`<label style="display:flex; gap:6px; align-items:center; font-size:13px; cursor:pointer;"><input type="checkbox" data-deh="${cp.id}" data-op="${esc(o)}" ${sel.has(o)?'checked':''} onchange="dehMudou(this)"> ${esc(o)}</label>`).join('')}</div></div>`; }
+  if(cp.t==='grade') return cp.l.map((txt,i)=>`<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:6px 0; border-bottom:1px solid var(--border-soft);"><div style="flex:1; min-width:240px; font-size:13.5px;">${esc(txt)}</div><select data-deh="${cp.id}.${i}" onchange="dehMudou(this)"><option value="">—</option>${cp.o.map(o=>`<option ${val(cp.id+'.'+i)===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`).join('');
+  return '';
+}
+function dehHTML(c, d){
+  return DEH_SECOES.map(sec=>`<details style="border:1px solid var(--border-soft); border-radius:12px; padding:10px 14px; margin-bottom:8px;"><summary style="cursor:pointer; font-weight:700;">${esc(sec.titulo)}</summary>${sec.meta?`<div class="section-sub" style="margin:6px 0;">Objetivo: ${esc(sec.meta)}</div>`:''}${sec.campos.map(cp=>dehCampoHTML(c, d, sec, cp)).join('')}</details>`).join('');
+}
+let _dehTimer = null;
+async function dehMudou(el){
+  const c = consCliente(); if(!c) return; const d = consDados(c);
+  d.deh = d.deh || { r:{} }; d.deh.r = d.deh.r || {};
+  const k = el.dataset.deh;
+  if(el.type === 'checkbox'){
+    const atual = new Set(d.deh.r[k] || []); if(el.checked) atual.add(el.dataset.op); else atual.delete(el.dataset.op);
+    d.deh.r[k] = [...atual];
+  } else d.deh.r[k] = el.value;
+  d.deh.em = new Date().toISOString();
+  clearTimeout(_dehTimer);
+  c.consultoria = d;
+  const box = document.getElementById('deh-resumo'); if(box) box.innerHTML = dehResumoHTML(d);
+  _dehTimer = setTimeout(()=>consGravar(c, d), 400);
+}
+async function dehCopiarResumo(){
+  const c = consCliente(); if(!c) return; const d = consDados(c);
+  const linhas = ['DEH — Diagnóstico Estratégico de Habilitação: ' + (c.nome||''), ''];
+  dehResumo(d).forEach(x=>{
+    if(!x.total) return;
+    linhas.push(`${x.sec.titulo}: ${x.resp}/${x.total} respondidas · atende ${x.pos} · parcial/verificar ${x.mid} · lacuna ${x.lac}` + (x.resp===x.total ? ` · prontidão indicativa ${x.pct}%` : ''));
+    x.faltas.forEach(f=>linhas.push('   '+f));
+  });
+  const r = (d.deh && d.deh.r) || {};
+  ['risco1','risco2','risco3'].forEach((k,i)=>{ if(r[k]) linhas.push('', ['Maior preocupação','Pendência para habilitação','Pendência para execução'][i] + ': ' + r[k]); });
+  await _copiarTexto(linhas.join('\n'));
+}
 function consDetalhe(){
   const el = document.getElementById('cons-detalhe'); if(!el) return;
   const c = consCliente(); if(!c){ el.innerHTML = ''; return; }
@@ -7856,7 +7969,12 @@ function consDetalhe(){
     <div class="form-row" style="margin-top:14px;"><label>4. Histórico de análises</label>
       <textarea id="ch-texto" rows="4" placeholder="Anotações da análise: Índice, prós e contras, o que foi apresentado ao cliente…"></textarea>
       <button class="btn-ghost" style="margin-top:6px;" onclick="consRegistrarAnalise()">Registrar análise no histórico</button>
-      <div style="margin-top:12px;">${histHtml}</div></div>`;
+      <div style="margin-top:12px;">${histHtml}</div></div>
+    <div class="form-row" style="margin-top:14px;"><label>5. Diagnóstico DEH (Diagnóstico Estratégico de Habilitação)</label>
+      <p class="section-sub" style="margin:0 0 8px;">Preencha com o cliente (as respostas salvam sozinhas). Não inclui as perguntas específicas de cada edital. O resumo por bloco é indicativo: resposta positiva vale 1, parcial ou "preciso verificar" vale 0,5 e lacuna vale 0.</p>
+      <div id="deh-resumo" style="margin-bottom:10px;">${dehResumoHTML(d)}</div>
+      <button class="btn-ghost" style="margin-bottom:10px;" onclick="dehCopiarResumo()">Copiar resumo e pendências</button>
+      ${dehHTML(c, d)}</div>`;
 }
 function adminTab(nome){
   adminTabAtual = nome;
