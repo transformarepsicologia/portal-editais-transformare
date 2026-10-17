@@ -1034,7 +1034,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
   </div>
 
-  <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:var(--violet-texto);">⚠ <strong>Alertas demonstrativos.</strong> Neste protótipo, os alertas são exibidos dentro do portal (aqui e no sino do menu). E-mail, WhatsApp e notificações push serão implementados em uma versão futura.</div>
+  <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:var(--violet-texto);">ℹ Os alertas aparecem aqui e no sino do menu. Assinantes do <strong>Plano Pro</strong> também recebem um resumo diário por e-mail. WhatsApp e notificações push virão em uma versão futura.</div>
+  <div id="alert-email-box" style="margin:12px 0;"></div>
 
   <div class="filter-panel">
     <div class="form-row"><label>Profissão de interesse</label><input type="text" id="alert-prof" list="alert-prof-lista" placeholder="Digite sua profissão (ex.: Psicologia, Dentista…)" autocomplete="off" oninput="onAlertProfInput(this.value)"><datalist id="alert-prof-lista"></datalist></div>
@@ -4808,8 +4809,43 @@ function onAlertProfInput(valor){
 async function saveAlertPrefs(){
   await storeSet(ukey('alertPrefs'), {profTexto: alertPrefs.profTexto || '', uf:[...alertPrefs.uf], mod:[...alertPrefs.mod]});
   renderBell();
+  alertEmailSync();
+}
+// ===== Aviso diário por e-mail (Plano Pro): os critérios são copiados para o servidor só enquanto o aviso estiver ligado =====
+let alertEmailAtivo = false;
+function alertEmailPro(){ return !!(userProfile && userProfile.plano === 'essencial' && typeof _sb !== 'undefined' && _sb); }
+async function alertEmailCarregar(){
+  alertEmailAtivo = false;
+  if(!alertEmailPro()) return;
+  try{ const { data } = await _sb.from('alertas_email').select('ativo').eq('user_id', userProfile.id).maybeSingle(); alertEmailAtivo = !!(data && data.ativo); }catch(e){}
+}
+async function alertEmailSync(){
+  if(!alertEmailPro() || !alertEmailAtivo) return;
+  const { error } = await _sb.from('alertas_email').upsert({ user_id:userProfile.id, prof_texto:alertPrefs.profTexto||'', ufs:[...alertPrefs.uf], mods:[...alertPrefs.mod], ativo:true, atualizado_em:new Date().toISOString() }, { onConflict:'user_id' });
+  if(error) toast('Não consegui atualizar o aviso por e-mail. Tente de novo.');
+}
+async function alertEmailToggle(ligado){
+  if(!alertEmailPro()) return;
+  if(ligado && alertaSemCriterio()){ toast('Escolha ao menos um critério (profissão, estado ou modalidade) para receber o aviso.'); alertEmailAtivo = false; renderAlertEmailBox(); return; }
+  alertEmailAtivo = !!ligado;
+  const { error } = ligado
+    ? await _sb.from('alertas_email').upsert({ user_id:userProfile.id, prof_texto:alertPrefs.profTexto||'', ufs:[...alertPrefs.uf], mods:[...alertPrefs.mod], ativo:true, atualizado_em:new Date().toISOString() }, { onConflict:'user_id' })
+    : await _sb.from('alertas_email').update({ ativo:false }).eq('user_id', userProfile.id);
+  if(error){ alertEmailAtivo = !ligado; toast('Não consegui salvar. Tente de novo.'); }
+  else toast(ligado ? 'Aviso diário por e-mail ligado.' : 'Aviso por e-mail desligado.');
+  renderAlertEmailBox();
+}
+function renderAlertEmailBox(){
+  const el = document.getElementById('alert-email-box'); if(!el) return;
+  if(!userProfile){ el.innerHTML = ''; return; }
+  if(userProfile.plano !== 'essencial'){
+    el.innerHTML = `<div class="admin-flag" style="background:rgba(245,169,62,0.08); border-color:rgba(245,169,62,0.35);">🔒 <strong>Plano Pro:</strong> receba por e-mail, uma vez por dia, só os editais novos que combinam com estes critérios. <a href="#" onclick="abrirPlanosModal();return false;">Conhecer o plano</a></div>`;
+    return;
+  }
+  el.innerHTML = `<label style="display:flex; gap:10px; align-items:flex-start; cursor:pointer; border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px;"><input type="checkbox" ${alertEmailAtivo?'checked':''} onchange="alertEmailToggle(this.checked)" style="margin-top:3px;"><span><strong>Receber resumo diário por e-mail</strong><br><span style="font-size:12.5px; color:var(--ink-muted);">Enviamos para ${esc(userProfile.email||'o e-mail da sua conta')} só quando surgir edital novo compatível com os critérios abaixo. Você pode desligar a qualquer momento.</span></span></label>`;
 }
 function renderAlertas(){
+  renderAlertEmailBox();
   const list = document.getElementById('alert-list');
   const countEl = document.getElementById('alert-count');
   list.innerHTML = '';
@@ -4892,6 +4928,7 @@ async function loadUserData(){
   favoritos = new Set(f || []);
   const a = await storeGet(ukey('alertPrefs'));
   alertPrefs = a ? {profTexto:a.profTexto || (a.prof||[])[0] || '', uf:new Set((a.uf||[]).slice(0,ALERTA_MAX_UF)), mod:new Set(a.mod||[])} : {profTexto:'', uf:new Set(), mod:new Set()};
+  await alertEmailCarregar();
   const d = await storeGet(ukey('docChecks'));
   docChecks = d || {};
   updateNavCta();
