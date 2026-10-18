@@ -1069,6 +1069,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <ul>
       <li><strong>Cadastro e perfil profissional:</strong> nome, e-mail, WhatsApp, registro profissional (ex.: CRP), estado e cidade, profissão, modalidades e abrangência de interesse, remuneração mínima esperada, nível de instrução, tempo de atuação e forma de atuação (pessoa física e/ou jurídica).</li>
       <li><strong>Dados da empresa (se você atua como PJ):</strong> CNPJ e as informações públicas desse CNPJ na Receita Federal (razão social, nome fantasia, situação cadastral, CNAEs, município/UF, porte, opção pelo MEI e data de abertura), consultadas automaticamente na BrasilAPI a partir do número informado por você.</li>
+      <li><strong>Dados complementares (opcional):</strong> formação, títulos, CNES, site ou Instagram e endereço de atendimento, além de inscrição municipal, endereço da sede, representante legal, responsável técnico, telefone, e-mail e tamanho da equipe da empresa. Para assinantes do Plano Pro, a situação (tenho / não tenho) e a validade de documentos como certidões e certificados. <em>Não recebemos nem guardamos os arquivos dos documentos</em>, apenas essas informações.</li>
       <li><strong>Pedidos de contato e orientação:</strong> nome, WhatsApp, e-mail, o edital de interesse, o tipo de ajuda, a situação da documentação, a urgência e a mensagem que você escrever.</li>
       <li><strong>Outras interações:</strong> solicitações de avaliação do Índice Transformare, sugestões de profissão e mensagens de feedback (com a página do Portal e o tipo de navegador, para entendermos problemas técnicos).</li>
       <li><strong>Dados guardados só no seu navegador:</strong> editais favoritos, critérios de alerta e o checklist de documentos ficam no armazenamento local (localStorage) do seu próprio aparelho e não são enviados para nós.</li>
@@ -1271,6 +1272,44 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div id="perfil-empresa" class="empresa-box"></div>
     </div>
     <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="saveProfile()">Salvar perfil</button></div>
+  </div>
+  <div class="form-card" style="max-width:560px; margin-top:18px;">
+    <h4 style="font-family:var(--font-display); margin:0 0 4px;">Dados profissionais</h4>
+    <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.5; margin:0 0 12px;">Opcional. Ajuda a preparar sua documentação para credenciamentos.</p>
+    <div class="two-col">
+      <div class="form-row"><label>Instituição de formação</label><input type="text" id="cmp-form-inst" maxlength="120"></div>
+      <div class="form-row"><label>Ano de conclusão</label><input type="number" id="cmp-form-ano" min="1950" max="2100" step="1" placeholder="Ex: 2015"></div>
+    </div>
+    <div class="form-row"><label>Pós-graduação, títulos e cursos relevantes</label><textarea id="cmp-posgrad" rows="3" maxlength="600" placeholder="Ex: Especialização em Terapia Cognitivo-Comportamental (2019)"></textarea></div>
+    <div class="two-col">
+      <div class="form-row"><label>CNES (se tiver)</label><input type="text" id="cmp-cnes" maxlength="20" inputmode="numeric"></div>
+      <div class="form-row"><label>Site ou Instagram</label><input type="text" id="cmp-site" maxlength="120" placeholder="@seuperfil ou endereço do site"></div>
+    </div>
+    <div class="form-row"><label>Endereço de atendimento</label><input type="text" id="cmp-prof-end" maxlength="200" placeholder="Rua, número, bairro, cidade/UF"></div>
+    <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="cadComplementoSalvar()">Salvar dados profissionais</button></div>
+  </div>
+  <div class="form-card" style="max-width:560px; margin-top:18px;">
+    <h4 style="font-family:var(--font-display); margin:0 0 4px;">Dados da empresa</h4>
+    <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.5; margin:0 0 12px;">Opcional, para quem atua como pessoa jurídica. CNPJ, razão social e situação cadastral vêm do campo "Como você atua", acima.</p>
+    <div class="two-col">
+      <div class="form-row"><label>Inscrição municipal</label><input type="text" id="cmp-emp-im" maxlength="30"></div>
+      <div class="form-row"><label>Nº de profissionais na equipe</label><input type="number" id="cmp-emp-equipe" min="0" max="9999" step="1"></div>
+    </div>
+    <div class="form-row"><label>Endereço da sede</label><input type="text" id="cmp-emp-end" maxlength="200"></div>
+    <div class="two-col">
+      <div class="form-row"><label>Representante legal</label><input type="text" id="cmp-emp-rep" maxlength="120"></div>
+      <div class="form-row"><label>Responsável técnico (nome e registro)</label><input type="text" id="cmp-emp-rt" maxlength="120" placeholder="Ex: Maria Silva, CRP 07/00000"></div>
+    </div>
+    <div class="two-col">
+      <div class="form-row"><label>Telefone da empresa</label><input type="text" id="cmp-emp-tel" maxlength="30"></div>
+      <div class="form-row"><label>E-mail da empresa</label><input type="email" id="cmp-emp-email" maxlength="120"></div>
+    </div>
+    <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="cadComplementoSalvar()">Salvar dados da empresa</button></div>
+  </div>
+  <div class="form-card" style="max-width:560px; margin-top:18px;" id="cad-docs-card">
+    <h4 style="font-family:var(--font-display); margin:0 0 4px;">Meus documentos</h4>
+    <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.5; margin:0 0 12px;">Controle o que você já tem pronto e quando vence. Guardamos só a situação e a validade, nunca os arquivos.</p>
+    <div id="cad-docs-box"></div>
   </div>
   <div class="form-card" style="max-width:560px; margin-top:18px;">
     <h4 style="font-family:var(--font-display); margin:0 0 14px;">Alterar senha</h4>
@@ -4933,6 +4972,8 @@ async function carregarPerfilUsuario(authUser){
     mods: (perfil?.mods || []).map(normModalidade),
     plano: perfil?.plano || 'gratuito',
     criadoEm: perfil?.criado_em || null,
+    complemento: perfil?.complemento || {},
+    documentos: perfil?.documentos || {},
   };
   try{ renderIndicators(); }catch(e){}   // atualiza o cadeado do Índice conforme o plano
   const doBanco = (perfil && (perfil.cidade || (perfil.abrangencias||[]).length || perfil.rem_min != null || perfil.escolaridade || perfil.anos_experiencia != null || (perfil.atuacao||[]).length || perfil.cnpj || (perfil.especialidades||[]).length || (perfil.formatos||[]).length || perfil.meta_mensal != null || perfil.regime))
@@ -5127,6 +5168,85 @@ function prefillLeadFromUser(){
   document.getElementById('lead-email').value = userProfile.email || '';
 }
 
+
+/* ---- cadastro completo: dados profissionais, dados da empresa e Meus documentos ---- */
+const CMP_CAMPOS = { 'cmp-form-inst':'formInst','cmp-form-ano':'formAno','cmp-posgrad':'posgrad','cmp-cnes':'cnes','cmp-site':'site','cmp-prof-end':'profEnd',
+  'cmp-emp-im':'empIm','cmp-emp-equipe':'empEquipe','cmp-emp-end':'empEnd','cmp-emp-rep':'empRep','cmp-emp-rt':'empRt','cmp-emp-tel':'empTel','cmp-emp-email':'empEmail' };
+const DOCS_CLIENTE = [
+  { g:'Pessoais', itens:[ ['ident','Documento de identidade e CPF',0], ['resid','Comprovante de endereço',0], ['registro','Registro ativo no conselho profissional',1], ['diploma','Diploma ou certificado de graduação',0], ['titulos','Títulos e certificados de especialização',0], ['curriculo','Currículo atualizado',0] ] },
+  { g:'Empresa', itens:[ ['cnpj','Cartão CNPJ',0], ['contrato','Contrato social ou requerimento de empresário',0], ['altera','Última alteração contratual',0], ['certdigital','Certificado digital',1], ['cnes','Cadastro no CNES',0] ] },
+  { g:'Regularidade', itens:[ ['cnd_fed','Certidão negativa federal',1], ['fgts','Certificado de regularidade do FGTS',1], ['cndt','Certidão negativa trabalhista (CNDT)',1], ['cnd_est','Certidão negativa estadual',1], ['cnd_mun','Certidão negativa municipal',1], ['falencia','Certidão de falência e recuperação judicial',1] ] },
+  { g:'Acessos e cadastros', itens:[ ['govbr','Conta gov.br (nível prata ou ouro)',0], ['sicaf','Cadastro no SICAF',1], ['bancario','Dados bancários da empresa ou pessoa física',0] ] },
+];
+function cadMostrarComplemento(){
+  const c = (userProfile && userProfile.complemento) || {};
+  Object.entries(CMP_CAMPOS).forEach(([id,k])=>{ const el=document.getElementById(id); if(el) el.value = c[k] ?? ''; });
+}
+async function cadComplementoSalvar(){
+  const u = userProfile; if(!u) return;
+  const c = {};
+  Object.entries(CMP_CAMPOS).forEach(([id,k])=>{ const v = (document.getElementById(id).value||'').trim(); if(v!=='') c[k]=v; });
+  if(c.formAno && (+c.formAno<1950 || +c.formAno>2100)){ toast('Confira o ano de conclusão'); return; }
+  if(c.empEmail && !validEmail(c.empEmail)){ toast('Confira o e-mail da empresa'); return; }
+  if(_sb){
+    const { error } = await _sb.from('usuarios_perfil').update({ complemento: c }).eq('id', u.id);
+    if(error){ toast('Erro ao salvar: ' + error.message); return; }
+  }
+  u.complemento = c;
+  toast('Dados salvos');
+}
+function docSituacao(d){
+  // devolve 'tenho' | 'vencido' | 'vencendo' | 'nao' | ''
+  if(!d || !d.s) return '';
+  if(d.s === 'tenho' && d.v){
+    const dias = Math.round((new Date(d.v+'T12:00:00') - new Date())/86400000);
+    if(dias < 0) return 'vencido';
+    if(dias <= 30) return 'vencendo';
+  }
+  return d.s;
+}
+function renderMeusDocumentos(){
+  const box = document.getElementById('cad-docs-box'); if(!box) return;
+  if(!userProfile){ box.innerHTML=''; return; }
+  if(!ehEssencial()){
+    box.innerHTML = '<div class="empresa-box" style="margin:0;"><div class="emp-card">Recurso do <strong>Plano Pro</strong>: organize seus documentos, acompanhe validades e receba o resumo do que falta para se credenciar.</div></div>';
+    return;
+  }
+  const docs = userProfile.documentos || {};
+  let tot=0, ok=0, venc=0, vencendo=0;
+  DOCS_CLIENTE.forEach(g=>g.itens.forEach(([k])=>{ tot++; const st=docSituacao(docs[k]); if(st==='tenho') ok++; else if(st==='vencendo'){ ok++; vencendo++; } else if(st==='vencido') venc++; }));
+  const rot = { tenho:'', vencendo:'vence em breve', vencido:'vencido', nao:'', '':'' };
+  box.innerHTML = '<div id="doc-resumo" style="font-size:13px; margin-bottom:12px;"><strong>'+ok+' de '+tot+'</strong> prontos'+(venc?' · <span style="color:var(--coral)">'+venc+' vencido(s)</span>':'')+(vencendo?' · <span style="color:var(--amber,#e0a030)">'+vencendo+' vencendo em 30 dias</span>':'')+'</div>' +
+    DOCS_CLIENTE.map(g=>'<div style="font-weight:700; font-size:13px; margin:14px 0 6px;">'+esc(g.g)+'</div>'+g.itens.map(([k,t,val])=>{
+      const d = docs[k] || {}; const st = docSituacao(d);
+      return '<div class="doc-linha" data-doc="'+k+'" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:6px 0; border-bottom:1px solid var(--border);">'+
+        '<span style="flex:1 1 200px; font-size:13px;">'+esc(t)+(rot[st]?' <em style="color:var(--coral); font-size:11.5px;">('+rot[st]+')</em>':'')+'</span>'+
+        '<select data-f="s" onchange="docMudou(this)" style="flex:0 0 120px;"><option value="">—</option><option value="tenho"'+(d.s==='tenho'?' selected':'')+'>Tenho</option><option value="nao"'+(d.s==='nao'?' selected':'')+'>Não tenho</option></select>'+
+        (val?'<input type="date" data-f="v" value="'+esc(d.v||'')+'" onchange="docMudou(this)" title="Validade" style="flex:0 0 140px;">':'')+
+      '</div>';
+    }).join('')).join('') +
+    '<div class="form-actions" style="margin-top:14px;"><button class="btn-primary" style="flex:1;" onclick="cadDocumentosSalvar()">Salvar documentos</button></div>';
+}
+function docMudou(el){
+  const lin = el.closest('.doc-linha'); const k = lin.dataset.doc;
+  const docs = userProfile.documentos = userProfile.documentos || {};
+  const d = docs[k] = docs[k] || {};
+  d[el.dataset.f] = el.value;
+  if(!d.s && !d.v) delete docs[k];
+}
+async function cadDocumentosSalvar(){
+  const u = userProfile; if(!u || !ehEssencial()) return;
+  const limpo = {};
+  Object.entries(u.documentos||{}).forEach(([k,d])=>{ const o={}; if(d.s) o.s=d.s; if(d.v) o.v=d.v; if(o.s||o.v) limpo[k]=o; });
+  if(_sb){
+    const { error } = await _sb.from('usuarios_perfil').update({ documentos: limpo }).eq('id', u.id);
+    if(error){ toast('Erro ao salvar: ' + error.message); return; }
+  }
+  u.documentos = limpo;
+  renderMeusDocumentos();
+  toast('Documentos salvos');
+}
+
 /* ---- perfil ---- */
 function renderPerfil(){
   const u = userProfile; if(!u) return;
@@ -5167,6 +5287,8 @@ function renderPerfil(){
   renderEmpresaBox('perfil');
   chipsAbrangenciaPerfil('perfil-abr', u.abrs);
   chipsBuscaPerfil('perfil', u);
+  cadMostrarComplemento();
+  renderMeusDocumentos();
 }
 async function saveProfile(){
   const u = userProfile; if(!u) return;
