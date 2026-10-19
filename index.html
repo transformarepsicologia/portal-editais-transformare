@@ -3129,7 +3129,7 @@ async function enviarSugestaoProfissao(nome, usuario){
   });
 }
 const ATUACOES = [{v:'PF', label:'Pessoa Física (PF)'}, {v:'PJ', label:'Pessoa Jurídica (PJ)'}];
-const empresaForm = { cad:null, perfil:null }; // dados do CNPJ consultado em cada formulário
+const empresaForm = { cad:null, perfil:null, cons:null }; // dados do CNPJ consultado em cada formulário
 const ESPECIALIDADES = ['Infantil','Adolescentes','Adultos','Idosos','TEA / autismo','Neuropsicologia','Saúde mental','Dependência química','Avaliação psicológica','Saúde do trabalhador','Hospitalar','Reabilitação'];
 const FORMATOS_ATEND = ['Individual','Grupo','Domiciliar','Telessaúde / teleatendimento','Plantão'];
 const REGIMES = ['Autônomo (RPA)','MEI','Simples Nacional','Lucro presumido','Ainda não defini'];
@@ -7738,7 +7738,52 @@ const CONS_ETAPAS = { interesse:'Interesse', documentos:'Reunindo documentos', i
 const CONS_CONTRATO = { sem:'Sem contrato', enviado:'Contrato enviado', assinado:'Contrato assinado', encerrado:'Encerrado' };
 const CONS_STATUS = { ativo:'Ativo', pausado:'Pausado', encerrado:'Encerrado' };
 let consId = null;
-function consDados(c){ return Object.assign({ status:'ativo', valor:'', pagamento:'', contrato:'sem', obs:'', processos:[], historico:[] }, (c && c.consultoria) || {}); }
+function consDados(c){ return Object.assign({ status:'ativo', valor:'', pagamento:'', contrato:'sem', obs:'', processos:[], historico:[], perfil:null }, (c && c.consultoria) || {}); }
+// Cadastro do cliente da consultoria: mesmos campos do "Minha conta" do site (clonados do próprio formulário, para nunca divergirem).
+function consPerfilBase(c){
+  const d = consDados(c), f = (c && c.ficha) || {};
+  if(d.perfil) return d.perfil;
+  // cliente antigo: aproveita o que já havia na ficha
+  const nomes = profissoesAtivasNomes();
+  const profs = String(f.profissoes||'').split(/[,;]/).map(x=>x.trim()).filter(Boolean).map(x=>nomes.find(n=>normTxt(n)===normTxt(x)) || x);
+  let cidade = String(f.cidade||'').trim(), uf = '';
+  const m = cidade.match(/^(.*?)\s*[\/\-]\s*([A-Za-z]{2})$/); if(m){ cidade = m[1].trim(); uf = m[2].toUpperCase(); }
+  return { email:f.email||'', whatsapp:f.telefone||'', registro:'', uf, profs, mods:[], cidade, abrs:[], remMin:null, remTipo:'atendimento', escolaridade:'', anosExp:null, atuacao:[], cnpj:'', empresa:null, especialidades:[], formatos:[], metaMensal:null, regime:'' };
+}
+function consPerfilFormHTML(){
+  const src = document.querySelector('#view-perfil .form-card'); if(!src) return '';
+  let h = src.innerHTML;
+  h = h.replace(/id="perfil-/g, 'id="cons-').replace(/'perfil'/g, "'cons'");
+  h = h.replace('E-mail (não pode ser alterado)', 'E-mail').replace(/(id="cons-email"[^>]*?)\s+disabled/, '$1');
+  h = h.replace(/<div class="form-actions">[\s\S]*?<\/div>\s*$/, '');
+  return h;
+}
+function consPerfilPreencher(c){
+  const p = consPerfilBase(c), set = (id, v)=>{ const el = document.getElementById(id); if(el) el.value = v; };
+  set('cons-email', p.email||''); set('cons-nome', c.nome||''); set('cons-whats', p.whatsapp||''); set('cons-registro', p.registro||'');
+  const sel = document.getElementById('cons-uf'); sel.innerHTML = '<option value="">Selecione</option>' + ufOptionsHTML(); sel.value = p.uf || '';
+  const profBox = document.getElementById('cons-prof'); profBox.innerHTML = '';
+  new Set([...profissoesAtivasNomes(), ...(p.profs||[])]).forEach(nm=>{
+    const ch = document.createElement('div'); ch.className = 'chip-opt' + ((p.profs||[]).includes(nm) ? ' selected' : ''); ch.textContent = nm;
+    ch.onclick = ()=>ch.classList.toggle('selected'); profBox.appendChild(ch);
+  });
+  const modBox = document.getElementById('cons-mod'); modBox.innerHTML = '';
+  MODALIDADES.forEach(m=>{
+    const ch = document.createElement('div'); ch.className = 'chip-opt' + ((p.mods||[]).includes(m) ? ' selected' : ''); ch.textContent = m;
+    ch.onclick = ()=>ch.classList.toggle('selected'); modBox.appendChild(ch);
+  });
+  set('cons-cidade', p.cidade||''); set('cons-rem-min', p.remMin||''); set('cons-rem-tipo', p.remTipo||'atendimento');
+  set('cons-escolaridade', normEscolaridade(p.escolaridade||'')); set('cons-anos-exp', p.anosExp ?? '');
+  set('cons-cnpj', formatarCnpj(p.cnpj||'')); empresaForm.cons = p.empresa || null;
+  chipsAtuacaoPerfil('cons', p.atuacao); renderEmpresaBox('cons');
+  chipsAbrangenciaPerfil('cons-abr', p.abrs); chipsBuscaPerfil('cons', p);
+}
+// Aderência com a mesma conta do site (calcularAderencia), a partir do cadastro do cliente
+function consPerfilParaAderencia(c){
+  const p = consPerfilBase(c);
+  return { profs:p.profs||[], uf:p.uf||'', cidade:p.cidade||'', mods:(p.mods||[]).map(normModalidade), abrs:p.abrs||[], remMin:p.remMin ?? null, remTipo:p.remTipo||'atendimento',
+    escolaridade:normEscolaridade(p.escolaridade||''), anosExp:p.anosExp ?? null, atuacao:p.atuacao||[], empresa:p.empresa||null, especialidades:p.especialidades||[], formatos:p.formatos||[] };
+}
 function consCliente(){ return aaeLista.find(x=>x.id===consId) || null; }
 async function consCarregar(){ await aaeCarregar(); consRender(); consDetalhe(); }
 function consRender(){
@@ -7781,19 +7826,38 @@ async function consGravar(c, d, extra){
   c.consultoria = d; if(extra){ Object.assign(c, extra); }
   return true;
 }
-async function consSalvarDados(){
+async function consSalvarCadastro(){
+  const c = consCliente(); if(!c) return;
+  const v = id => ((document.getElementById(id)||{}).value||'').trim();
+  const nome = v('cons-nome'); if(!nome){ toast('Informe o nome'); return; }
+  const profs = [...document.querySelectorAll('#cons-prof .chip-opt.selected')].map(x=>x.textContent);
+  const outra = lerProfissaoOutra('cons', profs); if(outra) profs.push(outra);
+  const mods = [...document.querySelectorAll('#cons-mod .chip-opt.selected')].map(x=>x.textContent);
+  const perfil = Object.assign({ email:v('cons-email'), whatsapp:v('cons-whats'), registro:v('cons-registro'), uf:v('cons-uf'), profs, mods }, lerPerfilExtraForm('cons'));
+  const d = consDados(c); d.perfil = perfil;
+  // mantém a ficha usada pela Aderência (AAE) em sincronia
+  const f = Object.assign({}, c.ficha||{}, { profissoes:profs.join(', '), cidade:(perfil.cidade||'') + (perfil.uf ? ((perfil.cidade?'/':'') + perfil.uf) : ''), email:perfil.email, telefone:perfil.whatsapp });
+  if(await consGravar(c, d, { nome, ficha:f })){ document.getElementById('cons-nome').value = nome; toast('Cadastro salvo'); consRender(); consDetalhe(); }
+}
+async function consSalvarContrato(){
   const c = consCliente(); if(!c) return;
   const v = id => (document.getElementById(id)||{}).value||'';
   const d = consDados(c);
   Object.assign(d, { status:v('cd-status'), valor:v('cd-valor').trim(), pagamento:v('cd-pagto').trim(), contrato:v('cd-contrato'), obs:v('cd-obs').trim() });
-  const f = Object.assign({}, c.ficha||{}, { profissoes:v('cd-prof').trim(), cidade:v('cd-cidade').trim(), email:v('cd-email').trim(), telefone:v('cd-tel').trim() });
-  const nome = v('cd-nome').trim() || c.nome;
-  if(await consGravar(c, d, { nome, ficha:f })){ toast('Dados salvos'); consRender(); consDetalhe(); }
+  if(await consGravar(c, d)){ toast('Contrato e valores salvos'); consRender(); }
 }
 // Editais abertos compatíveis com a profissão e a região do cliente (reaproveita a pontuação da AAE)
 function consSugestoes(c){
   const f = c.ficha||{}, ja = new Set(consDados(c).processos.map(p=>String(p.id)));
   let out = [];
+  const up = consPerfilParaAderencia(c);
+  if((up.profs||[]).length){
+    // mesma aderência que o cliente veria no site; prioriza 70% ou mais
+    const todos = oportunidades.filter(o=>visivelAoCliente(o) && ['Aberto','Próximo do encerramento','Próximo da abertura'].includes(situacaoExibida(o)) && !ja.has(String(o.id)))
+      .map(o=>({ o, score: calcularAderencia(o, up).pct })).filter(r=>r.score !== null && r.score > 0).sort((a,b)=>b.score - a.score || (b.o.indice||0) - (a.o.indice||0));
+    const altos = todos.filter(r=>r.score >= 70);
+    return (altos.length ? altos : todos).slice(0, 8);
+  }
   try{
     out = oportunidades.filter(o=>visivelAoCliente(o) && ['Aberto','Próximo do encerramento','Próximo da abertura'].includes(situacaoExibida(o)) && !ja.has(String(o.id)))
       .map(o=>Object.assign({ o }, aaePontuar(f, aaeDeCatalogo(o))))
@@ -7957,7 +8021,7 @@ function consDetalhe(){
   const sugHtml = sug.length ? sug.map(r=>`<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:8px 0; border-bottom:1px solid var(--border-soft);">
       <div style="flex:1; min-width:220px;"><strong>${esc(r.o.orgao||'')}</strong> — ${esc(r.o.edital||'')}<br><span style="font-size:12px;color:var(--ink-dim);">${esc(r.o.cidade? r.o.cidade+'/':'')}${esc(r.o.uf||'')} · prazo ${esc(r.o.prazo||'—')} · Índice ${r.o.indice!=null?esc(r.o.indice):'—'} · aderência ${r.score}%</span></div>
       <button class="btn-ghost" onclick="consAdicionarProcesso('${esc(String(r.o.id))}')">+ Acompanhar</button></div>`).join('')
-    : '<span class="section-sub">Nenhum edital aberto compatível com a profissão e a região deste cliente (confira Profissões e Cidade/UF nos dados).</span>';
+    : '<span class="section-sub">Nenhum edital aberto compatível com o cadastro deste cliente (confira Profissão e Estado/Cidade no cadastro).</span>';
   const procHtml = d.processos.length ? d.processos.map((p,i)=>{
     const o = oportunidades.find(x=>String(x.id)===String(p.id)), docs = (o && o.documentos) || [], ok = new Set(p.docs_ok||[]);
     const feitos = docs.filter(x=>ok.has(x)).length;
@@ -7978,19 +8042,19 @@ function consDetalhe(){
   el.innerHTML = `
     <div class="section-title" style="font-size:17px;">${esc(c.nome||'(sem nome)')}</div>
     <div class="form-row" style="border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
-      <label>1. Dados, contrato e valores</label>
-      <div class="two-col"><div class="form-row"><label>Nome</label><input type="text" id="cd-nome" value="${esc(c.nome||'')}"></div>
-        <div class="form-row"><label>Profissões (vírgula)</label><input type="text" id="cd-prof" value="${esc(f.profissoes||'')}"></div></div>
-      <div class="two-col"><div class="form-row"><label>Cidade/UF</label><input type="text" id="cd-cidade" value="${esc(f.cidade||'')}"></div>
-        <div class="form-row"><label>E-mail</label><input type="text" id="cd-email" value="${esc(f.email||'')}"></div></div>
-      <div class="two-col"><div class="form-row"><label>Telefone</label><input type="text" id="cd-tel" value="${esc(f.telefone||'')}"></div>
-        <div class="form-row"><label>Status do atendimento</label><select id="cd-status">${opt(CONS_STATUS, d.status)}</select></div></div>
+      <label>1. Cadastro do cliente <span style="font-weight:400; color:var(--ink-muted);">(os mesmos campos de "Minha conta" no site)</span></label>
+      ${consPerfilFormHTML()}
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;"><button class="btn-primary" onclick="consSalvarCadastro()">Salvar cadastro</button>
+        <button class="btn-ghost" onclick="consAbrirAAE()">Abrir na Aderência (AAE) — score e documento</button></div>
+    </div>
+    <div class="form-row" style="border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px; margin-top:14px;">
+      <label>Contrato e valores</label>
+      <div class="two-col"><div class="form-row"><label>Status do atendimento</label><select id="cd-status">${opt(CONS_STATUS, d.status)}</select></div>
+        <div class="form-row"><label>Contrato</label><select id="cd-contrato">${opt(CONS_CONTRATO, d.contrato)}</select></div></div>
       <div class="two-col"><div class="form-row"><label>Valor cobrado</label><input type="text" id="cd-valor" value="${esc(d.valor)}" placeholder="Ex: R$ 1.500,00"></div>
         <div class="form-row"><label>Forma de pagamento</label><input type="text" id="cd-pagto" value="${esc(d.pagamento)}" placeholder="Ex: 3x no Pix"></div></div>
-      <div class="two-col"><div class="form-row"><label>Contrato</label><select id="cd-contrato">${opt(CONS_CONTRATO, d.contrato)}</select></div>
-        <div class="form-row"><label>Observações</label><input type="text" id="cd-obs" value="${esc(d.obs)}"></div></div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;"><button class="btn-primary" onclick="consSalvarDados()">Salvar dados</button>
-        <button class="btn-ghost" onclick="consAbrirAAE()">Abrir na Aderência (AAE) — score e documento</button></div>
+      <div class="form-row"><label>Observações</label><input type="text" id="cd-obs" value="${esc(d.obs)}"></div>
+      <button class="btn-primary" onclick="consSalvarContrato()">Salvar contrato e valores</button>
     </div>
     <div class="form-row" style="margin-top:14px;"><label>2. Editais abertos que combinam com este cliente</label>${sugHtml}</div>
     <div class="form-row" style="margin-top:14px;"><label>3. Acompanhamento do credenciamento e documentos</label>${procHtml}</div>
@@ -8003,6 +8067,7 @@ function consDetalhe(){
       <div id="deh-resumo" style="margin-bottom:10px;">${dehResumoHTML(d)}</div>
       <button class="btn-ghost" style="margin-bottom:10px;" onclick="dehCopiarResumo()">Copiar resumo e pendências</button>
       ${dehHTML(c, d)}</div>`;
+  consPerfilPreencher(c);
 }
 function adminTab(nome){
   adminTabAtual = nome;
