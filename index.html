@@ -2741,7 +2741,8 @@ let detalheOrigem = {view:'editais', y:null};
 function voltarDetalhe(){
   const o = detalheOrigem || {view:'editais', y:null};
   nav(o.view);
-  if(o.y != null) setTimeout(()=>window.scrollTo({top:o.y, behavior:'auto'}), 80);
+  if(o.view === 'admin' && _usrVoltarId) setTimeout(usrRestaurarCadastro, 150);
+  else if(o.y != null) setTimeout(()=>window.scrollTo({top:o.y, behavior:'auto'}), 80);
 }
 function nav(view){
   if(typeof atualizarPromos==='function') atualizarPromos();
@@ -2754,10 +2755,10 @@ function nav(view){
   // ela só perde o filtro se clicar em "Limpar filtros" de propósito.
 
   if(view === 'detalhe' && typeof currentView !== 'undefined' && currentView !== 'detalhe'){
-    const ROT = {'minha-conta':'minha conta','favoritos':'favoritos','alertas':'alertas','comparar':'comparação','home':'início'};
+    const ROT = {'minha-conta':'minha conta','favoritos':'favoritos','alertas':'alertas','comparar':'comparação','home':'início','admin':'ADM'};
     detalheOrigem = ROT[currentView] ? {view: currentView, y: window.scrollY} : {view:'editais', y:null};
     const bv = document.getElementById('detalhe-voltar');
-    if(bv) bv.textContent = '← Voltar ' + (detalheOrigem.view === 'editais' ? 'aos editais' : detalheOrigem.view === 'minha-conta' ? 'à minha conta' : detalheOrigem.view === 'home' ? 'ao início' : detalheOrigem.view === 'comparar' ? 'à comparação' : 'aos ' + ROT[detalheOrigem.view]);
+    if(bv) bv.textContent = '← Voltar ' + (detalheOrigem.view === 'editais' ? 'aos editais' : detalheOrigem.view === 'minha-conta' ? 'à minha conta' : detalheOrigem.view === 'home' ? 'ao início' : detalheOrigem.view === 'comparar' ? 'à comparação' : detalheOrigem.view === 'admin' ? 'ao ADM' : 'aos ' + ROT[detalheOrigem.view]);
   }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
@@ -9600,6 +9601,22 @@ function perfilDeLinha(r){
     escolaridade:normEscolaridade(r.escolaridade||''), anosExp:r.anos_experiencia??null, atuacao:r.atuacao||[],
     especialidades:r.especialidades||[], formatos:r.formatos||[] };
 }
+let _usrVoltarId = null;
+function usrAbrirEdital(uid, oid){
+  _usrVoltarId = uid;
+  openDetalhe(oid);
+}
+async function usrRestaurarCadastro(){
+  const id = _usrVoltarId; _usrVoltarId = null; if(!id) return;
+  const body = document.getElementById('usuarios-cadastrados-body'), arrow = document.getElementById('usuarios-cadastrados-arrow');
+  if(body) body.style.display = 'block';
+  if(arrow) arrow.style.transform = 'rotate(180deg)';
+  await renderUsuariosAdmin(true);
+  const btn = [...document.querySelectorAll('#usuarios-cadastrados-lista button')].find(b=>(b.getAttribute('onclick')||'').includes("usrToggleCadastro('"+id+"'"));
+  const box = document.getElementById('usr-cad-' + id);
+  if(box && box.style.display === 'none') usrToggleCadastro(id, btn);
+  if(box) box.scrollIntoView({behavior:'auto', block:'center'});
+}
 function usrToggleCadastro(id, btn){
   const box = document.getElementById('usr-cad-' + id); if(!box) return;
   const abrir = box.style.display === 'none';
@@ -9629,7 +9646,7 @@ function usrCadastroHTML(r){
   const lista = (altos.length ? altos : todos).slice(0, 8);
   const edHTML = !(u.profs||[]).length
     ? '<div style="font-size:12.5px; color:var(--ink-muted);">Sem profissão no perfil, então não dá para calcular a aderência.</div>'
-    : (lista.length ? lista.map(x=>'<div style="display:flex; gap:8px; align-items:baseline; padding:4px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px;"><b style="flex:0 0 42px; color:'+(x.ad.pct>=70?'var(--teal)':'var(--ink-muted)')+';">'+x.ad.pct+'%</b><span style="flex:1;">'+esc(x.o.orgao||'')+' · '+esc(x.o.edital||'')+' <span style="color:var(--ink-muted);">('+esc((x.o.cidade?x.o.cidade+'/':'')+(x.o.uf||''))+')</span></span></div>').join('') : '<div style="font-size:12.5px; color:var(--ink-muted);">Nenhum edital com aderência calculável.</div>');
+    : (lista.length ? lista.map(x=>'<div role="button" tabindex="0" title="Abrir o edital" onclick="usrAbrirEdital(\''+esc(r.id)+'\','+x.o.id+')" onkeydown="if(event.key===\'Enter\')this.click()" style="display:flex; gap:8px; align-items:baseline; padding:6px 4px; border-bottom:1px solid var(--border-soft); font-size:12.5px; cursor:pointer; border-radius:6px;" onmouseover="this.style.background=\'var(--bg-hover, rgba(47,217,196,0.08))\'" onmouseout="this.style.background=\'\'"><b style="flex:0 0 42px; color:'+(x.ad.pct>=70?'var(--teal)':'var(--ink-muted)')+';">'+x.ad.pct+'%</b><span style="flex:1;">'+esc(x.o.orgao||'')+' · '+esc(x.o.edital||'')+' <span style="color:var(--ink-muted);">('+esc((x.o.cidade?x.o.cidade+'/':'')+(x.o.uf||''))+')</span></span><span style="color:var(--teal);">ver ›</span></div>').join('') : '<div style="font-size:12.5px; color:var(--ink-muted);">Nenhum edital com aderência calculável.</div>');
   return '<div style="background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin:8px 0 4px;">' +
     '<div style="font-weight:700; font-size:13px; margin-bottom:6px;">Critérios do perfil <span style="font-weight:400; color:var(--ink-muted);">· '+pct+'% preenchido'+(faltam.length?' (falta: '+esc(faltam.join(', '))+')':'')+'</span></div>' +
     lin('Profissões', u.profs) + lin('Estado / cidade(s)', [u.uf, u.cidade].filter(Boolean).join(' · ')) +
