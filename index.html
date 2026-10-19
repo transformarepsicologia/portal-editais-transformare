@@ -9581,11 +9581,70 @@ async function renderUsuariosAdmin(semRecarregar){
         ${ped ? `<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="liberarProUsuario('${u.id}', ${ped.id})">✓ Aprovar Pro…</button><button type="button" class="btn-ghost" style="font-size:12px;" onclick="recusarPedidoPlano(${ped.id})">Recusar</button>` : ''}
         ${!ped && !info.pro ? `<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="liberarProUsuario('${u.id}', null)">Liberar Pro…</button>` : ''}
         ${info.pro ? `<button type="button" class="btn-ghost" style="font-size:12px;" onclick="liberarProUsuario('${u.id}', null)">Prorrogar…</button><button type="button" class="btn-ghost" style="font-size:12px;" onclick="voltarParaGratis('${u.id}')">Voltar para Grátis</button>` : ''}
+        <button type="button" class="btn-ghost" style="font-size:12px;" onclick="usrToggleCadastro('${u.id}', this)">👁 Ver cadastro</button>
         <button type="button" class="btn-ghost" style="font-size:12px;" onclick="enviarLinkRedefinicaoUsuario('${esc(u.email)}', this)">🔑 Redefinir senha</button>
-      </div>`;
+      </div>
+      <div class="usr-cad" id="usr-cad-${u.id}" style="display:none; flex-basis:100%; width:100%;"></div>`;
     box.appendChild(row);
   });
   box.appendChild(pgUs.barra);
+}
+
+/* ---- ADM: cadastro completo do usuário e editais aderentes ---- */
+function perfilDeLinha(r){
+  return { id:r.id, email:r.email, nome:r.nome||'', whatsapp:r.whatsapp||'', registro:r.registro||'', uf:r.uf||'', profs:r.profs||[], mods:(r.mods||[]).map(normModalidade),
+    cidade:r.cidade||'', abrs:r.abrangencias||[], remMin:r.rem_min!=null?Number(r.rem_min):null, remTipo:r.rem_tipo||'atendimento',
+    escolaridade:normEscolaridade(r.escolaridade||''), anosExp:r.anos_experiencia??null, atuacao:r.atuacao||[], cnpj:r.cnpj||'', empresa:r.empresa||null,
+    especialidades:r.especialidades||[], formatos:r.formatos||[], metaMensal:r.meta_mensal!=null?Number(r.meta_mensal):null, regime:r.regime||'' };
+}
+function usrToggleCadastro(id, btn){
+  const box = document.getElementById('usr-cad-' + id); if(!box) return;
+  const abrir = box.style.display === 'none';
+  box.style.display = abrir ? '' : 'none';
+  if(btn) btn.textContent = abrir ? '▲ Ocultar cadastro' : '👁 Ver cadastro';
+  if(abrir && !box.dataset.pronto){
+    const r = (_usrAdmDados && _usrAdmDados.lista || []).find(x=>x.id === id);
+    if(!r){ box.textContent = 'Usuário não encontrado.'; return; }
+    box.innerHTML = usrCadastroHTML(r); box.dataset.pronto = '1';
+  }
+}
+function usrCadastroHTML(r){
+  const u = perfilDeLinha(r);
+  const lin = (k, v)=> (v === '' || v == null || (Array.isArray(v) && !v.length)) ? '' : '<div style="display:flex; gap:8px; padding:3px 0; font-size:12.5px;"><span style="flex:0 0 150px; color:var(--ink-muted);">'+esc(k)+'</span><span style="flex:1;">'+esc(Array.isArray(v) ? v.join(', ') : v)+'</span></div>';
+  const comp = r.complemento || {}, docs = r.documentos || {};
+  const emp = u.empresa || {};
+  const brl = n => n != null ? 'R$ ' + Number(n).toLocaleString('pt-BR') : '';
+  const pc = perfilCompletude(u);
+  const rotComp = { formInst:'Instituição de formação', formAno:'Ano de conclusão', posgrad:'Pós-graduação e títulos', cnes:'CNES', site:'Site / Instagram', profEnd:'Endereço de atendimento',
+    empIm:'Inscrição municipal', empEquipe:'Nº na equipe', empEnd:'Endereço da sede', empRep:'Representante legal', empRt:'Responsável técnico', empTel:'Telefone da empresa', empEmail:'E-mail da empresa' };
+  const linhasComp = Object.keys(rotComp).map(k=>lin(rotComp[k], comp[k])).join('');
+  const nDocs = Object.values(docs).filter(d=>d && d.s === 'tenho').length;
+  const hojeISO = new Date().toISOString().slice(0,10);
+  const vencidos = Object.values(docs).filter(d=>d && d.v && d.v < hojeISO).length;
+  // editais aderentes: mesmas regras do que o cliente enxerga
+  const visCli = o => (!o.problemaDescricao || soPendenciaDeAuditoria(o)) && !prazoCurtoDemais(o);
+  let todos = [];
+  if((u.profs||[]).length){
+    todos = oportunidades.filter(o=>situacaoExibida(o) !== 'Encerrado' && visCli(o))
+      .map(o=>({ o, ad: calcularAderencia(o, u) })).filter(x=>x.ad.pct !== null && x.ad.pct > 0)
+      .sort((a,b)=>b.ad.pct - a.ad.pct || (b.o.indice||0) - (a.o.indice||0));
+  }
+  const altos = todos.filter(x=>x.ad.pct >= 70);
+  const lista = (altos.length ? altos : todos).slice(0, 8);
+  const edHTML = !(u.profs||[]).length
+    ? '<div style="font-size:12.5px; color:var(--ink-muted);">Sem profissão no perfil, então não dá para calcular a aderência.</div>'
+    : (lista.length ? lista.map(x=>'<div style="display:flex; gap:8px; align-items:baseline; padding:4px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px;"><b style="flex:0 0 42px; color:'+(x.ad.pct>=70?'var(--teal)':'var(--ink-muted)')+';">'+x.ad.pct+'%</b><span style="flex:1;">'+esc(x.o.orgao||'')+' · '+esc(x.o.edital||'')+' <span style="color:var(--ink-muted);">('+esc((x.o.cidade?x.o.cidade+'/':'')+(x.o.uf||''))+')</span></span></div>').join('') : '<div style="font-size:12.5px; color:var(--ink-muted);">Nenhum edital com aderência calculável.</div>');
+  return '<div style="background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin:8px 0 4px;">' +
+    '<div style="font-weight:700; font-size:13px; margin-bottom:6px;">Cadastro <span style="font-weight:400; color:var(--ink-muted);">· perfil '+pc.pct+'% preenchido'+(pc.faltam.length?' (falta: '+esc(pc.faltam.join(', '))+')':'')+'</span></div>' +
+    lin('Registro profissional', u.registro) + lin('Profissões', u.profs) + lin('Estado / cidade(s)', [u.uf, u.cidade].filter(Boolean).join(' · ')) +
+    lin('Modalidades', u.mods) + lin('Abrangência', u.abrs) + lin('Remuneração mínima', u.remMin ? brl(u.remMin) + ' por ' + u.remTipo : '') +
+    lin('Instrução', u.escolaridade) + lin('Tempo de atuação', u.anosExp != null ? u.anosExp + ' ano(s)' : '') + lin('Atuação', u.atuacao) +
+    lin('Especialidades', u.especialidades) + lin('Formato de atendimento', u.formatos) + lin('Meta mensal', brl(u.metaMensal)) + lin('Regime', u.regime) +
+    lin('CNPJ', u.cnpj) + lin('Empresa', emp.razao_social || emp.razaoSocial || emp.nome_fantasia || '') +
+    (linhasComp ? '<div style="font-weight:700; font-size:13px; margin:10px 0 4px;">Dados complementares</div>' + linhasComp : '') +
+    (Object.keys(docs).length ? '<div style="font-weight:700; font-size:13px; margin:10px 0 4px;">Documentos</div>' + lin('Situação', nDocs + ' marcado(s) como "tenho"' + (vencidos ? ' · ' + vencidos + ' vencido(s)' : '')) : '') +
+    '<div style="font-weight:700; font-size:13px; margin:12px 0 4px;">Editais aderentes <span style="font-weight:400; color:var(--ink-muted);">· '+altos.length+' com 70% ou mais'+(!altos.length && todos.length ? ' (mostrando os melhores)' : '')+'</span></div>' + edHTML +
+    '</div>';
 }
 async function enviarLinkRedefinicaoUsuario(email, btn){
   if(!_sb) return;
