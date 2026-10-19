@@ -1069,6 +1069,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <ul>
       <li><strong>Cadastro e perfil profissional:</strong> nome, e-mail, WhatsApp, registro profissional (ex.: CRP), estado e cidade, profissão, modalidades e abrangência de interesse, remuneração mínima esperada, nível de instrução, tempo de atuação e forma de atuação (pessoa física e/ou jurídica).</li>
       <li><strong>Dados da empresa (se você atua como PJ):</strong> CNPJ e as informações públicas desse CNPJ na Receita Federal (razão social, nome fantasia, situação cadastral, CNAEs, município/UF, porte, opção pelo MEI e data de abertura), consultadas automaticamente na BrasilAPI a partir do número informado por você.</li>
+      <li><strong>Atividade de uso:</strong> para quem tem conta, a data do último acesso, o número de acessos e a quantidade de editais favoritados (apenas o número; quais editais você favorita continua só no seu navegador). De forma anônima, sem ligar a você, também contamos quais editais são abertos e favoritados, para sabermos o que é mais útil. Base: legítimo interesse em melhorar o Portal (art. 7º, IX).</li>
       <li><strong>Pedidos de contato e orientação:</strong> nome, WhatsApp, e-mail, o edital de interesse, o tipo de ajuda, a situação da documentação, a urgência e a mensagem que você escrever.</li>
       <li><strong>Outras interações:</strong> solicitações de avaliação do Índice Transformare, sugestões de profissão e mensagens de feedback (com a página do Portal e o tipo de navegador, para entendermos problemas técnicos).</li>
       <li><strong>Dados guardados só no seu navegador:</strong> editais favoritos, critérios de alerta e o checklist de documentos ficam no armazenamento local (localStorage) do seu próprio aparelho e não são enviados para nós.</li>
@@ -1454,6 +1455,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div id="usuarios-cadastrados-body" style="display:block;">
       <div id="usuarios-cadastrados-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;"></div>
       <div id="usuarios-cadastrados-resumo" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;"></div>
+      <details id="ranking-editais" style="margin-bottom:12px;" ontoggle="if(this.open) carregarRankingEditais()">
+        <summary style="cursor:pointer; font-size:13px; font-weight:600;">📈 Editais mais vistos e favoritados (últimos 30 dias, sem identificar quem)</summary>
+        <div id="ranking-editais-box" style="margin-top:8px; font-size:12.5px; color:var(--ink-muted);">Carregando...</div>
+      </details>
       <div id="usuarios-cadastrados-filtros" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
         <input id="usr-busca" type="text" placeholder="Buscar por nome, e-mail ou UF" oninput="filtrarUsuariosAdmin()" style="flex:1; min-width:200px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); font-size:13px;">
         <select id="usr-filtro" onchange="filtrarUsuariosAdmin()" style="font-size:13px; padding:8px 10px;">
@@ -3031,6 +3036,23 @@ function shareWhatsApp(id){
 
 /* ================= FAVORITOS ================= */
 const MAX_FAVORITOS = 3;
+// ---- atividade de uso (LGPD: só contagens; os favoritos em si continuam só no navegador) ----
+const _evtVistos = new Set();
+function registrarAtividade(qtdFavoritos){
+  try{
+    if(!_sb || !userProfile || adminAuthed) return;
+    _sb.rpc('registrar_atividade', qtdFavoritos == null ? {} : { p_favoritos: qtdFavoritos }).then(()=>{}, ()=>{});
+  }catch(e){}
+}
+function registrarEvento(tipo, o){
+  // Anônimo: guarda só qual edital foi aberto/favoritado, sem ligar a ninguém. Uma vez por edital e tipo em cada visita.
+  try{
+    if(!_sb || adminAuthed || !o) return;
+    const k = tipo + '|' + o.edital + '|' + o.orgao;
+    if(_evtVistos.has(k)) return; _evtVistos.add(k);
+    _sb.from('eventos_edital').insert({ edital: String(o.edital||'').slice(0,200), orgao: String(o.orgao||'').slice(0,200), tipo }).then(()=>{}, ()=>{});
+  }catch(e){}
+}
 async function toggleFav(id){
   if(!exigirCadastro('favoritar editais')) return;
   if(!favoritos.has(id) && favoritos.size >= MAX_FAVORITOS){
@@ -3039,6 +3061,8 @@ async function toggleFav(id){
   }
   favoritos.has(id) ? favoritos.delete(id) : favoritos.add(id);
   await storeSet(ukey('favoritos'), [...favoritos]);
+  registrarAtividade(favoritos.size);
+  if(favoritos.has(id)) registrarEvento('favoritar', oportunidades.find(x=>x.id===id));
   applyFilters();
   if(document.getElementById('view-favoritos').classList.contains('active')) renderFavoritos();
   if(document.getElementById('view-detalhe').classList.contains('active') && currentDetailId===id) openDetalhe(id);
@@ -3914,6 +3938,7 @@ function openDetalhe(id){
   currentDetailId = id;
   const o = oportunidades.find(x=>x.id===id);
   if(!o || !visivelAoCliente(o)){ toast('Este edital não está disponível no momento.'); nav('editais'); return; }
+  registrarEvento('abrir', o);
   const isFav = favoritos.has(id);
   const el = document.getElementById('detalhe-content');
   const temIndice = o.indice !== null && o.indice !== undefined;
@@ -4901,6 +4926,7 @@ async function loadUserData(){
   renderAlertas();
   renderBell();
   applyFilters();
+  registrarAtividade(favoritos.size);
 }
 
 async function carregarPerfilUsuario(authUser){
@@ -9531,9 +9557,11 @@ async function renderUsuariosAdmin(semRecarregar){
     if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
     const { data: pedidos } = await _sb.from('pedidos_plano').select('*').eq('status','pendente');
     const { data: assinaturas } = await _sb.from('assinaturas').select('*');
-    _usrAdmDados = { lista: data || [], pedidos: pedidos || [], assinaturas: assinaturas || [] };
+    const { data: atividade } = await _sb.from('atividade_usuario').select('user_id,ultimo_acesso,acessos,favoritos');
+    _usrAdmDados = { lista: data || [], pedidos: pedidos || [], assinaturas: assinaturas || [], atividade: atividade || [] };
   }
   const { lista, pedidos, assinaturas } = _usrAdmDados;
+  const ativDe = {}; (_usrAdmDados.atividade || []).forEach(a=>{ ativDe[a.user_id] = a; });
   const pedidoDe = {}; pedidos.forEach(p=>{ pedidoDe[p.usuario_id] = p; });
   const itens = lista.map(u=>({ u, info: infoPlanoUsuario(u, assinaturas, pedidoDe[u.id]), ped: pedidoDe[u.id] }));
 
@@ -9579,6 +9607,7 @@ async function renderUsuariosAdmin(semRecarregar){
         <div style="font-weight:600;">${esc(u.nome || '(sem nome)')} ${selo}${ped ? ' <span class="plan-badge" style="background:var(--amber); color:#000;">pediu o Pro</span>' : ''}${info.vencendo ? ' <span class="plan-badge" style="background:var(--coral); color:#000;">vence logo</span>' : ''}</div>
         <div style="font-size:12px; color:var(--ink-dim);">${esc(u.email)}${u.uf ? ' · ' + esc(u.uf) : ''}${(u.profs||[]).length ? ' · ' + esc(u.profs.join(', ')) : ''}</div>
         <div style="font-size:12px; color:var(--ink-muted); margin-top:3px;">Cadastro em ${cadastro}${info.origem ? ' · <strong>' + esc(info.origem) + '</strong>' : ''}${validade ? ' · ' + validade : ''}${stLabel && info.pro !== null ? ' · ' + stLabel : ''}</div>
+        <div style="font-size:12px; color:var(--ink-muted); margin-top:2px;">${(()=>{ const a = ativDe[u.id]; if(!a) return 'Ainda não voltou ao portal desde que a atividade começou a ser registrada'; const d = Math.floor((Date.now() - new Date(a.ultimo_acesso)) / 86400000); return 'Último acesso ' + (d <= 0 ? 'hoje' : d === 1 ? 'ontem' : 'há ' + d + ' dias') + ' · ' + a.acessos + ' acesso(s) · ' + a.favoritos + ' favorito(s)'; })()}</div>
       </div>
       <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
         ${ped ? `<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="liberarProUsuario('${u.id}', ${ped.id})">✓ Aprovar Pro…</button><button type="button" class="btn-ghost" style="font-size:12px;" onclick="recusarPedidoPlano(${ped.id})">Recusar</button>` : ''}
@@ -9655,6 +9684,24 @@ function usrCadastroHTML(r){
     '<div style="font-size:11.5px; color:var(--ink-muted); margin-top:6px;">Por privacidade (LGPD), o ADM não vê contato, registro profissional, CNPJ, remuneração nem documentos do usuário.</div>' +
     '<div style="font-weight:700; font-size:13px; margin:12px 0 4px;">Editais aderentes <span style="font-weight:400; color:var(--ink-muted);">· '+altos.length+' com 70% ou mais'+(!altos.length && todos.length ? ' (mostrando os melhores)' : '')+' · não considera a remuneração mínima</span></div>' + edHTML +
     '</div>';
+}
+
+async function carregarRankingEditais(){
+  const box = document.getElementById('ranking-editais-box'); if(!box || !_sb) return;
+  const desde = new Date(Date.now() - 30*86400000).toISOString();
+  const { data, error } = await _sb.from('eventos_edital').select('edital,orgao,tipo').gte('criado_em', desde).limit(20000);
+  if(error){ box.textContent = 'Erro ao carregar: ' + error.message; return; }
+  const m = new Map();
+  (data||[]).forEach(e=>{ const k = (e.edital||'') + '|' + (e.orgao||''); const r = m.get(k) || { edital:e.edital, orgao:e.orgao, abrir:0, favoritar:0 }; r[e.tipo]++; m.set(k, r); });
+  const lista = [...m.values()].sort((a,b)=>(b.favoritar*3 + b.abrir) - (a.favoritar*3 + a.abrir)).slice(0, 10);
+  if(!lista.length){ box.textContent = 'Ainda não há registros. Eles aparecem conforme as pessoas abrem e favoritam editais.'; return; }
+  box.innerHTML = lista.map(r=>{
+    const o = oportunidades.find(x=>x.edital === r.edital && x.orgao === r.orgao);
+    const nome = esc(r.orgao || '') + ' · ' + esc(r.edital || '');
+    return '<div style="display:flex; gap:8px; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--border-soft);">' +
+      '<span style="flex:1;">' + (o ? '<a href="#" onclick="openDetalhe(' + o.id + '); return false;" style="color:inherit;">' + nome + '</a>' : nome) + '</span>' +
+      '<span style="flex:0 0 auto; white-space:nowrap;">👁 ' + r.abrir + ' · ★ ' + r.favoritar + '</span></div>';
+  }).join('');
 }
 async function enviarLinkRedefinicaoUsuario(email, btn){
   if(!_sb) return;
