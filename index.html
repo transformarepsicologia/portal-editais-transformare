@@ -1080,6 +1080,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <li><strong>Criar e manter sua conta e mostrar editais aderentes ao seu perfil</strong> — execução de contrato e de procedimentos preliminares a pedido do titular (art. 7º, V).</li>
       <li><strong>Responder pedidos de orientação e entrar em contato por WhatsApp ou e-mail</strong> — consentimento, dado no momento do envio (art. 7º, I), que pode ser revogado a qualquer momento.</li>
       <li><strong>Melhorar o Portal, analisar feedback e manter a segurança</strong> (prevenção a fraudes e abusos) — legítimo interesse (art. 7º, IX), sempre respeitando suas expectativas e direitos.</li>
+      <li><strong>Suporte e administração do Portal</strong> — a equipe da Transformare consulta, em área restrita, apenas os dados necessários para dar suporte, administrar planos e conferir a aderência de editais (nome, e-mail, profissão, localização e critérios de atendimento). Contato, registro profissional, CNPJ, remuneração e documentos não são exibidos nessa área. Base: execução de contrato (art. 7º, V) e legítimo interesse (art. 7º, IX), com acesso limitado ao mínimo necessário (art. 6º, III).</li>
       <li><strong>Cumprir obrigações legais ou atender autoridades</strong> — art. 7º, II.</li>
     </ul>
     <p>Não vendemos, alugamos nem cedemos seus dados para fins de publicidade de terceiros.</p>
@@ -9524,7 +9525,8 @@ async function renderUsuariosAdmin(semRecarregar){
   if(!_sb){ status.textContent = 'Indisponível: configure o Supabase.'; return; }
   if(!(semRecarregar === true && _usrAdmDados)){
     status.textContent = 'Carregando...';
-    const { data, error } = await _sb.from('usuarios_perfil').select('*').order('criado_em', {ascending:false});
+    // Minimização de dados (LGPD): o ADM carrega só o que precisa para administrar planos e conferir aderência. Ficam de fora WhatsApp, registro, CNPJ/empresa, remuneração, meta, regime, dados complementares e documentos.
+    const { data, error } = await _sb.from('usuarios_perfil').select('id,nome,email,uf,cidade,profs,mods,plano,criado_em,abrangencias,escolaridade,anos_experiencia,atuacao,especialidades,formatos').order('criado_em', {ascending:false});
     if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
     const { data: pedidos } = await _sb.from('pedidos_plano').select('*').eq('status','pendente');
     const { data: assinaturas } = await _sb.from('assinaturas').select('*');
@@ -9574,7 +9576,7 @@ async function renderUsuariosAdmin(semRecarregar){
     row.innerHTML = `
       <div style="min-width:240px; flex:1;">
         <div style="font-weight:600;">${esc(u.nome || '(sem nome)')} ${selo}${ped ? ' <span class="plan-badge" style="background:var(--amber); color:#000;">pediu o Pro</span>' : ''}${info.vencendo ? ' <span class="plan-badge" style="background:var(--coral); color:#000;">vence logo</span>' : ''}</div>
-        <div style="font-size:12px; color:var(--ink-dim);">${esc(u.email)}${u.uf ? ' · ' + esc(u.uf) : ''}${(u.profs||[]).length ? ' · ' + esc(u.profs.join(', ')) : ''}${u.whatsapp ? ' · ' + esc(u.whatsapp) : ''}</div>
+        <div style="font-size:12px; color:var(--ink-dim);">${esc(u.email)}${u.uf ? ' · ' + esc(u.uf) : ''}${(u.profs||[]).length ? ' · ' + esc(u.profs.join(', ')) : ''}</div>
         <div style="font-size:12px; color:var(--ink-muted); margin-top:3px;">Cadastro em ${cadastro}${info.origem ? ' · <strong>' + esc(info.origem) + '</strong>' : ''}${validade ? ' · ' + validade : ''}${stLabel && info.pro !== null ? ' · ' + stLabel : ''}</div>
       </div>
       <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
@@ -9592,10 +9594,11 @@ async function renderUsuariosAdmin(semRecarregar){
 
 /* ---- ADM: cadastro completo do usuário e editais aderentes ---- */
 function perfilDeLinha(r){
-  return { id:r.id, email:r.email, nome:r.nome||'', whatsapp:r.whatsapp||'', registro:r.registro||'', uf:r.uf||'', profs:r.profs||[], mods:(r.mods||[]).map(normModalidade),
-    cidade:r.cidade||'', abrs:r.abrangencias||[], remMin:r.rem_min!=null?Number(r.rem_min):null, remTipo:r.rem_tipo||'atendimento',
-    escolaridade:normEscolaridade(r.escolaridade||''), anosExp:r.anos_experiencia??null, atuacao:r.atuacao||[], cnpj:r.cnpj||'', empresa:r.empresa||null,
-    especialidades:r.especialidades||[], formatos:r.formatos||[], metaMensal:r.meta_mensal!=null?Number(r.meta_mensal):null, regime:r.regime||'' };
+  // só campos essenciais para a conta de aderência (sem remuneração, registro, CNPJ, contato)
+  return { id:r.id, email:r.email, nome:r.nome||'', uf:r.uf||'', profs:r.profs||[], mods:(r.mods||[]).map(normModalidade),
+    cidade:r.cidade||'', abrs:r.abrangencias||[], remMin:null, remTipo:'atendimento',
+    escolaridade:normEscolaridade(r.escolaridade||''), anosExp:r.anos_experiencia??null, atuacao:r.atuacao||[],
+    especialidades:r.especialidades||[], formatos:r.formatos||[] };
 }
 function usrToggleCadastro(id, btn){
   const box = document.getElementById('usr-cad-' + id); if(!box) return;
@@ -9611,17 +9614,10 @@ function usrToggleCadastro(id, btn){
 function usrCadastroHTML(r){
   const u = perfilDeLinha(r);
   const lin = (k, v)=> (v === '' || v == null || (Array.isArray(v) && !v.length)) ? '' : '<div style="display:flex; gap:8px; padding:3px 0; font-size:12.5px;"><span style="flex:0 0 150px; color:var(--ink-muted);">'+esc(k)+'</span><span style="flex:1;">'+esc(Array.isArray(v) ? v.join(', ') : v)+'</span></div>';
-  const comp = r.complemento || {}, docs = r.documentos || {};
-  const emp = u.empresa || {};
-  const brl = n => n != null ? 'R$ ' + Number(n).toLocaleString('pt-BR') : '';
-  const pc = perfilCompletude(u);
-  const rotComp = { formInst:'Instituição de formação', formAno:'Ano de conclusão', posgrad:'Pós-graduação e títulos', cnes:'CNES', site:'Site / Instagram', profEnd:'Endereço de atendimento',
-    empIm:'Inscrição municipal', empEquipe:'Nº na equipe', empEnd:'Endereço da sede', empRep:'Representante legal', empRt:'Responsável técnico', empTel:'Telefone da empresa', empEmail:'E-mail da empresa' };
-  const linhasComp = Object.keys(rotComp).map(k=>lin(rotComp[k], comp[k])).join('');
-  const nDocs = Object.values(docs).filter(d=>d && d.s === 'tenho').length;
-  const hojeISO = new Date().toISOString().slice(0,10);
-  const vencidos = Object.values(docs).filter(d=>d && d.v && d.v < hojeISO).length;
-  // editais aderentes: mesmas regras do que o cliente enxerga
+  const campos = [['Profissão',(u.profs||[]).length],['Estado',u.uf],['Cidade',u.cidade],['Modalidade',(u.mods||[]).length],['Abrangência',(u.abrs||[]).length],['Instrução',u.escolaridade],['Tempo de atuação',u.anosExp!=null],['Atuação (PF/PJ)',(u.atuacao||[]).length],['Especialidades',(u.especialidades||[]).length],['Formato de atendimento',(u.formatos||[]).length]];
+  const faltam = campos.filter(c=>!c[1]).map(c=>c[0]);
+  const pct = Math.round((campos.length - faltam.length) / campos.length * 100);
+  // editais aderentes: mesmas regras do que o cliente enxerga (sem o critério de remuneração, que fica oculto ao ADM)
   const visCli = o => (!o.problemaDescricao || soPendenciaDeAuditoria(o)) && !prazoCurtoDemais(o);
   let todos = [];
   if((u.profs||[]).length){
@@ -9635,15 +9631,12 @@ function usrCadastroHTML(r){
     ? '<div style="font-size:12.5px; color:var(--ink-muted);">Sem profissão no perfil, então não dá para calcular a aderência.</div>'
     : (lista.length ? lista.map(x=>'<div style="display:flex; gap:8px; align-items:baseline; padding:4px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px;"><b style="flex:0 0 42px; color:'+(x.ad.pct>=70?'var(--teal)':'var(--ink-muted)')+';">'+x.ad.pct+'%</b><span style="flex:1;">'+esc(x.o.orgao||'')+' · '+esc(x.o.edital||'')+' <span style="color:var(--ink-muted);">('+esc((x.o.cidade?x.o.cidade+'/':'')+(x.o.uf||''))+')</span></span></div>').join('') : '<div style="font-size:12.5px; color:var(--ink-muted);">Nenhum edital com aderência calculável.</div>');
   return '<div style="background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin:8px 0 4px;">' +
-    '<div style="font-weight:700; font-size:13px; margin-bottom:6px;">Cadastro <span style="font-weight:400; color:var(--ink-muted);">· perfil '+pc.pct+'% preenchido'+(pc.faltam.length?' (falta: '+esc(pc.faltam.join(', '))+')':'')+'</span></div>' +
-    lin('Registro profissional', u.registro) + lin('Profissões', u.profs) + lin('Estado / cidade(s)', [u.uf, u.cidade].filter(Boolean).join(' · ')) +
-    lin('Modalidades', u.mods) + lin('Abrangência', u.abrs) + lin('Remuneração mínima', u.remMin ? brl(u.remMin) + ' por ' + u.remTipo : '') +
-    lin('Instrução', u.escolaridade) + lin('Tempo de atuação', u.anosExp != null ? u.anosExp + ' ano(s)' : '') + lin('Atuação', u.atuacao) +
-    lin('Especialidades', u.especialidades) + lin('Formato de atendimento', u.formatos) + lin('Meta mensal', brl(u.metaMensal)) + lin('Regime', u.regime) +
-    lin('CNPJ', u.cnpj) + lin('Empresa', emp.razao_social || emp.razaoSocial || emp.nome_fantasia || '') +
-    (linhasComp ? '<div style="font-weight:700; font-size:13px; margin:10px 0 4px;">Dados complementares</div>' + linhasComp : '') +
-    (Object.keys(docs).length ? '<div style="font-weight:700; font-size:13px; margin:10px 0 4px;">Documentos</div>' + lin('Situação', nDocs + ' marcado(s) como "tenho"' + (vencidos ? ' · ' + vencidos + ' vencido(s)' : '')) : '') +
-    '<div style="font-weight:700; font-size:13px; margin:12px 0 4px;">Editais aderentes <span style="font-weight:400; color:var(--ink-muted);">· '+altos.length+' com 70% ou mais'+(!altos.length && todos.length ? ' (mostrando os melhores)' : '')+'</span></div>' + edHTML +
+    '<div style="font-weight:700; font-size:13px; margin-bottom:6px;">Critérios do perfil <span style="font-weight:400; color:var(--ink-muted);">· '+pct+'% preenchido'+(faltam.length?' (falta: '+esc(faltam.join(', '))+')':'')+'</span></div>' +
+    lin('Profissões', u.profs) + lin('Estado / cidade(s)', [u.uf, u.cidade].filter(Boolean).join(' · ')) +
+    lin('Modalidades', u.mods) + lin('Abrangência', u.abrs) + lin('Instrução', u.escolaridade) + lin('Tempo de atuação', u.anosExp != null ? u.anosExp + ' ano(s)' : '') +
+    lin('Atuação', u.atuacao) + lin('Especialidades', u.especialidades) + lin('Formato de atendimento', u.formatos) +
+    '<div style="font-size:11.5px; color:var(--ink-muted); margin-top:6px;">Por privacidade (LGPD), o ADM não vê contato, registro profissional, CNPJ, remuneração nem documentos do usuário.</div>' +
+    '<div style="font-weight:700; font-size:13px; margin:12px 0 4px;">Editais aderentes <span style="font-weight:400; color:var(--ink-muted);">· '+altos.length+' com 70% ou mais'+(!altos.length && todos.length ? ' (mostrando os melhores)' : '')+' · não considera a remuneração mínima</span></div>' + edHTML +
     '</div>';
 }
 async function enviarLinkRedefinicaoUsuario(email, btn){
