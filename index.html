@@ -1865,7 +1865,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
       <div class="form-row"><label>Índice Transformare (1–5)</label><select id="af-indice"><option value="" selected>— Ainda não avaliado —</option><option value="1">1 — Baixa</option><option value="2">2 — Baixa</option><option value="3">3 — Média</option><option value="4">4 — Alta</option><option value="5">5 — Alta</option></select></div>
       <div class="two-col">
-        <div class="form-row"><label>Prazo</label><input type="text" id="af-prazo" placeholder="dd/mm/aaaa"></div>
+        <div class="form-row"><label>Prazo de encerramento</label><input type="text" id="af-prazo" placeholder="dd/mm/aaaa">
+          <label style="display:flex; gap:6px; align-items:center; font-weight:400; margin-top:6px; font-size:13px; cursor:pointer;"><input type="checkbox" id="af-prazo-indet" onchange="afPrazoIndetMudou()"> Prazo indeterminado (o edital não tem data de encerramento)</label></div>
         <div class="form-row"><label>Publicação (divulgação)</label><input type="text" id="af-publicacao" placeholder="dd/mm/aaaa"></div>
       </div>
       <div class="form-row"><label>Início do recebimento de propostas</label><input type="text" id="af-abertura" placeholder="dd/mm/aaaa (deixe em branco se não houver)"></div>
@@ -2377,6 +2378,8 @@ function situacaoExibida(o){
     const h0 = new Date(); h0.setHours(0,0,0,0);
     if(dAb > h0) return 'Próximo da abertura';
   }
+  // Prazo indeterminado: o edital não tem data de encerramento, então fica Aberto (a menos que o analista o marque como Encerrado).
+  if(o.prazoIndeterminado) return s === 'Encerrado' ? 'Encerrado' : 'Aberto';
   // Prazo de 2040 em diante só vale depois que o analista confirma (credenciamentos longos existem).
   if(!isNaN(d.getTime()) && d.getFullYear() >= 2040 && !o.prazoConfirmado) return 'Prazo a confirmar';
   if(!isNaN(d.getTime())){
@@ -2625,6 +2628,15 @@ const ADMIN_EMAILS = ['transformarepsicologia1@gmail.com'];
 // Regra de exibição: o cliente não vê edital sinalizado com problema nem edital cujo prazo de
 // recebimento de propostas termina em menos de 30 dias (inclui os já encerrados). O administrador vê tudo.
 const PRAZO_MINIMO_DIAS = 30;
+// Ordena por prazo; editais sem data (indeterminado ou não informado) vão para o fim
+function cmpPrazo(a,b){ const ta = parseDate(a.prazo).getTime(), tb = parseDate(b.prazo).getTime(); return (isNaN(ta) ? Infinity : ta) === (isNaN(tb) ? Infinity : tb) ? 0 : ((isNaN(ta) ? Infinity : ta) < (isNaN(tb) ? Infinity : tb) ? -1 : 1); }
+function afPrazoIndetMudou(semLimpar){
+  const ck = document.getElementById('af-prazo-indet'), inp = document.getElementById('af-prazo');
+  if(!ck || !inp) return;
+  inp.disabled = ck.checked;
+  if(ck.checked && semLimpar !== true) inp.value = '';
+  inp.placeholder = ck.checked ? 'Sem data de encerramento' : 'dd/mm/aaaa';
+}
 function prazoCurtoDemais(o){
   const d = parseDate(o.prazo);
   if(isNaN(d.getTime())) return false; // sem prazo informado: continua visível
@@ -3074,7 +3086,7 @@ function renderFavoritos(){
   list.innerHTML = '';
   let items = oportunidades.filter(o=>favoritos.has(o.id) && visivelAoCliente(o));
   const sort = document.getElementById('fav-sort').value;
-  if(sort === 'prazo') items = [...items].sort((a,b)=>parseDate(a.prazo)-parseDate(b.prazo));
+  if(sort === 'prazo') items = [...items].sort(cmpPrazo);
   else if(sort === 'indice') items = [...items].sort((a,b)=>b.indice-a.indice);
   countEl.textContent = `${items.length} favorito(s)`;
   if(items.length===0){
@@ -3773,7 +3785,7 @@ function applyFilters(){
     return true;
   });
 
-  if(sort === 'prazo') filtradas = [...filtradas].sort((a,b)=>parseDate(a.prazo)-parseDate(b.prazo));
+  if(sort === 'prazo') filtradas = [...filtradas].sort(cmpPrazo);
   else if(sort === 'indice') filtradas = [...filtradas].sort((a,b)=>b.indice-a.indice);
   else if(sort === 'recentes') filtradas = [...filtradas].sort((a,b)=>parseDate(b.publicacao)-parseDate(a.publicacao));
 
@@ -6357,7 +6369,9 @@ function openAdminForm(id){
     document.getElementById('af-abr').value = o.abrangencia;
     document.getElementById('af-sit').value = o.situacao;
     document.getElementById('af-indice').value = (o.indice==null) ? '' : String(Math.min(5, Math.max(1, Math.round(Number(o.indice)))));
-    document.getElementById('af-prazo').value = o.prazo;
+    document.getElementById('af-prazo-indet').checked = !!o.prazoIndeterminado;
+    document.getElementById('af-prazo').value = o.prazoIndeterminado ? '' : o.prazo;
+    afPrazoIndetMudou(true);
     document.getElementById('af-publicacao').value = o.publicacao;
     document.getElementById('af-abertura').value = o.abertura || '';
     document.getElementById('af-valor-atendimento').value = (o.valorAtendimento && !o.valorAtendimento.startsWith('Não')) ? o.valorAtendimento : '';
@@ -6383,6 +6397,7 @@ function openAdminForm(id){
      'af-requisitos','af-pontos-positivos','af-pontos-atencao','af-escolaridade','af-exp-anos'].forEach(id2=>document.getElementById(id2).value='');
     document.getElementById('af-url-edital').value = 'https://pncp.gov.br/app/editais';
     document.getElementById('af-url-pncp').value = 'https://pncp.gov.br/app/editais';
+    document.getElementById('af-prazo-indet').checked = false; afPrazoIndetMudou(true);
     document.getElementById('af-indice').value = '';
     afDocumentos = [];
     afMovimentacoes = [];
@@ -6539,7 +6554,7 @@ async function saveAdminForm(){
     const val = id => (document.getElementById(id) ? document.getElementById(id).value.trim() : '');
     const dataOk = v => /^\d{2}\/\d{2}\/\d{4}$/.test(v);
     const faltam = [];
-    if(!val('af-prazo') || /^n[aã]o informado$/i.test(val('af-prazo'))) faltam.push('Prazo (data dd/mm/aaaa ou texto, ex.: fluxo contínuo)');
+    if(!document.getElementById('af-prazo-indet').checked && (!val('af-prazo') || /^n[aã]o informado$/i.test(val('af-prazo')))) faltam.push('Prazo (data dd/mm/aaaa) ou marque "Prazo indeterminado"');
     if(!dataOk(val('af-publicacao'))) faltam.push('Publicação/divulgação no PNCP (dd/mm/aaaa)');
     if(indice != null){
       if(!dataOk(val('af-abertura'))) faltam.push('Início das propostas');
@@ -6569,7 +6584,8 @@ async function saveAdminForm(){
     abrangencia: document.getElementById('af-abr').value,
     situacao: document.getElementById('af-sit').value,
     indice, indiceLabel: indice==null ? null : labels[indice],
-    prazo: document.getElementById('af-prazo').value.trim() || 'Não informado',
+    prazoIndeterminado: document.getElementById('af-prazo-indet').checked,
+    prazo: document.getElementById('af-prazo-indet').checked ? 'Indeterminado' : (document.getElementById('af-prazo').value.trim() || 'Não informado'),
     prazoConfirmado: false,
     publicacao: document.getElementById('af-publicacao').value.trim() || 'Não informado',
     abertura: document.getElementById('af-abertura').value.trim() || null,
@@ -6672,7 +6688,9 @@ async function saveAdminForm(){
     const prazoISO = _dataBRParaISO(data.prazo);
     const publicacaoISO = _dataBRParaISO(data.publicacao);
     payloadSupabase.prazo_confirmado = data.prazoConfirmado;
-    if(prazoISO !== undefined) payloadSupabase.prazo = prazoISO;
+    payloadSupabase.prazo_indeterminado = !!data.prazoIndeterminado;
+    if(data.prazoIndeterminado) payloadSupabase.prazo = null;
+    else if(prazoISO !== undefined) payloadSupabase.prazo = prazoISO;
     if(publicacaoISO !== undefined) payloadSupabase.publicacao = publicacaoISO;
     const aberturaISO = _dataBRParaISO(data.abertura);
     if(aberturaISO !== undefined) payloadSupabase.abertura = aberturaISO;
@@ -6688,7 +6706,7 @@ async function saveAdminForm(){
       toast('Atenção: NÃO foi gravado no banco (sem permissão ou edital não encontrado) — salvou só neste navegador. Avise o suporte técnico.');
     } else {
       let aviso = 'Oportunidade atualizada e salva no catálogo.';
-      if(prazoISO === undefined && data.prazo && data.prazo !== 'Não informado') aviso += ' Prazo não gravado no banco (use o formato dd/mm/aaaa).';
+      if(prazoISO === undefined && !data.prazoIndeterminado && data.prazo && data.prazo !== 'Não informado') aviso += ' Prazo não gravado no banco (use o formato dd/mm/aaaa).';
       if(publicacaoISO === undefined && data.publicacao && data.publicacao !== 'Não informado') aviso += ' Publicação não gravada no banco (use o formato dd/mm/aaaa).';
       toast(aviso);
       await afTextoSalvar(idReal);
@@ -8814,7 +8832,8 @@ function mapEditalSupabase(row){
     experienciaMinimaAnos: row.experiencia_minima_anos || null,
     situacao: row.situacao || 'Aberto',
     objeto: row.objeto || '',
-    prazo: formatarDataBR(row.prazo),
+    prazo: row.prazo_indeterminado ? 'Indeterminado' : formatarDataBR(row.prazo),
+    prazoIndeterminado: !!row.prazo_indeterminado,
     prazoConfirmado: !!row.prazo_confirmado,
     abertura: row.abertura ? formatarDataBR(row.abertura) : null,
     publicacao: formatarDataBR(row.publicacao),
