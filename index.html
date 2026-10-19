@@ -7777,6 +7777,16 @@ function consPerfilPreencher(c){
   set('cons-cnpj', formatarCnpj(p.cnpj||'')); empresaForm.cons = p.empresa || null;
   chipsAtuacaoPerfil('cons', p.atuacao); renderEmpresaBox('cons');
   chipsAbrangenciaPerfil('cons-abr', p.abrs); chipsBuscaPerfil('cons', p);
+  // campos do bloco "Contrato e valores" espelham os do cadastro (é o mesmo dado)
+  const tipoCad = document.getElementById('cons-rem-tipo'), tipoCd = document.getElementById('cd-rem-tipo');
+  if(tipoCad && tipoCd){ tipoCd.innerHTML = tipoCad.innerHTML; }
+  [['cons-cidade','cd-cidade'],['cons-rem-min','cd-rem-min'],['cons-rem-tipo','cd-rem-tipo']].forEach(([a,b])=>{
+    const ea = document.getElementById(a), eb = document.getElementById(b); if(!ea || !eb) return;
+    eb.value = ea.value;
+    const ev = ea.tagName === 'SELECT' ? 'change' : 'input';
+    ea.addEventListener(ev, ()=>{ eb.value = ea.value; });
+    eb.addEventListener(ev, ()=>{ ea.value = eb.value; });
+  });
 }
 // Aderência com a mesma conta do site (calcularAderencia), a partir do cadastro do cliente
 function consPerfilParaAderencia(c){
@@ -7835,17 +7845,14 @@ async function consSalvarCadastro(){
   const mods = [...document.querySelectorAll('#cons-mod .chip-opt.selected')].map(x=>x.textContent);
   const perfil = Object.assign({ email:v('cons-email'), whatsapp:v('cons-whats'), registro:v('cons-registro'), uf:v('cons-uf'), profs, mods }, lerPerfilExtraForm('cons'));
   const d = consDados(c); d.perfil = perfil;
+  const vc = id => (document.getElementById(id)||{}).value||'';
+  Object.assign(d, { status:vc('cd-status'), valor:vc('cd-valor').trim(), pagamento:vc('cd-pagto').trim(), contrato:vc('cd-contrato'), obs:vc('cd-obs').trim() });
   // mantém a ficha usada pela Aderência (AAE) em sincronia
   const f = Object.assign({}, c.ficha||{}, { profissoes:profs.join(', '), cidade:(perfil.cidade||'') + (perfil.uf ? ((perfil.cidade?'/':'') + perfil.uf) : ''), email:perfil.email, telefone:perfil.whatsapp });
   if(await consGravar(c, d, { nome, ficha:f })){ document.getElementById('cons-nome').value = nome; toast('Cadastro salvo'); consRender(); consDetalhe(); }
 }
-async function consSalvarContrato(){
-  const c = consCliente(); if(!c) return;
-  const v = id => (document.getElementById(id)||{}).value||'';
-  const d = consDados(c);
-  Object.assign(d, { status:v('cd-status'), valor:v('cd-valor').trim(), pagamento:v('cd-pagto').trim(), contrato:v('cd-contrato'), obs:v('cd-obs').trim() });
-  if(await consGravar(c, d)){ toast('Contrato e valores salvos'); consRender(); }
-}
+// Cadastro e contrato/valores são gravados juntos (cidade e remuneração aparecem nos dois blocos e são o mesmo dado)
+async function consSalvarContrato(){ return consSalvarCadastro(); }
 // Editais abertos compatíveis com a profissão e a região do cliente (reaproveita a pontuação da AAE)
 function consSugestoes(c){
   const f = c.ficha||{}, ja = new Set(consDados(c).processos.map(p=>String(p.id)));
@@ -8049,6 +8056,10 @@ function consDetalhe(){
     </div>
     <div class="form-row" style="border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px; margin-top:14px;">
       <label>Contrato e valores</label>
+      <div class="two-col">
+        <div class="form-row"><label>Cidade(s) de atendimento</label><input type="text" id="cd-cidade" placeholder="Ex: Porto Alegre, Canoas, Alvorada (cidades até 20 km)"></div>
+        <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="cd-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="cd-rem-tipo" style="flex:1; min-width:0;"></select></div></div>
+      </div>
       <div class="two-col"><div class="form-row"><label>Status do atendimento</label><select id="cd-status">${opt(CONS_STATUS, d.status)}</select></div>
         <div class="form-row"><label>Contrato</label><select id="cd-contrato">${opt(CONS_CONTRATO, d.contrato)}</select></div></div>
       <div class="two-col"><div class="form-row"><label>Valor cobrado</label><input type="text" id="cd-valor" value="${esc(d.valor)}" placeholder="Ex: R$ 1.500,00"></div>
