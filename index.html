@@ -1348,11 +1348,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-triagem">
-  <div id="triagem-edital-box" style="margin-top:8px; padding:16px; border:1px solid var(--border-soft); border-radius:12px; background:var(--surface, #fff);">
-    <div class="section-title" style="font-size:17px; margin:0 0 4px;">🔎 Analisar edital (link ou PDF)</div>
+  <div id="triagem-edital-box" style="margin-top:8px; padding-bottom:24px;">
+    <div class="section-title" style="font-size:17px; margin:0 0 6px;">🔎 Analisar edital (link ou PDF)</div>
     <p class="section-sub" style="margin-bottom:10px;">Leitura automática por regras, sem IA. Cole o link (ou o número) do PNCP / de uma página do edital e/ou envie os PDFs. Você recebe uma ficha com o que foi encontrado e abre o formulário já preenchido para revisar e publicar.</p>
     <div class="form-row"><label>Link ou número do edital</label><input type="text" id="tri-url" placeholder="https://pncp.gov.br/app/editais/…  ou  00000000000000-1-000123/2026" onkeydown="if(event.key==='Enter')triagemAnalisar()"></div>
-    <div class="form-row"><label>Arquivo(s) PDF do edital</label><input type="file" id="tri-files" accept="application/pdf,.pdf,.txt,.md" multiple></div>
+    <div class="form-row"><label>Arquivo(s) PDF do edital</label><input type="file" id="tri-files" accept="application/pdf,.pdf,.txt,.md" multiple style="color:var(--ink-muted); max-width:100%;"></div>
     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
       <button class="btn-primary" id="tri-btn" onclick="triagemAnalisar()">Analisar</button>
       <span id="tri-status" style="font-size:12px; color:var(--ink-dim);"></span>
