@@ -1348,6 +1348,17 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-triagem">
+  <div id="triagem-edital-box" style="margin-top:8px; padding:16px; border:1px solid var(--border-soft); border-radius:12px; background:var(--surface, #fff);">
+    <div class="section-title" style="font-size:17px; margin:0 0 4px;">🔎 Analisar edital (link ou PDF)</div>
+    <p class="section-sub" style="margin-bottom:10px;">Leitura automática por regras, sem IA. Cole o link (ou o número) do PNCP / de uma página do edital e/ou envie os PDFs. Você recebe uma ficha com o que foi encontrado e abre o formulário já preenchido para revisar e publicar.</p>
+    <div class="form-row"><label>Link ou número do edital</label><input type="text" id="tri-url" placeholder="https://pncp.gov.br/app/editais/…  ou  00000000000000-1-000123/2026" onkeydown="if(event.key==='Enter')triagemAnalisar()"></div>
+    <div class="form-row"><label>Arquivo(s) PDF do edital</label><input type="file" id="tri-files" accept="application/pdf,.pdf,.txt,.md" multiple></div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <button class="btn-primary" id="tri-btn" onclick="triagemAnalisar()">Analisar</button>
+      <span id="tri-status" style="font-size:12px; color:var(--ink-dim);"></span>
+    </div>
+    <div id="tri-resultado" style="margin-top:14px;"></div>
+  </div>
   <div style="margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; cursor:pointer; user-select:none;" onclick="toggleSecaoAdmin('caixa-entrada-body','caixa-entrada-arrow')">
       <div class="section-title" style="font-size:17px; margin:0; display:flex; align-items:center; gap:8px;">
@@ -5943,7 +5954,7 @@ function inferirDoTexto(texto){
     let n = 0;
     document.querySelectorAll('#af-profs .chip-opt').forEach(ch=>{
       const base = _fNorm(ch.dataset.prof).slice(0,5);
-      if(base.length >= 5 && t.includes(base)){ ch.classList.add('selected'); n++; }
+      if(base.length >= 5 && new RegExp('(^|[^a-z])' + base.replace(/[^a-z0-9]/g,'')).test(t)){ ch.classList.add('selected'); n++; }
     });
     if(n) ok.push('Profissões (' + n + ', deduzidas do texto — confira)'); else falta.push('Profissões contempladas — não achei no texto');
   }
@@ -6471,6 +6482,212 @@ function afPreencherDatasDoTexto(textoBruto){
   pares.forEach(([id, v, nome])=>{ const el = document.getElementById(id); if(v && el && !el.value.trim()){ el.value = v; ok.push(nome); } });
   return ok;
 }
+/* ================= TRIAGEM DE EDITAIS (link / PDF) — leitura por regras, sem IA ================= */
+let _tri = null;
+const PDFJS_VER = '3.11.174';
+async function triCarregarPdfJs(){
+  if(window.pdfjsLib) return window.pdfjsLib;
+  await new Promise((ok, err)=>{
+    const sc = document.createElement('script');
+    sc.src = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}/pdf.min.js`;
+    sc.onload = ok; sc.onerror = ()=>err(new Error('Não consegui carregar o leitor de PDF'));
+    document.head.appendChild(sc);
+  });
+  try{
+    const w = await (await fetch(`https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}/pdf.worker.min.js`)).text();
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([w], {type:'text/javascript'}));
+  }catch(e){}
+  return window.pdfjsLib;
+}
+async function triTextoDePdf(dados){
+  const lib = await triCarregarPdfJs();
+  const pdf = await lib.getDocument({ data: dados }).promise;
+  let out = '';
+  for(let p = 1; p <= pdf.numPages; p++){
+    const pg = await pdf.getPage(p);
+    const ct = await pg.getTextContent();
+    let y = null, linha = '';
+    ct.items.forEach(it=>{
+      const yy = it.transform ? Math.round(it.transform[5]) : 0;
+      if(y !== null && Math.abs(yy - y) > 3){ out += linha.trim() + '\n'; linha = ''; }
+      y = yy; linha += it.str + (it.hasEOL ? '\n' : ' ');
+    });
+    out += linha.trim() + '\n\n';
+  }
+  return { texto: out.replace(/[ \t]+/g,' ').replace(/ ?\n ?/g,'\n'), paginas: pdf.numPages };
+}
+function triB64ParaBytes(b64){ const bin = atob(b64); const u = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i); return u; }
+const _MESES = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+function triDataBR(trecho){
+  let m = String(trecho).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m) return String(m[1]).padStart(2,'0')+'/'+String(m[2]).padStart(2,'0')+'/'+m[3];
+  m = _fNorm(trecho).match(/(\d{1,2})\s*(?:º|o)?\s*de\s*([a-z]+)\s*de\s*(\d{4})/);
+  if(m && _MESES[m[2]]) return String(m[1]).padStart(2,'0')+'/'+String(_MESES[m[2]]).padStart(2,'0')+'/'+m[3];
+  return '';
+}
+const _DATA_RE = '(\\d{1,2}\\/\\d{1,2}\\/\\d{4}|\\d{1,2}\\s*(?:º|o)?\\s*de\\s+[A-Za-zçÇãÃ]+\\s+de\\s+\\d{4})';
+function triExtrair(texto, meta){
+  meta = meta || {};
+  const t = String(texto || '').replace(/\r/g,'');
+  const campos = {};   // nome -> { valor, fonte, origem }
+  const set = (k, v, fonte, origem)=>{ if(v && !campos[k]) campos[k] = { valor: v, fonte: (fonte||'').replace(/\s+/g,' ').slice(0,160), origem: origem || 'texto' }; };
+  // 1) Dados oficiais do PNCP (quando o link é do PNCP)
+  if(meta.edital) set('edital', meta.edital, 'PNCP', 'pncp');
+  if(meta.orgao) set('orgao', meta.orgao, 'PNCP', 'pncp');
+  if(meta.objeto) set('objeto', meta.objeto, 'PNCP', 'pncp');
+  if(meta.uf) set('uf', meta.uf, 'PNCP', 'pncp');
+  if(meta.cidade) set('cidade', meta.cidade, 'PNCP', 'pncp');
+  if(meta.prazo) set('prazo', formatarDataBR(meta.prazo), 'PNCP', 'pncp');
+  if(meta.abertura) set('abertura', formatarDataBR(meta.abertura), 'PNCP', 'pncp');
+  if(meta.publicacao) set('publicacao', formatarDataBR(meta.publicacao), 'PNCP', 'pncp');
+  if(meta.link_pncp) set('urlPncp', meta.link_pncp, 'PNCP', 'pncp');
+  if(meta.link_origem) set('urlEdital', meta.link_origem, 'PNCP', 'pncp');
+  // 2) Regras sobre o texto
+  let m = t.match(/(edital\s+de\s+)?(credenciamento|chamamento\s+p[úu]blico|inexigibilidade|pregão)[^\n]{0,60}?n[ºo°.]{0,2}\s*(\d{1,5}\s*[\/\-]\s*\d{4})/i);
+  if(m) set('edital', (/credenciamento/i.test(m[2]) ? 'Credenciamento' : /chamamento/i.test(m[2]) ? 'Chamamento Público' : m[2].replace(/^./,c=>c.toUpperCase())) + ' nº ' + m[3].replace(/\s/g,''), m[0]);
+  m = t.match(/(prefeitura municipal de [^\n,.;\d]{3,50}|munic[ií]pio de [^\n,.;\d]{3,40}|secretaria (?:municipal|estadual) de sa[úu]de[^\n,.;\d]{0,40}|funda[cç][aã]o [^\n,.;\d]{3,60}|hospital [^\n,.;\d]{3,60}|consórcio [^\n,.;\d]{3,60})/i);
+  if(m) set('orgao', m[1].trim().replace(/\s+/g,' ').replace(/\s*[-–\/]\s*[A-Z]{2}$/,''), m[0]);
+  m = t.match(/(?:^|\n)\s*(?:\d+(?:\.\d+)*\.?\s*)?(?:d[oa]\s+)?objeto\s*[:\-–]?\s*\n?\s*([^\n][\s\S]{25,700}?)(?:\n\s*\n|\n\s*\d+(?:\.\d+)*\.?\s+[A-ZÀ-Ú]{2,}|\n\s*\||$)/i);
+  if(m) set('objeto', m[1].replace(/\s*\n\s*/g,' ').replace(/^\d+(?:\.\d+)*\.?\s+/,'').trim().slice(0,600), m[0].slice(0,100));
+  // cidade / UF
+  const ufs = UFS.map(u=>u.sigla).join('|');
+  const bonito = x=>{ x = x.trim().replace(/\s+/g,' '); return x === x.toUpperCase() ? x.toLowerCase().replace(/(^|\s)(\S)/g,(a,b2,c2)=>b2+c2.toUpperCase()).replace(/\s(D[aeo]s?|E)\s/g,z=>z.toLowerCase()) : x; };
+  const pm = t.match(new RegExp('(?:prefeitura municipal|munic[ií]pio|c[aâ]mara municipal) de ([A-ZÀ-Ú][A-Za-zÀ-ú\' ]{2,30}?)(?=\\s*(?:[\\/\\-–,.\\n]|Estado|CNPJ|torna|por\\b|\\s(?:' + ufs + ')\\b))', 'i'));
+  if(pm){ set('cidade', bonito(pm[1]), pm[0]);
+    const pu = t.slice(t.indexOf(pm[0]) + pm[0].length).match(new RegExp('^\\s*[\\/\\-–,]\\s*(' + ufs + ')\\b'));
+    if(pu) set('uf', pu[1], pm[0] + pu[0]); }
+  if(!campos.cidade){
+    m = t.match(new RegExp('(?<![A-Za-zÀ-ú])([A-ZÀ-Ú][a-zà-ú]+(?: (?:d[aeo]s?|e) [A-ZÀ-Ú][a-zà-ú]+| [A-ZÀ-Ú][a-zà-ú]+){0,3})\\s*[\\/\\-–]\\s*(' + ufs + ')\\b'));
+    if(m){ set('cidade', m[1].trim(), m[0]); set('uf', m[2], m[0]); }
+  }
+  if(!campos.uf){
+    const tn = _fNorm(t);
+    const est = UFS.find(u=>tn.includes('estado de ' + _fNorm(u.nome)) || tn.includes('estado do ' + _fNorm(u.nome)) || tn.includes('estado da ' + _fNorm(u.nome)));
+    if(est) set('uf', est.sigla, 'Estado de ' + est.nome);
+  }
+  // abrangência (pelo órgão)
+  const org = _fNorm((campos.orgao && campos.orgao.valor) || '') + ' ' + _fNorm(t.slice(0, 3000));
+  if(/ministerio|ebserh|governo federal|universidade federal|fundacao nacional/.test(org)) set('abr', 'Nacional', 'órgão federal');
+  else if(/secretaria de (?:estado|saude do estado)|secretaria estadual|governo do estado/.test(org)) set('abr', 'Estadual', 'órgão estadual');
+  else if(/prefeitura|municipio|secretaria municipal|fundo municipal/.test(org)) set('abr', 'Municipal', 'órgão municipal');
+  // datas
+  const apos = (re)=>{ const x = t.match(re); return x ? { d: triDataBR(x[1]), fonte: x[0] } : null; };
+  let d = apos(new RegExp('fim de recebimento de propostas[^0-9A-Za-z]{0,15}' + _DATA_RE, 'i'))
+       || apos(new RegExp('(?:encerramento|prazo final|data limite|at[eé] o dia|at[eé] a data de)[^\\n]{0,80}?(?:inscri[cç][õo]es|credenciamento|propostas|documenta[cç][aã]o|envelopes)?[^\\n]{0,30}?' + _DATA_RE, 'i'))
+       || apos(new RegExp('(?:recebimento|entrega|protocolo)\\s+d[eao]s?\\s+(?:documentos|propostas|envelopes|inscri[cç][õo]es)[^\\n]{0,60}?' + _DATA_RE, 'i'));
+  if(d && d.d) set('prazo', d.d, d.fonte);
+  d = apos(new RegExp('in[ií]cio de recebimento de propostas[^0-9A-Za-z]{0,15}' + _DATA_RE, 'i')) || apos(new RegExp('(?:abertura|in[ií]cio)\\s+d[eao]s?\\s+(?:inscri[cç][õo]es|propostas|credenciamento)[^\\n]{0,40}?' + _DATA_RE, 'i'));
+  if(d && d.d) set('abertura', d.d, d.fonte);
+  d = apos(new RegExp('(?:divulga[cç][aã]o no PNCP|data de publica[cç][aã]o|publicado em)[^0-9A-Za-z]{0,15}' + _DATA_RE, 'i'));
+  if(d && d.d) set('publicacao', d.d, d.fonte);
+  // prazo indeterminado (sugestão: só vale sem data de encerramento)
+  m = t.match(/credenciamento\s+(?:permanente|cont[ií]nuo|aberto)|prazo\s+indeterminado|fluxo\s+cont[ií]nuo|a\s+qualquer\s+tempo|sem\s+prazo\s+(?:final|de\s+encerramento)|inscri[cç][õo]es\s+(?:permanecer[aã]o\s+)?abertas\s+(?:durante|enquanto)/i);
+  if(m) set('indeterminado', 'sim', m[0]);
+  // tipo (credenciamento é o padrão do portal)
+  if(/credenciamento/i.test(t) || /credenciamento/i.test(meta.objeto || '')) set('tipo', 'Credenciamento', 'texto menciona credenciamento');
+  // contatos e links
+  m = t.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/);
+  if(m) set('email', m[0], m[0]);
+  m = t.match(/https?:\/\/[^\s)>\]"]+/g);
+  if(m){ const l = m.find(x=>!/pncp\.gov\.br/i.test(x)); if(l) set('urlEdital', l.replace(/[.,;]+$/,''), l); }
+  return campos;
+}
+const _TRI_ROTULOS = [['edital','Edital'],['orgao','Órgão'],['objeto','Objeto'],['uf','UF'],['cidade','Cidade'],['abr','Abrangência'],['tipo','Tipo'],['prazo','Prazo (fim do recebimento)'],['abertura','Início das propostas'],['publicacao','Publicação'],['indeterminado','Prazo indeterminado?'],['urlPncp','Link PNCP'],['urlEdital','Link do edital'],['email','E-mail']];
+function triRender(){
+  const box = document.getElementById('tri-resultado'); if(!box || !_tri) return;
+  const c = _tri.campos;
+  const linhas = _TRI_ROTULOS.map(([k, rot])=>{
+    const x = c[k];
+    if(!x) return `<tr><td style="padding:4px 10px 4px 0; color:var(--ink-dim); white-space:nowrap;">${rot}</td><td style="color:var(--coral);">não encontrado</td><td></td></tr>`;
+    return `<tr><td style="padding:4px 10px 4px 0; color:var(--ink-dim); white-space:nowrap; vertical-align:top;">${rot}</td><td style="vertical-align:top;"><strong>${esc(x.valor)}</strong></td><td style="font-size:11px; color:var(--ink-dim); vertical-align:top;">${x.origem === 'pncp' ? 'dado oficial do PNCP' : '“' + esc(x.fonte) + '”'}</td></tr>`;
+  }).join('');
+  const avisos = (_tri.avisos || []).map(a=>`<div style="color:var(--coral); font-size:12.5px; margin-bottom:4px;">⚠ ${esc(a)}</div>`).join('');
+  const pdfs = (_tri.pdfsLinks || []).length ? `<div style="font-size:12px; margin:6px 0;">PDFs encontrados na página: ${(_tri.pdfsLinks).map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.split('/').pop().slice(0,50))}</a>`).join(' · ')} — baixe e envie no campo de arquivos para ler.</div>` : '';
+  box.innerHTML = `${avisos}
+    <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:8px;">Fontes lidas: ${esc(_tri.fontes.join(' · ') || '—')} (${Math.round(_tri.texto.length/1024)} KB de texto). Confira cada campo: a leitura é por regras e pode errar.</div>
+    <table style="font-size:13px; border-collapse:collapse; width:100%;">${linhas}</table>${pdfs}
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+      <button class="btn-primary" onclick="triAbrirFormulario()">Abrir no formulário para revisar e publicar</button>
+      <button class="btn-ghost" onclick="triCopiarFicha()">Copiar ficha</button>
+    </div>`;
+}
+async function triAnalisar(){ return triagemAnalisar(); }
+async function triagemAnalisar(){
+  const url = (document.getElementById('tri-url').value || '').trim();
+  const files = [...(document.getElementById('tri-files').files || [])];
+  const st = document.getElementById('tri-status'), btn = document.getElementById('tri-btn');
+  if(!url && !files.length){ toast('Cole um link ou envie um PDF'); return; }
+  btn.disabled = true; document.getElementById('tri-resultado').innerHTML = '';
+  const fontes = [], avisos = []; let texto = '', meta = {}, pdfsLinks = [];
+  try{
+    for(const f of files){
+      st.textContent = 'Lendo ' + f.name + '…';
+      if(f.size > 25*1024*1024){ avisos.push(f.name + ': arquivo maior que 25 MB, ignorado.'); continue; }
+      if(/\.pdf$/i.test(f.name) || f.type === 'application/pdf'){
+        const r = await triTextoDePdf(new Uint8Array(await f.arrayBuffer()));
+        if(r.texto.replace(/\s/g,'').length < 200) avisos.push(f.name + ': quase sem texto — provavelmente é PDF escaneado (imagem). A leitura não faz OCR; use uma versão com texto ou digite no formulário.');
+        texto += '\n' + r.texto; fontes.push(f.name + ' (' + r.paginas + ' pág.)');
+      } else { texto += '\n' + await f.text(); fontes.push(f.name); }
+    }
+    if(url){
+      st.textContent = 'Buscando o link…';
+      if(!_sb) throw new Error('Sem conexão com o servidor');
+      const { data: ses } = await _sb.auth.getSession();
+      const tok = ses && ses.session && ses.session.access_token;
+      if(!tok) throw new Error('Entre como administrador para analisar links');
+      const resp = await fetch(SUPABASE_URL + '/functions/v1/triagem-edital', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + tok, apikey: SUPABASE_ANON_KEY }, body: JSON.stringify({ url }) });
+      const r = await resp.json().catch(()=>({ ok:false, erro:'Resposta inválida do servidor' }));
+      if(!r.ok) avisos.push('Link: ' + (r.erro || 'não consegui ler') + ' — se preferir, envie o PDF.');
+      else {
+        meta = r.meta || {}; (r.avisos || []).forEach(a=>avisos.push(a)); pdfsLinks = r.pdfs || [];
+        if(r.pdf && r.pdf.base64){
+          st.textContent = 'Lendo o PDF do link…';
+          const pr = await triTextoDePdf(triB64ParaBytes(r.pdf.base64));
+          if(pr.texto.replace(/\s/g,'').length < 200) avisos.push('O PDF do link quase não tem texto (escaneado?).');
+          texto += '\n' + pr.texto; fontes.push((r.pdf.nome || 'PDF do link') + ' (' + pr.paginas + ' pág.)');
+        }
+        if(r.texto){ texto += '\n' + r.texto; fontes.push(r.tipo === 'pncp' ? 'dados do PNCP' : 'texto da página'); }
+        else if(r.tipo === 'pncp') fontes.push('dados do PNCP');
+      }
+    }
+    texto = texto.trim();
+    if(!texto && !Object.keys(meta).length){ st.textContent = ''; avisos.push('Não consegui obter nenhum texto.'); }
+    _tri = { texto, meta, fontes, avisos, pdfsLinks, campos: triExtrair(texto, meta) };
+    st.textContent = '';
+    triRender();
+  }catch(e){
+    st.textContent = ''; toast('Erro: ' + e.message);
+    document.getElementById('tri-resultado').innerHTML = `<div style="color:var(--coral); font-size:13px;">⚠ ${esc(e.message)}</div>`;
+  }finally{ btn.disabled = false; }
+}
+function triCopiarFicha(){
+  if(!_tri) return;
+  const txt = _TRI_ROTULOS.map(([k, rot])=>rot + ': ' + ((_tri.campos[k] || {}).valor || 'não encontrado')).join('\n');
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(()=>toast('Ficha copiada')).catch(()=>toast('Não consegui copiar'));
+}
+function triAbrirFormulario(){
+  if(!_tri) return;
+  const c = _tri.campos; const v = k => (c[k] ? c[k].valor : '');
+  openAdminForm(null);
+  const set = (id, val)=>{ const el = document.getElementById(id); if(el && val) el.value = val; };
+  const setSel = (id, val)=>{ const el = document.getElementById(id); if(el && val && [...el.options].some(o=>o.value===val)) el.value = val; };
+  set('af-edital', v('edital')); set('af-orgao', v('orgao')); set('af-objeto', v('objeto'));
+  setSel('af-uf', v('uf')); set('af-cidade', v('cidade'));
+  setSel('af-tipo', v('tipo') || 'Credenciamento'); setSel('af-abr', v('abr'));
+  set('af-prazo', v('prazo')); set('af-abertura', v('abertura')); set('af-publicacao', v('publicacao'));
+  set('af-url-pncp', v('urlPncp')); set('af-url-edital', v('urlEdital')); set('af-email-inscricao', v('email'));
+  if(v('indeterminado') && !v('prazo')){ const ck = document.getElementById('af-prazo-indet'); if(ck){ ck.checked = true; afPrazoIndetMudou(); } }
+  const ta = document.getElementById('af-texto-md');
+  if(ta && _tri.texto){
+    if(_tri.texto.length <= TEXTO_MD_MAX) { ta.value = _tri.texto; afTextoStatus(); }
+    else toast('Texto longo demais para gravar (' + Math.round(_tri.texto.length/1024) + ' KB): usado só para preencher, não será salvo.');
+  }
+  const inf = inferirDoTexto(_tri.texto || '');
+  afPreencherDatasDoTexto(_tri.texto || '');
+  afProfSelecionadasNoTopo(); atualizarLinksPortais();
+  toast('Formulário preenchido pela triagem — confira tudo antes de publicar');
+}
+
 function afTextoPreencherFicha(){
   const t = _limpaCitacoes(document.getElementById('af-texto-md').value).trim();
   if(!t){ toast('Anexe ou cole o texto do edital primeiro'); return; }
