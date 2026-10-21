@@ -7947,16 +7947,16 @@ Acompanho os editais públicos de credenciamento na área da saúde e separei um
 
 {editais}
 
-No Radar Transformare ({site}) você vê os requisitos, documentos e prazos desse edital e de outras oportunidades abertas para a sua área. É só criar uma conta grátis.
+No Radar Transformare ({site}) você vê os requisitos, os documentos e o prazo desse edital, além de outras oportunidades abertas para a sua área. É só fazer o cadastro, que é grátis.
 Se não quiser receber minhas mensagens, responda SAIR.`;
 function prospEditaisMarcados(p){
   const todos = prospEditaisDoContato(p, 6);
-  const sel = _prospSel[p.id] || new Set(todos.slice(0,3).map(o=>o.id));
+  const sel = _prospSel[p.id] || new Set(todos.slice(0,1).map(o=>o.id));
   return todos.filter(o=>sel.has(o.id));
 }
 function prospMarcarEdital(pid, eid, on){
   const p = prospectos.find(x=>x.id===pid); if(!p) return;
-  if(!_prospSel[pid]) _prospSel[pid] = new Set(prospEditaisDoContato(p, 6).slice(0,3).map(o=>o.id));
+  if(!_prospSel[pid]) _prospSel[pid] = new Set(prospEditaisDoContato(p, 6).slice(0,1).map(o=>o.id));
   if(on) _prospSel[pid].add(eid); else _prospSel[pid].delete(eid);
   prospRender();
 }
