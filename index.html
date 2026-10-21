@@ -7858,86 +7858,71 @@ async function prospLerArquivo(input){
   }catch(e){ st.textContent = 'Não consegui ler o arquivo (' + (e.message||e) + '). Salve como .csv e tente de novo.'; }
   input.value = '';
 }
-async function prospAdicionar(){
-  const st = document.getElementById('pr-add-status');
-  const prof = document.getElementById('pr-prof').value, cidadeP = document.getElementById('pr-cidade').value.trim(), ufP = document.getElementById('pr-uf').value;
-  const linhas = document.getElementById('pr-lista').value.split(/\n+/).map(l=>l.trim()).filter(Boolean);
-  if(!linhas.length){ st.textContent = 'Cole ao menos um contato.'; return; }
-  const novos = [], invalidos = [];
-  if(document.getElementById('pr-canal').value === 'instagram') return prospAdicionarInstagram(linhas, prof, cidadeP, ufP, st);
-  linhas.forEach(l=>{
-    const c = l.split(/\s*[;\t|]\s*/);
-    const tel = prospTelefone(c[1] !== undefined ? c[1] : c[0]);
-    const nome = (c[1] !== undefined ? c[0] : '').trim();
-    if(!tel){ invalidos.push(l.slice(0,40)); return; }
-    const profL = c[2] ? canonProfissao(c[2]) : prof;
-    const cidadeL = c[3] || cidadeP, ufL = (c[4] || ufP || '').toUpperCase().slice(0,2);
-    if(!profL || !ufL){ invalidos.push(l.slice(0,40) + ' (falta profissão ou UF)'); return; }
-    if(!novos.some(n=>n.telefone===tel)) novos.push({ nome: nome || null, telefone: tel, profissao: profL, cidade: cidadeL || null, uf: ufL, origem: 'Google' });
-  });
-  // Quem já está na lista (mesmo telefone) é atualizado com os dados desta importação; o status e o histórico de envios ficam como estão.
-  let criados = 0, atualizados = 0;
-  if(novos.length){
-    const { data: ja, error: e0 } = await _sb.from('prospectos_whatsapp').select('id, telefone, nome, status').in('telefone', novos.map(n=>n.telefone));
-    if(e0){ st.textContent = 'Erro ao consultar a lista: ' + e0.message; return; }
-    const idPorTel = new Map((ja||[]).map(x=>[x.telefone, x.id]));
-    const inserir = novos.filter(n=>!idPorTel.has(n.telefone));
-    // Aviso ao ADM antes de salvar: contatos repetidos
-    if(ja && ja.length){
-      const lista = ja.slice(0,8).map(x=>'• ' + (x.nome || 'sem nome') + ' — ' + x.telefone + ' (' + (PROSP_ROTULO[x.status]||x.status) + ')').join('\n') + (ja.length>8 ? '\n… e mais ' + (ja.length-8) : '');
-      const ok = confirm(ja.length + ' contato(s) desta lista já existe(m) na Prospecção:\n\n' + lista + '\n\nOK = atualizar esses com os dados da lista (status e histórico de envios são mantidos)' + (inserir.length ? ' e adicionar os ' + inserir.length + ' novo(s).' : '.') + '\nCancelar = não salvar nada.');
-      if(!ok){ st.textContent = 'Nada foi salvo: ' + ja.length + ' contato(s) já existia(m). Revise a lista.'; return; }
-    }
-    if(inserir.length){
-      const { error } = await _sb.from('prospectos_whatsapp').insert(inserir);
-      if(error){ st.textContent = 'Erro ao salvar: ' + error.message; return; }
-      criados = inserir.length;
-    }
-    for(const n of novos.filter(n=>idPorTel.has(n.telefone))){
-      const campos = { profissao: n.profissao, uf: n.uf }; if(n.nome) campos.nome = n.nome; if(n.cidade) campos.cidade = n.cidade;
-      const { error } = await _sb.from('prospectos_whatsapp').update(campos).eq('id', idPorTel.get(n.telefone));
-      if(!error) atualizados++;
-    }
-  }
-  st.textContent = criados + ' contato(s) novo(s)' + (atualizados ? ' · ' + atualizados + ' já existia(m) e foi(ram) atualizado(s) com os dados desta lista' : '') + (invalidos.length ? ' · ' + invalidos.length + ' linha(s) com problema: ' + invalidos.slice(0,3).join(' | ') : '');
-  if(!invalidos.length) document.getElementById('pr-lista').value = '';
-  await prospCarregar();
-}
 function prospCanalMudou(){
   const ig = document.getElementById('pr-canal').value === 'instagram';
   document.getElementById('pr-lista').placeholder = ig
-    ? 'Um perfil por linha: Nome; @perfil\nou completo: Nome; @perfil; profissão; cidade; UF\nEx.: Dra. Ana Souza; @dra.anasouza'
+    ? 'Um perfil por linha: Nome; @perfil\nou completo: Nome; @perfil; profissão; cidade; UF\nEx.: Dra. Ana Souza; @dra.anasouza\n(pode colocar telefone e @ na mesma linha: Dra. Ana; (51) 99999-1234; @dra.ana)'
     : 'Um contato por linha: Nome; telefone\nou completo: Nome; telefone; profissão; cidade; UF\nEx.: Dra. Ana Souza; (51) 99999-1234';
 }
 function prospInstagram(txt){
   const m = String(txt||'').trim().match(/(?:instagram\.com\/)?@?([A-Za-z0-9._]{1,30})\/?(?:\?.*)?$/);
   return m && !/^\d+$/.test(m[1]) ? m[1].toLowerCase() : null;
 }
-async function prospAdicionarInstagram(linhas, prof, cidadeP, ufP, st){
+async function prospAdicionar(){
+  const st = document.getElementById('pr-add-status');
+  const canal = document.getElementById('pr-canal').value;
+  const prof = document.getElementById('pr-prof').value, cidadeP = document.getElementById('pr-cidade').value.trim(), ufP = document.getElementById('pr-uf').value;
+  const linhas = document.getElementById('pr-lista').value.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  if(!linhas.length){ st.textContent = 'Cole ao menos um contato.'; return; }
+  // Cada linha pode trazer telefone e/ou @instagram (em qualquer posição): assim a mesma pessoa não vira dois contatos.
   const novos = [], invalidos = [];
   linhas.forEach(l=>{
-    const c = l.split(/\s*[;\t|]\s*/);
-    const ig = prospInstagram(c[1] !== undefined ? c[1] : c[0]);
-    const nome = (c[1] !== undefined ? c[0] : '').trim();
-    if(!ig){ invalidos.push(l.slice(0,40)); return; }
-    const profL = c[2] ? canonProfissao(c[2]) : prof;
-    const cidadeL = c[3] || cidadeP, ufL = (c[4] || ufP || '').toUpperCase().slice(0,2);
+    const cel = l.split(/\s*[;\t|]\s*/).map(x=>x.trim());
+    let tel = null, ig = null; const resto = [];
+    cel.forEach((x,k)=>{
+      const t = prospTelefone(x);
+      if(t && !tel) { tel = t; return; }
+      if(/^@|instagram\.com\//i.test(x) && !ig){ ig = prospInstagram(x); if(ig) return; }
+      resto.push({x,k});
+    });
+    if(!tel && !ig && canal === 'instagram'){ const c = cel[1] !== undefined ? 1 : 0; ig = prospInstagram(cel[c]); if(ig){ const r = resto.findIndex(o=>o.k===c); if(r>=0) resto.splice(r,1); } }
+    if(!tel && !ig){ invalidos.push(l.slice(0,40)); return; }
+    const temNome = !(cel[0] && (prospTelefone(cel[0]) || /^@|instagram\.com\//i.test(cel[0])));
+    const r = resto.map(o=>o.x); const nome = temNome ? (r.shift() || '') : '';
+    const profL = r[0] ? canonProfissao(r[0]) : prof, cidadeL = r[1] || cidadeP, ufL = (r[2] || ufP || '').toUpperCase().slice(0,2);
     if(!profL || !ufL){ invalidos.push(l.slice(0,40) + ' (falta profissão ou UF)'); return; }
-    if(!novos.some(n=>n.instagram===ig)) novos.push({ nome: nome || null, instagram: ig, canal:'instagram', profissao: profL, cidade: cidadeL || null, uf: ufL, origem: 'Instagram' });
+    const igual = n => (tel && n.telefone === tel) || (ig && n.instagram === ig);
+    const ja = novos.find(igual);
+    if(ja){ if(tel && !ja.telefone) ja.telefone = tel; if(ig && !ja.instagram) ja.instagram = ig; if(nome && !ja.nome) ja.nome = nome; return; }
+    novos.push({ nome: nome || null, telefone: tel, instagram: ig, canal: (canal === 'instagram' && ig) || !tel ? 'instagram' : 'whatsapp', profissao: profL, cidade: cidadeL || null, uf: ufL, origem: canal === 'instagram' ? 'Instagram' : 'Google' });
   });
-  let criados = 0, repetidos = 0;
-  if(novos.length){
-    const { data: ja, error: e0 } = await _sb.from('prospectos_whatsapp').select('instagram').in('instagram', novos.map(n=>n.instagram));
-    if(e0){ st.textContent = 'Erro ao consultar a lista: ' + e0.message; return; }
-    const ex = new Set((ja||[]).map(x=>x.instagram));
-    const inserir = novos.filter(n=>!ex.has(n.instagram)); repetidos = novos.length - inserir.length;
-    if(inserir.length){
-      const { error } = await _sb.from('prospectos_whatsapp').insert(inserir);
-      if(error){ st.textContent = 'Erro ao salvar: ' + error.message; return; }
-      criados = inserir.length;
-    }
+  if(!novos.length){ st.textContent = 'Nada válido: ' + invalidos.slice(0,3).join(' | '); return; }
+  // Procura quem já existe por telefone OU por @instagram
+  const tels = novos.map(n=>n.telefone).filter(Boolean), igs = novos.map(n=>n.instagram).filter(Boolean);
+  const filtros = []; if(tels.length) filtros.push('telefone.in.(' + tels.join(',') + ')'); if(igs.length) filtros.push('instagram.in.(' + igs.join(',') + ')');
+  const { data: ja, error: e0 } = await _sb.from('prospectos_whatsapp').select('id, telefone, instagram, nome, status').or(filtros.join(','));
+  if(e0){ st.textContent = 'Erro ao consultar a lista: ' + e0.message; return; }
+  const achar = n => (ja||[]).find(x=>(n.telefone && x.telefone === n.telefone) || (n.instagram && x.instagram === n.instagram));
+  const repetidos = novos.filter(achar), inserir = novos.filter(n=>!achar(n));
+  if(repetidos.length){
+    const lista = repetidos.slice(0,8).map(n=>{ const x = achar(n); return '• ' + (x.nome || n.nome || 'sem nome') + ' — ' + (x.telefone || '') + (x.instagram ? ' @' + x.instagram : '') + ' (' + (PROSP_ROTULO[x.status]||x.status) + ')'; }).join('\n') + (repetidos.length>8 ? '\n… e mais ' + (repetidos.length-8) : '');
+    const ok = confirm(repetidos.length + ' contato(s) desta lista já existe(m) (mesmo telefone ou @):\n\n' + lista + '\n\nOK = completar esses com os dados novos (ex.: acrescentar o @ ou o telefone que faltava) e manter status e histórico' + (inserir.length ? '; os ' + inserir.length + ' novos também serão incluídos.' : '.') + '\nCancelar = não salvar nada.');
+    if(!ok){ st.textContent = 'Nada foi salvo: ' + repetidos.length + ' contato(s) já existia(m).'; return; }
   }
-  st.textContent = criados + ' perfil(is) novo(s)' + (repetidos ? ' · ' + repetidos + ' já estava(m) na lista' : '') + (invalidos.length ? ' · ' + invalidos.length + ' linha(s) ignorada(s): ' + invalidos.slice(0,3).join(' | ') : '');
+  let criados = 0, atualizados = 0;
+  if(inserir.length){
+    const { error } = await _sb.from('prospectos_whatsapp').insert(inserir);
+    if(error){ st.textContent = 'Erro ao salvar: ' + error.message; return; }
+    criados = inserir.length;
+  }
+  for(const n of repetidos){
+    const x = achar(n), campos = { profissao: n.profissao, uf: n.uf };
+    if(n.nome && !x.nome) campos.nome = n.nome; if(n.cidade) campos.cidade = n.cidade;
+    if(n.telefone && !x.telefone) campos.telefone = n.telefone; if(n.instagram && !x.instagram) campos.instagram = n.instagram;
+    const { error } = await _sb.from('prospectos_whatsapp').update(campos).eq('id', x.id);
+    if(!error) atualizados++;
+  }
+  st.textContent = criados + ' contato(s) novo(s)' + (atualizados ? ' · ' + atualizados + ' já existia(m) e foi(ram) completado(s)' : '') + (invalidos.length ? ' · ' + invalidos.length + ' linha(s) ignorada(s): ' + invalidos.slice(0,3).join(' | ') : '');
   if(!invalidos.length) document.getElementById('pr-lista').value = '';
   await prospCarregar();
 }
@@ -7977,7 +7962,7 @@ function prospRender(){
     else if(!eds.length) acao = '<span style="color:var(--ink-dim);">sem edital compatível</span>';
     else acao = `<button class="btn-ghost" onclick="prospEnviar(${p.id})">${p.canal==='instagram' ? '📷 Copiar e abrir' : '📲 Enviar'}</button>`;
     const opcoes = Object.entries(PROSP_ROTULO).map(([v,r])=>`<option value="${v}" ${p.status===v?'selected':''}>${r}</option>`).join('');
-    return `<tr><td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${p.canal==='instagram' ? '📷 @' + esc(p.instagram||'') : esc(p.telefone||'')}</span></td>
+    return `<tr><td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${[p.telefone ? esc(p.telefone) : '', p.instagram ? '📷 @' + esc(p.instagram) : ''].filter(Boolean).join(' · ')}</span></td>
       <td>${esc(p.profissao||'')}<br><span style="color:var(--ink-dim); font-size:12px;">${esc((p.cidade||'') + (p.cidade?'/':'') + p.uf)}</span></td>
       <td style="font-size:12px;">${eds.length ? eds.map(o=>esc(o.orgao.slice(0,38))+' — '+esc(o.prazo)).join('<br>') : '—'}</td>
       <td><select onchange="prospMudarStatus(${p.id}, this.value)">${opcoes}</select></td><td>${acao}</td></tr>`;
