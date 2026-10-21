@@ -1583,7 +1583,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="form-row" style="margin-top:14px;">
       <label>2. Modelo da mensagem <span style="font-weight:400; color:var(--ink-dim);">— campos: {nome} {profissao} {cidade} {uf} {n_editais} {editais} {site}</span></label>
       <textarea id="pr-modelo" rows="9" oninput="prospSalvarModelo()"></textarea>
-      <label style="margin-top:10px;">Modelo quando você marca só 1 edital <span style="font-weight:400; color:var(--ink-dim);">— vai direto no edital e convida para conhecer o site</span></label>
+      <label style="margin-top:10px;">Modelo quando você marca só 1 edital <span style="font-weight:400; color:var(--ink-dim);">— vai direto no edital e convida para o cadastro — campos extras: {urgencia}</span></label>
       <textarea id="pr-modelo-um" rows="8" oninput="prospSalvarModeloUm()"></textarea>
       <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:6px; font-size:12.5px; color:var(--ink-muted);">
         <label style="display:flex; gap:6px; align-items:center; cursor:pointer;"><input type="checkbox" id="pr-incluir-medicina" onchange="prospRender()"> Para especialidades médicas, incluir também editais de Medicina (geral)</label>
@@ -7942,12 +7942,13 @@ function prospEditaisDoContato(p, max){
   }).sort((a,b)=>peso(a)-peso(b)).slice(0, max || 3);
 }
 const _prospSel = {};   // id do contato -> ids dos editais marcados para a mensagem
-const PROSP_MODELO_UM_PADRAO = `Olá, {nome}! Aqui é o Douglas, da Transformare 😊
-Acompanho os editais públicos de credenciamento na área da saúde e separei um que combina com {profissao} em {cidade}/{uf}:
+const PROSP_MODELO_UM_PADRAO = `{nome}, saiu um edital novo que pode complementar a receita da sua clínica 💼
+Aqui é o Douglas, da Transformare. Acompanho os credenciamentos públicos de saúde e este combina com {profissao} em {cidade}/{uf}:
 
 {editais}
 
-No Radar Transformare ({site}) você vê os requisitos, os documentos e o prazo desse edital, além de outras oportunidades abertas para a sua área. É só fazer o cadastro, que é grátis.
+{urgencia}
+No Radar Transformare ({site}) você vê requisitos, documentos e prazo desse edital e de outras oportunidades abertas para a sua área. Faça o cadastro grátis e não perca a janela.
 Se não quiser receber minhas mensagens, responda SAIR.`;
 function prospEditaisMarcados(p){
   const todos = prospEditaisDoContato(p, 6);
@@ -7976,13 +7977,26 @@ async function prospMudarProfissao(id, prof){
   const p = prospectos.find(x=>x.id===id); if(p){ p.profissao = prof; delete _prospSel[id]; }
   prospRender();
 }
+// Urgência só com fatos do edital: prazo curto (até 45 dias) ou publicação recente. Sem isso, apela para se organizar antes.
+function prospUrgencia(eds){
+  const dt = t => { const m = String(t||'').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? new Date(+m[3], +m[2]-1, +m[1]) : null; };
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const prazos = eds.map(o=>({ o, d: dt(o.prazo) })).filter(x=>x.d && x.d >= hoje).sort((a,b)=>a.d-b.d);
+  if(prazos.length){
+    const dias = Math.round((prazos[0].d - hoje) / 86400000);
+    if(dias <= 45) return '⏳ As inscrições vão até ' + prazos[0].o.prazo + ' (' + (dias === 0 ? 'é hoje' : dias === 1 ? 'falta 1 dia' : 'faltam ' + dias + ' dias') + '). Reunir a documentação leva tempo, então vale começar já.';
+  }
+  const rec = eds.find(o=>{ const d = dt(o.publicacao); return d && (hoje - d) / 86400000 <= 14; });
+  if(rec) return '🆕 Edital publicado há poucos dias: quem se organiza primeiro sai na frente.';
+  return 'Quem já deixa a documentação em dia consegue se credenciar assim que a oportunidade abre.';
+}
 function prospMensagem(p, eds){
   const um = eds.length === 1;
   const linhas = eds.map(o=>`• ${o.orgao}${o.cidade ? ' (' + o.cidade + '/' + o.uf + ')' : ' (' + o.uf + ')'} — prazo ${o.prazo}` + (um && o.objeto ? '\n  ' + String(o.objeto).replace(/\s+/g,' ').slice(0,180) + (String(o.objeto).length > 180 ? '…' : '') : '')).join('\n');
   const m = um ? ((document.getElementById('pr-modelo-um') || {}).value || PROSP_MODELO_UM_PADRAO) : (document.getElementById('pr-modelo').value || PROSP_MODELO_PADRAO);
   return m.replace(/\{nome\}/g, p.nome ? p.nome.split(/\s+/).slice(0, /^(dr|dra)\.?$/i.test(p.nome.split(/\s+/)[0]) ? 2 : 1).join(' ') : 'tudo bem')
     .replace(/\{profissao\}/g, p.profissao || '').replace(/\{cidade\}/g, p.cidade || p.uf).replace(/\{uf\}/g, p.uf)
-    .replace(/\{n_editais\}/g, String(eds.length)).replace(/\{editais\}/g, linhas).replace(/\{site\}/g, SITE_URL);
+    .replace(/\{urgencia\}/g, prospUrgencia(eds)).replace(/\{n_editais\}/g, String(eds.length)).replace(/\{editais\}/g, linhas).replace(/\{site\}/g, SITE_URL);
 }
 const PROSP_ROTULO = { novo:'Novo', enviado:'Enviado', respondeu:'Respondeu', assinou:'Assinou ✅', nao_contatar:'Não contatar' };
 function prospRender(){
