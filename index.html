@@ -1581,10 +1581,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
 
     <div class="form-row" style="margin-top:14px;">
-      <label>2. Modelo da mensagem <span style="font-weight:400; color:var(--ink-dim);">— campos: {nome} {profissao} {cidade} {uf} {n_editais} {editais} {site}</span></label>
-      <textarea id="pr-modelo" rows="9" oninput="prospSalvarModelo()"></textarea>
-      <label style="margin-top:10px;">Modelo quando você marca só 1 edital <span style="font-weight:400; color:var(--ink-dim);">— vai direto no edital e convida para o cadastro — campos extras: {urgencia}</span></label>
-      <textarea id="pr-modelo-um" rows="8" oninput="prospSalvarModeloUm()"></textarea>
+      <label>2. Modelo da mensagem <span style="font-weight:400; color:var(--ink-dim);">— cada mensagem fala de 1 edital. Campos: {nome} {profissao} {cidade} {uf} {editais} {urgencia} {site}</span></label>
+      <textarea id="pr-modelo-um" rows="9" oninput="prospSalvarModeloUm()"></textarea>
       <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:6px; font-size:12.5px; color:var(--ink-muted);">
         <label style="display:flex; gap:6px; align-items:center; cursor:pointer;"><input type="checkbox" id="pr-incluir-medicina" onchange="prospRender()"> Para especialidades médicas, incluir também editais de Medicina (geral)</label>
         <label style="display:flex; gap:6px; align-items:center;">Limite de envios por dia <input type="number" id="pr-limite" min="1" max="100" style="width:64px;" oninput="prospSalvarLimite()"></label>
@@ -1592,13 +1590,30 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       </div>
     </div>
 
-    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:14px 0 8px;">
-      <label style="font-weight:600;">3. Contatos</label>
+    <div style="margin:14px 0 8px;"><label style="font-weight:600;">3. Contatos</label></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
       <select id="pr-f-status" onchange="prospRender()"><option value="">Todos os status</option><option value="novo">Novo</option><option value="enviado">Enviado</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
+      <select id="pr-f-prof" onchange="prospRender()"><option value="">Todas as profissões</option></select>
+      <select id="pr-f-uf" onchange="prospRender()"><option value="">Todas as UFs</option></select>
+      <input type="text" id="pr-f-busca" placeholder="Buscar nome, telefone, @ ou cidade" oninput="prospRender()" style="max-width:230px;">
+      <label style="font-size:12.5px; color:var(--ink-muted);">Adicionado de <input type="date" id="pr-f-de" onchange="prospRender()"></label>
+      <label style="font-size:12.5px; color:var(--ink-muted);">até <input type="date" id="pr-f-ate" onchange="prospRender()"></label>
       <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; cursor:pointer;"><input type="checkbox" id="pr-f-comedital" onchange="prospRender()"> Só com edital compatível</label>
-      <span id="pr-resumo" style="font-size:12.5px; color:var(--ink-dim);"></span>
+      <button type="button" class="btn-ghost" onclick="prospLimparFiltros()">Limpar filtros</button>
     </div>
-    <div style="overflow-x:auto;"><table class="admin-table" id="pr-tabela"><thead><tr><th>Contato</th><th>Profissão / local</th><th>Editais compatíveis</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div id="pr-bloco" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:10px 12px; margin-bottom:8px; border:1px solid var(--border-soft); border-radius:10px; font-size:12.5px;">
+      <label style="display:flex; gap:6px; align-items:center; cursor:pointer;"><input type="checkbox" id="pr-sel-todos" onchange="prospMarcarTodos(this.checked)"> Selecionar todos os filtrados</label>
+      <strong id="pr-sel-qtd">0 selecionado(s)</strong>
+      <span style="color:var(--ink-dim);">Alterar em bloco:</span>
+      <select id="pr-b-status"><option value="">Status…</option><option value="novo">Novo</option><option value="enviado">Enviado</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
+      <select id="pr-b-prof"><option value="">Profissão…</option></select>
+      <input type="text" id="pr-b-cidade" placeholder="Cidade…" style="max-width:130px;">
+      <select id="pr-b-uf"><option value="">UF…</option></select>
+      <button type="button" class="btn-ghost" onclick="prospAplicarBloco()">Aplicar</button>
+      <button type="button" class="btn-ghost" style="color:var(--coral);" onclick="prospExcluirBloco()">🗑 Excluir selecionados</button>
+    </div>
+    <div id="pr-resumo" style="font-size:12.5px; color:var(--ink-dim); margin-bottom:8px;"></div>
+    <div style="overflow-x:auto;"><table class="admin-table" id="pr-tabela"><thead><tr><th></th><th>Contato / adicionado em</th><th>Profissão / local</th><th>Edital da mensagem</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
     <p class="section-sub" style="margin-top:10px;">Boas práticas: poucos envios por dia, uma única mensagem por contato, identifique-se e respeite o pedido de "SAIR" (marque como <em>Não contatar</em>). A lista guarda a origem de cada contato (LGPD).</p>
   </div>
 
@@ -7754,10 +7769,8 @@ function prospIniciar(){
   if(!sp.options.length) sp.innerHTML = '<option value="">— escolha —</option>' + profissoesAtivasNomes().slice().sort((a,b)=>a.localeCompare(b,'pt-BR')).map(n=>`<option>${esc(n)}</option>`).join('');
   const su = document.getElementById('pr-uf'); if(su && !su.options.length) su.innerHTML = '<option value="">—</option>' + UFS.map(u=>`<option value="${u.sigla}">${u.sigla}</option>`).join('');
   const mu = document.getElementById('pr-modelo-um'); if(mu && !mu.value){ let v = null; try{ v = localStorage.getItem('pr_modelo_um'); }catch(e){} mu.value = v || PROSP_MODELO_UM_PADRAO; }
-  const m = document.getElementById('pr-modelo'); if(m && !m.value){ let v = null; try{ v = localStorage.getItem('pr_modelo'); }catch(e){} m.value = v || PROSP_MODELO_PADRAO; }
   const l = document.getElementById('pr-limite'); if(l && !l.value){ let v = null; try{ v = localStorage.getItem('pr_limite'); }catch(e){} l.value = v || 15; }
 }
-function prospSalvarModelo(){ try{ localStorage.setItem('pr_modelo', document.getElementById('pr-modelo').value); }catch(e){} }
 function prospSalvarLimite(){ try{ localStorage.setItem('pr_limite', document.getElementById('pr-limite').value); }catch(e){} prospAtualizarContador(); }
 async function prospCarregar(){
   prospIniciar();
@@ -7941,8 +7954,8 @@ function prospEditaisDoContato(p, max){
     return o.uf === p.uf || /nacional/i.test(o.abrangencia||'');
   }).sort((a,b)=>peso(a)-peso(b)).slice(0, max || 3);
 }
-const _prospSel = {};   // id do contato -> ids dos editais marcados para a mensagem
-const PROSP_MODELO_UM_PADRAO = `{nome}, saiu um edital novo que pode complementar a receita da sua clínica 💼
+const _prospSel = {};   // id do contato -> id do edital escolhido para a mensagem (1 por contato)
+const PROSP_MODELO_UM_PADRAO = `{nome}, abriu uma oportunidade que pode complementar a receita da sua clínica 💼
 Aqui é o Douglas, da Transformare. Acompanho os credenciamentos públicos de saúde e este combina com {profissao} em {cidade}/{uf}:
 
 {editais}
@@ -7951,16 +7964,12 @@ Aqui é o Douglas, da Transformare. Acompanho os credenciamentos públicos de sa
 No Radar Transformare ({site}) você vê requisitos, documentos e prazo desse edital e de outras oportunidades abertas para a sua área. Faça o cadastro grátis e não perca a janela.
 Se não quiser receber minhas mensagens, responda SAIR.`;
 function prospEditaisMarcados(p){
-  const todos = prospEditaisDoContato(p, 6);
-  const sel = _prospSel[p.id] || new Set(todos.slice(0,1).map(o=>o.id));
-  return todos.filter(o=>sel.has(o.id));
+  const todos = prospEditaisDoContato(p, 8);
+  const id = _prospSel[p.id] !== undefined ? _prospSel[p.id] : (todos[0] && todos[0].id);
+  const o = todos.find(x=>x.id===id) || todos[0];
+  return o ? [o] : [];
 }
-function prospMarcarEdital(pid, eid, on){
-  const p = prospectos.find(x=>x.id===pid); if(!p) return;
-  if(!_prospSel[pid]) _prospSel[pid] = new Set(prospEditaisDoContato(p, 6).slice(0,1).map(o=>o.id));
-  if(on) _prospSel[pid].add(eid); else _prospSel[pid].delete(eid);
-  prospRender();
-}
+function prospEscolherEdital(pid, eid){ _prospSel[pid] = eid; }
 function prospSalvarModeloUm(){ try{ localStorage.setItem('pr_modelo_um', document.getElementById('pr-modelo-um').value); }catch(e){} }
 async function prospExcluir(id){
   const p = prospectos.find(x=>x.id===id); if(!p) return;
@@ -7968,7 +7977,7 @@ async function prospExcluir(id){
   await _sb.from('prospectos_envios').delete().eq('prospecto_id', id);
   const { error } = await _sb.from('prospectos_whatsapp').delete().eq('id', id);
   if(error){ toast('Erro ao excluir: ' + error.message); return; }
-  prospectos = prospectos.filter(x=>x.id!==id); delete _prospSel[id];
+  prospectos = prospectos.filter(x=>x.id!==id); delete _prospSel[id]; _prospChecked.delete(id);
   toast('Contato excluído'); prospRender(); prospAtualizarContador();
 }
 async function prospMudarProfissao(id, prof){
@@ -7977,50 +7986,108 @@ async function prospMudarProfissao(id, prof){
   const p = prospectos.find(x=>x.id===id); if(p){ p.profissao = prof; delete _prospSel[id]; }
   prospRender();
 }
-// Urgência só com fatos do edital: prazo curto (até 45 dias) ou publicação recente. Sem isso, apela para se organizar antes.
+// Urgência só com fatos do edital, com foco no INÍCIO das inscrições (abertura); sem abertura informada, usa o prazo final.
 function prospUrgencia(eds){
   const dt = t => { const m = String(t||'').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? new Date(+m[3], +m[2]-1, +m[1]) : null; };
   const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const prazos = eds.map(o=>({ o, d: dt(o.prazo) })).filter(x=>x.d && x.d >= hoje).sort((a,b)=>a.d-b.d);
-  if(prazos.length){
-    const dias = Math.round((prazos[0].d - hoje) / 86400000);
-    if(dias <= 45) return '⏳ As inscrições vão até ' + prazos[0].o.prazo + ' (' + (dias === 0 ? 'é hoje' : dias === 1 ? 'falta 1 dia' : 'faltam ' + dias + ' dias') + '). Reunir a documentação leva tempo, então vale começar já.';
-  }
-  const rec = eds.find(o=>{ const d = dt(o.publicacao); return d && (hoje - d) / 86400000 <= 14; });
-  if(rec) return '🆕 Edital publicado há poucos dias: quem se organiza primeiro sai na frente.';
-  return 'Quem já deixa a documentação em dia consegue se credenciar assim que a oportunidade abre.';
+  const o = eds[0]; if(!o) return '';
+  const ab = dt(o.abertura), pz = dt(o.prazo);
+  const dif = d => Math.round((d - hoje) / 86400000);
+  const quando = n => n === 0 ? 'hoje' : n === 1 ? 'amanhã' : 'em ' + n + ' dias';
+  if(ab && ab > hoje) return '⏳ As inscrições abrem ' + quando(dif(ab)) + ' (' + o.abertura + '). Quem já está com a documentação pronta sai na frente.';
+  if(ab && ab <= hoje && dif(hoje) - dif(ab) <= 7 && (!pz || pz >= hoje)) return '🆕 As inscrições abriram em ' + o.abertura + ' e já estão recebendo propostas. Quanto antes você se cadastra e organiza a documentação, melhor.';
+  if(pz && pz >= hoje && dif(pz) <= 45) return '⏳ As inscrições seguem abertas até ' + o.prazo + ' (' + (dif(pz) === 0 ? 'é hoje' : dif(pz) === 1 ? 'falta 1 dia' : 'faltam ' + dif(pz) + ' dias') + '). Reunir a documentação leva tempo, então vale começar já.';
+  return 'As inscrições estão abertas: quem já deixa a documentação em dia se credencia mais rápido.';
 }
 function prospMensagem(p, eds){
-  const um = eds.length === 1;
+  const um = true;
   const linhas = eds.map(o=>`• ${o.orgao}${o.cidade ? ' (' + o.cidade + '/' + o.uf + ')' : ' (' + o.uf + ')'} — prazo ${o.prazo}` + (um && o.objeto ? '\n  ' + String(o.objeto).replace(/\s+/g,' ').slice(0,180) + (String(o.objeto).length > 180 ? '…' : '') : '')).join('\n');
-  const m = um ? ((document.getElementById('pr-modelo-um') || {}).value || PROSP_MODELO_UM_PADRAO) : (document.getElementById('pr-modelo').value || PROSP_MODELO_PADRAO);
+  const m = um ? ((document.getElementById('pr-modelo-um') || {}).value || PROSP_MODELO_UM_PADRAO) : PROSP_MODELO_UM_PADRAO;
   return m.replace(/\{nome\}/g, p.nome ? p.nome.split(/\s+/).slice(0, /^(dr|dra)\.?$/i.test(p.nome.split(/\s+/)[0]) ? 2 : 1).join(' ') : 'tudo bem')
     .replace(/\{profissao\}/g, p.profissao || '').replace(/\{cidade\}/g, p.cidade || p.uf).replace(/\{uf\}/g, p.uf)
-    .replace(/\{urgencia\}/g, prospUrgencia(eds)).replace(/\{n_editais\}/g, String(eds.length)).replace(/\{editais\}/g, linhas).replace(/\{site\}/g, SITE_URL);
+    .replace(/\{urgencia\}/g, prospUrgencia(eds)).replace(/\{n_editais\}/g, '1').replace(/\{editais\}/g, linhas).replace(/\{site\}/g, SITE_URL);
 }
 const PROSP_ROTULO = { novo:'Novo', enviado:'Enviado', respondeu:'Respondeu', assinou:'Assinou ✅', nao_contatar:'Não contatar' };
+let _prospChecked = new Set(), _prospFiltrados = [];
+function prospDataLocal(iso){ const d = new Date(iso); if(isNaN(d)) return ''; return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function prospFiltroOpcoes(){
+  const sp = document.getElementById('pr-f-prof'), sb = document.getElementById('pr-b-prof');
+  const nomes = [...new Set([...profissoesAtivasNomes(), ...prospectos.map(x=>x.profissao)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  if(sp && sp.options.length <= 1) sp.innerHTML = '<option value="">Todas as profissões</option>' + nomes.map(n=>`<option>${esc(n)}</option>`).join('');
+  if(sb && sb.options.length <= 1) sb.innerHTML = '<option value="">Profissão…</option>' + nomes.map(n=>`<option>${esc(n)}</option>`).join('');
+  const ufh = UFS.map(u=>`<option value="${u.sigla}">${u.sigla}</option>`).join('');
+  const fu = document.getElementById('pr-f-uf'); if(fu && fu.options.length <= 1) fu.innerHTML = '<option value="">Todas as UFs</option>' + ufh;
+  const bu = document.getElementById('pr-b-uf'); if(bu && bu.options.length <= 1) bu.innerHTML = '<option value="">UF…</option>' + ufh;
+}
+function prospLimparFiltros(){
+  ['pr-f-status','pr-f-prof','pr-f-uf','pr-f-busca','pr-f-de','pr-f-ate'].forEach(i=>{ const e = document.getElementById(i); if(e) e.value = ''; });
+  document.getElementById('pr-f-comedital').checked = false; prospRender();
+}
+function prospMarcarLinha(id, on){ if(on) _prospChecked.add(id); else _prospChecked.delete(id); prospAtualizarSel(); }
+function prospMarcarTodos(on){ _prospFiltrados.forEach(id=>{ if(on) _prospChecked.add(id); else _prospChecked.delete(id); }); prospRender(); }
+function prospAtualizarSel(){
+  const n = _prospChecked.size, el = document.getElementById('pr-sel-qtd'); if(el) el.textContent = n + ' selecionado(s)';
+  const t = document.getElementById('pr-sel-todos'); if(t) t.checked = _prospFiltrados.length > 0 && _prospFiltrados.every(id=>_prospChecked.has(id));
+}
+async function prospAplicarBloco(){
+  const ids = [..._prospChecked]; if(!ids.length){ toast('Selecione contatos na lista primeiro'); return; }
+  const campos = {};
+  const st = document.getElementById('pr-b-status').value, pf = document.getElementById('pr-b-prof').value, ci = document.getElementById('pr-b-cidade').value.trim(), uf = document.getElementById('pr-b-uf').value;
+  if(st) campos.status = st; if(pf) campos.profissao = pf; if(ci) campos.cidade = ci; if(uf) campos.uf = uf;
+  if(!Object.keys(campos).length){ toast('Escolha o que alterar (status, profissão, cidade ou UF)'); return; }
+  const resumo = Object.entries(campos).map(([k,v])=>k + ' → ' + v).join(', ');
+  if(!confirm('Alterar ' + ids.length + ' contato(s)?\n\n' + resumo)) return;
+  const { error } = await _sb.from('prospectos_whatsapp').update(campos).in('id', ids);
+  if(error){ toast('Erro ao salvar: ' + error.message); return; }
+  prospectos.forEach(p=>{ if(_prospChecked.has(p.id)){ Object.assign(p, campos); if(campos.profissao || campos.uf || campos.cidade) delete _prospSel[p.id]; } });
+  ['pr-b-status','pr-b-prof','pr-b-cidade','pr-b-uf'].forEach(i=>{ document.getElementById(i).value = ''; });
+  toast(ids.length + ' contato(s) atualizado(s)'); prospRender();
+}
+async function prospExcluirBloco(){
+  const ids = [..._prospChecked]; if(!ids.length){ toast('Selecione contatos na lista primeiro'); return; }
+  if(!confirm('Excluir ' + ids.length + ' contato(s) da lista? O histórico de envios deles também será apagado.')) return;
+  await _sb.from('prospectos_envios').delete().in('prospecto_id', ids);
+  const { error } = await _sb.from('prospectos_whatsapp').delete().in('id', ids);
+  if(error){ toast('Erro ao excluir: ' + error.message); return; }
+  prospectos = prospectos.filter(p=>!_prospChecked.has(p.id)); ids.forEach(i=>delete _prospSel[i]); _prospChecked.clear();
+  toast(ids.length + ' contato(s) excluído(s)'); prospRender(); prospAtualizarContador();
+}
 function prospRender(){
   const tb = document.querySelector('#pr-tabela tbody'); if(!tb) return;
-  const fs = document.getElementById('pr-f-status').value, soEd = document.getElementById('pr-f-comedital').checked;
-  let lista = prospectos.map(p=>({ p, eds: prospEditaisDoContato(p, 6), marc: prospEditaisMarcados(p) }));
+  prospFiltroOpcoes();
+  const v = i => (document.getElementById(i) || {}).value || '';
+  const fs = v('pr-f-status'), fp = v('pr-f-prof'), fu = v('pr-f-uf'), busca = _prospNorm(v('pr-f-busca')), de = v('pr-f-de'), ate = v('pr-f-ate');
+  const soEd = document.getElementById('pr-f-comedital').checked;
+  let lista = prospectos.map(p=>({ p, eds: prospEditaisDoContato(p, 8), marc: prospEditaisMarcados(p) }));
   const total = lista.length, comEd = lista.filter(x=>x.eds.length).length;
   if(fs) lista = lista.filter(x=>x.p.status === fs);
+  if(fp) lista = lista.filter(x=>x.p.profissao === fp);
+  if(fu) lista = lista.filter(x=>x.p.uf === fu);
+  if(busca) lista = lista.filter(x=>_prospNorm([x.p.nome, x.p.telefone, x.p.instagram, x.p.cidade].join(' ')).includes(busca));
+  if(de) lista = lista.filter(x=>prospDataLocal(x.p.criado_em) >= de);
+  if(ate) lista = lista.filter(x=>prospDataLocal(x.p.criado_em) <= ate);
   if(soEd) lista = lista.filter(x=>x.eds.length);
-  document.getElementById('pr-resumo').textContent = total + ' contato(s) · ' + comEd + ' com edital compatível';
-  tb.innerHTML = lista.length ? lista.slice(0,200).map(({p,eds,marc})=>{
+  lista = lista.slice(0, 300);
+  _prospFiltrados = lista.map(x=>x.p.id);
+  document.getElementById('pr-resumo').textContent = lista.length + ' na lista filtrada · ' + total + ' contato(s) no total · ' + comEd + ' com edital compatível';
+  tb.innerHTML = lista.length ? lista.map(({p,eds,marc})=>{
     const dias = p.ultimo_envio ? Math.floor((Date.now() - new Date(p.ultimo_envio)) / 86400000) : null;
     let acao;
     if(p.status === 'nao_contatar') acao = '<span style="color:var(--ink-dim);">bloqueado</span>';
     else if(dias !== null && dias < 14) acao = `<span style="color:var(--ink-dim);">enviado há ${dias} dia(s)</span>`;
     else if(!eds.length) acao = '<span style="color:var(--ink-dim);">sem edital compatível</span>';
-    else if(!marc.length) acao = '<span style="color:var(--ink-dim);">marque um edital</span>';
     else acao = `<button class="btn-ghost" onclick="prospEnviar(${p.id})">${p.canal==='instagram' ? '📷 Copiar e abrir' : '📲 Enviar'}</button>`;
-    const opcoes = Object.entries(PROSP_ROTULO).map(([v,r])=>`<option value="${v}" ${p.status===v?'selected':''}>${r}</option>`).join('');
-    return `<tr><td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${[p.telefone ? esc(p.telefone) : '', p.instagram ? '📷 @' + esc(p.instagram) : ''].filter(Boolean).join(' · ')}</span></td>
-      <td><select onchange="prospMudarProfissao(${p.id}, this.value)" style="max-width:150px;">${[...new Set([...profissoesAtivasNomes(), p.profissao].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(n=>`<option ${n===p.profissao?'selected':''}>${esc(n)}</option>`).join('')}</select><br><span style="color:var(--ink-dim); font-size:12px;">${esc((p.cidade||'') + (p.cidade?'/':'') + p.uf)}</span></td>
-      <td style="font-size:12px;">${eds.length ? eds.map(o=>`<label style="display:flex; gap:6px; align-items:flex-start; cursor:pointer; margin-bottom:3px;"><input type="checkbox" ${marc.includes(o)?'checked':''} onchange="prospMarcarEdital(${p.id}, ${o.id}, this.checked)"><span>${esc(o.orgao.slice(0,38))} — ${esc(o.prazo)}</span></label>`).join('') : '—'}</td>
+    const opcoes = Object.entries(PROSP_ROTULO).map(([vv,r])=>`<option value="${vv}" ${p.status===vv?'selected':''}>${r}</option>`).join('');
+    const quando = p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '—';
+    const profs = [...new Set([...profissoesAtivasNomes(), p.profissao].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    const escolhido = marc[0] ? marc[0].id : null;
+    return `<tr><td><input type="checkbox" ${_prospChecked.has(p.id)?'checked':''} onchange="prospMarcarLinha(${p.id}, this.checked)"></td>
+      <td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${[p.telefone ? esc(p.telefone) : '', p.instagram ? '📷 @' + esc(p.instagram) : ''].filter(Boolean).join(' · ')}</span><br><span style="color:var(--ink-dim); font-size:11.5px;">adicionado em ${quando}</span></td>
+      <td><select onchange="prospMudarProfissao(${p.id}, this.value)" style="max-width:150px;">${profs.map(n=>`<option ${n===p.profissao?'selected':''}>${esc(n)}</option>`).join('')}</select><br><span style="color:var(--ink-dim); font-size:12px;">${esc((p.cidade||'') + (p.cidade?'/':'') + p.uf)}</span></td>
+      <td style="font-size:12px; min-width:230px;">${eds.length ? eds.map(o=>`<label style="display:flex; gap:6px; align-items:flex-start; cursor:pointer; margin-bottom:3px;"><input type="radio" name="ed-${p.id}" ${o.id===escolhido?'checked':''} onchange="prospEscolherEdital(${p.id}, ${o.id})"><span>${esc(o.orgao.slice(0,38))} — ${esc(o.abertura ? 'abre ' + o.abertura : 'prazo ' + o.prazo)}</span></label>`).join('') : '—'}</td>
       <td><select onchange="prospMudarStatus(${p.id}, this.value)">${opcoes}</select></td><td>${acao}<br><button class="btn-ghost" style="margin-top:4px; font-size:12px; color:var(--coral);" onclick="prospExcluir(${p.id})">🗑 Excluir</button></td></tr>`;
-  }).join('') : '<tr><td colspan="5" style="color:var(--ink-dim);">Nenhum contato com esses filtros.</td></tr>';
+  }).join('') : '<tr><td colspan="6" style="color:var(--ink-dim);">Nenhum contato com esses filtros.</td></tr>';
+  prospAtualizarSel();
 }
 async function prospMudarStatus(id, status){
   const { error } = await _sb.from('prospectos_whatsapp').update({ status }).eq('id', id);
