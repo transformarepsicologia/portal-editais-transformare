@@ -1561,11 +1561,12 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-prospeccao">
-    <div class="section-title" style="font-size:17px; margin-top:4px;">Prospecção por WhatsApp</div>
-    <p class="section-sub">Envio manual, um contato por vez, pelo seu WhatsApp. O sistema escolhe os editais abertos que combinam com a profissão e a região de cada profissional e monta a mensagem. Só envia se houver edital compatível.</p>
+    <div class="section-title" style="font-size:17px; margin-top:4px;">Prospecção (WhatsApp e Instagram)</div>
+    <p class="section-sub">Envio manual, um contato por vez, pelo seu WhatsApp ou Instagram. O sistema escolhe os editais abertos que combinam com a profissão e a região de cada profissional e monta a mensagem. Só envia se houver edital compatível.</p>
 
     <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
       <label>1. Adicionar contatos</label>
+      <div class="form-row"><label>Canal</label><select id="pr-canal" onchange="prospCanalMudou()"><option value="whatsapp">WhatsApp (telefone)</option><option value="instagram">Instagram (@perfil)</option></select></div>
       <div class="two-col">
         <div class="form-row"><label>Profissão (padrão da lista)</label><select id="pr-prof"></select></div>
         <div class="two-col" style="gap:8px;">
@@ -7863,6 +7864,7 @@ async function prospAdicionar(){
   const linhas = document.getElementById('pr-lista').value.split(/\n+/).map(l=>l.trim()).filter(Boolean);
   if(!linhas.length){ st.textContent = 'Cole ao menos um contato.'; return; }
   const novos = [], invalidos = [];
+  if(document.getElementById('pr-canal').value === 'instagram') return prospAdicionarInstagram(linhas, prof, cidadeP, ufP, st);
   linhas.forEach(l=>{
     const c = l.split(/\s*[;\t|]\s*/);
     const tel = prospTelefone(c[1] !== undefined ? c[1] : c[0]);
@@ -7901,6 +7903,44 @@ async function prospAdicionar(){
   if(!invalidos.length) document.getElementById('pr-lista').value = '';
   await prospCarregar();
 }
+function prospCanalMudou(){
+  const ig = document.getElementById('pr-canal').value === 'instagram';
+  document.getElementById('pr-lista').placeholder = ig
+    ? 'Um perfil por linha: Nome; @perfil\nou completo: Nome; @perfil; profissão; cidade; UF\nEx.: Dra. Ana Souza; @dra.anasouza'
+    : 'Um contato por linha: Nome; telefone\nou completo: Nome; telefone; profissão; cidade; UF\nEx.: Dra. Ana Souza; (51) 99999-1234';
+}
+function prospInstagram(txt){
+  const m = String(txt||'').trim().match(/(?:instagram\.com\/)?@?([A-Za-z0-9._]{1,30})\/?(?:\?.*)?$/);
+  return m && !/^\d+$/.test(m[1]) ? m[1].toLowerCase() : null;
+}
+async function prospAdicionarInstagram(linhas, prof, cidadeP, ufP, st){
+  const novos = [], invalidos = [];
+  linhas.forEach(l=>{
+    const c = l.split(/\s*[;\t|]\s*/);
+    const ig = prospInstagram(c[1] !== undefined ? c[1] : c[0]);
+    const nome = (c[1] !== undefined ? c[0] : '').trim();
+    if(!ig){ invalidos.push(l.slice(0,40)); return; }
+    const profL = c[2] ? canonProfissao(c[2]) : prof;
+    const cidadeL = c[3] || cidadeP, ufL = (c[4] || ufP || '').toUpperCase().slice(0,2);
+    if(!profL || !ufL){ invalidos.push(l.slice(0,40) + ' (falta profissão ou UF)'); return; }
+    if(!novos.some(n=>n.instagram===ig)) novos.push({ nome: nome || null, instagram: ig, canal:'instagram', profissao: profL, cidade: cidadeL || null, uf: ufL, origem: 'Instagram' });
+  });
+  let criados = 0, repetidos = 0;
+  if(novos.length){
+    const { data: ja, error: e0 } = await _sb.from('prospectos_whatsapp').select('instagram').in('instagram', novos.map(n=>n.instagram));
+    if(e0){ st.textContent = 'Erro ao consultar a lista: ' + e0.message; return; }
+    const ex = new Set((ja||[]).map(x=>x.instagram));
+    const inserir = novos.filter(n=>!ex.has(n.instagram)); repetidos = novos.length - inserir.length;
+    if(inserir.length){
+      const { error } = await _sb.from('prospectos_whatsapp').insert(inserir);
+      if(error){ st.textContent = 'Erro ao salvar: ' + error.message; return; }
+      criados = inserir.length;
+    }
+  }
+  st.textContent = criados + ' perfil(is) novo(s)' + (repetidos ? ' · ' + repetidos + ' já estava(m) na lista' : '') + (invalidos.length ? ' · ' + invalidos.length + ' linha(s) ignorada(s): ' + invalidos.slice(0,3).join(' | ') : '');
+  if(!invalidos.length) document.getElementById('pr-lista').value = '';
+  await prospCarregar();
+}
 // Editais abertos que combinam com a profissão e a região do contato (no máximo 3, os mais próximos primeiro).
 function prospEditaisDoContato(p){
   const prof = _prospNorm(canonProfissao(p.profissao));
@@ -7935,9 +7975,9 @@ function prospRender(){
     if(p.status === 'nao_contatar') acao = '<span style="color:var(--ink-dim);">bloqueado</span>';
     else if(dias !== null && dias < 14) acao = `<span style="color:var(--ink-dim);">enviado há ${dias} dia(s)</span>`;
     else if(!eds.length) acao = '<span style="color:var(--ink-dim);">sem edital compatível</span>';
-    else acao = `<button class="btn-ghost" onclick="prospEnviar(${p.id})">📲 Enviar</button>`;
+    else acao = `<button class="btn-ghost" onclick="prospEnviar(${p.id})">${p.canal==='instagram' ? '📷 Copiar e abrir' : '📲 Enviar'}</button>`;
     const opcoes = Object.entries(PROSP_ROTULO).map(([v,r])=>`<option value="${v}" ${p.status===v?'selected':''}>${r}</option>`).join('');
-    return `<tr><td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${esc(p.telefone)}</span></td>
+    return `<tr><td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${p.canal==='instagram' ? '📷 @' + esc(p.instagram||'') : esc(p.telefone||'')}</span></td>
       <td>${esc(p.profissao||'')}<br><span style="color:var(--ink-dim); font-size:12px;">${esc((p.cidade||'') + (p.cidade?'/':'') + p.uf)}</span></td>
       <td style="font-size:12px;">${eds.length ? eds.map(o=>esc(o.orgao.slice(0,38))+' — '+esc(o.prazo)).join('<br>') : '—'}</td>
       <td><select onchange="prospMudarStatus(${p.id}, this.value)">${opcoes}</select></td><td>${acao}</td></tr>`;
@@ -7956,12 +7996,15 @@ async function prospEnviar(id){
   const n = await prospEnviosHoje(), lim = parseInt(document.getElementById('pr-limite').value,10) || 15;
   if(n >= lim && !confirm('Você já fez ' + n + ' envios hoje (limite ' + lim + '). Enviar mesmo assim?')) return;
   const msg = prospMensagem(p, eds);
-  window.open('https://wa.me/' + p.telefone + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+  if(p.canal === 'instagram'){
+    try{ await navigator.clipboard.writeText(msg); }catch(e){ prompt('Copie a mensagem:', msg); }
+    window.open('https://www.instagram.com/' + encodeURIComponent(p.instagram) + '/', '_blank', 'noopener');
+  } else window.open('https://wa.me/' + p.telefone + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
   const agora = new Date().toISOString();
   await _sb.from('prospectos_envios').insert({ prospecto_id: p.id, editais: eds.map(o=>o.edital), mensagem: msg });
   const { error } = await _sb.from('prospectos_whatsapp').update({ status: p.status === 'novo' ? 'enviado' : p.status, qtd_envios: (p.qtd_envios||0) + 1, ultimo_envio: agora }).eq('id', p.id);
   if(!error){ p.status = p.status === 'novo' ? 'enviado' : p.status; p.qtd_envios = (p.qtd_envios||0) + 1; p.ultimo_envio = agora; }
-  toast('WhatsApp aberto — marcado como enviado. Se não enviou, volte o status para "Novo".');
+  toast(p.canal === 'instagram' ? 'Mensagem copiada e perfil aberto: cole na conversa do Instagram. Marcado como enviado; se não enviou, volte para "Novo".' : 'WhatsApp aberto — marcado como enviado. Se não enviou, volte o status para "Novo".');
   prospRender(); prospAtualizarContador();
 }
 
