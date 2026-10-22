@@ -1422,6 +1422,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <select id="admin-filtro-uf" style="min-width:110px;" onchange="adminFiltroMudou()"><option value="">Todas as UFs</option></select>
     <select id="admin-filtro-profissao" style="min-width:160px;" onchange="adminFiltroMudou()"><option value="">Todas as profissões</option></select>
     <select id="admin-filtro-situacao" style="min-width:150px;" onchange="adminFiltroMudou()"><option value="">Todas as situações</option></select>
+    <select id="admin-filtro-indice" style="min-width:150px;" onchange="adminFiltroMudou()"><option value="">Todos os Índices</option><option value="sem">Sem Índice</option><option value="com">Com Índice</option></select>
     <button class="btn-ghost" onclick="limparFiltrosAdmin()">Limpar filtros</button>
   </div>
   <div id="admin-filtro-contagem" style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;"></div>
@@ -5440,7 +5441,7 @@ function toggleSecaoAdmin(bodyId, arrowId){
 
 /* ---- filtros e paginação da tabela "Oportunidades cadastradas" ---- */
 const ADMIN_POR_PAGINA = 10;
-let adminFiltro = { busca:'', uf:'', profissao:'', situacao:'' };
+let adminFiltro = { busca:'', uf:'', profissao:'', situacao:'', indice:'' };
 let adminPagina = 1;
 
 function adminFiltroMudou(){
@@ -5448,15 +5449,17 @@ function adminFiltroMudou(){
   adminFiltro.uf = document.getElementById('admin-filtro-uf').value;
   adminFiltro.profissao = document.getElementById('admin-filtro-profissao').value;
   adminFiltro.situacao = document.getElementById('admin-filtro-situacao').value;
+  adminFiltro.indice = document.getElementById('admin-filtro-indice').value;
   adminPagina = 1;
   renderAdminTabela();
 }
 function limparFiltrosAdmin(){
-  adminFiltro = { busca:'', uf:'', profissao:'', situacao:'' };
+  adminFiltro = { busca:'', uf:'', profissao:'', situacao:'', indice:'' };
   document.getElementById('admin-filtro-busca').value = '';
   document.getElementById('admin-filtro-uf').value = '';
   document.getElementById('admin-filtro-profissao').value = '';
   document.getElementById('admin-filtro-situacao').value = '';
+  document.getElementById('admin-filtro-indice').value = '';
   adminPagina = 1;
   renderAdminTabela();
 }
@@ -5486,6 +5489,8 @@ function renderAdminTabela(){
   if(adminFiltro.uf) filtradas = filtradas.filter(o => o.uf === adminFiltro.uf);
   if(adminFiltro.profissao) filtradas = filtradas.filter(o => (o.profissoes||[]).includes(adminFiltro.profissao));
   if(adminFiltro.situacao) filtradas = filtradas.filter(o => situacaoExibida(o) === adminFiltro.situacao);
+  if(adminFiltro.indice === 'sem') filtradas = filtradas.filter(o => o.indice == null);
+  if(adminFiltro.indice === 'com') filtradas = filtradas.filter(o => o.indice != null);
 
   const totalPaginas = Math.max(1, Math.ceil(filtradas.length / ADMIN_POR_PAGINA));
   if(adminPagina > totalPaginas) adminPagina = totalPaginas;
@@ -8541,7 +8546,7 @@ function renderHoje(){
     {num:fmt(_contagensHoje.pncp), label:'Achados do PNCP para triar', cls:_contagensHoje.pncp?'alerta':'', ir:()=>adminIrPara('triagem','caixa-entrada-body')},
     {num:fmt(_contagensHoje.diario), label:'Achados do Diário Oficial para triar', cls:_contagensHoje.diario?'alerta':'', ir:()=>adminIrPara('triagem','diario-oficial-body')},
     {num:problemas, label:'Editais com problema', cls:problemas?'perigo':'', ir:()=>adminIrPara('editais')},
-    {num:semIndice.length, label:'Editais sem Índice', cls:'', ir:()=>adminIrPara('editais')},
+    {num:semIndice.length, label:'Editais sem Índice', cls:'', ir:()=>{ limparFiltrosAdmin(); document.getElementById('admin-filtro-indice').value = 'sem'; adminFiltroMudou(); adminIrPara('editais','oportunidades-cadastradas-body'); }},
     {num:fmt(_contagensHoje.indicePend), label:'Pedidos de avaliação de Índice', cls:_contagensHoje.indicePend?'alerta':'', ir:()=>adminIrPara('leads','solicitacoes-indice-body')},
     {num:fmt(_contagensHoje.pedidosPlano), label:'Pedidos do plano Transformare Pro', cls:_contagensHoje.pedidosPlano?'alerta':'', ir:()=>adminIrPara('leads','usuarios-cadastrados-body')},
     {num:fmt(_contagensHoje.leadsNovos), label:'Leads novos', cls:_contagensHoje.leadsNovos?'alerta':'', ir:()=>adminIrPara('leads','leads-table')},
