@@ -6632,7 +6632,17 @@ function triRender(){
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
       <button class="btn-primary" onclick="triAbrirFormulario()">Abrir no formulário para revisar e publicar</button>
       <button class="btn-ghost" onclick="triCopiarFicha()">Copiar ficha</button>
+      <button class="btn-ghost" style="color:var(--coral); border-color:var(--coral);" onclick="triDescartar()">Descartar este edital</button>
     </div>`;
+}
+// Cancela a escolha: limpa a ficha, o link e os arquivos, e a pessoa continua na tela para analisar outro.
+function triDescartar(){
+  _tri = null;
+  const r = document.getElementById('tri-resultado'); if(r) r.innerHTML = '';
+  const u = document.getElementById('tri-url'); if(u) u.value = '';
+  const f = document.getElementById('tri-files'); if(f) f.value = '';
+  const st = document.getElementById('tri-status'); if(st) st.textContent = '';
+  toast('Edital descartado');
 }
 async function triAnalisar(){ return triagemAnalisar(); }
 async function triagemAnalisar(){
