@@ -3990,6 +3990,7 @@ function openDetalhe(id){
   const o = oportunidades.find(x=>x.id===id);
   if(!o || !visivelAoCliente(o)){ toast('Este edital não está disponível no momento.'); nav('editais'); return; }
   registrarEvento('abrir', o);
+  marcarVistoSino(id);
   const isFav = favoritos.has(id);
   const el = document.getElementById('detalhe-content');
   const temIndice = o.indice !== null && o.indice !== undefined;
@@ -4927,10 +4928,29 @@ function matchedAlertItems(){
     return alertaCombina(o);
   });
 }
+// Editais que a pessoa já viu (pelo sino ou abrindo o edital): não contam mais no número vermelho.
+let sinoVistos = new Set();
+async function carregarSinoVistos(){
+  const v = await storeGet(ukey('sinoVistos'));
+  sinoVistos = new Set(Array.isArray(v) ? v : []);
+}
+function marcarVistoSino(id){
+  if(sinoVistos.has(id)) return;
+  sinoVistos.add(id);
+  storeSet(ukey('sinoVistos'), [...sinoVistos]);
+  renderBell();
+}
+function marcarTodosVistosSino(ev){
+  if(ev) ev.stopPropagation();
+  matchedAlertItems().forEach(o=>sinoVistos.add(o.id));
+  storeSet(ukey('sinoVistos'), [...sinoVistos]);
+  renderBell();
+}
 function renderBell(){
   const items = matchedAlertItems();
+  const novos = items.filter(o=>!sinoVistos.has(o.id));
   const badge = document.getElementById('bell-badge');
-  if(items.length>0){ badge.style.display='flex'; badge.textContent = items.length; }
+  if(novos.length>0){ badge.style.display='flex'; badge.textContent = novos.length; }
   else{ badge.style.display='none'; }
 
   const list = document.getElementById('bell-list');
@@ -4938,8 +4958,10 @@ function renderBell(){
     list.innerHTML = `<div style="font-size:12.5px; color:var(--ink-dim);">Configure seus alertas para receber novidades aqui.</div>`;
     return;
   }
-  list.innerHTML = items.slice(0,6).map(o=>`
-    <div class="bell-item" onclick="closeBell(); openDetalhe(${o.id});">
+  const ordenados = [...novos, ...items.filter(o=>sinoVistos.has(o.id))];
+  list.innerHTML = (novos.length ? `<div style="text-align:right; margin-bottom:6px;"><button class="btn-ghost" style="padding:3px 9px; font-size:11px;" onclick="marcarTodosVistosSino(event)">Marcar todos como lidos</button></div>` : '')
+    + ordenados.slice(0,6).map(o=>`
+    <div class="bell-item" style="${sinoVistos.has(o.id)?'opacity:.55;':''}" onclick="closeBell(); openDetalhe(${o.id});">
       <div class="t">${o.objeto}</div>
       <div class="m">${o.orgao} — ${o.uf} · Prazo ${o.prazo}</div>
     </div>
@@ -4972,6 +4994,7 @@ async function loadUserData(){
   favoritos = new Set(f || []);
   const a = await storeGet(ukey('alertPrefs'));
   alertPrefs = a ? {profTexto:a.profTexto || (a.prof||[])[0] || '', uf:new Set((a.uf||[]).slice(0,ALERTA_MAX_UF)), mod:new Set(a.mod||[])} : {profTexto:'', uf:new Set(), mod:new Set()};
+  await carregarSinoVistos();
   const d = await storeGet(ukey('docChecks'));
   docChecks = d || {};
   updateNavCta();
@@ -5296,6 +5319,7 @@ async function deleteAccount(){
   if(!confirm('Excluir seu perfil, favoritos, alertas e progresso de documentos? Esta ação não pode ser desfeita.')) return;
   await storeRemove(ukey('favoritos'));
   await storeRemove(ukey('alertPrefs'));
+  await storeRemove(ukey('sinoVistos'));
   await storeRemove(ukey('docChecks'));
   if(_sb){
     await _sb.from('usuarios_perfil').delete().eq('id', u.id);
