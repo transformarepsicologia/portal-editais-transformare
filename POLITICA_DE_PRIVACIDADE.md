@@ -14,6 +14,7 @@ A Transformare é a **controladora** dos dados pessoais tratados no Portal. Para
 - **Dados da empresa (se você atua como PJ):** CNPJ e as informações públicas desse CNPJ na Receita Federal (razão social, nome fantasia, situação cadastral, CNAEs, município/UF, porte, opção pelo MEI e data de abertura), consultadas automaticamente na BrasilAPI a partir do número informado por você.
 - **Pedidos de contato e orientação:** nome, WhatsApp, e-mail, o edital de interesse, o tipo de ajuda, a situação da documentação, a urgência e a mensagem que você escrever.
 - **Outras interações:** solicitações de avaliação do Índice Transformare, sugestões de profissão e mensagens de feedback (com a página do Portal e o tipo de navegador, para entendermos problemas técnicos).
+- **Notificações no aparelho (opcional):** se você ativar, guardamos o endereço técnico de envio do seu navegador (fornecido pelo próprio navegador/Google/Apple), as opções que você marcou e uma cópia dos seus critérios de alerta, só para enviar os avisos. Você pode desativar quando quiser, em Alertas; ao desativar, o endereço é apagado.
 - **Dados guardados só no seu navegador:** editais favoritos, critérios de alerta e o checklist de documentos ficam no armazenamento local (localStorage) do seu próprio aparelho e não são enviados para nós.
 
 Não coletamos dados sensíveis (como saúde, religião ou origem racial) e pedimos que você não os inclua em campos de texto livre.

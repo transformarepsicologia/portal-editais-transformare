@@ -1,7 +1,7 @@
 // Service worker do Radar Transformare (PWA).
 // Regra: sempre tenta a internet primeiro; o cache só entra quando a pessoa está sem conexão.
 // Só mexe em arquivos do próprio site. Banco (Supabase), pagamentos e bibliotecas externas passam direto.
-const VERSAO = 'radar-v1';
+const VERSAO = 'radar-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -30,5 +30,27 @@ self.addEventListener('fetch', (e) => {
       .catch(() =>
         caches.match(req).then((hit) => hit || (req.mode === 'navigate' ? caches.match('/') || caches.match('index.html') : undefined))
       )
+  );
+});
+
+// ---- Notificações push ----
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: 'Radar Transformare', body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Radar Transformare', {
+    body: d.body || '', icon: 'assets/pwa-192.png', badge: 'assets/pwa-192.png',
+    tag: d.tag || 'radar', renotify: true, data: { url: d.url || '/' },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const alvo = new URL((e.notification.data && e.notification.data.url) || '/', self.location.origin).href;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((lista) => {
+      const aberta = lista.find((c) => c.url.startsWith(self.location.origin));
+      if (aberta) { return aberta.focus().then(() => aberta.navigate ? aberta.navigate(alvo) : self.clients.openWindow(alvo)); }
+      return self.clients.openWindow(alvo);
+    })
   );
 });

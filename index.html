@@ -1041,7 +1041,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
   </div>
 
-  <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:var(--violet-texto);">⚠ <strong>Alertas demonstrativos.</strong> Neste protótipo, os alertas são exibidos dentro do portal (aqui e no sino do menu). E-mail, WhatsApp e notificações push serão implementados em uma versão futura.</div>
+  <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:var(--violet-texto);">ℹ Os alertas aparecem aqui e no sino do menu. Para ser avisado no celular, ative as notificações logo abaixo.</div>
+  <div class="filter-panel" id="push-card" style="display:none;"></div>
 
   <div class="filter-panel">
     <div class="form-row"><label>Profissão de interesse</label><input type="text" id="alert-prof" list="alert-prof-lista" placeholder="Digite sua profissão (ex.: Psicologia, Dentista…)" autocomplete="off" oninput="onAlertProfInput(this.value)"><datalist id="alert-prof-lista"></datalist></div>
@@ -1077,6 +1078,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <li><strong>Cadastro e perfil profissional:</strong> nome, e-mail, WhatsApp, registro profissional (ex.: CRP), estado e cidade, profissão, modalidades e abrangência de interesse, remuneração mínima esperada, nível de instrução, tempo de atuação e forma de atuação (pessoa física e/ou jurídica).</li>
       <li><strong>Dados da empresa (se você atua como PJ):</strong> CNPJ e as informações públicas desse CNPJ na Receita Federal (razão social, nome fantasia, situação cadastral, CNAEs, município/UF, porte, opção pelo MEI e data de abertura), consultadas automaticamente na BrasilAPI a partir do número informado por você.</li>
       <li><strong>Atividade de uso:</strong> para quem tem conta, a data do último acesso, o número de acessos e a quantidade de editais favoritados (apenas o número; quais editais você favorita continua só no seu navegador). De forma anônima, sem ligar a você, também contamos quais editais são abertos e favoritados, para sabermos o que é mais útil. Base: legítimo interesse em melhorar o Portal (art. 7º, IX).</li>
+      <li><strong>Notificações no aparelho (opcional):</strong> se você ativar, guardamos o endereço técnico de envio do seu navegador (fornecido pelo próprio navegador/Google/Apple), as opções que você marcou e uma cópia dos seus critérios de alerta, só para enviar os avisos. Você pode desativar quando quiser, em Alertas; ao desativar, o endereço é apagado.</li>
       <li><strong>Pedidos de contato e orientação:</strong> nome, WhatsApp, e-mail, o edital de interesse, o tipo de ajuda, a situação da documentação, a urgência e a mensagem que você escrever.</li>
       <li><strong>Outras interações:</strong> solicitações de avaliação do Índice Transformare, sugestões de profissão e mensagens de feedback (com a página do Portal e o tipo de navegador, para entendermos problemas técnicos).</li>
       <li><strong>Dados guardados só no seu navegador:</strong> editais favoritos, critérios de alerta e o checklist de documentos ficam no armazenamento local (localStorage) do seu próprio aparelho e não são enviados para nós.</li>
@@ -4884,8 +4886,10 @@ function onAlertProfInput(valor){
 async function saveAlertPrefs(){
   await storeSet(ukey('alertPrefs'), {profTexto: alertPrefs.profTexto || '', uf:[...alertPrefs.uf], mod:[...alertPrefs.mod]});
   renderBell();
+  pushSincronizarCriterios();
 }
 function renderAlertas(){
+  pushRender();
   const list = document.getElementById('alert-list');
   const countEl = document.getElementById('alert-count');
   list.innerHTML = '';
@@ -8812,8 +8816,9 @@ async function init(){
   // Link direto para a política (ex.: .../#privacidade em e-mails e mensagens do beta).
   if(location.hash === '#privacidade') nav('privacidade');
   if(location.hash === '#admin') nav('admin'); // atalho: radartransformare.com.br/#admin abre o login do administrador
-  carregarEditaisSupabase();
+  carregarEditaisSupabase().then(abrirLinkDeNotificacao);
   carregarStatusFontes();
+  pushCarregar();
 }
 
 /* ================= STATUS DAS FONTES (PNCP / Querido Diário) ================= */
@@ -9152,6 +9157,128 @@ init();
    (Project Settings > API no painel do Supabase) antes de publicar. */
 // Chave PÚBLICA (site key) do Cloudflare Turnstile para o cadastro. Vazia = sem CAPTCHA.
 const TURNSTILE_SITE_KEY = "";
+/* ================= NOTIFICAÇÕES PUSH ================= */
+// Alertas (critérios da página Alertas): todos os planos. Editais aderentes (70%+): Plano Pro.
+// O envio é feito pela função enviar-push (de hora em hora, em horário comercial).
+let _pushPrefs = { alertas:false, aderentes:false };
+let _pushAqui = false;      // este aparelho está inscrito e com permissão
+let _pushOcupado = false;
+function pushSuportado(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function pushIOSsemApp(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window.navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)); }
+function pushB64ParaBytes(b){ const pad='='.repeat((4-b.length%4)%4); const r=atob((b+pad).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(r, c=>c.charCodeAt(0)); }
+async function pushChavePublica(){
+  const r = await fetch(SUPABASE_URL + '/functions/v1/enviar-push?chave=1', { headers:{ apikey: SUPABASE_ANON_KEY } });
+  const j = await r.json(); if(!j.publicKey) throw new Error('sem chave'); return j.publicKey;
+}
+async function pushCarregar(){
+  if(!_sb || !userProfile || !pushSuportado()){ pushRender(); return; }
+  try{
+    const { data } = await _sb.from('push_prefs').select('alertas,aderentes').eq('user_id', userProfile.id).maybeSingle();
+    _pushPrefs = { alertas: !!(data && data.alertas), aderentes: !!(data && data.aderentes) };
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    _pushAqui = !!sub && Notification.permission === 'granted';
+  }catch(e){}
+  pushRender();
+}
+function pushRender(){
+  const el = document.getElementById('push-card'); if(!el) return;
+  if(!userProfile){ el.style.display = 'none'; return; }
+  el.style.display = '';
+  const pro = ehPro();
+  let corpo = '';
+  if(!pushSuportado()){
+    corpo = pushIOSsemApp()
+      ? '<p class="caption">No iPhone, instale o Radar na tela inicial (Compartilhar → Adicionar à Tela de Início) e abra por lá para ativar as notificações.</p>'
+      : '<p class="caption">Este navegador não permite notificações. No Android, use o Chrome.</p>';
+  } else if(pushIOSsemApp()){
+    corpo = '<p class="caption">No iPhone, instale o Radar na tela inicial (Compartilhar → Adicionar à Tela de Início) e abra por lá para ativar as notificações.</p>';
+  } else {
+    const bloqueado = (typeof Notification !== 'undefined' && Notification.permission === 'denied');
+    corpo = `
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+        ${_pushAqui
+          ? '<span class="plan-badge">Ativas neste aparelho</span><button class="btn-ghost" onclick="pushTestar()">Enviar teste</button><button class="btn-ghost" onclick="pushDesativarAqui()">Desativar neste aparelho</button>'
+          : '<button class="btn-primary" onclick="pushAtivar()"' + (_pushOcupado ? ' disabled' : '') + '>Ativar notificações neste aparelho</button>'}
+      </div>
+      ${bloqueado ? '<p class="caption" style="color:var(--coral);">As notificações estão bloqueadas neste navegador. Libere em Configurações do site (ícone do cadeado) e tente de novo.</p>' : ''}
+      <label style="display:flex; gap:9px; align-items:flex-start; margin:8px 0; cursor:${_pushAqui?'pointer':'default'}; ${_pushAqui?'':'opacity:.55;'}">
+        <input type="checkbox" ${_pushPrefs.alertas?'checked':''} ${_pushAqui?'':'disabled'} onchange="pushSalvarPref('alertas', this.checked)">
+        <span><strong>Meus alertas</strong><br><span class="caption">Edital novo que combina com os critérios definidos nesta página (profissão, estados e modalidade).</span></span>
+      </label>
+      ${pro ? `<label style="display:flex; gap:9px; align-items:flex-start; margin:8px 0; cursor:${_pushAqui?'pointer':'default'}; ${_pushAqui?'':'opacity:.55;'}">
+        <input type="checkbox" ${_pushPrefs.aderentes?'checked':''} ${_pushAqui?'':'disabled'} onchange="pushSalvarPref('aderentes', this.checked)">
+        <span><strong>Editais com alta aderência</strong><br><span class="caption">Edital novo com 70% ou mais de aderência ao seu perfil profissional.</span></span>
+      </label>` : `<div style="margin:10px 0;">${travaProHTML('Aviso de editais com alta aderência ao seu perfil: Plano Pro')}</div>`}
+      <p class="caption" style="margin-top:10px;">Enviamos no máximo um aviso por tipo a cada hora, em horário comercial. Cada aparelho precisa ser ativado separadamente. Dá para desativar quando quiser.</p>`;
+  }
+  el.innerHTML = '<div class="section-title" style="font-size:16px; margin:0 0 10px;">🔔 Notificações no celular</div>' + corpo;
+}
+async function pushAtivar(){
+  if(!_sb || !userProfile || _pushOcupado) return;
+  _pushOcupado = true;
+  try{
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted'){ toast('Sem permissão do navegador, as notificações não podem ser ativadas.'); return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: pushB64ParaBytes(await pushChavePublica()) });
+    const j = sub.toJSON();
+    const { error: e1 } = await _sb.from('push_dispositivos').upsert({ user_id: userProfile.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_agent: (navigator.userAgent||'').slice(0,200) }, { onConflict:'endpoint' });
+    if(e1) throw e1;
+    const primeira = !_pushPrefs.alertas && !_pushPrefs.aderentes;
+    if(primeira){ _pushPrefs = { alertas:true, aderentes: !!ehPro() }; }
+    const { error: e2 } = await _sb.from('push_prefs').upsert({ user_id: userProfile.id, alertas:_pushPrefs.alertas, aderentes:_pushPrefs.aderentes, ...pushCriterios(), atualizado_em: new Date().toISOString() }, { onConflict:'user_id' });
+    if(e2) throw e2;
+    _pushAqui = true;
+    toast('Notificações ativadas neste aparelho');
+  }catch(e){ toast('Não foi possível ativar as notificações agora. Tente de novo em instantes.'); }
+  finally{ _pushOcupado = false; pushRender(); }
+}
+function pushCriterios(){ return { prof_texto: alertPrefs.profTexto || '', ufs:[...alertPrefs.uf], mods:[...alertPrefs.mod] }; }
+async function pushSincronizarCriterios(){
+  if(!_sb || !userProfile || !_pushAqui) return;
+  try{ await _sb.from('push_prefs').upsert({ user_id: userProfile.id, ...pushCriterios() }, { onConflict:'user_id' }); }catch(e){}
+}
+async function pushSalvarPref(campo, valor){
+  if(!_sb || !userProfile) return;
+  if(campo === 'aderentes' && !ehPro()){ exigePro('Aviso de editais aderentes'); pushRender(); return; }
+  const antes = _pushPrefs[campo];
+  _pushPrefs[campo] = !!valor;
+  const reg = { user_id: userProfile.id, [campo]: !!valor, ...pushCriterios() };
+  if(valor) reg.atualizado_em = new Date().toISOString();   // ao ligar, só valem editais publicados daqui para frente
+  const { error } = await _sb.from('push_prefs').upsert(reg, { onConflict:'user_id' });
+  if(error){ _pushPrefs[campo] = antes; toast('Não foi possível salvar agora.'); }
+  else if(valor && campo === 'alertas' && alertaSemCriterio()) toast('Defina ao menos um critério abaixo (profissão, estado ou modalidade) para receber estes avisos.');
+  pushRender();
+}
+async function pushDesativarAqui(){
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub){ const ep = sub.endpoint; await sub.unsubscribe(); if(_sb && userProfile) await _sb.from('push_dispositivos').delete().eq('endpoint', ep); }
+    _pushAqui = false; toast('Notificações desativadas neste aparelho');
+  }catch(e){ toast('Não foi possível desativar agora.'); }
+  pushRender();
+}
+async function pushTestar(){
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('Radar Transformare', { body:'Tudo certo! É assim que os avisos vão aparecer.', icon:'assets/pwa-192.png', badge:'assets/pwa-192.png', tag:'radar-teste', data:{ url:'/?v=alertas' } });
+  }catch(e){ toast('Não consegui mostrar o teste neste aparelho.'); }
+}
+// Abre o edital/tela indicado no link da notificação (?e=<id do edital> ou ?v=<tela>)
+function abrirLinkDeNotificacao(){
+  try{
+    const q = new URLSearchParams(location.search);
+    const e = q.get('e'), v = q.get('v');
+    if(!e && !v) return;
+    history.replaceState(null, '', location.pathname + location.hash);
+    if(e && /^\d+$/.test(e)) openDetalhe(900000 + Number(e));
+    else if(v && ['alertas','minha-conta','editais','favoritos'].includes(v)) nav(v);
+  }catch(err){}
+}
+
 // ===== App instalável (PWA) =====
 let _promptInstalar = null;
 window.addEventListener('beforeinstallprompt', (ev) => {
