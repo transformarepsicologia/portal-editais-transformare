@@ -7,8 +7,8 @@
 <meta name="description" content="Radar Transformare: editais, chamamentos e credenciamentos da área da saúde (Psicologia, Nutrição, Fonoaudiologia e mais) monitorados no PNCP, organizados e comparáveis, com Índice de atratividade e aderência ao seu perfil.">
 <link rel="icon" type="image/png" sizes="96x96" href="assets/radar-marca-96.png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="assets/radar-marca-192.png">
-<meta name="theme-color" content="#0E1A2B">
+<link rel="apple-touch-icon" href="assets/pwa-192.png">
+<meta name="theme-color" id="meta-theme-color" content="#0E1A2B">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Radar">
@@ -10811,6 +10811,8 @@ if(window.matchMedia){ var _mqCel = window.matchMedia('(max-width:900px)'); (_mq
 /* Tema claro/escuro: escolha guardada neste aparelho; o escuro é o padrão. */
 function atualizarBotaoTema(){
   var claro = document.documentElement.getAttribute('data-theme') === 'light';
+  var mt = document.getElementById('meta-theme-color');
+  if(mt) mt.setAttribute('content', claro ? '#E4E2DC' : '#0E1A2B');
   var b = document.getElementById('theme-btn');
   if(b){ b.textContent = claro ? '🌙' : '☀️'; b.title = claro ? 'Mudar para o tema escuro' : 'Mudar para o tema claro'; }
 }
