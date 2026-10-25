@@ -1480,6 +1480,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <summary style="cursor:pointer; font-size:13px; font-weight:600;">📈 Editais mais vistos e favoritados (últimos 30 dias, sem identificar quem)</summary>
         <div id="ranking-editais-box" style="margin-top:8px; font-size:12.5px; color:var(--ink-muted);">Carregando...</div>
       </details>
+      <details id="funil-app" style="margin-bottom:12px;" ontoggle="if(this.open) carregarFunilApp()">
+        <summary style="cursor:pointer; font-size:13px; font-weight:600;">📲 App instalável (últimos 30 dias, anônimo)</summary>
+        <div id="funil-app-box" style="margin-top:8px; font-size:12.5px; color:var(--ink-muted);">Carregando...</div>
+      </details>
       <div id="usuarios-cadastrados-filtros" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
         <input id="usr-busca" type="text" placeholder="Buscar por nome, e-mail ou UF" oninput="filtrarUsuariosAdmin()" style="flex:1; min-width:200px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); font-size:13px;">
         <select id="usr-filtro" onchange="filtrarUsuariosAdmin()" style="font-size:13px; padding:8px 10px;">
@@ -9314,27 +9318,42 @@ function abrirLinkDeNotificacao(){
 }
 
 // ===== App instalável (PWA) =====
+// Contador anônimo (sem usuário e sem IP): só o tipo do evento e se foi celular ou computador.
+const _appEvtVistos = new Set();
+function registrarEventoApp(tipo, tentativa){
+  try{
+    if(tipo === 'botao_exibido' || tipo === 'abriu_app'){ if(_appEvtVistos.has(tipo)) return; _appEvtVistos.add(tipo); }
+    if(!_sb){ if((tentativa||0) < 5) setTimeout(()=>{ _appEvtVistos.delete(tipo); registrarEventoApp(tipo, (tentativa||0)+1); }, 2000); return; }
+    if(adminAuthed) return;
+    const aparelho = /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent) ? 'celular' : 'computador';
+    _sb.from('eventos_app').insert({ tipo, aparelho }).then(()=>{}, ()=>{});
+  }catch(e){}
+}
 let _promptInstalar = null;
 window.addEventListener('beforeinstallprompt', (ev) => {
   ev.preventDefault();
   _promptInstalar = ev;
   const b = document.getElementById('btn-instalar-app');
   if (b) b.style.display = '';
+  registrarEventoApp('botao_exibido');
 });
 window.addEventListener('appinstalled', () => {
   _promptInstalar = null;
   const b = document.getElementById('btn-instalar-app');
   if (b) b.style.display = 'none';
+  registrarEventoApp('instalou');
   try { toast('Radar instalado!'); } catch (e) {}
 });
 async function instalarApp(){
   if (!_promptInstalar) return;
+  registrarEventoApp('botao_clicado');
   _promptInstalar.prompt();
-  try { await _promptInstalar.userChoice; } catch (e) {}
+  try { const r = await _promptInstalar.userChoice; registrarEventoApp(r && r.outcome === 'accepted' ? 'aceitou' : 'recusou'); } catch (e) {}
   _promptInstalar = null;
   const b = document.getElementById('btn-instalar-app');
   if (b) b.style.display = 'none';
 }
+window.addEventListener('load', () => { setTimeout(() => { try{ if((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone) registrarEventoApp('abriu_app'); }catch(e){} }, 1500); });
 if ('serviceWorker' in navigator && window.isSecureContext) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 }
@@ -10355,6 +10374,19 @@ function usrCadastroHTML(r){
     '</div>';
 }
 
+async function carregarFunilApp(){
+  const box = document.getElementById('funil-app-box'); if(!box || !_sb) return;
+  const desde = new Date(Date.now() - 30*86400000).toISOString();
+  const { data, error } = await _sb.from('eventos_app').select('tipo,aparelho').gte('criado_em', desde).limit(50000);
+  if(error){ box.textContent = 'Erro ao carregar: ' + error.message; return; }
+  const c = {}; (data||[]).forEach(e=>{ const k = e.tipo; c[k] = c[k] || { celular:0, computador:0 }; c[k][e.aparelho]++; });
+  const linhas = [['botao_exibido','Viram o botão "Instalar app"'],['botao_clicado','Clicaram no botão'],['aceitou','Aceitaram na janela do navegador'],['recusou','Recusaram na janela'],['instalou','Instalaram o app'],['abriu_app','Aberturas pelo app instalado']];
+  if(!(data||[]).length){ box.textContent = 'Ainda não há registros. Eles aparecem conforme as pessoas veem o botão, instalam e abrem o app (a contagem começa quando esta versão entra no ar).'; return; }
+  box.innerHTML = '<div style="display:grid; grid-template-columns:1fr auto auto auto; gap:4px 14px; align-items:baseline;">' +
+    '<span></span><strong>Celular</strong><strong>Computador</strong><strong>Total</strong>' +
+    linhas.map(([k,r])=>{ const v = c[k] || { celular:0, computador:0 }; return '<span>'+r+'</span><span>'+v.celular+'</span><span>'+v.computador+'</span><strong>'+(v.celular+v.computador)+'</strong>'; }).join('') +
+    '</div><div style="margin-top:8px; font-size:11.5px; color:var(--ink-dim);">Quem instalou pelo menu do navegador entra em "Instalaram", mesmo sem clicar no nosso botão. No iPhone não há registro de instalação. Administradores não entram na contagem. "Aberturas" conta uma vez por visita.</div>';
+}
 async function carregarRankingEditais(){
   const box = document.getElementById('ranking-editais-box'); if(!box || !_sb) return;
   const desde = new Date(Date.now() - 30*86400000).toISOString();
