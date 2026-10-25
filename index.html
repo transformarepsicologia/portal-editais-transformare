@@ -6,6 +6,12 @@
 <title>Radar Transformare — Portal de Editais</title>
 <meta name="description" content="Radar Transformare: editais, chamamentos e credenciamentos da área da saúde (Psicologia, Nutrição, Fonoaudiologia e mais) monitorados no PNCP, organizados e comparáveis, com Índice de atratividade e aderência ao seu perfil.">
 <link rel="icon" type="image/png" sizes="96x96" href="assets/radar-marca-96.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/radar-marca-192.png">
+<meta name="theme-color" content="#0E1A2B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Radar">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Radar Transformare">
 <meta property="og:title" content="Radar Transformare — Portal de Editais">
@@ -842,6 +848,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <div id="bell-list"></div>
       </div>
     </div>
+    <button class="theme-btn" id="btn-instalar-app" onclick="instalarApp()" style="display:none; width:auto; padding:0 10px; font-size:12px; font-weight:600;" title="Instalar o Radar como app no seu aparelho">⬇ Instalar app</button>
     <button class="theme-btn" id="theme-btn" onclick="alternarTema()" aria-label="Alternar entre tema escuro e claro" title="Tema claro / escuro">☀️</button>
     </div>
     <button class="mobile-toggle" onclick="document.getElementById('mainNav').classList.toggle('open')">☰</button>
@@ -9145,6 +9152,32 @@ init();
    (Project Settings > API no painel do Supabase) antes de publicar. */
 // Chave PÚBLICA (site key) do Cloudflare Turnstile para o cadastro. Vazia = sem CAPTCHA.
 const TURNSTILE_SITE_KEY = "";
+// ===== App instalável (PWA) =====
+let _promptInstalar = null;
+window.addEventListener('beforeinstallprompt', (ev) => {
+  ev.preventDefault();
+  _promptInstalar = ev;
+  const b = document.getElementById('btn-instalar-app');
+  if (b) b.style.display = '';
+});
+window.addEventListener('appinstalled', () => {
+  _promptInstalar = null;
+  const b = document.getElementById('btn-instalar-app');
+  if (b) b.style.display = 'none';
+  try { toast('Radar instalado!'); } catch (e) {}
+});
+async function instalarApp(){
+  if (!_promptInstalar) return;
+  _promptInstalar.prompt();
+  try { await _promptInstalar.userChoice; } catch (e) {}
+  _promptInstalar = null;
+  const b = document.getElementById('btn-instalar-app');
+  if (b) b.style.display = 'none';
+}
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+
 const SUPABASE_URL = "https://cjtcfpiohhnvtqfktbsv.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_nOfG7Stoy-0lO8CSeW-_EQ_QLvDoeGN";
 
