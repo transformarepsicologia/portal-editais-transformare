@@ -1579,6 +1579,16 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="section-title" style="font-size:17px; margin-top:4px;">Prospecção (WhatsApp e Instagram)</div>
     <p class="section-sub">Envio manual, um contato por vez, pelo seu WhatsApp ou Instagram. O sistema lista os editais abertos que combinam com a profissão e a região de cada profissional; você marca quais entram na mensagem (1 edital = mensagem direta no edital, com convite para conhecer o site). Só envia se houver edital marcado.</p>
 
+    <details id="pr-cidades" style="margin:0 0 14px; background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:12px 16px;" open ontoggle="if(this.open && typeof prospRenderCidades==='function') prospRenderCidades()">
+      <summary style="cursor:pointer; font-weight:600; font-size:14px;">🏙 Cidades com mais editais <span style="font-weight:400; color:var(--ink-muted); font-size:12px;">(só o ADM vê)</span></summary>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:10px 0 6px; font-size:12.5px;">
+        <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pr-cid-abertos" checked onchange="prospRenderCidades()"> Só editais abertos</label>
+        <label style="display:flex; gap:6px; align-items:center;">UF <select id="pr-cid-uf" onchange="prospRenderCidades()" style="font-size:12.5px; padding:4px 8px;"><option value="">Todas</option></select></label>
+        <label style="display:flex; gap:6px; align-items:center;">Profissão <select id="pr-cid-prof" onchange="prospRenderCidades()" style="font-size:12.5px; padding:4px 8px;"><option value="">Todas</option></select></label>
+      </div>
+      <div id="pr-cidades-box" style="font-size:12.5px; color:var(--ink-muted);">Carregando...</div>
+    </details>
+
     <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
       <label>1. Adicionar contatos</label>
       <div class="form-row"><label>Canal</label><select id="pr-canal" onchange="prospCanalMudou()"><option value="whatsapp">WhatsApp (telefone)</option><option value="instagram">Instagram (@perfil)</option></select></div>
@@ -7938,6 +7948,50 @@ async function prospLerArquivo(input){
   }catch(e){ st.textContent = 'Não consegui ler o arquivo (' + (e.message||e) + '). Salve como .csv e tente de novo.'; }
   input.value = '';
 }
+/* ---- Ranking de cidades com mais editais (só ADM, na aba Prospecção) ---- */
+const _normCid = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+function prospRenderCidades(){
+  const box = document.getElementById('pr-cidades-box'); if(!box) return;
+  const soAbertos = document.getElementById('pr-cid-abertos').checked;
+  const selUf = document.getElementById('pr-cid-uf'), selProf = document.getElementById('pr-cid-prof');
+  const base = oportunidades.filter(o=>o.origemSupabase && !ehContratacaoDeFornecedor(o.objeto));
+  // opções dos filtros (mantém a escolha atual)
+  const ufAtual = selUf.value, profAtual = selProf.value;
+  const ufs = [...new Set(base.map(o=>o.uf).filter(Boolean))].sort();
+  const profs = [...new Set(base.flatMap(o=>o.profissoes||[]))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  selUf.innerHTML = '<option value="">Todas</option>' + ufs.map(u=>'<option value="'+esc(u)+'"'+(u===ufAtual?' selected':'')+'>'+esc(u)+'</option>').join('');
+  selProf.innerHTML = '<option value="">Todas</option>' + profs.map(p=>'<option value="'+esc(p)+'"'+(p===profAtual?' selected':'')+'>'+esc(p)+'</option>').join('');
+  let eds = base;
+  if(soAbertos) eds = eds.filter(o=>situacaoExibida(o) !== 'Encerrado');
+  if(ufAtual) eds = eds.filter(o=>o.uf === ufAtual);
+  if(profAtual) eds = eds.filter(o=>(o.profissoes||[]).includes(profAtual));
+  if(!oportunidades.length){ box.textContent = 'Os editais ainda estão carregando. Abra esta aba de novo em instantes.'; return; }
+  const semCidade = eds.filter(o=>!String(o.cidade||'').trim()).length;
+  const m = new Map();
+  eds.filter(o=>String(o.cidade||'').trim()).forEach(o=>{
+    const k = _normCid(o.cidade) + '|' + (o.uf||'');
+    const r = m.get(k) || { nome:String(o.cidade).trim(), uf:o.uf||'', n:0, abertos:0, orgaos:new Set(), profs:new Map() };
+    r.n++; if(situacaoExibida(o) !== 'Encerrado') r.abertos++;
+    r.orgaos.add(o.orgao);
+    (o.profissoes||[]).forEach(p=>r.profs.set(p, (r.profs.get(p)||0)+1));
+    m.set(k, r);
+  });
+  const lista = [...m.values()].sort((a,b)=>b.n - a.n || b.abertos - a.abertos || a.nome.localeCompare(b.nome,'pt-BR')).slice(0, 20);
+  if(!lista.length){ box.textContent = 'Nenhum edital com cidade informada nesse filtro.' + (semCidade ? ' (' + semCidade + ' sem cidade: estaduais ou nacionais.)' : ''); return; }
+  box.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12.5px;"><thead><tr style="text-align:left; color:var(--ink-dim);"><th style="padding:4px 8px 4px 0;">#</th><th style="padding:4px 8px;">Cidade</th><th style="padding:4px 8px; text-align:right;">Editais</th><th style="padding:4px 8px; text-align:right;">Abertos</th><th style="padding:4px 8px;">Profissões mais pedidas</th><th></th></tr></thead><tbody>' +
+    lista.map((r,i)=>{
+      const top = [...r.profs.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3).map(([p,n])=>esc(p)+' ('+n+')').join(', ');
+      return '<tr style="border-top:1px solid var(--border-soft);"><td style="padding:6px 8px 6px 0; color:var(--ink-dim);">'+(i+1)+'</td><td style="padding:6px 8px; font-weight:600; color:var(--ink);">'+esc(r.nome)+' <span style="font-weight:400; color:var(--ink-muted);">/ '+esc(r.uf)+'</span></td><td style="padding:6px 8px; text-align:right;">'+r.n+'</td><td style="padding:6px 8px; text-align:right;">'+r.abertos+'</td><td style="padding:6px 8px;">'+top+'</td><td style="padding:6px 0 6px 8px; text-align:right;"><button type="button" class="btn-ghost" style="font-size:11.5px; padding:3px 9px;" title="Preenche cidade e UF padrão do formulário abaixo" onclick="prospUsarCidade(\''+esc(r.nome).replace(/'/g,"\\'")+'\',\''+esc(r.uf)+'\')">Usar na prospecção</button></td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    '<div style="margin-top:8px; font-size:11.5px; color:var(--ink-dim);">Conta editais reais com cidade informada (sem contratações de fornecedores)' + (semCidade ? '; ' + semCidade + ' sem cidade (estaduais/nacionais) ficam de fora' : '') + '. Mostra as 20 primeiras.</div>';
+}
+function prospUsarCidade(cidade, uf){
+  const c = document.getElementById('pr-cidade'), u = document.getElementById('pr-uf');
+  if(c) c.value = cidade;
+  if(u) u.value = uf;
+  toast('Cidade e UF preenchidas em "1. Adicionar contatos"');
+  const alvo = document.getElementById('pr-lista'); if(alvo) alvo.scrollIntoView({ behavior:'smooth', block:'center' });
+}
 function prospCanalMudou(){
   const ig = document.getElementById('pr-canal').value === 'instagram';
   document.getElementById('pr-lista').placeholder = ig
@@ -8530,7 +8584,7 @@ function consDetalhe(){
 function adminTab(nome){
   adminTabAtual = nome;
   if(nome==='aae') aaeCarregar();
-  if(nome==='prospeccao') prospCarregar();
+  if(nome==='prospeccao'){ prospCarregar(); prospRenderCidades(); }
   if(nome==='consultoria') consCarregar();
   document.querySelectorAll('#admin-tabs .admin-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab === nome));
   document.querySelectorAll('.admin-tabpanel').forEach(p=>p.classList.toggle('active', p.id === 'admin-tab-'+nome));
