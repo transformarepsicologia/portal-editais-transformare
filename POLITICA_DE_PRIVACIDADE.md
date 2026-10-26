@@ -15,7 +15,8 @@ A Transformare é a **controladora** dos dados pessoais tratados no Portal. Para
 - **Pedidos de contato e orientação:** nome, WhatsApp, e-mail, o edital de interesse, o tipo de ajuda, a situação da documentação, a urgência e a mensagem que você escrever.
 - **Outras interações:** solicitações de avaliação do Índice Transformare, sugestões de profissão e mensagens de feedback (com a página do Portal e o tipo de navegador, para entendermos problemas técnicos).
 - **Notificações no aparelho (opcional):** se você ativar, guardamos o endereço técnico de envio do seu navegador (fornecido pelo próprio navegador/Google/Apple), as opções que você marcou e uma cópia dos seus critérios de alerta, só para enviar os avisos. Você pode desativar quando quiser, em Alertas; ao desativar, o endereço é apagado.
-- **Dados guardados só no seu navegador:** editais favoritos, critérios de alerta e o checklist de documentos ficam no armazenamento local (localStorage) do seu próprio aparelho e não são enviados para nós.
+- **Dados guardados só no seu navegador:** editais favoritos e critérios de alerta ficam no armazenamento local (localStorage) do seu próprio aparelho e não são enviados para nós.
+- **Checklist de documentos:** as marcações que você faz no checklist de cada edital (quais documentos já tem) ficam salvas na sua conta, para você retomar de onde parou em qualquer aparelho. Somem se você excluir a conta.
 
 Não coletamos dados sensíveis (como saúde, religião ou origem racial) e pedimos que você não os inclua em campos de texto livre.
 
@@ -66,7 +67,7 @@ Você mesmo pode **corrigir seu perfil** em "Minha Conta → Editar perfil" e **
 
 ## 9. Cookies e armazenamento local
 
-O Portal não usa cookies de publicidade nem ferramentas de rastreamento de terceiros. Usamos o armazenamento local do navegador apenas para manter sua sessão de login e suas preferências (favoritos, alertas e checklist). Você pode apagar esses dados nas configurações do seu navegador.
+O Portal não usa cookies de publicidade nem ferramentas de rastreamento de terceiros. Usamos o armazenamento local do navegador apenas para manter sua sessão de login e suas preferências (favoritos e alertas). Você pode apagar esses dados nas configurações do seu navegador.
 
 ## 10. Público
 
