@@ -1081,7 +1081,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <li><strong>Notificações no aparelho (opcional):</strong> se você ativar, guardamos o endereço técnico de envio do seu navegador (fornecido pelo próprio navegador/Google/Apple), as opções que você marcou e uma cópia dos seus critérios de alerta, só para enviar os avisos. Você pode desativar quando quiser, em Alertas; ao desativar, o endereço é apagado.</li>
       <li><strong>Pedidos de contato e orientação:</strong> nome, WhatsApp, e-mail, o edital de interesse, o tipo de ajuda, a situação da documentação, a urgência e a mensagem que você escrever.</li>
       <li><strong>Outras interações:</strong> solicitações de avaliação do Índice Transformare, sugestões de profissão e mensagens de feedback (com a página do Portal e o tipo de navegador, para entendermos problemas técnicos).</li>
-      <li><strong>Dados guardados só no seu navegador:</strong> editais favoritos, critérios de alerta e o checklist de documentos ficam no armazenamento local (localStorage) do seu próprio aparelho e não são enviados para nós.</li>
+      <li><strong>Dados guardados só no seu navegador:</strong> editais favoritos e critérios de alerta ficam no armazenamento local (localStorage) do seu próprio aparelho e não são enviados para nós.</li>
+      <li><strong>Checklist de documentos:</strong> as marcações que você faz no checklist de cada edital (quais documentos já tem) ficam salvas na sua conta, para você retomar de onde parou em qualquer aparelho. Somem se você excluir a conta.</li>
     </ul>
     <p>Não coletamos dados sensíveis (como saúde, religião ou origem racial) e pedimos que você não os inclua em campos de texto livre.</p>
 
@@ -1129,7 +1130,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p>Você mesmo pode <strong>corrigir seu perfil</strong> em "Minha Conta → Editar perfil" e <strong>excluir sua conta</strong> na mesma tela. Para os demais pedidos, escreva para <a href="mailto:transformarepsicologia1@gmail.com">transformarepsicologia1@gmail.com</a> — respondemos em até 15 dias.</p>
 
     <h3>9. Cookies e armazenamento local</h3>
-    <p>O Portal não usa cookies de publicidade nem ferramentas de rastreamento de terceiros. Usamos o armazenamento local do navegador apenas para manter sua sessão de login e suas preferências (favoritos, alertas e checklist). Você pode apagar esses dados nas configurações do seu navegador.</p>
+    <p>O Portal não usa cookies de publicidade nem ferramentas de rastreamento de terceiros. Usamos o armazenamento local do navegador apenas para manter sua sessão de login e suas preferências (favoritos e alertas). Você pode apagar esses dados nas configurações do seu navegador.</p>
 
     <h3>10. Público</h3>
     <p>O Portal é destinado a profissionais maiores de 18 anos. Não coletamos intencionalmente dados de crianças ou adolescentes.</p>
@@ -4565,6 +4566,31 @@ function docProgressHTML(oid, documentos, checks){
   return `<div class="doc-progress-text"><span>${done} de ${total} documentos concluídos</span><span>${pct}%</span></div>
     <div class="doc-progress-bar"><div class="doc-progress-fill" style="width:${pct}%;"></div></div>`;
 }
+// O checklist fica salvo na conta (tabela checklist_docs), então não se perde ao trocar de aparelho ou limpar o navegador.
+// Cada marcação grava na hora; o navegador guarda uma cópia local como reserva.
+async function salvarChecklistNaConta(oid){
+  if(!_sb || !userProfile || !userProfile.id) return;
+  try{
+    await _sb.from('checklist_docs').upsert({ user_id: userProfile.id, edital_id: oid, marcados: docChecks[oid] || {}, atualizado_em: new Date().toISOString() }, { onConflict:'user_id,edital_id' });
+  }catch(e){}
+}
+async function sincronizarChecklist(){
+  if(!_sb || !userProfile || !userProfile.id) return;
+  try{
+    const { data, error } = await _sb.from('checklist_docs').select('edital_id,marcados');
+    if(error) return;
+    const noServidor = new Set();
+    (data || []).forEach(r=>{ noServidor.add(r.edital_id); docChecks[r.edital_id] = r.marcados || {}; });   // a conta vale mais que a cópia do aparelho
+    // o que só existe neste aparelho (marcado antes desta função existir) sobe para a conta
+    const subir = Object.keys(docChecks).filter(k=>!noServidor.has(Number(k)) && Object.values(docChecks[k] || {}).some(Boolean))
+      .map(k=>({ user_id: userProfile.id, edital_id: Number(k), marcados: docChecks[k] }));
+    if(subir.length) await _sb.from('checklist_docs').upsert(subir, { onConflict:'user_id,edital_id' });
+    await storeSet(ukey('docChecks'), docChecks);
+    const det = document.getElementById('view-detalhe');
+    if(det && det.classList.contains('active') && currentDetailId != null) openDetalhe(currentDetailId);
+    else if(typeof renderMinhaConta === 'function' && document.getElementById('view-minha-conta').classList.contains('active')) renderMinhaConta();
+  }catch(e){}
+}
 async function toggleDoc(oid, idx){
   docChecks[oid] = docChecks[oid] || {};
   docChecks[oid][idx] = !docChecks[oid][idx];
@@ -4578,6 +4604,7 @@ async function toggleDoc(oid, idx){
   const progressEl = document.getElementById(`doc-progress-${oid}`);
   if(progressEl && o) progressEl.innerHTML = docProgressHTML(oid, docsPreview(o.documentos), docChecks[oid]);
   await storeSet(ukey('docChecks'), docChecks);
+  salvarChecklistNaConta(oid);
 }
 
 /* ================= LEAD MODAL / FUNIL COMERCIAL ================= */
@@ -5021,6 +5048,7 @@ async function loadUserData(){
   await carregarSinoVistos();
   const d = await storeGet(ukey('docChecks'));
   docChecks = d || {};
+  sincronizarChecklist();
   updateNavCta();
   renderAlertChips();
   renderAlertas();
