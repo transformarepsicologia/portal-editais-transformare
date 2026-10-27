@@ -531,9 +531,14 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .two-col{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 .chip-select{display:flex; gap:7px; flex-wrap:wrap; width:100%; max-width:100%;}
 /* Mapa de editais (Como funciona) */
-.sobre-grid{display:grid; grid-template-columns:minmax(0,640px) minmax(0,1fr); gap:32px; align-items:start;}
+.sobre-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:40px; align-items:stretch;}
 @media (max-width:1000px){.sobre-grid{grid-template-columns:minmax(0,1fr);}}
-#mp-wrap{position:sticky; top:84px; max-width:100%;}
+#mp-wrap{max-width:100%;}
+.sobre-texto .page-head{padding-top:0;}
+.mp-rank{display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%; border:1px solid var(--border); border-radius:10px; padding:8px 11px; cursor:pointer; background:transparent; color:inherit; font:inherit; text-align:left;}
+.mp-rank:hover{background:var(--bg-card-hover);}
+.mp-rank b{font-family:var(--font-display);}
+.mp-painel{flex:1;}
 /* O mapa aparece só no computador */
 @media (max-width:1000px){#mp-wrap{display:none;}}
 .mp-card{background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:14px; min-width:0; display:flex; flex-direction:column; gap:10px;}
@@ -544,7 +549,7 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .mp-kpi{background:var(--bg-elevated); border:1px solid var(--border-soft); border-radius:10px; padding:8px 10px; min-width:0;}
 .mp-kpi .l{font-family:var(--font-mono); font-size:9.5px; letter-spacing:1.1px; text-transform:uppercase; color:var(--ink-dim);}
 .mp-kpi .v{font-family:var(--font-display); font-size:22px; font-weight:700; margin-top:2px;}
-.mp-mapa{position:relative; border-radius:10px; overflow:hidden; background:var(--bg);}
+.mp-mapa{position:relative; border-radius:10px; overflow:hidden; background:var(--bg); display:flex; align-items:center; justify-content:center;}
 #mp-svg{width:100%; height:auto; display:block; touch-action:none; cursor:grab; user-select:none;}
 #mp-svg.arrastando{cursor:grabbing;}
 #mp-svg .land{fill:var(--bg-elevated); stroke:var(--border); stroke-linejoin:round;}
@@ -559,8 +564,9 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .mp-zoom button:hover{background:var(--bg-card-hover);}
 .mp-painel{border-top:1px solid var(--border); padding-top:10px; display:flex; flex-direction:column; gap:8px;}
 .mp-painel[hidden]{display:none;}
+.mp-x[hidden]{display:none !important;}
 .mp-x{all:unset; cursor:pointer; color:var(--ink-muted); font-size:20px; line-height:1; padding:0 4px;}
-.mp-lista{display:flex; flex-direction:column; gap:8px; max-height:340px; overflow:auto; padding-right:4px;}
+.mp-lista{display:flex; flex-direction:column; gap:8px; max-height:230px; overflow:auto; padding-right:4px;}
 .mp-item{border:1px solid var(--border); border-radius:10px; padding:9px 11px; display:flex; flex-direction:column; gap:3px; min-width:0; cursor:pointer; text-align:left; background:transparent; color:inherit; font:inherit;}
 .mp-item:hover{background:var(--bg-card-hover);}
 .mp-item .t{display:flex; justify-content:space-between; gap:8px; font-weight:600; font-size:13.5px;}
@@ -1186,9 +1192,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== SOBRE ===================== -->
 <section class="view" id="view-sobre">
-  <div class="page-head"><span class="eyebrow">Sobre a Transformare</span><h2>Uma plataforma de inteligência de oportunidades</h2></div>
   <div class="sobre-grid">
   <div class="sobre-texto" style="font-size:14.5px; line-height:1.75; color:var(--ink-muted);">
+    <div class="page-head"><span class="eyebrow">Sobre a Transformare</span><h2>Uma plataforma de inteligência de oportunidades</h2></div>
     <p style="color:var(--ink);">O edital é a matéria-prima. A Transformare agrega valor ao encontrar, filtrar, organizar, analisar e explicar — conectando cada oportunidade ao profissional certo.</p>
     <p>Monitoramos continuamente o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, reunindo oportunidades para profissionais da saúde — como Psicologia, Nutrição, Fonoaudiologia, Odontologia, Medicina, Enfermagem e outras áreas — e ampliando a cobertura a cada nova profissão.</p>
     <p>Quando avaliada, cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong> — uma nota de 1 a 5 que leva em conta retorno financeiro, facilidade de entrada, aderência aos serviços da Transformare e complexidade documental. É um indicador interno, atribuído manualmente por um analista da Transformare — não é uma informação oficial do órgão responsável, não representa classificação oficial e não substitui o julgamento previsto no edital. Nem todo edital publicado já foi avaliado; quando ainda não foi, isso fica informado na página do edital, com a opção de solicitar a avaliação.</p>
@@ -1207,8 +1213,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <div class="mp-zoom"><button type="button" onclick="mpZoomBtn(0.6)" aria-label="Aproximar">+</button><button type="button" onclick="mpZoomBtn(1/0.6)" aria-label="Afastar">−</button><button type="button" onclick="mpZoomReset()" aria-label="Ver o Brasil inteiro">⟲</button></div>
     </div>
     <p class="mp-hint">Clique numa cidade para ver os editais abertos. Aproxime com + e − ou arraste o mapa. As bolhas crescem com o número de editais.</p>
-    <div id="mp-painel" class="mp-painel" hidden>
-      <div class="mp-hd"><h3 id="mp-ptitulo">Editais abertos</h3><button type="button" class="mp-x" onclick="mpFechar()" aria-label="Fechar lista">×</button></div>
+    <div id="mp-painel" class="mp-painel">
+      <div class="mp-hd"><h3 id="mp-ptitulo">Editais abertos</h3><button type="button" class="mp-x" id="mp-fechar" onclick="mpFechar()" aria-label="Fechar lista" hidden>×</button></div>
       <div id="mp-lista" class="mp-lista"></div>
     </div>
     <div id="mp-tip" class="mp-tip"></div>
@@ -8734,14 +8740,20 @@ function mpPainel(){
   const pn=document.getElementById('mp-painel'); let lista=[], titulo='';
   if(mpSel){ const x=mpDados.arr.find(a=>a.k===mpSel); lista=mpDados.rows.filter(o=>o.cidade && (mpNorm(o.cidade)+'|'+o.uf)===mpSel); titulo='Editais abertos em '+(x?x.c+'/'+x.u:''); }
   else if(mpV.w<=200){ const ks=new Set(mpDados.arr.filter(x=>mpEmArea(x)).map(x=>x.k)); lista=mpDados.rows.filter(o=>o.cidade && ks.has(mpNorm(o.cidade)+'|'+o.uf)); titulo='Editais abertos nesta área ('+lista.length+')'; }
-  if(!lista.length){ pn.hidden=true; return; }
-  pn.hidden=false; document.getElementById('mp-ptitulo').textContent=titulo;
+  const fx=document.getElementById('mp-fechar');
+  if(!lista.length){
+    fx.hidden=true; document.getElementById('mp-ptitulo').textContent='Cidades com mais editais abertos';
+    document.getElementById('mp-lista').innerHTML = mpDados.arr.slice(0,5).map(x=>'<button type="button" class="mp-rank" onclick="mpEscolher(\''+esc(x.k).replace(/'/g,'')+'\')"><span>'+esc(x.c+'/'+x.u)+'</span><b>'+x.n+'</b></button>').join('');
+    return;
+  }
+  fx.hidden=!mpSel; document.getElementById('mp-ptitulo').textContent=titulo;
   lista=lista.slice().sort((a,b)=>mpNum(b)-mpNum(a)||b.id-a.id).slice(0,60);
   document.getElementById('mp-lista').innerHTML = lista.map(o=>{
     const pf=(o.profissoes||[]); const pt = pf.length>3 ? pf.slice(0,3).join(', ')+' +'+(pf.length-3) : pf.join(', ');
     return '<button type="button" class="mp-item" onclick="openDetalhe('+o.id+')"><div class="t"><span>'+esc(o.cidade+'/'+o.uf)+'</span><span>'+mpBRL(mpNum(o))+'</span></div><div class="o">'+esc(o.orgao||'')+'</div><div class="o">'+esc(pt||'Profissão não informada')+'</div><div class="mp-tags"><span class="mp-tag">'+esc(o.modalidade||'')+'</span><span class="mp-tag">'+esc(situacaoExibida(o))+'</span></div></button>';
   }).join('');
 }
+function mpEscolher(k){ mpSel=k; mpDesenhar(); mpPainel(); }
 function mpFechar(){ mpSel=''; if(mpDados){ mpDesenhar(); mpPainel(); } }
 function mpZoom(f, cx, cy){
   const nw=Math.min(600, Math.max(50, mpV.w*f)), nh=nw*610/600;
