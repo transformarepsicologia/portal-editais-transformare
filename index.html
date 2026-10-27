@@ -5525,7 +5525,10 @@ async function addProfissaoAdmin(){
   const novas = [], repetidas = [];
   nomes.forEach(nome=>{
     if(profissoes.some(p=>p.nome.toLowerCase()===nome.toLowerCase()) || novas.some(n=>n.toLowerCase()===nome.toLowerCase())) repetidas.push(nome);
-    else if(canonProfissao(nome) !== nome){ repetidas.push(nome + ' (já existe como ' + canonProfissao(nome) + ')'); }   // sinônimo de uma profissão já cadastrada
+    else if(canonProfissao(nome) !== nome){   // parece sinônimo de uma profissão já cadastrada: pergunta antes de recusar
+      if(confirm('"' + nome + '" parece ser a mesma profissão que "' + canonProfissao(nome) + '", que já está na lista.\n\nCadastrar "' + nome + '" mesmo assim, como uma profissão separada?\n\nOK = cadastrar separada   ·   Cancelar = não cadastrar')) novas.push(nome);
+      else repetidas.push(nome + ' (já existe como ' + canonProfissao(nome) + ')');
+    }
     else novas.push(nome);
   });
   if(!novas.length){ toast(repetidas.length > 1 ? 'Essas profissões já estão cadastradas' : 'Essa profissão já está cadastrada'); return; }
