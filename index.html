@@ -530,6 +530,50 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .form-actions{margin-top:20px; display:flex; gap:10px;}
 .two-col{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 .chip-select{display:flex; gap:7px; flex-wrap:wrap; width:100%; max-width:100%;}
+/* Mapa de editais (Como funciona) */
+.mp-filtros{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:10px;}
+.mp-filtros label{display:flex; flex-direction:column; gap:4px; flex:1 1 150px; min-width:0; font-family:var(--font-mono); font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-dim);}
+.mp-filtros select{font:inherit; font-size:13px; letter-spacing:0; text-transform:none; color:var(--ink); background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:8px 10px; width:100%; min-width:0;}
+.mp-btn{font:inherit; font-size:13px; font-weight:600; color:var(--teal); background:transparent; border:1px solid var(--teal); border-radius:8px; padding:8px 12px; cursor:pointer;}
+.mp-chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
+.mp-chip{display:inline-flex; gap:6px; align-items:center; background:rgba(47,217,196,0.12); color:var(--ink); border-radius:999px; padding:3px 10px; font-size:12px;}
+.mp-chip button{all:unset; cursor:pointer; color:var(--ink-muted); font-weight:700; padding:0 2px;}
+.mp-kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:16px;}
+.mp-kpi{background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; min-width:0;}
+.mp-kpi .l{font-family:var(--font-mono); font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-dim);}
+.mp-kpi .v{font-family:var(--font-display); font-size:clamp(22px,3.4vw,28px); font-weight:700; margin-top:4px; overflow-wrap:anywhere;}
+.mp-kpi .n{color:var(--ink-muted); font-size:12px; margin-top:2px;}
+.mp-main{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:16px;}
+@media (max-width:860px){.mp-main{grid-template-columns:minmax(0,1fr);}}
+.mp-card{background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:14px; min-width:0; display:flex; flex-direction:column; gap:10px;}
+.mp-card h3{margin:0; font-size:15px;}
+.mp-hd{display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;}
+.mp-hint{color:var(--ink-dim); font-size:12px; margin:0;}
+#mp-svg{width:100%; height:auto; display:block;}
+#mp-svg .land{fill:var(--bg-elevated); stroke:var(--border); stroke-width:1; stroke-linejoin:round;}
+#mp-svg .gl{stroke:var(--border-soft); stroke-width:1; stroke-dasharray:3 4;}
+#mp-svg .gt{fill:var(--ink-dim); font-size:10px;}
+#mp-svg .bub{fill:var(--teal); fill-opacity:.5; stroke:var(--bg-card); stroke-width:2; cursor:pointer;}
+#mp-svg .bub:hover,#mp-svg .bub.sel{fill-opacity:.9;}
+#mp-svg .bub.sel{stroke:var(--ink);}
+#mp-svg .leg circle{fill:var(--teal); fill-opacity:.5; stroke:var(--bg-card); stroke-width:2;}
+#mp-svg .leg text{fill:var(--ink-dim); font-size:10px;}
+.mp-lista{display:flex; flex-direction:column; gap:8px; max-height:560px; overflow:auto; padding-right:4px;}
+.mp-item{border:1px solid var(--border); border-radius:10px; padding:9px 11px; display:flex; flex-direction:column; gap:3px; min-width:0; cursor:pointer; text-align:left; background:transparent; color:inherit; font:inherit;}
+.mp-item:hover{background:var(--bg-card-hover);}
+.mp-item .t{display:flex; justify-content:space-between; gap:8px; font-weight:600; font-size:13.5px;}
+.mp-item .t span:first-child{overflow-wrap:anywhere;}
+.mp-item .o{color:var(--ink-muted); font-size:12px; overflow-wrap:anywhere;}
+.mp-tags{display:flex; flex-wrap:wrap; gap:5px; margin-top:2px;}
+.mp-tag{font-size:11px; border:1px solid var(--border); border-radius:4px; padding:1px 6px; color:var(--ink-muted);}
+.mp-bars{display:flex; align-items:flex-end; gap:10px; height:190px; border-bottom:1px solid var(--border); padding-top:8px;}
+.mp-bar{flex:1 1 0; min-width:0; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%; cursor:pointer; background:none; border:0; padding:0; font:inherit; color:var(--ink);}
+.mp-bar .val{font-size:12px; font-weight:600; margin-bottom:4px;}
+.mp-bar .col{width:100%; max-width:64px; background:var(--teal); border-radius:4px 4px 0 0; min-height:2px;}
+.mp-bar.dim .col{opacity:.35;}
+.mp-bar .xl{font-size:12px; color:var(--ink-muted); padding:6px 0 0; border-top:1px solid transparent;}
+.mp-bar.on .xl{color:var(--ink); font-weight:700;}
+.mp-tip{position:fixed; z-index:50; pointer-events:none; background:var(--ink); color:var(--bg); border-radius:6px; padding:6px 9px; font-size:12px; max-width:240px; opacity:0;}
 .chip-opt{font-size:12.5px; padding:7px 13px; border:1px solid var(--border); border-radius:20px; cursor:pointer; background:var(--bg-elevated); color:var(--ink-muted); flex:0 0 auto; max-width:100%; white-space:normal; overflow-wrap:anywhere;}
 .chip-opt.selected{background:var(--teal); border-color:var(--teal); color:var(--bg); font-weight:600;}
 .chip-select.chip-select-uf{gap:6px;}
@@ -1158,6 +1202,25 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <p style="margin:0;">Encontrou mais de um edital interessante? Clique em "Comparar" nos cards que te chamaram atenção e veja prazo, remuneração, índice de atratividade e requisitos lado a lado — sem precisar abrir cada um separadamente.</p>
     </div>
     <p style="margin-top:24px; text-align:center;"><a href="#" onclick="event.preventDefault(); nav('cadastro');" style="display:inline-flex; align-items:center; gap:6px; color:var(--ink-muted); font-size:12px; text-decoration:none; border:1px solid var(--border); border-radius:20px; padding:8px 16px;" onmouseover="this.style.borderColor='var(--teal)'; this.style.color='var(--teal)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--ink-muted)';">✨ Quero criar minha conta</a></p>
+  </div>
+  <div id="mp-wrap" style="max-width:1100px; margin:40px auto 0;">
+    <div class="page-head" style="padding-top:0;"><span class="eyebrow">Mapa de editais</span><h2>Onde estão as oportunidades</h2><p>Credenciamentos de saúde do Radar, por cidade. As bolhas crescem com o número de editais. Clique numa bolha ou numa barra de ano para filtrar.</p></div>
+    <div class="mp-filtros">
+      <label>Profissão<select id="mp-prof"></select></label>
+      <label>Estado<select id="mp-uf"></select></label>
+      <label>Formato<select id="mp-mod"></select></label>
+      <label>Situação<select id="mp-sit"><option value="a">Abertos agora</option><option value="t">Todos (inclui encerrados)</option></select></label>
+      <button type="button" class="mp-btn" onclick="mpLimpar()">Limpar filtros</button>
+    </div>
+    <div id="mp-chips" class="mp-chips"></div>
+    <div id="mp-kpis" class="mp-kpis"></div>
+    <div class="mp-main">
+      <div class="mp-card"><div class="mp-hd"><h3>Editais por cidade</h3><span id="mp-nota" class="mp-hint"></span></div><svg id="mp-svg" viewBox="0 0 600 610" role="img" aria-label="Mapa do Brasil com bolhas por cidade"></svg><p class="mp-hint">Contorno simplificado do país. Posições aproximadas.</p></div>
+      <div class="mp-card"><div class="mp-hd"><h3 id="mp-ltitulo">Editais</h3><span id="mp-lcont" class="mp-hint"></span></div><div id="mp-lista" class="mp-lista"></div></div>
+    </div>
+    <div class="mp-card" style="margin-top:16px;"><div class="mp-hd"><h3>Editais por ano de publicação</h3><span class="mp-hint">Clique para filtrar</span></div><div id="mp-bars" class="mp-bars"></div></div>
+    <p class="mp-hint" id="mp-rodape" style="margin-top:12px;"></p>
+    <div id="mp-tip" class="mp-tip"></div>
   </div>
 </section>
 
@@ -2846,6 +2909,7 @@ function nav(view){
   if(view === 'alertas') renderAlertas();
   if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); adminTab(adminTabAtual||'hoje'); carregarContagensHoje(); renderUsuariosAdmin(); renderFeedbacksAdmin(); renderSugestoesProfissaoAdmin(); renderSolicitacoesIndiceAdmin(); }
   if(view === 'minha-conta'){ renderMinhaConta(); atualizarStatusPedidoPlano(); carregarMinhaAssinatura(); carregarAvisoProEncerrado(); }
+  if(view === 'sobre') renderMapaEditais();
   if(view === 'perfil') renderPerfil();
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
   currentView = view;
@@ -8631,6 +8695,107 @@ function _prazoParaDate(txt){
 }
 // Mesma regra do robô do PNCP: "CONTRATAÇÃO DA EMPRESA FULANO LTDA, PARA PRESTAÇÃO DE..."
 // é contratação de fornecedor já escolhido, não edital aberto para credenciar.
+// ===== Mapa de editais (aba Como funciona) =====
+const MP_OUT=[[-51.5,4.4],[-50.9,2.4],[-50.2,1.6],[-50.5,0.4],[-50.0,-0.2],[-49.0,-0.8],[-47.4,-0.7],[-46.0,-1.0],[-44.8,-2.3],[-43.0,-2.4],[-41.4,-2.9],[-40.0,-2.85],[-38.5,-3.7],[-37.2,-4.6],[-35.4,-5.1],[-35.1,-6.4],[-34.8,-7.2],[-35.0,-8.4],[-35.6,-9.4],[-36.4,-10.5],[-37.1,-11.2],[-37.9,-12.4],[-38.5,-13.0],[-38.9,-14.5],[-39.1,-16.5],[-39.2,-17.9],[-39.7,-18.8],[-40.1,-20.0],[-40.9,-21.5],[-41.8,-22.8],[-43.0,-22.95],[-44.7,-23.4],[-46.3,-24.0],[-47.9,-25.0],[-48.6,-26.0],[-48.6,-27.7],[-48.8,-28.6],[-49.8,-29.4],[-50.5,-30.7],[-51.4,-31.7],[-52.3,-32.4],[-53.4,-33.7],[-53.4,-32.6],[-54.1,-32.0],[-55.5,-30.9],[-56.4,-30.2],[-57.6,-30.2],[-57.1,-29.7],[-56.1,-28.7],[-55.2,-27.8],[-54.2,-27.2],[-53.7,-26.2],[-54.45,-25.6],[-54.3,-24.1],[-55.0,-23.6],[-55.7,-22.3],[-57.0,-22.1],[-57.9,-21.7],[-57.7,-19.0],[-58.2,-17.8],[-58.4,-16.3],[-60.1,-16.3],[-60.3,-15.2],[-60.5,-13.9],[-61.6,-13.5],[-63.0,-12.6],[-64.5,-12.0],[-65.4,-10.4],[-68.8,-11.0],[-70.6,-11.0],[-70.6,-9.5],[-72.7,-9.5],[-74.0,-7.5],[-73.3,-7.3],[-72.3,-5.8],[-70.9,-4.4],[-70.0,-4.2],[-69.4,-1.0],[-70.0,-0.2],[-69.5,0.8],[-67.9,1.9],[-66.9,1.2],[-66.0,0.8],[-64.4,1.5],[-63.4,2.2],[-62.8,3.7],[-61.0,4.5],[-60.7,5.2],[-60.2,4.5],[-59.7,4.2],[-60.0,2.8],[-59.7,1.8],[-58.9,1.2],[-58.3,1.6],[-57.0,1.9],[-56.0,1.9],[-55.9,2.5],[-54.6,2.3],[-52.9,2.2],[-52.3,3.3]];
+let mpGeo = null, mpGeoPromessa = null;
+let mpS = {prof:'', uf:'', mod:'', sit:'a', ano:'', city:''};
+let mpMontado = false;
+function mpNorm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); }
+function mpCarregarGeo(){
+  if(mpGeo) return Promise.resolve(mpGeo);
+  if(!mpGeoPromessa) mpGeoPromessa = fetch('municipios.json').then(r=>r.json()).then(j=>{ mpGeo=j; return j; }).catch(()=>{ mpGeoPromessa=null; mpGeo={}; return mpGeo; });
+  return mpGeoPromessa;
+}
+function mpNum(o){
+  const m = String(o.valorMaximo||'').match(/R\$\s*([\d.]+,\d{2})/);
+  return m ? parseFloat(m[1].replace(/\./g,'').replace(',','.')) : 0;
+}
+function mpAno(o){ const m = String(o.publicacao||'').match(/(\d{4})\s*$/) || String(o.publicacao||'').match(/(\d{4})/); return m ? m[1] : ''; }
+function mpBase(){
+  return (typeof oportunidades!=='undefined' ? oportunidades : []).filter(o=>o.origemSupabase && visivelAoCliente(o) && !ehContratacaoDeFornecedor(o.objeto));
+}
+function mpAtivo(o){ return ['Aberto','Próximo do encerramento','Próximo da abertura'].includes(situacaoExibida(o)); }
+function mpOk(o, pular){
+  if(pular!=='sit' && mpS.sit==='a' && !mpAtivo(o)) return false;
+  if(pular!=='prof' && mpS.prof && !(o.profissoes||[]).includes(mpS.prof)) return false;
+  if(pular!=='uf' && mpS.uf && o.uf!==mpS.uf) return false;
+  if(pular!=='mod' && mpS.mod && o.modalidade!==mpS.mod) return false;
+  if(pular!=='ano' && mpS.ano && (mpAno(o)||'sem')!==mpS.ano) return false;
+  if(pular!=='city' && mpS.city && (mpNorm(o.cidade)+'|'+o.uf)!==mpS.city) return false;
+  return true;
+}
+function mpBRL(v){ if(!v) return '—'; if(v>=1e6) return 'R$ '+(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi'; if(v>=1e3) return 'R$ '+Math.round(v/1e3).toLocaleString('pt-BR')+' mil'; return 'R$ '+Math.round(v); }
+function mpPx(lon,lat){ return [(lon+74.2)*14.6,(5.6-lat)*15.2]; }
+function mpTip(e,html){ const t=document.getElementById('mp-tip'); t.innerHTML=html; t.style.opacity=1; let x=e.clientX+14; if(x+250>window.innerWidth) x=e.clientX-250; t.style.left=Math.max(8,x)+'px'; t.style.top=(e.clientY+14)+'px'; }
+function mpTipOff(){ document.getElementById('mp-tip').style.opacity=0; }
+function mpLimpar(){ mpS={prof:'',uf:'',mod:'',sit:'a',ano:'',city:''}; renderMapaEditais(); }
+function mpOpcoes(id, todos, itens){
+  const el=document.getElementById(id); const atual=el.value;
+  el.innerHTML='<option value="">'+todos+'</option>'+itens.map(([k,n])=>'<option value="'+esc(k)+'">'+esc(k)+' ('+n+')</option>').join('');
+  el.value=atual;
+}
+function mpContar(base, fn){ const m={}; base.forEach(o=>fn(o).forEach(k=>{ if(k) m[k]=(m[k]||0)+1; })); return Object.entries(m).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])); }
+async function renderMapaEditais(){
+  if(!document.getElementById('mp-svg')) return;
+  const geo = await mpCarregarGeo();
+  const base = mpBase();
+  if(!mpMontado){
+    mpMontado = true;
+    [['mp-prof','prof'],['mp-uf','uf'],['mp-mod','mod'],['mp-sit','sit']].forEach(([id,k])=>document.getElementById(id).addEventListener('change',e=>{ mpS[k]=e.target.value; if(k!=='ano') mpS.city=''; renderMapaEditais(); }));
+  }
+  const ativosBase = base.filter(o=>mpS.sit==='t' || mpAtivo(o));
+  mpOpcoes('mp-prof','Todas as profissões', mpContar(ativosBase,o=>o.profissoes||[]));
+  mpOpcoes('mp-uf','Todos os estados', mpContar(ativosBase,o=>[o.uf]));
+  mpOpcoes('mp-mod','Todos os formatos', mpContar(ativosBase,o=>[o.modalidade]));
+  document.getElementById('mp-prof').value=mpS.prof; document.getElementById('mp-uf').value=mpS.uf; document.getElementById('mp-mod').value=mpS.mod; document.getElementById('mp-sit').value=mpS.sit;
+  const rows = base.filter(o=>mpOk(o));
+  // chips
+  let chips='';
+  if(mpS.ano) chips+='<span class="mp-chip">Ano: '+(mpS.ano==='sem'?'sem data':esc(mpS.ano))+' <button type="button" data-x="ano" aria-label="Remover filtro de ano">×</button></span>';
+  if(mpS.city){ const r=rows[0]||base.find(o=>(mpNorm(o.cidade)+'|'+o.uf)===mpS.city); chips+='<span class="mp-chip">Cidade: '+esc(r?r.cidade+'/'+r.uf:mpS.city)+' <button type="button" data-x="city" aria-label="Remover filtro de cidade">×</button></span>'; }
+  const chipsEl=document.getElementById('mp-chips'); chipsEl.innerHTML=chips;
+  chipsEl.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ mpS[b.dataset.x]=''; renderMapaEditais(); }));
+  // KPIs
+  const cidades=new Set(), ufs=new Set(); let soma=0, comValor=0;
+  rows.forEach(o=>{ if(o.cidade) cidades.add(mpNorm(o.cidade)+'|'+o.uf); if(o.uf) ufs.add(o.uf); const v=mpNum(o); if(v){ soma+=v; comValor++; } });
+  document.getElementById('mp-kpis').innerHTML =
+    '<div class="mp-kpi"><div class="l">Editais</div><div class="v">'+rows.length+'</div><div class="n">de '+ativosBase.length+(mpS.sit==='a'?' abertos':' na base')+'</div></div>'+
+    '<div class="mp-kpi"><div class="l">Cidades</div><div class="v">'+cidades.size+'</div><div class="n">'+ufs.size+' estado'+(ufs.size===1?'':'s')+'</div></div>'+
+    '<div class="mp-kpi"><div class="l">Valor global declarado</div><div class="v">'+(soma?mpBRL(soma):'—')+'</div><div class="n">'+(soma?'soma do que o edital informa':'sem valor nos filtrados')+'</div></div>'+
+    '<div class="mp-kpi"><div class="l">Editais com valor</div><div class="v">'+comValor+'</div><div class="n">'+(rows.length?Math.round(comValor/rows.length*100):0)+'% dos filtrados</div></div>';
+  // mapa
+  const svg=document.getElementById('mp-svg'); let h='';
+  [0,-10,-20,-30].forEach(la=>{ const y=mpPx(-74,la)[1]; h+='<line class="gl" x1="0" x2="600" y1="'+y+'" y2="'+y+'"/><text class="gt" x="4" y="'+(y-4)+'">'+(la===0?'Equador':Math.abs(la)+'° S')+'</text>'; });
+  h+='<path class="land" d="M'+MP_OUT.map(p=>{ const q=mpPx(p[0],p[1]); return q[0].toFixed(1)+' '+q[1].toFixed(1); }).join('L')+'Z"/>';
+  const g={}; let semCidade=0, semCoord=0;
+  rows.forEach(o=>{ if(!o.cidade){ semCidade++; return; } const k=mpNorm(o.cidade)+'|'+o.uf; if(!geo[k]){ semCoord++; return; } (g[k]=g[k]||{k,c:o.cidade,u:o.uf,n:0,v:0}); g[k].n++; g[k].v+=mpNum(o); });
+  const arr=Object.values(g).sort((a,b)=>b.n-a.n);
+  arr.forEach((x,i)=>{ const q=mpPx(geo[x.k][1],geo[x.k][0]); x.r=3.5+3.2*Math.sqrt(x.n); h+='<circle class="bub'+(mpS.city===x.k?' sel':'')+'" data-i="'+i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+x.r.toFixed(1)+'"/>'; });
+  h+='<g class="leg"><text x="490" y="505">Editais na cidade</text>'+[[1,0],[2,28],[4,64]].map(([n,dx])=>'<circle cx="'+(502+dx)+'" cy="529" r="'+(3.5+3.2*Math.sqrt(n)).toFixed(1)+'"/><text x="'+(502+dx)+'" y="553" text-anchor="middle">'+n+'</text>').join('')+'</g>';
+  svg.innerHTML=h;
+  svg.querySelectorAll('.bub').forEach(el=>{ const x=arr[+el.dataset.i];
+    el.addEventListener('mousemove',e=>mpTip(e,'<b>'+esc(x.c)+'/'+esc(x.u)+'</b><br>'+x.n+(x.n>1?' editais':' edital')+(x.v?' · '+mpBRL(x.v):'')));
+    el.addEventListener('mouseleave',mpTipOff);
+    el.addEventListener('click',()=>{ mpS.city = mpS.city===x.k ? '' : x.k; mpTipOff(); renderMapaEditais(); });
+  });
+  document.getElementById('mp-nota').textContent = arr.length+' cidades'+(semCidade?' · '+semCidade+' sem cidade':'')+(semCoord?' · '+semCoord+' fora do mapa':'');
+  // lista
+  const ord = rows.slice().sort((a,b)=>mpNum(b)-mpNum(a)||b.id-a.id);
+  document.getElementById('mp-ltitulo').textContent = mpS.city ? 'Editais em '+(ord[0]?ord[0].cidade+'/'+ord[0].uf:'') : 'Editais filtrados';
+  document.getElementById('mp-lcont').textContent = rows.length+' resultado'+(rows.length===1?'':'s');
+  document.getElementById('mp-lista').innerHTML = ord.map(o=>{
+    const pf=(o.profissoes||[]); const pt = pf.length>3 ? pf.slice(0,3).join(', ')+' +'+(pf.length-3) : pf.join(', ');
+    return '<button type="button" class="mp-item" onclick="openDetalhe('+o.id+')"><div class="t"><span>'+esc(o.cidade?o.cidade+'/'+o.uf:'Sem cidade · '+(o.uf||'—'))+'</span><span>'+mpBRL(mpNum(o))+'</span></div><div class="o">'+esc(o.orgao||'')+'</div><div class="o">'+esc(pt||'Profissão não informada')+'</div><div class="mp-tags"><span class="mp-tag">'+esc(o.modalidade||'')+'</span><span class="mp-tag">'+esc(situacaoExibida(o))+'</span></div></button>';
+  }).join('') || '<div class="mp-hint" style="padding:12px 4px;">Nenhum edital com esses filtros. Use "Limpar filtros".</div>';
+  // barras por ano (ignora o filtro de ano)
+  const porAno={}; base.filter(o=>mpOk(o,'ano')).forEach(o=>{ const k=mpAno(o)||'sem'; porAno[k]=(porAno[k]||0)+1; });
+  const ks=Object.keys(porAno).filter(k=>k!=='sem').sort(); if(porAno.sem) ks.push('sem');
+  const max=Math.max(1,...ks.map(k=>porAno[k]));
+  document.getElementById('mp-bars').innerHTML = ks.map(k=>'<button type="button" class="mp-bar'+(mpS.ano&&mpS.ano!==k?' dim':'')+(mpS.ano===k?' on':'')+'" data-k="'+k+'" aria-label="'+(k==='sem'?'Sem data':k)+': '+porAno[k]+' editais"><span class="val">'+porAno[k]+'</span><span class="col" style="height:'+Math.max(Math.round(porAno[k]/max*130),3)+'px"></span><span class="xl">'+(k==='sem'?'Sem data':k)+'</span></button>').join('');
+  document.querySelectorAll('#mp-bars .mp-bar').forEach(b=>b.addEventListener('click',()=>{ mpS.ano = mpS.ano===b.dataset.k ? '' : b.dataset.k; mpS.city=''; renderMapaEditais(); }));
+  document.getElementById('mp-rodape').textContent = 'Dados em tempo real dos editais do Radar. O valor global é o total estimado informado no edital; muitos editais só trazem valor por atendimento e aparecem sem valor. O ano usa a data de publicação. Contratações de fornecedores ficam fora do mapa.';
+}
+
 function ehContratacaoDeFornecedor(objeto){
   const t = (objeto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   if(!/^(contratacao|inexigibilidade)\s+d[aeo]s?\s+/.test(t)) return false;
