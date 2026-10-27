@@ -543,8 +543,20 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .mp-rank:hover{background:var(--bg-card-hover);}
 .mp-rank b{font-family:var(--font-display);}
 .mp-painel{flex:1;}
-/* O mapa aparece só no computador */
-@media (max-width:1000px){#mp-wrap{display:none;}}
+/* Celular: título e 2 primeiros parágrafos, depois o mapa, depois o resto do texto */
+@media (max-width:1000px){
+  .sobre-grid{margin-top:16px; gap:18px;}
+  .sobre-texto{display:contents;}
+  .sobre-texto > p{margin:0;}
+  .sobre-texto > :nth-child(-n+3){order:1;}
+  #mp-wrap{order:2; padding:12px;}
+  .sobre-texto > :nth-child(n+4){order:3;}
+  .mp-zoom{right:6px; top:6px; gap:6px;}
+  .mp-zoom button{width:42px; height:42px; font-size:20px;}
+  .mp-rank{min-height:44px;}
+  .mp-item{padding:11px 12px;}
+  #mp-lista{max-height:none;}
+}
 .mp-card{background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:14px; min-width:0; display:flex; flex-direction:column; gap:10px;}
 .mp-card h3{margin:0; font-size:15px;}
 .mp-hd{display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;}
@@ -560,7 +572,9 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 #mp-svg .gl{stroke:var(--border-soft); stroke-dasharray:3 4;}
 #mp-svg .gt{fill:var(--ink-dim);}
 #mp-svg .bub{fill:var(--teal); fill-opacity:.5; stroke:var(--bg-card); cursor:pointer;}
-#mp-svg .bub:hover,#mp-svg .bub.sel{fill-opacity:.9;}
+#mp-svg .bub{pointer-events:none;}
+#mp-svg .hit{fill:transparent; cursor:pointer;}
+#mp-svg .bub:has(+ .hit:hover),#mp-svg .bub.sel{fill-opacity:.9;}
 #mp-svg .bub.sel{stroke:var(--ink);}
 #mp-svg .cid{fill:var(--ink); pointer-events:none; paint-order:stroke; stroke:var(--bg); stroke-linejoin:round;}
 .mp-zoom{position:absolute; right:8px; top:8px; display:flex; flex-direction:column; gap:4px;}
@@ -1198,7 +1212,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <section class="view" id="view-sobre">
   <div class="sobre-grid">
   <div class="sobre-texto" style="font-size:14.5px; line-height:1.75; color:var(--ink-muted);">
-    <div class="page-head"><span class="eyebrow">Sobre o Radar</span><h2>Do edital público à oportunidade certa para você</h2></div>
+    <div class="page-head"><span class="eyebrow">Sobre o Radar</span><h2>Veja no mapa onde estão as oportunidades</h2></div>
     <p style="color:var(--ink);">O edital é a matéria-prima. A Transformare agrega valor ao encontrar, filtrar, organizar, analisar e explicar — conectando cada oportunidade ao profissional certo.</p>
     <p>Monitoramos continuamente o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, reunindo oportunidades para profissionais da saúde — como Psicologia, Nutrição, Fonoaudiologia, Odontologia, Medicina, Enfermagem e outras áreas — e ampliando a cobertura a cada nova profissão.</p>
     <p>Quando avaliada, cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong> — uma nota de 1 a 5 que leva em conta retorno financeiro, facilidade de entrada, aderência aos serviços da Transformare e complexidade documental. É um indicador interno, atribuído manualmente por um analista da Transformare — não é uma informação oficial do órgão responsável, não representa classificação oficial e não substitui o julgamento previsto no edital. Nem todo edital publicado já foi avaliado; quando ainda não foi, isso fica informado na página do edital, com a opção de solicitar a avaliação.</p>
@@ -1210,7 +1224,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p class="sobre-cta-wrap"><a href="#" class="sobre-cta" onclick="event.preventDefault(); nav('cadastro');">✨ Quero criar minha conta</a></p>
   </div>
   <aside id="mp-wrap" class="mp-card">
-    <div class="mp-hd"><h3>Onde estão as oportunidades</h3><span id="mp-nota" class="mp-hint"></span></div>
+    <div class="mp-hd"><h3>Mapa de editais abertos</h3><span id="mp-nota" class="mp-hint"></span></div>
     <div id="mp-kpis" class="mp-kpis"></div>
     <div class="mp-mapa">
       <svg id="mp-svg" viewBox="0 0 600 610" role="img" aria-label="Mapa do Brasil com bolhas por cidade"></svg>
@@ -8723,18 +8737,19 @@ function mpEmArea(x){ const q=mpPx(mpGeo[x.k][1],mpGeo[x.k][0]); return q[0]>=mp
 function mpDesenhar(){
   const svg=document.getElementById('mp-svg'), k=mpV.w/600, geo=mpGeo;
   svg.setAttribute('viewBox', mpV.x+' '+mpV.y+' '+mpV.w+' '+mpV.h);
+  svg.style.touchAction = mpV.w>=600 ? 'pan-y' : 'none'; // sem zoom, o dedo rola a página; com zoom, arrasta o mapa
   let h='';
   [0,-10,-20,-30].forEach(la=>{ const y=mpPx(-74,la)[1]; h+='<line class="gl" x1="0" x2="600" y1="'+y+'" y2="'+y+'" style="stroke-width:'+k+'"/><text class="gt" x="'+(mpV.x+4)+'" y="'+(y-4*k)+'" style="font-size:'+(10*k)+'px">'+(la===0?'Equador':Math.abs(la)+'° S')+'</text>'; });
   h+='<path class="land" style="stroke-width:'+k+'" d="M'+MP_OUT.map(p=>{ const q=mpPx(p[0],p[1]); return q[0].toFixed(1)+' '+q[1].toFixed(1); }).join('L')+'Z"/>';
   const esc_r = Math.sqrt(k);
   mpDados.arr.forEach((x,i)=>{ const q=mpPx(geo[x.k][1],geo[x.k][0]); const r=(3.5+3.2*Math.sqrt(x.n))*esc_r;
-    h+='<circle class="bub'+(mpSel===x.k?' sel':'')+'" data-i="'+i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(2)+'" style="stroke-width:'+(2*k)+'"/>'; });
+    h+='<circle class="bub'+(mpSel===x.k?' sel':'')+'" data-i="'+i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(2)+'" style="stroke-width:'+(2*k)+'"/><circle class="hit" data-i="'+i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+Math.max(r, (window.matchMedia('(pointer:coarse)').matches?15:7)*k).toFixed(2)+'"/>'; });
   if(mpV.w<=300){
     mpDados.arr.filter(x=>mpEmArea(x)).forEach(x=>{ const q=mpPx(geo[x.k][1],geo[x.k][0]); const r=(3.5+3.2*Math.sqrt(x.n))*esc_r;
       h+='<text class="cid" x="'+(q[0]+r+2*k).toFixed(1)+'" y="'+(q[1]+3.5*k).toFixed(1)+'" style="font-size:'+(11*k)+'px; stroke-width:'+(3*k)+'">'+esc(x.c)+'</text>'; });
   }
   svg.innerHTML=h;
-  svg.querySelectorAll('.bub').forEach(el=>{ const x=mpDados.arr[+el.dataset.i];
+  svg.querySelectorAll('.hit').forEach(el=>{ const x=mpDados.arr[+el.dataset.i];
     el.addEventListener('mousemove',e=>mpTip(e,'<b>'+esc(x.c)+'/'+esc(x.u)+'</b><br>'+x.n+(x.n>1?' editais abertos':' edital aberto')));
     el.addEventListener('mouseleave',mpTipOff);
     el.addEventListener('click',()=>{ if(mpArrastou) return; mpSel = mpSel===x.k ? '' : x.k; mpTipOff(); mpDesenhar(); mpPainel(); });
@@ -8783,7 +8798,6 @@ let mpLigado=false;
 window.addEventListener('resize',()=>{ const v=document.getElementById('view-sobre'); if(v && v.classList.contains('active')) renderMapaEditais(); });
 async function renderMapaEditais(){
   if(!document.getElementById('mp-svg')) return;
-  if(window.matchMedia('(max-width:1000px)').matches) return; // só no computador
   const geo = await mpCarregarGeo();
   if(!mpLigado){ mpLigado=true; mpLigarMapa(); }
   const rows = mpBase().filter(o=>mpAtivo(o));
