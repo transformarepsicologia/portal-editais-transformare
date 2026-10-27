@@ -2359,7 +2359,7 @@ function canonProfissao(nome){
     'fisioterapeuta':'fisioterapia','nutricionista':'nutricao','fonoaudiologo':'fonoaudiologia','fonoaudiologa':'fonoaudiologia','enfermeiro':'enfermagem','enfermeira':'enfermagem',
     'farmaceutico':'farmacia','farmaceutica':'farmacia','biomedico':'biomedicina','biomedica':'biomedicina','assistente social':'assistencia social','terapeuta ocupacional':'terapia ocupacional',
     'psicopedagogo':'psicopedagogia','psicopedagoga':'psicopedagogia','musicoterapeuta':'musicoterapia','clinico geral':'clinica geral','clinica medica':'clinica geral','obstetra':'obstetricia',
-    'cirurgiao':'cirurgia geral','cirurgiao geral':'cirurgia geral','medico do trabalho':'medicina do trabalho',
+    'anestesiologista':'anestesista','anestesiologia':'anestesista','cirurgiao':'cirurgia geral','cirurgiao geral':'cirurgia geral','medico do trabalho':'medicina do trabalho',
     'ginecologista e obstetra':'gineco-obstetricia','ginecologia e obstetricia':'gineco-obstetricia','ortopedia e traumatologia':'ortopedia','traumatologista':'traumatologia','tecnico em enfermagem':'tecnico de enfermagem' };
   const cand = [FIXOS[n], n.replace(/ologista$/,'ologia'), n.replace(/iatra$/,'iatria'), n.replace(/ista$/,'ia'), n.replace(/^cirurgiao /,'cirurgia '), n.replace(/ologo$/,'ologia')].filter(Boolean);
   for(const v of cand){ r = acha(v); if(r) return r; }
@@ -5525,7 +5525,10 @@ async function addProfissaoAdmin(){
   const novas = [], repetidas = [];
   nomes.forEach(nome=>{
     if(profissoes.some(p=>p.nome.toLowerCase()===nome.toLowerCase()) || novas.some(n=>n.toLowerCase()===nome.toLowerCase())) repetidas.push(nome);
-    else if(canonProfissao(nome) !== nome){ repetidas.push(nome + ' (já existe como ' + canonProfissao(nome) + ')'); }   // sinônimo de uma profissão já cadastrada
+    else if(canonProfissao(nome) !== nome){   // parece sinônimo de uma profissão já cadastrada: pergunta antes de recusar
+      if(confirm('"' + nome + '" parece ser a mesma profissão que "' + canonProfissao(nome) + '", que já está na lista.\n\nCadastrar "' + nome + '" mesmo assim, como uma profissão separada?\n\nOK = cadastrar separada   ·   Cancelar = não cadastrar')) novas.push(nome);
+      else repetidas.push(nome + ' (já existe como ' + canonProfissao(nome) + ')');
+    }
     else novas.push(nome);
   });
   if(!novas.length){ toast(repetidas.length > 1 ? 'Essas profissões já estão cadastradas' : 'Essa profissão já está cadastrada'); return; }
