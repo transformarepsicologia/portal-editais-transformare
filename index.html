@@ -1894,6 +1894,23 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </div>
 </div>
 
+<div class="modal-overlay" id="orgao-modal" style="z-index:1300;">
+  <div class="modal-box" style="max-width:640px;">
+    <button class="modal-close" onclick="fecharPerguntarOrgao()">×</button>
+    <div class="section-title" style="font-size:17px;">✉ Perguntar ao órgão por e-mail</div>
+    <div class="panel" style="margin:0 0 12px;"><strong id="orgao-nome"></strong><div id="orgao-info" style="font-size:12.5px; color:var(--ink-muted); margin-top:4px;"></div></div>
+    <div class="form-row"><label>E-mail do órgão (se você já tiver)</label><input type="email" id="orgao-email" placeholder="licitacao@prefeitura.gov.br"></div>
+    <div class="form-row"><label>Assunto</label><input type="text" id="orgao-assunto"></div>
+    <div class="form-row"><label>Mensagem (você pode editar)</label><textarea id="orgao-corpo" rows="12" style="width:100%;"></textarea></div>
+    <p class="section-sub" style="margin-bottom:10px;">Ao abrir o e-mail, o edital sai da fila e fica na lista como “Aguardando resposta do órgão”. Lá você aprova ou rejeita quando o órgão responder.</p>
+    <div class="form-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn-primary" style="flex:1; min-width:220px;" onclick="enviarPerguntaOrgao()">Abrir no meu e-mail e marcar como aguardando</button>
+      <button class="btn-ghost" onclick="copiarPerguntaOrgao()">Copiar texto</button>
+      <button class="btn-ghost" onclick="fecharPerguntarOrgao()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="confirm-exclusao-modal" style="z-index:1300;">
   <div class="modal-box" style="max-width:520px;">
     <button class="modal-close" onclick="cancelarExclusao()">×</button>
@@ -9848,9 +9865,10 @@ async function renderCaixaEntrada(){
   }
 
   const nPendentes = data.filter(i=>i.status==='pendente').length;
-  const nAdiados = data.filter(i=>i.status==='mais_tarde').length;
+  const nAguardando = data.filter(aguardandoOrgao).length;
+  const nAdiados = data.filter(i=>i.status==='mais_tarde').length - nAguardando;
   const nPrioritarios = data.filter(ehPrioritarioPendente).length;
-  status.textContent = `${nPendentes} aguardando revisão${nPrioritarios ? ` · ⚡ ${nPrioritarios} de alta prioridade` : ''}${nAdiados ? ` · ${nAdiados} adiado(s) para depois` : ''}.`;
+  status.textContent = `${nPendentes} aguardando revisão${nPrioritarios ? ` · ⚡ ${nPrioritarios} de alta prioridade` : ''}${nAdiados ? ` · ${nAdiados} adiado(s) para depois` : ''}${nAguardando ? ` · ✉ ${nAguardando} aguardando resposta do órgão` : ''}.`;
   lista.innerHTML = '';
   _dataCaixaEntrada = data;
 
@@ -9862,9 +9880,10 @@ async function renderCaixaEntrada(){
   // Dentro de cada grupo de status (pendente / adiado), os de alta prioridade
   // sobem para o topo, pra chamar a atenção primeiro.
   const pendentesArr = data.filter(i=>i.status==='pendente');
-  const adiadosArr = data.filter(i=>i.status==='mais_tarde');
+  const adiadosArr = data.filter(i=>i.status==='mais_tarde' && !aguardandoOrgao(i));
+  const aguardandoArr = data.filter(aguardandoOrgao);
   const porPrioridade = arr => [...arr].sort((a,b)=>(ehPrioritarioPendente(b)?1:0)-(ehPrioritarioPendente(a)?1:0));
-  const dataOrdenada = [...porPrioridade(pendentesArr), ...porPrioridade(adiadosArr)];
+  const dataOrdenada = [...porPrioridade(pendentesArr), ...porPrioridade(adiadosArr), ...aguardandoArr];
 
   // Cruzamento com o catálogo: mesmo número do PNCP, ou mesmo órgão + início do objeto.
   const normK = t => String(t||'').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -9895,7 +9914,8 @@ async function renderCaixaEntrada(){
         ${prioritario ? '<span class="badge-prioridade" title="Índice 5 e abrangência Nacional — avaliar com prioridade">⚡ Avaliar com prioridade</span>' : ''}
         ${badgeIndiceSugeridoHTML(item)}
         ${par ? `<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="Já existe no catálogo: ${esc(par.orgao||'')} — ${esc(par.edital||'')}">⚠ Parecido com edital já cadastrado (id ${par.id})</span>` : ''}
-        ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
+        ${aguardandoOrgao(item) ? `<span class="badge" style="background:rgba(47,217,196,.16); color:var(--teal); margin-left:8px;" title="${esc(item.motivo_decisao||'')}">✉ Aguardando resposta do órgão</span>` : adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
+        ${prazoJaEncerrado(item) && !aguardandoOrgao(item) ? '<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="A data de encerramento já passou. Credenciamentos costumam seguir abertos: vale perguntar ao órgão.">Prazo já encerrado</span>' : ''}
         <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao ? formatarDataBR(item.data_publicacao) : '—'}${item.hora_publicacao ? ' às ' + esc(item.hora_publicacao) : ''}${item.abertura ? ` · Início das propostas: ${formatarDataBR(item.abertura)}` : ''}${item.data_encerramento_proposta ? ` · Prazo: ${formatarDataBR(item.data_encerramento_proposta)}` : ''} · Fonte: ${esc(item.fonte)}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
       </summary>
@@ -9906,6 +9926,7 @@ async function renderCaixaEntrada(){
         <div class="inbox-actions" style="margin-top:10px;">
           <button class="inbox-approve" onclick="abrirAprovarModal(${item.id}, 'credenciamento')">Aprovar e adicionar ao catálogo</button>
           ${!adiado ? `<button class="btn-ghost${fonteInstavel('pncp') ? ' destaque-adiar' : ''}" onclick="adiarCredenciamento(${item.id})">Avaliar mais tarde</button>` : ''}
+          <button class="btn-ghost" style="${prazoJaEncerrado(item) || aguardandoOrgao(item) ? 'border-color:var(--teal); color:var(--teal);' : ''}" onclick="abrirPerguntarOrgao('credenciamento', ${item.id})">${aguardandoOrgao(item) ? '✉ Perguntar de novo' : '✉ Perguntar ao órgão'}</button>
           <button class="inbox-reject" onclick="abrirRejeitarModal(${item.id}, 'credenciamento')">Rejeitar</button>
         </div>
       </div>
@@ -9938,6 +9959,75 @@ async function rejeitarCredenciamento(id, motivo, motivoTags){
   if(error){ alert('Erro ao rejeitar: ' + error.message); return; }
   toast('Credenciamento rejeitado');
   renderCaixaEntrada();
+}
+
+// ===== Triagem: perguntar ao órgão por e-mail =====
+// O item continua com status "mais_tarde" (nada muda no banco); a marca fica no campo motivo_decisao.
+const MARCA_ORGAO = 'Perguntado ao órgão por e-mail em ';
+const aguardandoOrgao = i => i.status === 'mais_tarde' && String(i.motivo_decisao||'').startsWith(MARCA_ORGAO);
+function prazoJaEncerrado(i){
+  const d = i.data_encerramento_proposta; if(!d) return false;
+  const t = new Date(); t.setHours(0,0,0,0);
+  return new Date(d + 'T00:00:00') < t;
+}
+let _orgaoAlvo = null;
+function textoPerguntaOrgao(tipo, i){
+  const dt = d => d ? formatarDataBR(d) : '';
+  const corte = (t,n) => { t = String(t||'').replace(/\s+/g,' ').trim(); return t.length>n ? t.slice(0,n).replace(/\s+\S*$/,'') + '…' : t; };
+  let assunto, ref;
+  if(tipo === 'diario'){
+    assunto = 'Consulta sobre credenciamento publicado no Diário Oficial – ' + (i.municipio||'') + (i.uf ? '/' + i.uf : '');
+    ref = 'uma publicação no Diário Oficial de ' + (i.municipio||'seu município') + (i.uf ? '/' + i.uf : '') + (i.edicao ? ', edição ' + i.edicao : '') + (i.data_publicacao ? ', de ' + dt(i.data_publicacao) : '') + ', sobre credenciamento de profissionais da saúde'
+      + (i.excerto ? ' ("' + corte(i.excerto, 220) + '")' : '') + (i.url_diario ? '.\nLink: ' + i.url_diario : '.');
+  } else {
+    assunto = 'Consulta sobre o credenciamento' + (i.numero_controle_pncp ? ' nº ' + i.numero_controle_pncp : '') + ' – ' + (i.orgao||'');
+    ref = 'o edital de credenciamento' + (i.numero_controle_pncp ? ' nº ' + i.numero_controle_pncp : '') + ' de ' + (i.orgao||'esse órgão')
+      + (i.data_publicacao ? ', publicado em ' + dt(i.data_publicacao) : '') + (i.objeto ? ', cujo objeto é: "' + corte(i.objeto, 220) + '"' : '')
+      + (i.data_encerramento_proposta ? '. O prazo informado vai até ' + dt(i.data_encerramento_proposta) : '') + (i.link_pncp ? '.\nLink: ' + i.link_pncp : '.');
+  }
+  const corpo = 'Prezados(as), bom dia.\n\nMeu nome é Douglas, da Transformare Psicologia e Projetos. Identificamos ' + ref + '\n\n'
+    + (tipo !== 'diario' && prazoJaEncerrado(i) ? 'Como o prazo divulgado já passou, gostaríamos' : 'Gostaríamos') + ' de confirmar com vocês:\n'
+    + '1) O credenciamento continua aberto para novas inscrições de profissionais da saúde?\n'
+    + '2) Houve prorrogação do prazo, retificação ou um novo edital?\n'
+    + '3) Onde e como devemos enviar a documentação, e há um contato responsável pelo processo?\n\n'
+    + 'Agradeço desde já a atenção e fico à disposição.\n\nAtenciosamente,\nDouglas\nTransformare Psicologia e Projetos';
+  return { assunto, corpo };
+}
+function abrirPerguntarOrgao(tipo, id){
+  const lista = tipo === 'diario' ? _dataDiarioOficial : _dataCaixaEntrada;
+  const item = lista.find(x=>x.id===id); if(!item) return;
+  _orgaoAlvo = { tipo, id };
+  const t = textoPerguntaOrgao(tipo, item);
+  document.getElementById('orgao-nome').textContent = tipo === 'diario' ? ((item.municipio||'') + (item.uf ? '/' + item.uf : '')) : (item.orgao || 'Órgão não identificado');
+  document.getElementById('orgao-info').textContent = tipo === 'diario' ? 'Diário Oficial' + (item.edicao ? ' · edição ' + item.edicao : '') : ((item.numero_controle_pncp||'') + (item.data_encerramento_proposta ? ' · prazo até ' + formatarDataBR(item.data_encerramento_proposta) : ''));
+  document.getElementById('orgao-email').value = '';
+  document.getElementById('orgao-assunto').value = t.assunto;
+  document.getElementById('orgao-corpo').value = t.corpo;
+  document.getElementById('orgao-modal').classList.add('open');
+}
+function fecharPerguntarOrgao(){ document.getElementById('orgao-modal').classList.remove('open'); _orgaoAlvo = null; }
+function copiarPerguntaOrgao(){
+  const txt = 'Assunto: ' + document.getElementById('orgao-assunto').value + '\n\n' + document.getElementById('orgao-corpo').value;
+  const ta = document.getElementById('orgao-corpo');
+  const ok = () => toast('Texto copiado');
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok).catch(()=>{ ta.select(); toast('Selecione e copie o texto'); }); }
+  else { ta.select(); toast('Selecione e copie o texto'); }
+}
+async function enviarPerguntaOrgao(){
+  if(!_orgaoAlvo || !_sb) return;
+  const { tipo, id } = _orgaoAlvo;
+  const email = document.getElementById('orgao-email').value.trim();
+  const assunto = document.getElementById('orgao-assunto').value.trim();
+  const corpo = document.getElementById('orgao-corpo').value;
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const tabela = tipo === 'diario' ? 'diario_oficial_pendentes' : 'credenciamentos_pendentes';
+  const { error } = await _sb.from(tabela).update({ status:'mais_tarde', motivo_decisao: MARCA_ORGAO + hoje + (email ? ' (' + email + ')' : '') }).eq('id', id);
+  if(error){ alert('Erro ao marcar como aguardando: ' + error.message); return; }
+  const url = 'mailto:' + encodeURIComponent(email).replace(/%40/g,'@') + '?subject=' + encodeURIComponent(assunto) + '&body=' + encodeURIComponent(corpo);
+  fecharPerguntarOrgao();
+  toast('Marcado como "aguardando resposta do órgão"');
+  tipo === 'diario' ? renderDiarioOficial() : renderCaixaEntrada();
+  window.location.href = url;
 }
 
 async function adiarCredenciamento(id){
@@ -9993,9 +10083,10 @@ async function renderDiarioOficial(){
   }
 
   const nPendentes = data.filter(i=>i.status==='pendente').length;
-  const nAdiados = data.filter(i=>i.status==='mais_tarde').length;
+  const nAguardando = data.filter(aguardandoOrgao).length;
+  const nAdiados = data.filter(i=>i.status==='mais_tarde').length - nAguardando;
   const nPrioritarios = data.filter(ehPrioritarioPendente).length;
-  status.textContent = `${nPendentes} achado(s) aguardando revisão${nPrioritarios ? ` · ⚡ ${nPrioritarios} de alta prioridade` : ''}${nAdiados ? ` · ${nAdiados} adiado(s) para depois` : ''}.`;
+  status.textContent = `${nPendentes} achado(s) aguardando revisão${nPrioritarios ? ` · ⚡ ${nPrioritarios} de alta prioridade` : ''}${nAdiados ? ` · ${nAdiados} adiado(s) para depois` : ''}${nAguardando ? ` · ✉ ${nAguardando} aguardando resposta do órgão` : ''}.`;
   lista.innerHTML = '';
   _dataDiarioOficial = data;
 
@@ -10005,9 +10096,10 @@ async function renderDiarioOficial(){
   }
 
   const pendentesArr = data.filter(i=>i.status==='pendente');
-  const adiadosArr = data.filter(i=>i.status==='mais_tarde');
+  const adiadosArr = data.filter(i=>i.status==='mais_tarde' && !aguardandoOrgao(i));
+  const aguardandoArr = data.filter(aguardandoOrgao);
   const porPrioridade = arr => [...arr].sort((a,b)=>(ehPrioritarioPendente(b)?1:0)-(ehPrioritarioPendente(a)?1:0));
-  const dataOrdenada = [...porPrioridade(pendentesArr), ...porPrioridade(adiadosArr)];
+  const dataOrdenada = [...porPrioridade(pendentesArr), ...porPrioridade(adiadosArr), ...aguardandoArr];
 
   const pgDo = paginarLista('do', dataOrdenada, 10, renderDiarioOficial);
   pgDo.fatia.forEach(item => {
@@ -10023,7 +10115,8 @@ async function renderDiarioOficial(){
         ${prioritario ? '<span class="badge-prioridade" title="Índice 5 e abrangência Nacional — avaliar com prioridade">⚡ Avaliar com prioridade</span>' : ''}
         ${badgeIndiceSugeridoHTML(item)}
         ${item.tipo === 'em_breve' ? '<span class="badge" title="PCA/ETP: o órgão planeja contratar, mas ainda não há edital aberto" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;">🔜 Em breve (planejamento)</span>' : ''}
-        ${adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
+        ${aguardandoOrgao(item) ? `<span class="badge" style="background:rgba(47,217,196,.16); color:var(--teal); margin-left:8px;" title="${esc(item.motivo_decisao||'')}">✉ Aguardando resposta do órgão</span>` : adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
+        ${prazoJaEncerrado(item) && !aguardandoOrgao(item) ? '<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="A data de encerramento já passou. Credenciamentos costumam seguir abertos: vale perguntar ao órgão.">Prazo já encerrado</span>' : ''}
         <div class="inbox-meta" style="margin-top:4px;">Publicado em ${item.data_publicacao || '—'}${item.edicao ? ' · Edição ' + esc(item.edicao) : ''} · Termo: ${esc(item.termo_busca || '')}</div>
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
       </summary>
@@ -10036,6 +10129,7 @@ async function renderDiarioOficial(){
         <div class="inbox-actions" style="margin-top:10px;">
           <button class="inbox-approve" onclick="abrirAprovarModal(${item.id}, 'diario')">Aprovar e adicionar ao catálogo</button>
           ${!adiado ? `<button class="btn-ghost${fonteInstavel('querido_diario') ? ' destaque-adiar' : ''}" onclick="adiarDiarioOficial(${item.id})">Avaliar mais tarde</button>` : ''}
+          <button class="btn-ghost" style="${aguardandoOrgao(item) ? 'border-color:var(--teal); color:var(--teal);' : ''}" onclick="abrirPerguntarOrgao('diario', ${item.id})">${aguardandoOrgao(item) ? '✉ Perguntar de novo' : '✉ Perguntar ao órgão'}</button>
           <button class="inbox-reject" onclick="abrirRejeitarModal(${item.id}, 'diario')">Rejeitar</button>
         </div>
       </div>
