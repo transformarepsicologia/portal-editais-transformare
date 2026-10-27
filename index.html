@@ -530,8 +530,12 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .form-actions{margin-top:20px; display:flex; gap:10px;}
 .two-col{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 .chip-select{display:flex; gap:7px; flex-wrap:wrap; width:100%; max-width:100%;}
+.sobre-cta-wrap{margin:28px 0 0; text-align:center;}
+.sobre-cta{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:12px 26px; border:1px solid var(--teal); border-radius:999px; color:var(--teal); font-size:14.5px; font-weight:600; line-height:1.2; text-decoration:none;}
+.sobre-cta:hover{background:rgba(47,217,196,0.12);}
+@media (max-width:640px){.sobre-cta{display:flex; width:100%; min-height:50px; font-size:15.5px;}}
 /* Mapa de editais (Como funciona) */
-.sobre-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:40px; align-items:stretch;}
+.sobre-grid{margin-top:32px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:40px; align-items:stretch;}
 @media (max-width:1000px){.sobre-grid{grid-template-columns:minmax(0,1fr);}}
 #mp-wrap{max-width:100%;}
 .sobre-texto .page-head{padding-top:0;}
@@ -880,7 +884,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <button data-view="editais">Editais</button>
       <button data-view="favoritos">Favoritos</button>
       <button data-view="alertas">Alertas</button>
-      <button data-view="sobre">Como funciona</button>
+      <button data-view="sobre">Sobre o Radar</button>
       <button data-view="minha-conta" id="nav-minha-conta"><span class="nav-minha">Minha </span>Conta</button>
       <button data-view="login" class="nav-cta" id="nav-cta-btn">Entrar</button>
     </nav>
@@ -1194,7 +1198,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <section class="view" id="view-sobre">
   <div class="sobre-grid">
   <div class="sobre-texto" style="font-size:14.5px; line-height:1.75; color:var(--ink-muted);">
-    <div class="page-head"><span class="eyebrow">Sobre a Transformare</span><h2>Uma plataforma de inteligência de oportunidades</h2></div>
+    <div class="page-head"><span class="eyebrow">Sobre o Radar</span><h2>Do edital público à oportunidade certa para você</h2></div>
     <p style="color:var(--ink);">O edital é a matéria-prima. A Transformare agrega valor ao encontrar, filtrar, organizar, analisar e explicar — conectando cada oportunidade ao profissional certo.</p>
     <p>Monitoramos continuamente o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, reunindo oportunidades para profissionais da saúde — como Psicologia, Nutrição, Fonoaudiologia, Odontologia, Medicina, Enfermagem e outras áreas — e ampliando a cobertura a cada nova profissão.</p>
     <p>Quando avaliada, cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong> — uma nota de 1 a 5 que leva em conta retorno financeiro, facilidade de entrada, aderência aos serviços da Transformare e complexidade documental. É um indicador interno, atribuído manualmente por um analista da Transformare — não é uma informação oficial do órgão responsável, não representa classificação oficial e não substitui o julgamento previsto no edital. Nem todo edital publicado já foi avaliado; quando ainda não foi, isso fica informado na página do edital, com a opção de solicitar a avaliação.</p>
@@ -1203,7 +1207,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <p style="color:var(--ink); margin:0 0 6px; font-weight:600;">⇄ Compare oportunidades lado a lado</p>
       <p style="margin:0;">Encontrou mais de um edital interessante? Clique em "Comparar" nos cards que te chamaram atenção e veja prazo, remuneração, índice de atratividade e requisitos lado a lado — sem precisar abrir cada um separadamente.</p>
     </div>
-    <p style="margin-top:24px; text-align:center;"><a href="#" onclick="event.preventDefault(); nav('cadastro');" style="display:inline-flex; align-items:center; gap:6px; color:var(--ink-muted); font-size:12px; text-decoration:none; border:1px solid var(--border); border-radius:20px; padding:8px 16px;" onmouseover="this.style.borderColor='var(--teal)'; this.style.color='var(--teal)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--ink-muted)';">✨ Quero criar minha conta</a></p>
+    <p class="sobre-cta-wrap"><a href="#" class="sobre-cta" onclick="event.preventDefault(); nav('cadastro');">✨ Quero criar minha conta</a></p>
   </div>
   <aside id="mp-wrap" class="mp-card">
     <div class="mp-hd"><h3>Onde estão as oportunidades</h3><span id="mp-nota" class="mp-hint"></span></div>
