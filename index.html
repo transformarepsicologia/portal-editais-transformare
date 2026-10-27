@@ -534,7 +534,8 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .sobre-grid{display:grid; grid-template-columns:minmax(0,640px) minmax(0,1fr); gap:32px; align-items:start;}
 @media (max-width:1000px){.sobre-grid{grid-template-columns:minmax(0,1fr);}}
 #mp-wrap{position:sticky; top:84px; max-width:100%;}
-@media (max-width:1000px){#mp-wrap{position:static;}}
+/* O mapa aparece só no computador */
+@media (max-width:1000px){#mp-wrap{display:none;}}
 .mp-card{background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:14px; min-width:0; display:flex; flex-direction:column; gap:10px;}
 .mp-card h3{margin:0; font-size:15px;}
 .mp-hd{display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;}
@@ -8763,8 +8764,10 @@ function mpLigarMapa(){
   svg.addEventListener('dblclick',e=>{ const r=svg.getBoundingClientRect(); mpZoom(0.5, mpV.x+(e.clientX-r.left)*mpV.w/r.width, mpV.y+(e.clientY-r.top)*mpV.h/r.height); mpDesenhar(); mpPainel(); });
 }
 let mpLigado=false;
+window.addEventListener('resize',()=>{ const v=document.getElementById('view-sobre'); if(v && v.classList.contains('active')) renderMapaEditais(); });
 async function renderMapaEditais(){
   if(!document.getElementById('mp-svg')) return;
+  if(window.matchMedia('(max-width:1000px)').matches) return; // só no computador
   const geo = await mpCarregarGeo();
   if(!mpLigado){ mpLigado=true; mpLigarMapa(); }
   const rows = mpBase().filter(o=>mpAtivo(o));
