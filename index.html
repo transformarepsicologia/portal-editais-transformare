@@ -1902,9 +1902,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="form-row"><label>E-mail do órgão (se você já tiver)</label><input type="email" id="orgao-email" placeholder="licitacao@prefeitura.gov.br"></div>
     <div class="form-row"><label>Assunto</label><input type="text" id="orgao-assunto"></div>
     <div class="form-row"><label>Mensagem (você pode editar)</label><textarea id="orgao-corpo" rows="12" style="width:100%;"></textarea></div>
-    <p class="section-sub" style="margin-bottom:10px;">Ao abrir o e-mail, o edital sai da fila e fica na lista como “Aguardando resposta do órgão”. Lá você aprova ou rejeita quando o órgão responder.</p>
+    <p class="section-sub" style="margin-bottom:10px;">O Gmail abre numa aba nova e o portal continua aberto aqui. Ao abrir o e-mail, o edital sai da fila e fica na lista como “Aguardando resposta do órgão”. Lá você aprova ou rejeita quando o órgão responder.</p>
     <div class="form-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
-      <button class="btn-primary" style="flex:1; min-width:220px;" onclick="enviarPerguntaOrgao()">Abrir no meu e-mail e marcar como aguardando</button>
+      <button class="btn-primary" style="flex:1; min-width:220px;" onclick="enviarPerguntaOrgao('gmail')">Abrir no Gmail e marcar como aguardando</button>
+      <button class="btn-ghost" onclick="enviarPerguntaOrgao('app')">Abrir no app de e-mail</button>
       <button class="btn-ghost" onclick="copiarPerguntaOrgao()">Copiar texto</button>
       <button class="btn-ghost" onclick="fecharPerguntarOrgao()">Cancelar</button>
     </div>
@@ -10013,8 +10014,10 @@ function copiarPerguntaOrgao(){
   if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok).catch(()=>{ ta.select(); toast('Selecione e copie o texto'); }); }
   else { ta.select(); toast('Selecione e copie o texto'); }
 }
-async function enviarPerguntaOrgao(){
+async function enviarPerguntaOrgao(modo){
   if(!_orgaoAlvo || !_sb) return;
+  // Abre a aba já no clique (antes de falar com o banco), senão o navegador bloqueia como pop-up.
+  const aba = modo === 'gmail' ? window.open('about:blank', '_blank') : null;
   const { tipo, id } = _orgaoAlvo;
   const email = document.getElementById('orgao-email').value.trim();
   const assunto = document.getElementById('orgao-assunto').value.trim();
@@ -10022,12 +10025,17 @@ async function enviarPerguntaOrgao(){
   const hoje = new Date().toLocaleDateString('pt-BR');
   const tabela = tipo === 'diario' ? 'diario_oficial_pendentes' : 'credenciamentos_pendentes';
   const { error } = await _sb.from(tabela).update({ status:'mais_tarde', motivo_decisao: MARCA_ORGAO + hoje + (email ? ' (' + email + ')' : '') }).eq('id', id);
-  if(error){ alert('Erro ao marcar como aguardando: ' + error.message); return; }
+  if(error){ if(aba) aba.close(); alert('Erro ao marcar como aguardando: ' + error.message); return; }
   const url = 'mailto:' + encodeURIComponent(email).replace(/%40/g,'@') + '?subject=' + encodeURIComponent(assunto) + '&body=' + encodeURIComponent(corpo);
   fecharPerguntarOrgao();
   toast('Marcado como "aguardando resposta do órgão"');
   tipo === 'diario' ? renderDiarioOficial() : renderCaixaEntrada();
-  window.location.href = url;
+  if(modo === 'gmail'){
+    const g = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(email) + '&su=' + encodeURIComponent(assunto) + '&body=' + encodeURIComponent(corpo);
+    if(aba) aba.location.href = g; else window.open(g, '_blank');
+  } else {
+    window.location.href = url;
+  }
 }
 
 async function adiarCredenciamento(id){
