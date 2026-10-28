@@ -1910,6 +1910,26 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </div>
 </div>
 
+<div class="modal-overlay" id="pca-email-modal" style="z-index:1300;">
+  <div class="modal-box" style="max-width:640px;">
+    <button class="modal-close" onclick="pcaFecharEmail()">×</button>
+    <div class="section-title" style="font-size:17px;">Pedir informações ao órgão</div>
+    <div class="panel" style="margin:0 0 12px;"><strong id="pca-em-orgao"></strong><div id="pca-em-desc" style="font-size:12.5px; color:var(--ink-muted); margin-top:4px;"></div></div>
+    <div class="form-row"><label>E-mail do órgão (procure no site do órgão ou no PNCP)</label><input type="email" id="pca-em-para" placeholder="ex.: licitacoes@municipio.rs.gov.br"></div>
+    <div class="form-row"><label>Assunto</label><input type="text" id="pca-em-assunto"></div>
+    <div class="form-row"><label>Mensagem (pode editar antes de enviar)</label><textarea id="pca-em-corpo" rows="16" style="width:100%;"></textarea></div>
+    <div class="form-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn-primary" onclick="pcaEmailAbrir('gmail')">Abrir no Gmail</button>
+      <button class="btn-ghost" onclick="pcaEmailAbrir('mailto')">Abrir no app de e-mail</button>
+      <button class="btn-ghost" onclick="pcaEmailCopiar()">Copiar texto</button>
+    </div>
+    <div class="form-actions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; padding-top:10px; border-top:1px solid var(--line, rgba(148,163,184,.2));">
+      <button class="btn-ghost" onclick="pcaEmailRegistrar()" title="Guarda o e-mail do órgão, marca o item como Aguardando órgão e passa a acompanhá-lo">✓ Já enviei — registrar</button>
+      <button class="btn-ghost" onclick="pcaFecharEmail()">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="pca-excluir-modal" style="z-index:1300;">
   <div class="modal-box" style="max-width:560px;">
     <button class="modal-close" onclick="pcaFecharExcluir()">×</button>
@@ -8800,6 +8820,7 @@ function pcaAcompHTML(i){
   } else {
     h += '<button class="btn-ghost" style="font-size:12px;" onclick="pcaAcompanhar('+i.id+', true)" title="O Diário Oficial passa a vigiar este item todo dia">＋ Acompanhar</button>';
   }
+  if(i.email_enviado_em) h += '<div style="font-size:11.5px; color:var(--teal); margin-top:4px;" title="'+esc(i.email_orgao||'')+'">✉ Pedido enviado em '+dBR(i.email_enviado_em)+'</div>';
   if(i.data_atualizacao) h += '<div style="font-size:11px; color:var(--ink-dim); margin-top:4px;" title="Última vez que o órgão mexeu no PCA">PCA atualizado em '+dBR(i.data_atualizacao)+'</div>';
   return h;
 }
@@ -8857,6 +8878,7 @@ function pcaRender(){
       +'<td>'+pcaAcompHTML(i)+'</td>'
       +'<td style="white-space:nowrap;">'+val+'</td>'
       +'<td style="white-space:nowrap;">'+(link?'<a href="'+link+'" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none; display:inline-block;">PNCP ↗</a> ':'')
+      +'<button class="btn-ghost" onclick="pcaEmail('+i.id+')" title="E-mail padronizado ao órgão perguntando sobre a abertura do edital">✉ Pedir info</button> '
       +'<button class="btn-ghost" onclick="pcaVisto('+i.id+')">'+(i.visto?'Desmarcar':'Marcar visto')+'</button> '
       +'<button class="btn-ghost" style="color:var(--coral);" onclick="pcaExcluir('+i.id+')" title="Tirar da lista: o objeto não interessa ao Radar">Excluir</button></td></tr>';
   }).join('');
@@ -8886,6 +8908,69 @@ async function pcaConfirmarExcluir(){
   const { error } = await _sb.from('pca_itens').update({ descartado: true, motivo_descarte: texto, descartado_em: new Date().toISOString() }).eq('id', id);
   if(error){ toast('Não foi possível excluir.'); return; }
   pcaDados = pcaDados.filter(x=>x.id!==id); pcaFecharExcluir(); pcaRender(); toast('Item excluído da lista.');
+}
+
+// ----- E-mail padronizado ao órgão (PCA) -----
+const PCA_ASSINATURA = 'Douglas\nConsultor — Transformare Psicologia e Projetos\ntransformarepsicologia1@gmail.com';
+let _pcaEmailId = null;
+function pcaEmailTexto(it){
+  const ano = it.ano_pca || '';
+  const data = it.data_desejada ? formatarDataBR(String(it.data_desejada).slice(0,10)) : 'não informada';
+  const desc = String(it.descricao||'').replace(/\s+/g,' ').trim().slice(0,200);
+  const assunto = 'Solicitação de informações — previsão de edital: '+desc.slice(0,70)+(desc.length>70?'…':'')+' (PCA '+ano+')';
+  const corpo =
+'Prezados(as),\n\nCordial saudação.\n\n'
++'Em consulta ao Plano de Contratações Anual (PCA '+ano+') de '+(it.orgao||'esse órgão')+(it.cnpj?' (CNPJ '+it.cnpj+')':'')+', publicado no Portal Nacional de Contratações Públicas (PNCP), identificamos a previsão de contratação do seguinte item:\n\n'
++'• Descrição: '+desc+'\n'
++(it.unidade?'• Unidade: '+it.unidade+'\n':'')
++'• Data desejada para a contratação: '+data+'\n\n'
++'Com o interesse de acompanhar a abertura desse processo, solicitamos, por gentileza, as seguintes informações:\n\n'
++'1. Há previsão de publicação de edital para essa contratação? Em caso positivo, qual a data estimada?\n'
++'2. Qual será a modalidade (credenciamento/chamamento público, pregão, dispensa ou outra)?\n'
++'3. Quais serão as formas de atendimento e de prestação do serviço (presencial, telemedicina, local, carga horária, plantões etc.)?\n'
++'4. Poderão participar pessoas físicas, pessoas jurídicas ou ambas?\n'
++'5. Há valores ou tabela de remuneração previstos?\n'
++'6. Em qual canal (site, portal ou e-mail) o edital será divulgado e onde podemos acompanhar o andamento?\n\n'
++'Agradecemos desde já a atenção e ficamos à disposição para qualquer esclarecimento.\n\nAtenciosamente,\n\n'+PCA_ASSINATURA;
+  return { assunto, corpo };
+}
+function pcaEmail(id){
+  const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
+  _pcaEmailId = id;
+  const t = pcaEmailTexto(it);
+  document.getElementById('pca-em-orgao').textContent = it.orgao || '';
+  document.getElementById('pca-em-desc').textContent = (it.descricao||'').slice(0,240);
+  document.getElementById('pca-em-para').value = it.email_orgao || '';
+  document.getElementById('pca-em-assunto').value = t.assunto;
+  document.getElementById('pca-em-corpo').value = t.corpo;
+  document.getElementById('pca-email-modal').classList.add('open');
+}
+function pcaFecharEmail(){ document.getElementById('pca-email-modal').classList.remove('open'); _pcaEmailId = null; }
+function pcaEmailAbrir(tipo){
+  const para = document.getElementById('pca-em-para').value.trim();
+  const su = document.getElementById('pca-em-assunto').value;
+  const body = document.getElementById('pca-em-corpo').value;
+  const url = tipo==='gmail'
+    ? 'https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(para)+'&su='+encodeURIComponent(su)+'&body='+encodeURIComponent(body)
+    : 'mailto:'+encodeURIComponent(para)+'?subject='+encodeURIComponent(su)+'&body='+encodeURIComponent(body);
+  if(tipo==='gmail') window.open(url, '_blank', 'noopener'); else window.location.href = url;
+  toast('Depois de enviar, volte aqui e clique em "Já enviei — registrar".');
+}
+async function pcaEmailCopiar(){
+  const txt = 'Assunto: '+document.getElementById('pca-em-assunto').value+'\n\n'+document.getElementById('pca-em-corpo').value;
+  try { await navigator.clipboard.writeText(txt); toast('Texto copiado.'); } catch(e){ toast('Não foi possível copiar; selecione o texto e copie.'); }
+}
+async function pcaEmailRegistrar(){
+  const it = (pcaDados||[]).find(x=>x.id===_pcaEmailId); if(!it) return;
+  const para = document.getElementById('pca-em-para').value.trim();
+  const agora = new Date().toISOString();
+  const upd = { email_orgao: para || null, email_enviado_em: agora, acompanhar: true,
+    status_acomp: (it.status_acomp==='novo'||it.status_acomp==='acompanhando'||!it.status_acomp) ? 'aguardando_orgao' : it.status_acomp,
+    acomp_nota: 'E-mail pedindo informações enviado em '+formatarDataBR(agora.slice(0,10))+(para?' para '+para:'') };
+  const { error } = await _sb.from('pca_itens').update(upd).eq('id', it.id);
+  if(error){ toast('Não foi possível registrar.'); return; }
+  Object.assign(it, upd); pcaFecharEmail(); pcaRender();
+  toast('Registrado: item aguardando resposta do órgão.');
 }
 async function pcaVisto(id){
   const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
