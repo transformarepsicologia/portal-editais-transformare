@@ -8736,7 +8736,7 @@ async function pcaCarregar(forcar){
   const hoje = new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
   const todos = [];
   for(let ini=0; ini<10000; ini+=1000){
-    const { data, error } = await _sb.from('pca_itens').select('*').gte('data_desejada', hoje).order('data_desejada').range(ini, ini+999);
+    const { data, error } = await _sb.from('pca_itens').select('*').eq('descartado', false).gte('data_desejada', hoje).order('data_desejada').range(ini, ini+999);
     if(error){ if(tb) tb.innerHTML = '<tr><td colspan="5" style="color:var(--coral);">Não foi possível carregar: '+esc(error.message)+'</td></tr>'; return; }
     todos.push(...(data||[]));
     if(!data || data.length < 1000) break;
