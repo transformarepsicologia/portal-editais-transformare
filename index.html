@@ -1735,7 +1735,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <label style="font-size:12.5px; display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pca-ocultar-vistos" onchange="pcaRender()"> Ocultar já vistos</label>
     </div>
     <div id="pca-contagem" style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;"></div>
-    <div style="overflow-x:auto;"><table class="admin-table" id="pca-tabela"><thead><tr><th>Data desejada</th><th>Órgão</th><th>Serviço previsto</th><th>Modalidade</th><th>Acompanhamento</th><th>Valor</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div id="pca-bloco" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;"></div>
+    <div style="overflow-x:auto;"><table class="admin-table" id="pca-tabela"><thead><tr><th style="width:28px;"><input type="checkbox" id="pca-sel-pagina" onchange="pcaSelPagina(this.checked)" title="Marcar todos desta página"></th><th>Data desejada</th><th>Órgão</th><th>Serviço previsto</th><th>Modalidade</th><th>Acompanhamento</th><th>Valor</th><th></th></tr></thead><tbody></tbody></table></div>
     <div id="pca-paginacao" style="display:flex; justify-content:center; align-items:center; gap:14px; margin-top:14px;"></div>
   </div>
 
@@ -8781,12 +8782,12 @@ const PCA_POR_PAG = 30;
 async function pcaCarregar(forcar){
   if(pcaDados && !forcar){ pcaRender(); return; }
   const tb = document.querySelector('#pca-tabela tbody');
-  if(tb) tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--ink-dim);">Carregando…</td></tr>';
+  if(tb) tb.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--ink-dim);">Carregando…</td></tr>';
   const hoje = new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
   const todos = [];
   for(let ini=0; ini<10000; ini+=1000){
     const { data, error } = await _sb.from('pca_itens').select('*').eq('descartado', false).gte('data_desejada', hoje).order('data_desejada').range(ini, ini+999);
-    if(error){ if(tb) tb.innerHTML = '<tr><td colspan="7" style="color:var(--coral);">Não foi possível carregar: '+esc(error.message)+'</td></tr>'; return; }
+    if(error){ if(tb) tb.innerHTML = '<tr><td colspan="8" style="color:var(--coral);">Não foi possível carregar: '+esc(error.message)+'</td></tr>'; return; }
     todos.push(...(data||[]));
     if(!data || data.length < 1000) break;
   }
@@ -8869,12 +8870,13 @@ function pcaRender(){
   if(pcaPag>pags) pcaPag = pags;
   const ct = document.getElementById('pca-contagem');
   if(ct) ct.textContent = total+' item(ns) de serviço previsto(s)'+((pcaDados||[]).length!==total ? ' (de '+(pcaDados||[]).length+' no total)' : '')+'.';
-  if(!total){ tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--ink-dim);">Nenhum item encontrado. Rode a varredura do PCA para atualizar.</td></tr>'; document.getElementById('pca-paginacao').innerHTML=''; return; }
+  if(!total){ pcaBlocoRender(); tb.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--ink-dim);">Nenhum item encontrado. Rode a varredura do PCA para atualizar.</td></tr>'; document.getElementById('pca-paginacao').innerHTML=''; return; }
   tb.innerHTML = l.slice((pcaPag-1)*PCA_POR_PAG, pcaPag*PCA_POR_PAG).map(i=>{
     const cnpj = String(i.cnpj||'').replace(/\D/g,'');
     const link = pcaLinkPncp(i);
     const val = i.valor_total>0 ? 'R$ '+Number(i.valor_total).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
     return '<tr'+(i.visto?' style="opacity:.55"':'')+'>'
+      +'<td><input type="checkbox" '+(pcaSel.has(i.id)?'checked ':'')+'onchange="pcaSelToggle('+i.id+', this.checked)"></td>'
       +'<td style="white-space:nowrap;"><strong>'+esc(formatarDataBR(i.data_desejada))+'</strong></td>'
       +'<td>'+esc(i.orgao||'')+'<div style="font-size:11.5px; color:var(--ink-dim);">'+esc(i.unidade||'')+' · CNPJ '+esc(i.cnpj||'')+'</div></td>'
       +'<td>'+esc(i.descricao||'')+'<div style="font-size:11.5px; color:var(--ink-dim);">'+esc(i.nome_classe||'')+(i.termo?' · '+esc(i.termo):'')+'</div></td>'
@@ -8882,18 +8884,50 @@ function pcaRender(){
       +'<td>'+pcaAcompHTML(i)+'</td>'
       +'<td style="white-space:nowrap;">'+val+'</td>'
       +'<td><div style="display:flex; flex-wrap:wrap; gap:6px; min-width:150px; max-width:260px;">'+(link?'<a href="'+link+'" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none; display:inline-block;">PNCP ↗</a> ':'')
+      +'<button class="btn-ghost" onclick="pcaGoogleAberto('+i.id+')" title="Pesquisa no Google se o órgão já abriu o credenciamento/edital deste item">🔎 Já abriu?</button> '
       +'<button class="btn-ghost" onclick="pcaEmail('+i.id+')" title="E-mail padronizado ao órgão perguntando sobre a abertura do edital">✉ Pedir info</button> '
       +'<button class="btn-ghost" onclick="pcaVisto('+i.id+')">'+(i.visto?'Desmarcar':'Marcar visto')+'</button> '
       +'<button class="btn-ghost" style="color:var(--coral);" onclick="pcaExcluir('+i.id+')" title="Tirar da lista: o objeto não interessa ao Radar">Excluir</button></div></td></tr>';
   }).join('');
+  pcaBlocoRender();
   document.getElementById('pca-paginacao').innerHTML = pags>1
     ? '<button class="btn-ghost" '+(pcaPag<=1?'disabled':'')+' onclick="pcaPagina(-1)">← Anterior</button><span style="font-size:12.5px;">Página '+pcaPag+' de '+pags+'</span><button class="btn-ghost" '+(pcaPag>=pags?'disabled':'')+' onclick="pcaPagina(1)">Próxima →</button>' : '';
 }
 function pcaPagina(d){ pcaPag += d; pcaRender(); window.scrollTo({top:0, behavior:'smooth'}); }
-let _pcaExcluirId = null;
+const pcaSel = new Set();
+function pcaSelAtivos(){ return pcaFiltrados().filter(i=>pcaSel.has(i.id)); }
+function pcaSelToggle(id, on){ if(on) pcaSel.add(id); else pcaSel.delete(id); pcaBlocoRender(); }
+function pcaSelPagina(on){
+  const l = pcaFiltrados().slice((pcaPag-1)*PCA_POR_PAG, pcaPag*PCA_POR_PAG);
+  l.forEach(i=>{ if(on) pcaSel.add(i.id); else pcaSel.delete(i.id); });
+  pcaRender();
+}
+function pcaSelTodosFiltrados(){ pcaFiltrados().forEach(i=>pcaSel.add(i.id)); pcaRender(); }
+function pcaSelLimpar(){ pcaSel.clear(); pcaRender(); }
+function pcaBlocoRender(){
+  const box = document.getElementById('pca-bloco'); if(!box) return;
+  const total = pcaFiltrados().length, n = pcaSelAtivos().length;
+  box.innerHTML = '<button class="btn-ghost" style="font-size:12px;" onclick="pcaSelTodosFiltrados()">Selecionar todos os '+total+' da lista filtrada</button>'
+    + (n ? '<span style="font-size:12.5px;"><strong>'+n+'</strong> selecionado(s)</span>'
+         + '<button class="btn-ghost" style="font-size:12px; color:var(--coral);" onclick="pcaExcluirBloco()">🗑 Excluir selecionados ('+n+')</button>'
+         + '<button class="btn-ghost" style="font-size:12px;" onclick="pcaSelLimpar()">Limpar seleção</button>' : '');
+  const cp = document.getElementById('pca-sel-pagina');
+  if(cp){ const pg = pcaFiltrados().slice((pcaPag-1)*PCA_POR_PAG, pcaPag*PCA_POR_PAG); cp.checked = pg.length>0 && pg.every(i=>pcaSel.has(i.id)); }
+}
+let _pcaExcluirIds = [];
+function pcaExcluirBloco(){
+  const l = pcaSelAtivos(); if(!l.length) return;
+  _pcaExcluirIds = l.map(i=>i.id);
+  document.getElementById('pca-ex-orgao').textContent = l.length+' itens selecionados';
+  document.getElementById('pca-ex-desc').textContent = l.slice(0,4).map(i=>(i.orgao||'')+': '+String(i.descricao||'').slice(0,50)).join(' · ')+(l.length>4?' · …':'');
+  document.getElementById('pca-ex-motivo').selectedIndex = 0;
+  document.getElementById('pca-ex-termo').value = '';
+  document.getElementById('pca-ex-obs').value = '';
+  document.getElementById('pca-excluir-modal').classList.add('open');
+}
 function pcaExcluir(id){
   const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
-  _pcaExcluirId = id;
+  _pcaExcluirIds = [id];
   document.getElementById('pca-ex-orgao').textContent = it.orgao || '';
   document.getElementById('pca-ex-desc').textContent = (it.descricao||'').slice(0,240);
   document.getElementById('pca-ex-motivo').selectedIndex = 0;
@@ -8902,16 +8936,21 @@ function pcaExcluir(id){
   document.getElementById('pca-excluir-modal').classList.add('open');
 }
 function pcaMotivoMudou(){}
-function pcaFecharExcluir(){ document.getElementById('pca-excluir-modal').classList.remove('open'); _pcaExcluirId = null; }
+function pcaFecharExcluir(){ document.getElementById('pca-excluir-modal').classList.remove('open'); _pcaExcluirIds = []; }
 async function pcaConfirmarExcluir(){
-  const id = _pcaExcluirId; const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
+  const ids = _pcaExcluirIds.slice(); if(!ids.length) return;
   const motivo = document.getElementById('pca-ex-motivo').value;
   const termo = document.getElementById('pca-ex-termo').value.trim();
   const obs = document.getElementById('pca-ex-obs').value.trim();
   const texto = motivo + (termo ? ' | termo: '+termo : '') + (obs ? ' | '+obs : '');
-  const { error } = await _sb.from('pca_itens').update({ descartado: true, motivo_descarte: texto, descartado_em: new Date().toISOString() }).eq('id', id);
-  if(error){ toast('Não foi possível excluir.'); return; }
-  pcaDados = pcaDados.filter(x=>x.id!==id); pcaFecharExcluir(); pcaRender(); toast('Item excluído da lista.');
+  const agora = new Date().toISOString();
+  for(let k=0; k<ids.length; k+=200){
+    const { error } = await _sb.from('pca_itens').update({ descartado: true, motivo_descarte: texto, descartado_em: agora }).in('id', ids.slice(k,k+200));
+    if(error){ toast('Não foi possível excluir tudo. Tente de novo.'); return; }
+  }
+  const set = new Set(ids);
+  pcaDados = pcaDados.filter(x=>!set.has(x.id)); ids.forEach(x=>pcaSel.delete(x));
+  pcaFecharExcluir(); pcaRender(); toast(ids.length>1 ? ids.length+' itens excluídos da lista.' : 'Item excluído da lista.');
 }
 
 // ----- E-mail padronizado ao órgão (PCA) -----
@@ -8954,6 +8993,13 @@ function pcaEmail(id){
   document.getElementById('pca-em-assunto').value = t.assunto;
   document.getElementById('pca-em-corpo').value = t.corpo;
   document.getElementById('pca-email-modal').classList.add('open');
+}
+function pcaGoogleAberto(id){
+  const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
+  const desc = String(it.descricao||'').replace(/\s+/g,' ').trim().split(/\s+/).slice(0,8).join(' ');
+  const ano = it.ano_pca || new Date().getFullYear();
+  const q = '"'+(it.orgao||'')+'" (credenciamento OR chamamento OR edital) '+desc+' '+ano;
+  window.open('https://www.google.com/search?q='+encodeURIComponent(q), '_blank', 'noopener');
 }
 function pcaEmailGoogle(palavra){
   const it = (pcaDados||[]).find(x=>x.id===_pcaEmailId); if(!it) return;
