@@ -1482,13 +1482,13 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div style="margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; cursor:pointer; user-select:none;" onclick="toggleSecaoAdmin('diario-oficial-body','diario-oficial-arrow')">
       <div class="section-title" style="font-size:17px; margin:0; display:flex; align-items:center; gap:8px;">
-        <span>📋 Diário Oficial — achados (fonte separada do PNCP)</span>
+        <span>📋 Diário Oficial — itens do PCA que você acompanha</span>
         <span id="diario-oficial-arrow" style="transition:transform .2s; display:inline-block; transform:rotate(180deg);">▾</span>
       </div>
-      <button class="btn-ghost" onclick="event.stopPropagation(); buscarDiarioOficialAgora()">🔄 Buscar agora</button>
+      <button class="btn-ghost" onclick="event.stopPropagation(); buscarDiarioOficialAgora()" title="Checa agora só os itens do PCA marcados com + Acompanhar">🔄 Checar acompanhados</button>
     </div>
     <div id="diario-oficial-body">
-      <p class="section-sub" style="margin-bottom:10px;">Credenciamentos publicados no Diário Oficial de prefeituras, via Querido Diário (Open Knowledge Brasil) — cobre casos que às vezes não são replicados no PNCP. Fonte nacional, com busca automática diária. Aprove para que entrem no catálogo de editais.</p>
+      <p class="section-sub" style="margin-bottom:10px;">O Diário Oficial vigia <strong>só os itens do PCA que você marcou com “+ Acompanhar”</strong> (aba PCA), no diário do município de cada item, via Querido Diário. A checagem é automática todo dia de manhã, e o botão ao lado faz uma checagem na hora. A busca geral por profissões está desligada. Aprove para que entrem no catálogo de editais.</p>
       <div id="status-fontes-aviso-diario"></div>
       <div id="diario-oficial-status" style="font-size:12px; color:var(--ink-dim); margin-bottom:12px;"></div>
       <div id="diario-oficial-lista"></div>
@@ -10732,20 +10732,22 @@ async function buscarDiarioOficialAgora(){
     if(status) status.textContent = 'Configure o Supabase para usar a busca automática.';
     return;
   }
-  status.textContent = 'Buscando novidades no Diário Oficial (pode levar até 1 minuto)...';
+  if(status) status.textContent = 'Checando os itens do PCA que você acompanha no Diário Oficial (pode levar até 1 minuto)...';
   try{
-    const resp = await fetch(SUPABASE_URL + '/functions/v1/buscar-diario-oficial', {
-      headers: { Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+    const { data: sess } = await _sb.auth.getSession();
+    const token = sess && sess.session ? sess.session.access_token : null;
+    if(!token){ toast('Entre como administrador para checar.'); return; }
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/vigiar-pca-diario', {
+      headers: { Authorization: 'Bearer ' + token, apikey: SUPABASE_ANON_KEY },
     });
-    const resultado = await resp.json();
-    if(resultado.erros && resultado.erros.length){
-      toast(`Busca concluída com avisos: ${resultado.novosPendentes || 0} novo(s) item(ns), ${resultado.erros.length} erro(s)`);
-    } else {
-      toast(`Busca concluída: ${resultado.novosPendentes || 0} novo(s) item(ns)`);
-    }
+    const r = await resp.json();
+    if(!resp.ok){ toast('Não foi possível checar: ' + (r.erro || resp.status)); }
+    else if(!r.acompanhados){ toast('Nenhum item acompanhado. Marque “+ Acompanhar” na aba PCA.'); }
+    else { toast(`Checagem concluída: ${r.acompanhados} item(ns) acompanhado(s), ${r.inseridos_no_diario || 0} achado(s) novo(s) no Diário, ${r.editais_encontrados || 0} edital(is) já no Radar.`); }
   }catch(e){
-    toast('Erro ao buscar: ' + e.message);
+    toast('Erro ao checar: ' + e.message);
   }
+  if(status) status.textContent = '';
   renderDiarioOficial();
 }
 
