@@ -1734,7 +1734,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <label style="font-size:12.5px; display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pca-ocultar-vistos" onchange="pcaRender()"> Ocultar já vistos</label>
     </div>
     <div id="pca-contagem" style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;"></div>
-    <div style="overflow-x:auto;"><table class="admin-table" id="pca-tabela"><thead><tr><th>Data desejada</th><th>Órgão</th><th>Serviço previsto</th><th>Valor</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div style="overflow-x:auto;"><table class="admin-table" id="pca-tabela"><thead><tr><th>Data desejada</th><th>Órgão</th><th>Serviço previsto</th><th>Modalidade</th><th>Valor</th><th></th></tr></thead><tbody></tbody></table></div>
     <div id="pca-paginacao" style="display:flex; justify-content:center; align-items:center; gap:14px; margin-top:14px;"></div>
   </div>
 
@@ -1905,6 +1905,30 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="form-actions" style="display:flex; gap:8px;">
       <button class="btn-primary" id="problema-btn" style="flex:1; opacity:.5;" disabled onclick="confirmarProblema()">OK — sinalizar problema</button>
       <button class="btn-ghost" onclick="fecharProblemaModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pca-excluir-modal" style="z-index:1300;">
+  <div class="modal-box" style="max-width:560px;">
+    <button class="modal-close" onclick="pcaFecharExcluir()">×</button>
+    <div class="section-title" style="font-size:17px;">Excluir item do PCA</div>
+    <div class="panel" style="margin:0 0 12px;"><strong id="pca-ex-orgao"></strong><div id="pca-ex-desc" style="font-size:12.5px; color:var(--ink-muted); margin-top:4px;"></div></div>
+    <div class="form-row"><label>Por que sai da lista? (ajuda a refinar a coleta)</label>
+      <select id="pca-ex-motivo" onchange="pcaMotivoMudou()">
+        <option value="Não é serviço de profissional de saúde">Não é serviço de profissional de saúde (ex.: material, limpeza, obra)</option>
+        <option value="Objeto fora do interesse do Radar">Objeto fora do interesse do Radar</option>
+        <option value="Profissão ou área que não atendemos">Profissão ou área que não atendemos</option>
+        <option value="Órgão fora do foco">Órgão fora do foco</option>
+        <option value="Duplicado ou já conhecido">Duplicado ou já conhecido</option>
+        <option value="Outro">Outro (explicar abaixo)</option>
+      </select></div>
+    <div class="form-row"><label>Palavra ou trecho que enganou a coleta (opcional)</label><input type="text" id="pca-ex-termo" placeholder="ex.: medicinal, consulta, saúde ocupacional"></div>
+    <div class="form-row"><label>Observação (opcional)</label><textarea id="pca-ex-obs" rows="2" style="width:100%;"></textarea></div>
+    <p class="section-sub" style="margin-bottom:10px;">O item some da lista e não volta nas próximas coletas. Os motivos ficam guardados para eu ajustar os termos de busca.</p>
+    <div class="form-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn-primary" onclick="pcaConfirmarExcluir()">Excluir</button>
+      <button class="btn-ghost" onclick="pcaFecharExcluir()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -8732,12 +8756,12 @@ const PCA_POR_PAG = 30;
 async function pcaCarregar(forcar){
   if(pcaDados && !forcar){ pcaRender(); return; }
   const tb = document.querySelector('#pca-tabela tbody');
-  if(tb) tb.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--ink-dim);">Carregando…</td></tr>';
+  if(tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--ink-dim);">Carregando…</td></tr>';
   const hoje = new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
   const todos = [];
   for(let ini=0; ini<10000; ini+=1000){
     const { data, error } = await _sb.from('pca_itens').select('*').eq('descartado', false).gte('data_desejada', hoje).order('data_desejada').range(ini, ini+999);
-    if(error){ if(tb) tb.innerHTML = '<tr><td colspan="5" style="color:var(--coral);">Não foi possível carregar: '+esc(error.message)+'</td></tr>'; return; }
+    if(error){ if(tb) tb.innerHTML = '<tr><td colspan="6" style="color:var(--coral);">Não foi possível carregar: '+esc(error.message)+'</td></tr>'; return; }
     todos.push(...(data||[]));
     if(!data || data.length < 1000) break;
   }
@@ -8748,6 +8772,17 @@ async function pcaCarregar(forcar){
     sel.innerHTML = '<option value="">Todos os tipos</option>' + termos.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('');
   }
   pcaPag = 1; pcaRender();
+}
+// O PCA não informa a modalidade (ela só é definida quando o edital é publicado):
+// aqui ela é inferida do texto da descrição, quando o órgão a menciona.
+function pcaModalidade(i){
+  const t = pcaNorm((i.descricao||'')+' '+(i.nome_classe||''));
+  if(/credenciament/.test(t)) return 'Credenciamento';
+  if(/chamamento/.test(t)) return 'Chamamento público';
+  if(/pregao/.test(t)) return 'Pregão';
+  if(/dispensa/.test(t)) return 'Dispensa';
+  if(/inexigibilidade/.test(t)) return 'Inexigibilidade';
+  return '';
 }
 function pcaNorm(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 function pcaFiltrados(){
@@ -8772,7 +8807,7 @@ function pcaRender(){
   if(pcaPag>pags) pcaPag = pags;
   const ct = document.getElementById('pca-contagem');
   if(ct) ct.textContent = total+' item(ns) de serviço previsto(s)'+((pcaDados||[]).length!==total ? ' (de '+(pcaDados||[]).length+' no total)' : '')+'.';
-  if(!total){ tb.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--ink-dim);">Nenhum item encontrado. Rode a varredura do PCA para atualizar.</td></tr>'; document.getElementById('pca-paginacao').innerHTML=''; return; }
+  if(!total){ tb.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--ink-dim);">Nenhum item encontrado. Rode a varredura do PCA para atualizar.</td></tr>'; document.getElementById('pca-paginacao').innerHTML=''; return; }
   tb.innerHTML = l.slice((pcaPag-1)*PCA_POR_PAG, pcaPag*PCA_POR_PAG).map(i=>{
     const cnpj = String(i.cnpj||'').replace(/\D/g,'');
     const link = cnpj && i.id_pca ? 'https://pncp.gov.br/app/pca/'+encodeURIComponent(cnpj)+'/'+encodeURIComponent(String(i.ano_pca||''))+'/'+encodeURIComponent(String((i.id_pca||'').split('-').pop().split('/')[0]).replace(/^0+/,'')) : '';
@@ -8781,14 +8816,39 @@ function pcaRender(){
       +'<td style="white-space:nowrap;"><strong>'+esc(formatarDataBR(i.data_desejada))+'</strong></td>'
       +'<td>'+esc(i.orgao||'')+'<div style="font-size:11.5px; color:var(--ink-dim);">'+esc(i.unidade||'')+' · CNPJ '+esc(i.cnpj||'')+'</div></td>'
       +'<td>'+esc(i.descricao||'')+'<div style="font-size:11.5px; color:var(--ink-dim);">'+esc(i.nome_classe||'')+(i.termo?' · '+esc(i.termo):'')+'</div></td>'
+      +'<td style="white-space:nowrap;">'+(pcaModalidade(i) ? '<span class="admin-tab-badge neutral" style="position:static;">'+esc(pcaModalidade(i))+'</span>' : '<span style="font-size:11.5px; color:var(--ink-dim);" title="O PCA não informa a modalidade; ela só é definida quando o edital é publicado.">não informada</span>')+'</td>'
       +'<td style="white-space:nowrap;">'+val+'</td>'
       +'<td style="white-space:nowrap;">'+(link?'<a href="'+link+'" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none; display:inline-block;">PNCP ↗</a> ':'')
-      +'<button class="btn-ghost" onclick="pcaVisto('+i.id+')">'+(i.visto?'Desmarcar':'Marcar visto')+'</button></td></tr>';
+      +'<button class="btn-ghost" onclick="pcaVisto('+i.id+')">'+(i.visto?'Desmarcar':'Marcar visto')+'</button> '
+      +'<button class="btn-ghost" style="color:var(--coral);" onclick="pcaExcluir('+i.id+')" title="Tirar da lista: o objeto não interessa ao Radar">Excluir</button></td></tr>';
   }).join('');
   document.getElementById('pca-paginacao').innerHTML = pags>1
     ? '<button class="btn-ghost" '+(pcaPag<=1?'disabled':'')+' onclick="pcaPagina(-1)">← Anterior</button><span style="font-size:12.5px;">Página '+pcaPag+' de '+pags+'</span><button class="btn-ghost" '+(pcaPag>=pags?'disabled':'')+' onclick="pcaPagina(1)">Próxima →</button>' : '';
 }
 function pcaPagina(d){ pcaPag += d; pcaRender(); window.scrollTo({top:0, behavior:'smooth'}); }
+let _pcaExcluirId = null;
+function pcaExcluir(id){
+  const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
+  _pcaExcluirId = id;
+  document.getElementById('pca-ex-orgao').textContent = it.orgao || '';
+  document.getElementById('pca-ex-desc').textContent = (it.descricao||'').slice(0,240);
+  document.getElementById('pca-ex-motivo').selectedIndex = 0;
+  document.getElementById('pca-ex-termo').value = '';
+  document.getElementById('pca-ex-obs').value = '';
+  document.getElementById('pca-excluir-modal').classList.add('open');
+}
+function pcaMotivoMudou(){}
+function pcaFecharExcluir(){ document.getElementById('pca-excluir-modal').classList.remove('open'); _pcaExcluirId = null; }
+async function pcaConfirmarExcluir(){
+  const id = _pcaExcluirId; const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
+  const motivo = document.getElementById('pca-ex-motivo').value;
+  const termo = document.getElementById('pca-ex-termo').value.trim();
+  const obs = document.getElementById('pca-ex-obs').value.trim();
+  const texto = motivo + (termo ? ' | termo: '+termo : '') + (obs ? ' | '+obs : '');
+  const { error } = await _sb.from('pca_itens').update({ descartado: true, motivo_descarte: texto, descartado_em: new Date().toISOString() }).eq('id', id);
+  if(error){ toast('Não foi possível excluir.'); return; }
+  pcaDados = pcaDados.filter(x=>x.id!==id); pcaFecharExcluir(); pcaRender(); toast('Item excluído da lista.');
+}
 async function pcaVisto(id){
   const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
   const novo = !it.visto;
