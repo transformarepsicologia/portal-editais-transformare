@@ -1915,7 +1915,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <button class="modal-close" onclick="pcaFecharEmail()">×</button>
     <div class="section-title" style="font-size:17px;">Pedir informações ao órgão</div>
     <div class="panel" style="margin:0 0 12px;"><strong id="pca-em-orgao"></strong><div id="pca-em-desc" style="font-size:12.5px; color:var(--ink-muted); margin-top:4px;"></div></div>
-    <div class="form-row"><label>E-mail do órgão (procure no site do órgão ou no PNCP)</label><input type="email" id="pca-em-para" placeholder="ex.: licitacoes@municipio.rs.gov.br"></div>
+    <div class="form-row"><label>E-mail do órgão (procure no site do órgão ou no PNCP)</label><input type="email" id="pca-em-para" placeholder="ex.: licitacoes@municipio.rs.gov.br">
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
+        <button type="button" class="btn-ghost" style="font-size:12px;" onclick="pcaEmailGoogle('licitação')">🔎 Google: órgão + licitação</button>
+        <button type="button" class="btn-ghost" style="font-size:12px;" onclick="pcaEmailGoogle('credenciamento')">🔎 Google: órgão + credenciamento</button>
+      </div></div>
     <div class="form-row"><label>Assunto</label><input type="text" id="pca-em-assunto"></div>
     <div class="form-row"><label>Mensagem (pode editar antes de enviar)</label><textarea id="pca-em-corpo" rows="16" style="width:100%;"></textarea></div>
     <div class="form-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -8868,7 +8872,7 @@ function pcaRender(){
   if(!total){ tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--ink-dim);">Nenhum item encontrado. Rode a varredura do PCA para atualizar.</td></tr>'; document.getElementById('pca-paginacao').innerHTML=''; return; }
   tb.innerHTML = l.slice((pcaPag-1)*PCA_POR_PAG, pcaPag*PCA_POR_PAG).map(i=>{
     const cnpj = String(i.cnpj||'').replace(/\D/g,'');
-    const link = cnpj && i.id_pca ? 'https://pncp.gov.br/app/pca/'+encodeURIComponent(cnpj)+'/'+encodeURIComponent(String(i.ano_pca||''))+'/'+encodeURIComponent(String((i.id_pca||'').split('-').pop().split('/')[0]).replace(/^0+/,'')) : '';
+    const link = pcaLinkPncp(i);
     const val = i.valor_total>0 ? 'R$ '+Number(i.valor_total).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
     return '<tr'+(i.visto?' style="opacity:.55"':'')+'>'
       +'<td style="white-space:nowrap;"><strong>'+esc(formatarDataBR(i.data_desejada))+'</strong></td>'
@@ -8877,10 +8881,10 @@ function pcaRender(){
       +'<td style="white-space:nowrap;">'+(pcaModalidade(i) ? '<span class="admin-tab-badge neutral" style="position:static;">'+esc(pcaModalidade(i))+'</span>' : '<span style="font-size:11.5px; color:var(--ink-dim);" title="O PCA não informa a modalidade; ela só é definida quando o edital é publicado.">não informada</span>')+'</td>'
       +'<td>'+pcaAcompHTML(i)+'</td>'
       +'<td style="white-space:nowrap;">'+val+'</td>'
-      +'<td style="white-space:nowrap;">'+(link?'<a href="'+link+'" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none; display:inline-block;">PNCP ↗</a> ':'')
+      +'<td><div style="display:flex; flex-wrap:wrap; gap:6px; min-width:150px; max-width:260px;">'+(link?'<a href="'+link+'" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none; display:inline-block;">PNCP ↗</a> ':'')
       +'<button class="btn-ghost" onclick="pcaEmail('+i.id+')" title="E-mail padronizado ao órgão perguntando sobre a abertura do edital">✉ Pedir info</button> '
       +'<button class="btn-ghost" onclick="pcaVisto('+i.id+')">'+(i.visto?'Desmarcar':'Marcar visto')+'</button> '
-      +'<button class="btn-ghost" style="color:var(--coral);" onclick="pcaExcluir('+i.id+')" title="Tirar da lista: o objeto não interessa ao Radar">Excluir</button></td></tr>';
+      +'<button class="btn-ghost" style="color:var(--coral);" onclick="pcaExcluir('+i.id+')" title="Tirar da lista: o objeto não interessa ao Radar">Excluir</button></div></td></tr>';
   }).join('');
   document.getElementById('pca-paginacao').innerHTML = pags>1
     ? '<button class="btn-ghost" '+(pcaPag<=1?'disabled':'')+' onclick="pcaPagina(-1)">← Anterior</button><span style="font-size:12.5px;">Página '+pcaPag+' de '+pags+'</span><button class="btn-ghost" '+(pcaPag>=pags?'disabled':'')+' onclick="pcaPagina(1)">Próxima →</button>' : '';
@@ -8913,6 +8917,10 @@ async function pcaConfirmarExcluir(){
 // ----- E-mail padronizado ao órgão (PCA) -----
 const PCA_ASSINATURA = 'Douglas\nConsultor — Transformare Psicologia e Projetos\ntransformarepsicologia1@gmail.com';
 let _pcaEmailId = null;
+function pcaLinkPncp(i){
+  const cnpj = String(i.cnpj||'').replace(/\D/g,'');
+  return cnpj && i.id_pca ? 'https://pncp.gov.br/app/pca/'+encodeURIComponent(cnpj)+'/'+encodeURIComponent(String(i.ano_pca||''))+'/'+encodeURIComponent(String((i.id_pca||'').split('-').pop().split('/')[0]).replace(/^0+/,'')) : '';
+}
 function pcaEmailTexto(it){
   const ano = it.ano_pca || '';
   const data = it.data_desejada ? formatarDataBR(String(it.data_desejada).slice(0,10)) : 'não informada';
@@ -8923,6 +8931,8 @@ function pcaEmailTexto(it){
 +'Em consulta ao Plano de Contratações Anual (PCA '+ano+') de '+(it.orgao||'esse órgão')+(it.cnpj?' (CNPJ '+it.cnpj+')':'')+', publicado no Portal Nacional de Contratações Públicas (PNCP), identificamos a previsão de contratação do seguinte item:\n\n'
 +'• Descrição: '+desc+'\n'
 +(it.unidade?'• Unidade: '+it.unidade+'\n':'')
++(it.id_pca?'• Identificação no PNCP (PCA): '+it.id_pca+(it.numero_item?' — item '+it.numero_item:'')+'\n':'')
++(pcaLinkPncp(it)?'• Link: '+pcaLinkPncp(it)+'\n':'')
 +'• Data desejada para a contratação: '+data+'\n\n'
 +'Com o interesse de acompanhar a abertura desse processo, solicitamos, por gentileza, as seguintes informações:\n\n'
 +'1. Há previsão de publicação de edital para essa contratação? Em caso positivo, qual a data estimada?\n'
@@ -8944,6 +8954,11 @@ function pcaEmail(id){
   document.getElementById('pca-em-assunto').value = t.assunto;
   document.getElementById('pca-em-corpo').value = t.corpo;
   document.getElementById('pca-email-modal').classList.add('open');
+}
+function pcaEmailGoogle(palavra){
+  const it = (pcaDados||[]).find(x=>x.id===_pcaEmailId); if(!it) return;
+  const q = '"'+(it.orgao||'')+'" '+palavra+' e-mail contato';
+  window.open('https://www.google.com/search?q='+encodeURIComponent(q), '_blank', 'noopener');
 }
 function pcaFecharEmail(){ document.getElementById('pca-email-modal').classList.remove('open'); _pcaEmailId = null; }
 function pcaEmailAbrir(tipo){
