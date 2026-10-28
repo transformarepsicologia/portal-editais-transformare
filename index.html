@@ -8882,6 +8882,7 @@ function pcaRender(){
       +'<td>'+pcaAcompHTML(i)+'</td>'
       +'<td style="white-space:nowrap;">'+val+'</td>'
       +'<td><div style="display:flex; flex-wrap:wrap; gap:6px; min-width:150px; max-width:260px;">'+(link?'<a href="'+link+'" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none; display:inline-block;">PNCP ↗</a> ':'')
+      +'<button class="btn-ghost" onclick="pcaGoogleAberto('+i.id+')" title="Pesquisa no Google se o órgão já abriu o credenciamento/edital deste item">🔎 Já abriu?</button> '
       +'<button class="btn-ghost" onclick="pcaEmail('+i.id+')" title="E-mail padronizado ao órgão perguntando sobre a abertura do edital">✉ Pedir info</button> '
       +'<button class="btn-ghost" onclick="pcaVisto('+i.id+')">'+(i.visto?'Desmarcar':'Marcar visto')+'</button> '
       +'<button class="btn-ghost" style="color:var(--coral);" onclick="pcaExcluir('+i.id+')" title="Tirar da lista: o objeto não interessa ao Radar">Excluir</button></div></td></tr>';
@@ -8954,6 +8955,13 @@ function pcaEmail(id){
   document.getElementById('pca-em-assunto').value = t.assunto;
   document.getElementById('pca-em-corpo').value = t.corpo;
   document.getElementById('pca-email-modal').classList.add('open');
+}
+function pcaGoogleAberto(id){
+  const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
+  const desc = String(it.descricao||'').replace(/\s+/g,' ').trim().split(/\s+/).slice(0,8).join(' ');
+  const ano = it.ano_pca || new Date().getFullYear();
+  const q = '"'+(it.orgao||'')+'" (credenciamento OR chamamento OR edital) '+desc+' '+ano;
+  window.open('https://www.google.com/search?q='+encodeURIComponent(q), '_blank', 'noopener');
 }
 function pcaEmailGoogle(palavra){
   const it = (pcaDados||[]).find(x=>x.id===_pcaEmailId); if(!it) return;
