@@ -1416,6 +1416,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <button class="admin-tab" data-tab="editais" onclick="adminTab('editais')">Editais<span class="admin-tab-badge neutral" id="tabbadge-editais" style="display:none;"></span></button>
     <button class="admin-tab" data-tab="leads" onclick="adminTab('leads')">Leads e usuários<span class="admin-tab-badge" id="tabbadge-leads" style="display:none;"></span></button>
     <button class="admin-tab" data-tab="prospeccao" onclick="adminTab('prospeccao')">Prospecção</button>
+    <button class="admin-tab" data-tab="pca" onclick="adminTab('pca')">PCA (planejados)</button>
     <button class="admin-tab" data-tab="consultoria" onclick="adminTab('consultoria')">Consultoria</button>
     <button class="admin-tab" data-tab="aae" onclick="adminTab('aae')">Aderência (AAE)</button>
     <button class="admin-tab" data-tab="config" onclick="adminTab('config')">Configurações</button>
@@ -1721,6 +1722,20 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div id="pr-resumo" style="font-size:12.5px; color:var(--ink-dim); margin-bottom:8px;"></div>
     <div style="overflow-x:auto;"><table class="admin-table" id="pr-tabela"><thead><tr><th></th><th>Contato / adicionado em</th><th>Profissão / local</th><th>Edital da mensagem</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
     <p class="section-sub" style="margin-top:10px;">Boas práticas: poucos envios por dia, uma única mensagem por contato, identifique-se e respeite o pedido de "SAIR" (marque como <em>Não contatar</em>). A lista guarda a origem de cada contato (LGPD).</p>
+  </div>
+
+  <div class="admin-tabpanel" id="admin-tab-pca">
+    <div class="section-title" style="font-size:17px; margin-top:4px;">PCA — serviços de saúde ainda não abertos (uso interno)</div>
+    <p class="section-sub">Itens de <strong>serviço</strong> de saúde previstos nos Planos de Contratações Anuais (PNCP) com data desejada de contratação ainda no futuro. Não são editais abertos: são avisos antecipados de que o órgão pretende contratar. Visível apenas para administradores.</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
+      <input type="text" id="pca-busca" placeholder="Buscar órgão, serviço ou palavra…" oninput="pcaRender()" style="flex:2 1 240px; width:auto;">
+      <select id="pca-termo" onchange="pcaRender()" style="flex:1 1 150px; width:auto;"><option value="">Todos os tipos</option></select>
+      <select id="pca-ordem" onchange="pcaRender()" style="flex:1 1 200px; width:auto;"><option value="data">Data desejada (mais próxima)</option><option value="valor">Maior valor</option><option value="recente">Publicados recentemente</option></select>
+      <label style="font-size:12.5px; display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pca-ocultar-vistos" onchange="pcaRender()"> Ocultar já vistos</label>
+    </div>
+    <div id="pca-contagem" style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;"></div>
+    <div style="overflow-x:auto;"><table class="admin-table" id="pca-tabela"><thead><tr><th>Data desejada</th><th>Órgão</th><th>Serviço previsto</th><th>Valor</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div id="pca-paginacao" style="display:flex; justify-content:center; align-items:center; gap:14px; margin-top:14px;"></div>
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-consultoria">
@@ -8711,11 +8726,82 @@ function consDetalhe(){
       ${dehHTML(c, d)}</div>`;
   consPerfilPreencher(c);
 }
+// ===== PCA (aba admin): serviços de saúde planejados, ainda não abertos =====
+let pcaDados = null, pcaPag = 1;
+const PCA_POR_PAG = 30;
+async function pcaCarregar(forcar){
+  if(pcaDados && !forcar){ pcaRender(); return; }
+  const tb = document.querySelector('#pca-tabela tbody');
+  if(tb) tb.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--ink-dim);">Carregando…</td></tr>';
+  const hoje = new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
+  const todos = [];
+  for(let ini=0; ini<10000; ini+=1000){
+    const { data, error } = await _sb.from('pca_itens').select('*').eq('descartado', false).gte('data_desejada', hoje).order('data_desejada').range(ini, ini+999);
+    if(error){ if(tb) tb.innerHTML = '<tr><td colspan="5" style="color:var(--coral);">Não foi possível carregar: '+esc(error.message)+'</td></tr>'; return; }
+    todos.push(...(data||[]));
+    if(!data || data.length < 1000) break;
+  }
+  pcaDados = todos;
+  const sel = document.getElementById('pca-termo');
+  if(sel){
+    const termos = [...new Set(todos.map(i=>i.termo).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="">Todos os tipos</option>' + termos.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('');
+  }
+  pcaPag = 1; pcaRender();
+}
+function pcaNorm(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function pcaFiltrados(){
+  const q = pcaNorm(document.getElementById('pca-busca')?.value||'').trim();
+  const termo = document.getElementById('pca-termo')?.value||'';
+  const ocultar = document.getElementById('pca-ocultar-vistos')?.checked;
+  const ordem = document.getElementById('pca-ordem')?.value||'data';
+  let l = (pcaDados||[]).filter(i=>{
+    if(termo && i.termo!==termo) return false;
+    if(ocultar && i.visto) return false;
+    if(q && !pcaNorm((i.orgao||'')+' '+(i.unidade||'')+' '+(i.descricao||'')+' '+(i.nome_classe||'')).includes(q)) return false;
+    return true;
+  });
+  if(ordem==='valor') l.sort((a,b)=>(b.valor_total||0)-(a.valor_total||0));
+  else if(ordem==='recente') l.sort((a,b)=>String(b.data_publicacao||'').localeCompare(String(a.data_publicacao||'')));
+  return l;
+}
+function pcaRender(){
+  const tb = document.querySelector('#pca-tabela tbody'); if(!tb) return;
+  const l = pcaFiltrados();
+  const total = l.length, pags = Math.max(1, Math.ceil(total/PCA_POR_PAG));
+  if(pcaPag>pags) pcaPag = pags;
+  const ct = document.getElementById('pca-contagem');
+  if(ct) ct.textContent = total+' item(ns) de serviço previsto(s)'+((pcaDados||[]).length!==total ? ' (de '+(pcaDados||[]).length+' no total)' : '')+'.';
+  if(!total){ tb.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--ink-dim);">Nenhum item encontrado. Rode a varredura do PCA para atualizar.</td></tr>'; document.getElementById('pca-paginacao').innerHTML=''; return; }
+  tb.innerHTML = l.slice((pcaPag-1)*PCA_POR_PAG, pcaPag*PCA_POR_PAG).map(i=>{
+    const cnpj = String(i.cnpj||'').replace(/\D/g,'');
+    const link = cnpj && i.id_pca ? 'https://pncp.gov.br/app/pca/'+encodeURIComponent(cnpj)+'/'+encodeURIComponent(String(i.ano_pca||''))+'/'+encodeURIComponent(String((i.id_pca||'').split('-').pop().split('/')[0]).replace(/^0+/,'')) : '';
+    const val = i.valor_total>0 ? 'R$ '+Number(i.valor_total).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+    return '<tr'+(i.visto?' style="opacity:.55"':'')+'>'
+      +'<td style="white-space:nowrap;"><strong>'+esc(formatarDataBR(i.data_desejada))+'</strong></td>'
+      +'<td>'+esc(i.orgao||'')+'<div style="font-size:11.5px; color:var(--ink-dim);">'+esc(i.unidade||'')+' · CNPJ '+esc(i.cnpj||'')+'</div></td>'
+      +'<td>'+esc(i.descricao||'')+'<div style="font-size:11.5px; color:var(--ink-dim);">'+esc(i.nome_classe||'')+(i.termo?' · '+esc(i.termo):'')+'</div></td>'
+      +'<td style="white-space:nowrap;">'+val+'</td>'
+      +'<td style="white-space:nowrap;">'+(link?'<a href="'+link+'" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none; display:inline-block;">PNCP ↗</a> ':'')
+      +'<button class="btn-ghost" onclick="pcaVisto('+i.id+')">'+(i.visto?'Desmarcar':'Marcar visto')+'</button></td></tr>';
+  }).join('');
+  document.getElementById('pca-paginacao').innerHTML = pags>1
+    ? '<button class="btn-ghost" '+(pcaPag<=1?'disabled':'')+' onclick="pcaPagina(-1)">← Anterior</button><span style="font-size:12.5px;">Página '+pcaPag+' de '+pags+'</span><button class="btn-ghost" '+(pcaPag>=pags?'disabled':'')+' onclick="pcaPagina(1)">Próxima →</button>' : '';
+}
+function pcaPagina(d){ pcaPag += d; pcaRender(); window.scrollTo({top:0, behavior:'smooth'}); }
+async function pcaVisto(id){
+  const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
+  const novo = !it.visto;
+  const { error } = await _sb.from('pca_itens').update({ visto: novo }).eq('id', id);
+  if(error){ toast('Não foi possível salvar.'); return; }
+  it.visto = novo; pcaRender();
+}
 function adminTab(nome){
   adminTabAtual = nome;
   if(nome==='aae') aaeCarregar();
   if(nome==='prospeccao'){ prospCarregar(); prospRenderCidades(); }
   if(nome==='consultoria') consCarregar();
+  if(nome==='pca') pcaCarregar();
   document.querySelectorAll('#admin-tabs .admin-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab === nome));
   document.querySelectorAll('.admin-tabpanel').forEach(p=>p.classList.toggle('active', p.id === 'admin-tab-'+nome));
 }
