@@ -1731,10 +1731,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <input type="text" id="pca-busca" placeholder="Buscar órgão, serviço ou palavra…" oninput="pcaRender()" style="flex:2 1 240px; width:auto;">
       <select id="pca-termo" onchange="pcaRender()" style="flex:1 1 150px; width:auto;"><option value="">Todos os tipos</option></select>
       <select id="pca-ordem" onchange="pcaRender()" style="flex:1 1 200px; width:auto;"><option value="data">Data desejada (mais próxima)</option><option value="valor">Maior valor</option><option value="recente">Publicados recentemente</option></select>
+      <select id="pca-status" onchange="pcaRender()" style="flex:1 1 170px; width:auto;"><option value="">Todos os status</option><option value="acompanhados">Só acompanhados</option><option value="novidade_diario">Novidade no diário</option><option value="edital_apareceu">Edital apareceu</option><option value="aguardando_orgao">Aguardando órgão</option><option value="confirmado">Confirmado</option><option value="adiado">Adiado</option><option value="sem_previsao">Sem previsão</option></select>
       <label style="font-size:12.5px; display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pca-ocultar-vistos" onchange="pcaRender()"> Ocultar já vistos</label>
     </div>
     <div id="pca-contagem" style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;"></div>
-    <div style="overflow-x:auto;"><table class="admin-table" id="pca-tabela"><thead><tr><th>Data desejada</th><th>Órgão</th><th>Serviço previsto</th><th>Modalidade</th><th>Valor</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div style="overflow-x:auto;"><table class="admin-table" id="pca-tabela"><thead><tr><th>Data desejada</th><th>Órgão</th><th>Serviço previsto</th><th>Modalidade</th><th>Acompanhamento</th><th>Valor</th><th></th></tr></thead><tbody></tbody></table></div>
     <div id="pca-paginacao" style="display:flex; justify-content:center; align-items:center; gap:14px; margin-top:14px;"></div>
   </div>
 
@@ -8372,7 +8373,7 @@ function prospRender(){
       <td><select onchange="prospMudarProfissao(${p.id}, this.value)" style="max-width:150px;">${profs.map(n=>`<option ${n===p.profissao?'selected':''}>${esc(n)}</option>`).join('')}</select><br><span style="color:var(--ink-dim); font-size:12px;">${esc((p.cidade||'') + (p.cidade?'/':'') + p.uf)}</span></td>
       <td style="font-size:12px; min-width:230px;">${eds.length ? eds.map(o=>`<label style="display:flex; gap:6px; align-items:flex-start; cursor:pointer; margin-bottom:3px;"><input type="radio" name="ed-${p.id}" ${o.id===escolhido?'checked':''} onchange="prospEscolherEdital(${p.id}, ${o.id})"><span>${esc(o.orgao.slice(0,38))} — ${esc(o.abertura ? 'abre ' + o.abertura : 'sem data de abertura')}</span></label>`).join('') : '—'}</td>
       <td><select onchange="prospMudarStatus(${p.id}, this.value)">${opcoes}</select></td><td>${acao}<br><button class="btn-ghost" style="margin-top:4px; font-size:12px; color:var(--coral);" onclick="prospExcluir(${p.id})">🗑 Excluir</button></td></tr>`;
-  }).join('') : '<tr><td colspan="6" style="color:var(--ink-dim);">Nenhum contato com esses filtros.</td></tr>';
+  }).join('') : '<tr><td colspan="7" style="color:var(--ink-dim);">Nenhum contato com esses filtros.</td></tr>';
   prospAtualizarSel();
 }
 async function prospMudarStatus(id, status){
@@ -8756,12 +8757,12 @@ const PCA_POR_PAG = 30;
 async function pcaCarregar(forcar){
   if(pcaDados && !forcar){ pcaRender(); return; }
   const tb = document.querySelector('#pca-tabela tbody');
-  if(tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--ink-dim);">Carregando…</td></tr>';
+  if(tb) tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--ink-dim);">Carregando…</td></tr>';
   const hoje = new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
   const todos = [];
   for(let ini=0; ini<10000; ini+=1000){
     const { data, error } = await _sb.from('pca_itens').select('*').eq('descartado', false).gte('data_desejada', hoje).order('data_desejada').range(ini, ini+999);
-    if(error){ if(tb) tb.innerHTML = '<tr><td colspan="6" style="color:var(--coral);">Não foi possível carregar: '+esc(error.message)+'</td></tr>'; return; }
+    if(error){ if(tb) tb.innerHTML = '<tr><td colspan="7" style="color:var(--coral);">Não foi possível carregar: '+esc(error.message)+'</td></tr>'; return; }
     todos.push(...(data||[]));
     if(!data || data.length < 1000) break;
   }
@@ -8784,6 +8785,39 @@ function pcaModalidade(i){
   if(/inexigibilidade/.test(t)) return 'Inexigibilidade';
   return '';
 }
+const PCA_STATUS = {novo:'Não acompanhado', acompanhando:'Acompanhando', novidade_diario:'Novidade no diário', edital_apareceu:'Edital apareceu', aguardando_orgao:'Aguardando órgão', confirmado:'Confirmado', adiado:'Adiado', sem_previsao:'Sem previsão'};
+function pcaAcompHTML(i){
+  const dBR = (d)=> d ? formatarDataBR(String(d).slice(0,10)) : '';
+  let h = '';
+  if(i.acompanhar){
+    const novo = i.status_acomp==='novidade_diario' || i.status_acomp==='edital_apareceu';
+    h += '<select onchange="pcaStatus('+i.id+', this.value)" style="width:auto; font-size:12px; padding:3px 6px; margin:0 0 4px;'+(novo?' border-color:var(--accent); color:var(--accent); font-weight:600;':'')+'">'
+      + Object.entries(PCA_STATUS).filter(([k])=>k!=='novo').map(([k,v])=>'<option value="'+k+'"'+(k===i.status_acomp?' selected':'')+'>'+esc(v)+'</option>').join('')+'</select><br>';
+    if(i.acomp_nota) h += '<div style="font-size:11.5px; color:var(--ink-muted); max-width:240px;">'+esc(i.acomp_nota)+'</div>';
+    if(i.edital_link) h += '<a href="'+esc(i.edital_link)+'" target="_blank" rel="noopener" style="font-size:11.5px;">Ver edital ↗</a><br>';
+    h += '<div style="font-size:11px; color:var(--ink-dim);">'+(i.acomp_checado_em ? 'Diário checado em '+dBR(i.acomp_checado_em) : 'Diário ainda não checado')+'</div>';
+    h += '<button class="btn-ghost" style="font-size:11.5px; padding:3px 8px; margin-top:4px;" onclick="pcaAcompanhar('+i.id+', false)">Parar de acompanhar</button>';
+  } else {
+    h += '<button class="btn-ghost" style="font-size:12px;" onclick="pcaAcompanhar('+i.id+', true)" title="O Diário Oficial passa a vigiar este item todo dia">＋ Acompanhar</button>';
+  }
+  if(i.data_atualizacao) h += '<div style="font-size:11px; color:var(--ink-dim); margin-top:4px;" title="Última vez que o órgão mexeu no PCA">PCA atualizado em '+dBR(i.data_atualizacao)+'</div>';
+  return h;
+}
+async function pcaAcompanhar(id, ligar){
+  const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
+  const upd = ligar ? { acompanhar:true, status_acomp: it.status_acomp==='novo' ? 'acompanhando' : it.status_acomp }
+                    : { acompanhar:false, status_acomp:'novo' };
+  const { error } = await _sb.from('pca_itens').update(upd).eq('id', id);
+  if(error){ toast('Não foi possível salvar.'); return; }
+  Object.assign(it, upd); pcaRender();
+  toast(ligar ? 'Acompanhando: o Diário Oficial vai vigiar este item (primeira checagem na próxima rodada diária).' : 'Acompanhamento encerrado.');
+}
+async function pcaStatus(id, valor){
+  const it = (pcaDados||[]).find(x=>x.id===id); if(!it) return;
+  const { error } = await _sb.from('pca_itens').update({ status_acomp: valor }).eq('id', id);
+  if(error){ toast('Não foi possível salvar.'); return; }
+  it.status_acomp = valor; pcaRender();
+}
 function pcaNorm(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 function pcaFiltrados(){
   const q = pcaNorm(document.getElementById('pca-busca')?.value||'').trim();
@@ -8793,6 +8827,9 @@ function pcaFiltrados(){
   let l = (pcaDados||[]).filter(i=>{
     if(termo && i.termo!==termo) return false;
     if(ocultar && i.visto) return false;
+    const st = document.getElementById('pca-status')?.value||'';
+    if(st==='acompanhados' && !i.acompanhar) return false;
+    if(st && st!=='acompanhados' && i.status_acomp!==st) return false;
     if(q && !pcaNorm((i.orgao||'')+' '+(i.unidade||'')+' '+(i.descricao||'')+' '+(i.nome_classe||'')).includes(q)) return false;
     return true;
   });
@@ -8807,7 +8844,7 @@ function pcaRender(){
   if(pcaPag>pags) pcaPag = pags;
   const ct = document.getElementById('pca-contagem');
   if(ct) ct.textContent = total+' item(ns) de serviço previsto(s)'+((pcaDados||[]).length!==total ? ' (de '+(pcaDados||[]).length+' no total)' : '')+'.';
-  if(!total){ tb.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--ink-dim);">Nenhum item encontrado. Rode a varredura do PCA para atualizar.</td></tr>'; document.getElementById('pca-paginacao').innerHTML=''; return; }
+  if(!total){ tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--ink-dim);">Nenhum item encontrado. Rode a varredura do PCA para atualizar.</td></tr>'; document.getElementById('pca-paginacao').innerHTML=''; return; }
   tb.innerHTML = l.slice((pcaPag-1)*PCA_POR_PAG, pcaPag*PCA_POR_PAG).map(i=>{
     const cnpj = String(i.cnpj||'').replace(/\D/g,'');
     const link = cnpj && i.id_pca ? 'https://pncp.gov.br/app/pca/'+encodeURIComponent(cnpj)+'/'+encodeURIComponent(String(i.ano_pca||''))+'/'+encodeURIComponent(String((i.id_pca||'').split('-').pop().split('/')[0]).replace(/^0+/,'')) : '';
@@ -8817,6 +8854,7 @@ function pcaRender(){
       +'<td>'+esc(i.orgao||'')+'<div style="font-size:11.5px; color:var(--ink-dim);">'+esc(i.unidade||'')+' · CNPJ '+esc(i.cnpj||'')+'</div></td>'
       +'<td>'+esc(i.descricao||'')+'<div style="font-size:11.5px; color:var(--ink-dim);">'+esc(i.nome_classe||'')+(i.termo?' · '+esc(i.termo):'')+'</div></td>'
       +'<td style="white-space:nowrap;">'+(pcaModalidade(i) ? '<span class="admin-tab-badge neutral" style="position:static;">'+esc(pcaModalidade(i))+'</span>' : '<span style="font-size:11.5px; color:var(--ink-dim);" title="O PCA não informa a modalidade; ela só é definida quando o edital é publicado.">não informada</span>')+'</td>'
+      +'<td>'+pcaAcompHTML(i)+'</td>'
       +'<td style="white-space:nowrap;">'+val+'</td>'
       +'<td style="white-space:nowrap;">'+(link?'<a href="'+link+'" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none; display:inline-block;">PNCP ↗</a> ':'')
       +'<button class="btn-ghost" onclick="pcaVisto('+i.id+')">'+(i.visto?'Desmarcar':'Marcar visto')+'</button> '
@@ -11079,7 +11117,7 @@ async function renderFeedbacksAdmin(){
   const TIPOS_FB = { problema:'🐞 Problema', sugestao:'💡 Sugestão', duvida:'❓ Dúvida', elogio:'👏 Elogio' };
   status.textContent = `${(data||[]).length} feedback(s) — ${(data||[]).filter(f=>f.status==='novo').length} novo(s).`;
   tbody.innerHTML = (data||[]).length === 0
-    ? `<tr><td colspan="6" style="text-align:center; color:var(--ink-dim); padding:18px;">Nenhum feedback recebido ainda.</td></tr>`
+    ? `<tr><td colspan="7" style="text-align:center; color:var(--ink-dim); padding:18px;">Nenhum feedback recebido ainda.</td></tr>`
     : data.map(f => `
       <tr>
         <td>${new Date(f.criado_em).toLocaleString('pt-BR')}</td>
@@ -11130,7 +11168,7 @@ async function renderSugestoesProfissaoAdmin(){
   const pendentes = (data||[]).filter(s=>s.status==='pendente').length;
   status.textContent = `${(data||[]).length} sugestão(ões) no total — ${pendentes} pendente(s).`;
   tbody.innerHTML = (data||[]).length === 0
-    ? `<tr><td colspan="6" style="text-align:center; color:var(--ink-dim); padding:18px;">Nenhuma profissão sugerida ainda.</td></tr>`
+    ? `<tr><td colspan="7" style="text-align:center; color:var(--ink-dim); padding:18px;">Nenhuma profissão sugerida ainda.</td></tr>`
     : data.map(s => `
       <tr>
         <td>${s.criado_em ? formatarDataBR(s.criado_em.slice(0,10)) : '—'}</td>
