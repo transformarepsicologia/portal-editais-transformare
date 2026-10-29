@@ -173,6 +173,8 @@ body.pro .so-nao-pro{display:none !important;}
 .logo-mark svg{width:100%; height:100%;}
 .logo-text{font-family:var(--font-display); font-weight:700; font-size:22px; letter-spacing:0.3px;}
 .logo-text span{color:var(--teal);}
+.logo-col{display:flex; flex-direction:column; gap:3px; min-width:0; line-height:1.1;}
+.logo-sub{font-size:12px; font-weight:500; letter-spacing:.2px; color:var(--ink-muted);}
 .r-espelho{display:inline-block; color:inherit !important; transform:perspective(220px) rotateY(180deg); transition:transform .9s cubic-bezier(.4,0,.2,1);}
 .r-espelho.normal{transform:perspective(220px) rotateY(0deg);}
 .logo:hover .r-espelho.normal{transform:perspective(220px) rotateY(180deg);}
@@ -829,7 +831,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   .hero .lead{font-size:14.5px;}
   .resumo-grid, .fin-grid, .two-col{grid-template-columns:1fr;}
   .topbar-inner{padding:12px 16px; gap:10px;}
-  .logo-text{font-size:15px;} .logo-mark{width:44px;height:44px;} .logo{gap:8px;}
+  .logo-text{font-size:15px;} .logo-mark{width:44px;height:44px;} .logo{gap:8px;} .logo-sub{font-size:9.5px; letter-spacing:0;}
   .score-hero{flex-direction:column; align-items:flex-start; padding:18px 20px;}
   .score-hero-num{font-size:32px;}
   .filter-panel{padding:14px 16px;}
@@ -946,7 +948,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <img class="marca-escura" src="assets/radar-marca-112.webp" alt="Radar Transformare" width="56" height="56" style="width:100%; height:100%; object-fit:contain;">
         <img class="marca-clara" src="assets/radar-marca-verde.webp" alt="" aria-hidden="true" width="56" height="56" style="width:100%; height:100%; object-fit:contain;">
       </div>
-      <div class="logo-text"><span class="rl" aria-hidden="true">R</span><span class="rl" aria-hidden="true">A</span><span class="rl" aria-hidden="true">D</span><span class="rl" aria-hidden="true">A</span><span class="rl ultimo" aria-hidden="true">R</span><span class="sr-only-rl">RADAR</span> TRANSFORMARE<span>.</span></div>
+      <div class="logo-col">
+        <div class="logo-text"><span class="rl" aria-hidden="true">R</span><span class="rl" aria-hidden="true">A</span><span class="rl" aria-hidden="true">D</span><span class="rl" aria-hidden="true">A</span><span class="rl ultimo" aria-hidden="true">R</span><span class="sr-only-rl">RADAR</span> TRANSFORMARE<span>.</span></div>
+        <div class="logo-sub">Editais e credenciamentos para sua profissão</div>
+      </div>
     </div>
     <nav class="main-nav" id="mainNav">
       <button data-view="home" class="active">Início</button>
