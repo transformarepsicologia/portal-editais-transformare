@@ -4100,7 +4100,7 @@ function clearAllFilters(){
 // quando não há nenhuma oportunidade real carregada ainda (prototipo sem
 // Supabase configurado, ou antes da primeira carga terminar).
 function renderIndicators(){
-  const reais = oportunidades.filter(o=>o.origemSupabase && visivelAoCliente(o));
+  const reais = oportunidades.filter(o=>o.origemSupabase && visivelAoCliente(o) && !ehContratacaoDeFornecedor(o.objeto));
   const usandoDemo = reais.length === 0;
   indicadoresUsandoDemo = usandoDemo;
   // Só contam os editais ATIVOS (recebendo propostas agora): saem dos números os
@@ -9079,7 +9079,8 @@ function mpNum(o){
 function mpBase(){
   return (typeof oportunidades!=='undefined' ? oportunidades : []).filter(o=>o.origemSupabase && visivelAoCliente(o) && !ehContratacaoDeFornecedor(o.objeto));
 }
-function mpAtivo(o){ return ['Aberto','Próximo do encerramento','Próximo da abertura'].includes(situacaoExibida(o)); }
+// Mesmo critério do número "editais ativos" da tela inicial: só os que estão recebendo propostas agora.
+function mpAtivo(o){ return editalAtivo(o); }
 function mpBRL(v){ if(!v) return '—'; if(v>=1e6) return 'R$ '+(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi'; if(v>=1e3) return 'R$ '+Math.round(v/1e3).toLocaleString('pt-BR')+' mil'; return 'R$ '+Math.round(v); }
 function mpPx(lon,lat){ return [(lon+74.2)*14.6,(5.6-lat)*15.2]; }
 function mpTip(e,html){ const t=document.getElementById('mp-tip'); t.innerHTML=html; t.style.opacity=1; let x=e.clientX+14; if(x+250>window.innerWidth) x=e.clientX-250; t.style.left=Math.max(8,x)+'px'; t.style.top=(e.clientY+14)+'px'; }
@@ -9161,7 +9162,8 @@ async function renderMapaEditais(){
     '<div class="mp-kpi"><div class="l">Editais abertos</div><div class="v">'+rows.length+'</div></div>'+
     '<div class="mp-kpi"><div class="l">Cidades</div><div class="v">'+arr.length+'</div></div>'+
     '<div class="mp-kpi"><div class="l">Estados</div><div class="v">'+ufs.size+'</div></div>';
-  document.getElementById('mp-nota').textContent = (semCidade+semCoord) ? (semCidade+semCoord)+' sem cidade no mapa' : '';
+  const abrem = mpBase().filter(o=>situacaoExibida(o)==='Próximo da abertura').length;
+  document.getElementById('mp-nota').textContent = [(semCidade+semCoord) ? (semCidade+semCoord)+' sem cidade no mapa' : '', abrem ? abrem+' ainda não abriram (não contados)' : ''].filter(Boolean).join(' · ');
   mpDesenhar(); mpPainel();
 }
 function ehContratacaoDeFornecedor(objeto){
