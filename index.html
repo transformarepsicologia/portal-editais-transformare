@@ -585,6 +585,62 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 #mp-svg .uf:hover{fill:var(--bg-card-hover);}
 #mp-svg .uf.on{fill:var(--teal); fill-opacity:.62; cursor:pointer;}
 #mp-svg .uf.on:hover,#mp-svg .uf.on.sel{fill-opacity:.95;}
+/* ===== Planos ===== */
+.pl-wrap{max-width:1080px; margin:0 auto; padding:14px 0 30px;}
+.pl-head{text-align:center; max-width:720px; margin:0 auto 30px;}
+.pl-eyebrow{display:flex; align-items:center; justify-content:center; gap:14px; font-family:var(--font-mono); font-size:12px; letter-spacing:3px; color:var(--teal); margin-bottom:10px;}
+.pl-eyebrow span{width:48px; height:1px; background:var(--teal); opacity:.6;}
+.pl-head h2{font-family:var(--font-display); font-size:clamp(27px,4vw,38px); line-height:1.15; margin:0 0 12px; color:var(--ink); font-weight:700;}
+.pl-head p{margin:0; color:var(--ink-muted); font-size:15px; line-height:1.65;}
+.pl-grid{display:grid; grid-template-columns:1fr 1fr; gap:22px; align-items:stretch;}
+.pl-card{position:relative; background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:26px 26px 24px; display:flex; flex-direction:column; overflow:hidden;}
+.pl-pro{border:2px solid var(--teal); background:linear-gradient(180deg, rgba(47,217,196,.07), var(--bg-card) 40%); box-shadow:0 10px 36px rgba(47,217,196,.10);}
+.pl-fita{position:absolute; top:0; right:0; display:flex; align-items:center; gap:7px; background:var(--teal); color:var(--bg); font-weight:600; font-size:13.5px; padding:9px 20px 9px 22px; border-radius:0 0 0 16px;}
+html[data-theme="light"] .pl-fita{color:#fff;}
+.pl-tag{align-self:flex-start; background:rgba(47,217,196,.14); color:var(--teal); border-radius:999px; padding:5px 14px; font-size:12.5px; font-weight:500;}
+.pl-card h3{font-family:var(--font-display); font-size:30px; line-height:1.1; margin:14px 0 8px; color:var(--ink);}
+.pl-preco{font-family:var(--font-display); font-size:44px; font-weight:700; color:var(--teal); line-height:1.05;}
+.pl-preco small{font-size:17px; font-weight:500; color:var(--ink-muted);}
+.pl-desc{color:var(--ink-muted); font-size:14.5px; line-height:1.6; margin:10px 0 0;}
+.pl-card hr{border:0; border-top:1px solid var(--border); margin:18px 0 16px;}
+.pl-sub{font-family:var(--font-mono); font-size:11.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--teal); font-weight:600; margin-bottom:12px;}
+.pl-lista{list-style:none; margin:0 0 22px; padding:0; display:flex; flex-direction:column; gap:14px; flex:1;}
+.pl-lista li{display:flex; gap:12px; align-items:flex-start; font-size:14px; line-height:1.5; color:var(--ink-muted);}
+.pl-lista li svg{flex:none; margin-top:1px;}
+.pl-lista b{display:block; color:var(--ink); font-weight:600;}
+.pl-lista em{display:block; font-style:normal; color:var(--ink-muted); font-size:13.5px;}
+.pl-btn{display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:14px 18px; border-radius:10px; font:inherit; font-weight:600; font-size:15px; cursor:pointer; transition:transform .15s, background .15s, border-color .15s;}
+.pl-btn:hover{transform:translateY(-1px);}
+.pl-btn-ghost{background:transparent; color:var(--teal); border:1.5px solid var(--teal);}
+.pl-btn-ghost:hover{background:rgba(47,217,196,.1);}
+.pl-btn-cheio{background:var(--teal); color:var(--bg); border:1.5px solid var(--teal);}
+.pl-btn-cheio:hover{background:var(--teal-deep);}
+html[data-theme="light"] .pl-btn-cheio{color:#fff;}
+.pl-cons{margin-top:22px; display:grid; grid-template-columns:auto 1.4fr 1fr; gap:26px; align-items:center; background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:26px;}
+.pl-cons-ico{width:92px; height:92px; border-radius:50%; background:rgba(47,217,196,.12); color:var(--teal); display:flex; align-items:center; justify-content:center;}
+.pl-cons-ico svg{width:44px; height:44px;}
+.pl-cons h3{font-family:var(--font-display); font-size:25px; margin:0 0 8px; color:var(--ink);}
+.pl-cons-txt p{margin:0; color:var(--ink-muted); font-size:14px; line-height:1.65;}
+.pl-aviso{display:flex; align-items:center; gap:9px; margin-top:14px; font-size:13px; color:var(--ink-muted);}
+.pl-aviso svg{color:var(--ink-dim); flex:none;}
+.pl-cons-lado{border-left:1px solid var(--border); padding-left:26px; display:flex; flex-direction:column; gap:14px;}
+.pl-vant{display:flex; gap:11px; align-items:flex-start; font-size:13px; line-height:1.5; color:var(--ink-muted);}
+.pl-vant svg{flex:none; color:var(--teal); margin-top:2px;}
+.pl-vant b{display:block; color:var(--ink); font-size:13.5px;}
+.pl-vant span{display:block;}
+.pl-cons-lado .pl-btn{padding:11px 16px; font-size:14px; margin-top:2px;}
+@media (max-width:900px){
+  .pl-grid{grid-template-columns:1fr;}
+  .pl-cons{grid-template-columns:1fr; gap:18px;}
+  .pl-cons-ico{width:72px; height:72px;}
+  .pl-cons-lado{border-left:0; padding-left:0; border-top:1px solid var(--border); padding-top:18px;}
+}
+@media (max-width:520px){
+  .pl-card{padding:22px 18px 20px;}
+  .pl-card h3{font-size:26px;}
+  .pl-preco{font-size:38px;}
+  .pl-fita{font-size:12.5px; padding:8px 14px 8px 16px;}
+}
 .mp-tip{position:fixed; z-index:50; pointer-events:none; background:var(--ink); color:var(--bg); border-radius:6px; padding:6px 9px; font-size:12px; max-width:240px; opacity:0;}
 .chip-opt{font-size:12.5px; padding:7px 13px; border:1px solid var(--border); border-radius:20px; cursor:pointer; background:var(--bg-elevated); color:var(--ink-muted); flex:0 0 auto; max-width:100%; white-space:normal; overflow-wrap:anywhere;}
 .chip-opt.selected{background:var(--teal); border-color:var(--teal); color:var(--bg); font-weight:600;}
@@ -892,6 +948,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <button data-view="favoritos">Favoritos</button>
       <button data-view="alertas">Alertas</button>
       <button data-view="sobre">Sobre o Radar</button>
+      <button data-view="planos">Planos</button>
       <button data-view="minha-conta" id="nav-minha-conta"><span class="nav-minha">Minha </span>Conta</button>
       <button data-view="login" class="nav-cta" id="nav-cta-btn">Entrar</button>
     </nav>
@@ -1226,6 +1283,55 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   </aside>
   </div>
 </section>
+
+<!-- ===================== PLANOS ===================== -->
+<section class="view" id="view-planos">
+  <div class="pl-wrap">
+    <div class="pl-head">
+      <div class="pl-eyebrow"><span></span>PLANOS<span></span></div>
+      <h2>Escolha o plano ideal para você</h2>
+      <p>O Radar Transformare reúne editais e credenciamentos da área da saúde para facilitar sua busca por novas oportunidades. Conheça os planos e encontre o que melhor atende às suas necessidades.</p>
+    </div>
+    <div class="pl-grid">
+      <article class="pl-card">
+        <span class="pl-tag">Para conhecer e explorar</span>
+        <h3>Plano Gratuito</h3>
+        <div class="pl-preco">R$ 0</div>
+        <p class="pl-desc">Encontre oportunidades e acompanhe as que interessam a você.</p>
+        <hr>
+        <div class="pl-sub">O que está incluído</div>
+        <ul class="pl-lista"><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Consulta aos editais e credenciamentos disponíveis no Radar.</span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Visualização das profissões contempladas, dos prazos e dos requisitos.</span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Consulta a até 5 documentos exigidos por oportunidade.</span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Favoritos para salvar oportunidades de interesse.</span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Alertas para acompanhar oportunidades, conforme os recursos disponíveis.</span></li></ul>
+        <button type="button" class="pl-btn pl-btn-ghost" onclick="nav('cadastro')">Começar gratuitamente <span aria-hidden="true">→</span></button>
+      </article>
+      <article class="pl-card pl-pro">
+        <div class="pl-fita"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" fill="currentColor"/></svg> Plano Pro</div>
+        <span class="pl-tag">Mais recursos para sua análise</span>
+        <h3>Plano Pro</h3>
+        <div class="pl-preco">R$ 39,90 <small>/mês</small></div>
+        <p class="pl-desc">Tenha mais informações para avaliar oportunidades e se preparar para participar.</p>
+        <hr>
+        <div class="pl-sub">Tudo do Plano Gratuito, mais</div>
+        <ul class="pl-lista"><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Lista completa de documentos</b><em>Consulte todos os documentos exigidos em cada oportunidade.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Links para emissão de certidões negativas</b><em>Acesse os canais oficiais para emitir as principais certidões.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Comparação de oportunidades</b><em>Veja as diferenças entre os editais para apoiar sua decisão.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Aderência ao seu perfil</b><em>Identifique oportunidades que combinam com sua profissão e com os critérios utilizados pelo Radar.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Índice Transformare</b><em>Consulte a análise interna de retorno financeiro, facilidade de entrada e complexidade documental.</em></span></li></ul>
+        <button type="button" class="pl-btn pl-btn-cheio" onclick="solicitarPlanoEssencial()">Quero conhecer o Plano Pro <span aria-hidden="true">→</span></button>
+      </article>
+    </div>
+    <div class="pl-cons">
+      <div class="pl-cons-ico"><svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><rect x="5" y="4.5" width="14" height="16.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="2.5" width="6" height="4" rx="1" fill="var(--bg-card)" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 11h7M8.5 14.5h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="17" cy="18" r="4" fill="var(--teal)"/><path d="M15.2 18l1.4 1.4 2.4-2.6" fill="none" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="pl-cons-txt">
+        <div class="pl-sub" style="margin:0 0 4px;">Serviço adicional</div>
+        <h3>Consultoria para credenciamento</h3>
+        <p>A Transformare oferece apoio individualizado para comparar os documentos que você já possui com os requisitos do edital, identificar ajustes necessários e orientar sobre o que precisa ser corrigido ou providenciado.</p>
+        <div class="pl-aviso"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 11v6M12 7.2v.1" stroke="var(--bg-card)" stroke-width="2.2" stroke-linecap="round"/></svg><span>Este é um serviço distinto da assinatura do Radar.</span></div>
+      </div>
+      <div class="pl-cons-lado">
+        <div class="pl-vant"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2.2 2.2L15.5 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Mais segurança no processo</b><span>Conte com orientação especializada para se preparar melhor para o credenciamento.</span></div></div>
+        <div class="pl-vant"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c.6-3.6 3.4-5.6 7-5.6s6.4 2 7 5.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><div><b>Atendimento individualizado</b><span>Análise dos seus documentos, identificação de pendências e orientações sobre as adequações ou providências necessárias.</span></div></div>
+        <button type="button" class="pl-btn pl-btn-ghost" onclick="openLeadModal(null,'planos')">Conhecer a consultoria <span aria-hidden="true">→</span></button>
+      </div>
+    </div>
+  </div>
+</section>
+
 
 <!-- ===================== LOGIN ===================== -->
 <section class="view" id="view-login">
