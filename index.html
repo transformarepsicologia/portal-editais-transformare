@@ -10245,7 +10245,31 @@ async function renderCaixaEntrada(){
            catalogo.find(e => o && ob.length > 20 && normT(e.orgao) === o && normT(e.objeto).slice(0,60) === ob) || null;
   };
 
-  const pgCx = paginarLista('cx', dataOrdenada, 10, renderCaixaEntrada);
+  const nVencPerto = pendentesArr.filter(i=>prazoJaEncerrado(i)||prazoProximo(i)).length;
+  const filtros = [
+    ['todos','Todos', data.length],
+    ['pendentes','Para revisar', pendentesArr.length],
+    ['aguardando','✉ Aguardando resposta do órgão', aguardandoArr.length],
+    ['vencidos','⏰ Prazo vencido ou perto', nVencPerto],
+    ['adiados','Avaliar depois', adiadosArr.length]
+  ];
+  if(!filtros.some(f=>f[0]===_cxFiltro)) _cxFiltro = 'todos';
+  const dataFiltrada = _cxFiltro==='pendentes' ? porPrioridade(pendentesArr)
+    : _cxFiltro==='aguardando' ? aguardandoArr
+    : _cxFiltro==='adiados' ? porPrioridade(adiadosArr)
+    : _cxFiltro==='vencidos' ? porPrioridade(pendentesArr.filter(i=>prazoJaEncerrado(i)||prazoProximo(i)))
+    : dataOrdenada;
+  const chips = document.createElement('div');
+  chips.style.cssText = 'display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px;';
+  chips.innerHTML = filtros.map(([k,t,n])=>{
+    const ativo = k===_cxFiltro, teal = k==='aguardando';
+    return `<button class="btn-ghost" style="font-size:12.5px; padding:5px 10px;${ativo ? ' background:rgba(47,217,196,.18); border-color:var(--teal); color:var(--teal); font-weight:600;' : (teal && n ? ' border-color:var(--teal); color:var(--teal);' : '')}" onclick="cxFiltrar('${k}')">${t} (${n})</button>`;
+  }).join('');
+  lista.appendChild(chips);
+  if(!dataFiltrada.length){
+    const vazio = document.createElement('div'); vazio.className = 'empty-state'; vazio.textContent = 'Nenhum item neste filtro.'; lista.appendChild(vazio); return;
+  }
+  const pgCx = paginarLista('cx', dataFiltrada, 10, renderCaixaEntrada);
   pgCx.fatia.forEach(item => {
     const adiado = item.status === 'mais_tarde';
     const par = parecidoCom(item);
@@ -10253,13 +10277,14 @@ async function renderCaixaEntrada(){
     const card = document.createElement('details');
     card.className = 'inbox-card' + (prioritario ? ' inbox-card-prioritario' : '');
     if(adiado) card.style.opacity = '0.75';
+    if(aguardandoOrgao(item)){ card.style.opacity = '1'; card.style.borderLeft = '4px solid var(--teal)'; }
     card.innerHTML = `
       <summary style="cursor:pointer; list-style:none;">
         <h5 style="display:inline; margin:0;">${esc(item.orgao || 'Órgão não identificado')} — ${esc(item.uf || '')}</h5>
         ${prioritario ? '<span class="badge-prioridade" title="Índice 5 e abrangência Nacional — avaliar com prioridade">⚡ Avaliar com prioridade</span>' : ''}
         ${badgeIndiceSugeridoHTML(item)}
         ${par ? `<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="Já existe no catálogo: ${esc(par.orgao||'')} — ${esc(par.edital||'')}">⚠ Parecido com edital já cadastrado (id ${par.id})</span>` : ''}
-        ${aguardandoOrgao(item) ? `<span class="badge" style="background:rgba(47,217,196,.16); color:var(--teal); margin-left:8px;" title="${esc(item.motivo_decisao||'')}">✉ Aguardando resposta do órgão</span>` : adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
+        ${aguardandoOrgao(item) ? `<span class="badge" style="background:rgba(47,217,196,.2); color:var(--teal); margin-left:8px; font-weight:600;" title="${esc(item.motivo_decisao||'')}">✉ Aguardando resposta do órgão${esc(infoAguardando(item))}</span>` : adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
         ${prazoJaEncerrado(item) && !aguardandoOrgao(item) ? '<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="A data de encerramento já passou. Credenciamentos costumam seguir abertos: vale perguntar ao órgão.">Prazo já encerrado</span>' : ''}
         ${prazoProximo(item) && !aguardandoOrgao(item) ? '<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="O prazo termina em poucos dias: vale perguntar ao órgão se haverá prorrogação.">Prazo em '+diasAtePrazoPend(item)+' dia(s)</span>' : ''}
         ${item.sinalizacao ? `<div style="margin-top:6px; padding:6px 10px; border-radius:8px; background:rgba(245,158,11,.14); color:#b45309; font-size:12.5px;">🚩 <strong>Para confirmar:</strong> ${esc(item.sinalizacao)}</div>` : ''}
@@ -10310,6 +10335,16 @@ async function rejeitarCredenciamento(id, motivo, motivoTags){
 
 // ===== Triagem: perguntar ao órgão por e-mail =====
 // O item continua com status "mais_tarde" (nada muda no banco); a marca fica no campo motivo_decisao.
+let _cxFiltro = 'todos';
+function cxFiltrar(f){ _cxFiltro = f; _pag['cx'] = 1; renderCaixaEntrada(); }
+// Texto do marcador: "perguntado em dd/mm/aaaa · há N dia(s)" a partir do motivo gravado.
+function infoAguardando(i){
+  const m = String(i.motivo_decisao||'').match(/em (\d{2})\/(\d{2})\/(\d{4})/);
+  if(!m) return '';
+  const d = new Date(+m[3], +m[2]-1, +m[1]); const h = new Date(); h.setHours(0,0,0,0);
+  const n = Math.round((h - d)/86400000);
+  return ' · perguntado em ' + m[1] + '/' + m[2] + (n>0 ? ' (há ' + n + ' dia' + (n>1?'s':'') + ')' : ' (hoje)');
+}
 const MARCA_ORGAO = 'Perguntado ao órgão por e-mail em ';
 const aguardandoOrgao = i => i.status === 'mais_tarde' && String(i.motivo_decisao||'').startsWith(MARCA_ORGAO);
 function prazoJaEncerrado(i){
