@@ -219,6 +219,10 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
   font-family:var(--font-display); font-size:44px; line-height:1.12; font-weight:700; margin:0 0 18px; letter-spacing:-0.5px;
 }
 .hero h1 em{font-style:normal; color:var(--teal);}
+/* Título premium: primeira frase leve, segunda em dourado da marca */
+.hero h1 .h1-leve{font-weight:500; letter-spacing:-0.8px; color:var(--ink);}
+.hero h1 .h1-ouro{display:inline-block; font-weight:700; letter-spacing:-0.8px; background:linear-gradient(100deg,#FCE7B2 0%,#F5B94E 48%,#D98E1F 100%); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; filter:drop-shadow(0 2px 20px rgba(245,169,62,.25));}
+html[data-theme="light"] .hero h1 .h1-ouro{background:linear-gradient(100deg,#C98A1B 0%,#A8690A 55%,#7A4A00 100%); -webkit-background-clip:text; background-clip:text; filter:none;}
 .hero .lead{font-size:16px; color:var(--ink-muted); line-height:1.6; max-width:520px; margin:0 0 28px;}
 
 .search-box{
@@ -926,7 +930,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="hero">
     <div>
       <span class="eyebrow">Radar Transformare · Monitoramento contínuo</span>
-      <h1>Você não precisa procurar. <em style="display:inline-block;">O Radar procura por você.</em></h1>
+      <h1><span class="h1-leve">Você não precisa procurar,</span><br><span class="h1-ouro">o Radar procura por você.</span></h1>
       <p class="lead">Encontre editais e credenciamentos para sua profissão em um só lugar. Consulte valores, prazos e requisitos, compare oportunidades e descubra quais merecem sua atenção.</p>
       <p class="lead" style="margin-top:12px;">Oportunidades da área da saúde reunidas em um só lugar.</p>
       <div class="search-box">
