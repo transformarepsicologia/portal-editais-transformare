@@ -219,10 +219,11 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
   font-family:var(--font-display); font-size:44px; line-height:1.12; font-weight:700; margin:0 0 18px; letter-spacing:-0.5px;
 }
 .hero h1 em{font-style:normal; color:var(--teal);}
-/* Título premium: primeira frase leve, segunda em dourado da marca */
+/* Título premium: primeira frase leve, segunda em verde-água da marca com degradê e brilho discreto */
 .hero h1 .h1-leve{font-weight:500; letter-spacing:-0.8px; color:var(--ink);}
-.hero h1 .h1-ouro{display:inline-block; font-weight:700; letter-spacing:-0.8px; background:linear-gradient(100deg,#FCE7B2 0%,#F5B94E 48%,#D98E1F 100%); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; filter:drop-shadow(0 2px 20px rgba(245,169,62,.25));}
-html[data-theme="light"] .hero h1 .h1-ouro{background:linear-gradient(100deg,#C98A1B 0%,#A8690A 55%,#7A4A00 100%); -webkit-background-clip:text; background-clip:text; filter:none;}
+.hero h1 .h1-ouro{display:inline-block; font-weight:700; letter-spacing:-0.8px; padding-bottom:.06em; background:linear-gradient(100deg,#8FF3E4 0%,#2FD9C4 46%,#17A596 100%); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; filter:drop-shadow(0 2px 22px rgba(47,217,196,.22));}
+.hero h1::after{content:""; display:block; width:64px; height:3px; border-radius:3px; margin-top:18px; background:linear-gradient(90deg,var(--teal),rgba(47,217,196,0));}
+html[data-theme="light"] .hero h1 .h1-ouro{background:linear-gradient(100deg,#12A394 0%,#0A7F72 52%,#075E55 100%); -webkit-background-clip:text; background-clip:text; filter:none;}
 .hero .lead{font-size:16px; color:var(--ink-muted); line-height:1.6; max-width:520px; margin:0 0 28px;}
 
 .search-box{
