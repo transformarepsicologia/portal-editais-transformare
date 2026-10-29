@@ -9077,7 +9077,7 @@ function renderMapaEditais(){
   svg.innerHTML=Object.keys(MP_UF).map(u=>'<path class="uf'+(n[u]?' on':'')+'" data-u="'+u+'" d="'+MP_UF[u]+'"/>').join('');
   svg.querySelectorAll('.uf').forEach(el=>{
     const u=el.dataset.u, q=n[u]||0;
-    const html='<b>'+MP_NOMES[u]+'</b>'+(q?'<br>'+q+(q>1?' editais abertos':' edital aberto'):'');
+    const html='<b>'+MP_NOMES[u]+'</b>';
     el.addEventListener('mousemove',e=>mpTip(e,html));
     el.addEventListener('mouseleave',mpTipOff);
     el.addEventListener('click',e=>{ mpTip(e,html); clearTimeout(window._mpT); window._mpT=setTimeout(mpTipOff,2500); });
