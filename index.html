@@ -688,19 +688,25 @@ html:not([data-theme="light"]) #view-home ::placeholder{color:rgba(255,255,255,.
 #view-alertas .page-head .eyebrow,
 #view-sobre .page-head .eyebrow,
 #view-planos .page-head .eyebrow,
-#view-minha-conta .page-head .eyebrow{color:var(--amber);}
+#view-minha-conta .page-head .eyebrow,
+#view-login .page-head .eyebrow,
+#view-cadastro .page-head .eyebrow{color:var(--amber);}
 #view-editais .page-head .eyebrow::before,
 #view-favoritos .page-head .eyebrow::before,
 #view-alertas .page-head .eyebrow::before,
 #view-sobre .page-head .eyebrow::before,
 #view-planos .page-head .eyebrow::before,
-#view-minha-conta .page-head .eyebrow::before{background:var(--amber); box-shadow:0 0 0 4px rgba(245,169,62,.18);}
+#view-minha-conta .page-head .eyebrow::before,
+#view-login .page-head .eyebrow::before,
+#view-cadastro .page-head .eyebrow::before{background:var(--amber); box-shadow:0 0 0 4px rgba(245,169,62,.18);}
 #view-editais .page-head h2,
 #view-favoritos .page-head h2,
 #view-alertas .page-head h2,
 #view-sobre .page-head h2,
 #view-planos .page-head h2,
-#view-minha-conta .page-head h2{color:var(--teal);}
+#view-minha-conta .page-head h2,
+#view-login .page-head h2,
+#view-cadastro .page-head h2{color:var(--teal);}
 #view-editais .section-title,
 #view-favoritos .section-title,
 #view-alertas .section-title,
@@ -812,6 +818,29 @@ table.admin-table tr:hover td{background:var(--bg-elevated);}
 .pw-toggle{position:absolute; right:4px; top:50%; transform:translateY(-50%); width:38px; height:38px; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; color:var(--ink-muted); cursor:pointer; padding:0;}
 .pw-toggle:hover,.pw-toggle:focus-visible{color:var(--teal); outline:none; background:rgba(47,217,196,.10);}
 .pw-toggle svg{width:20px; height:20px; display:block;}
+/* ===== Entrar: cartão centralizado e acabamento ===== */
+#view-login .auth-head{max-width:460px; margin:0 auto; text-align:center;}
+#view-login .auth-head .eyebrow{display:inline-flex;}
+#view-login .auth-head p{color:#FFFFFF; margin-top:8px; font-size:14.5px; line-height:1.6;}
+#view-login .auth-card{max-width:460px; margin:0 auto;}
+#view-login .auth-esqueci{margin:-4px 0 14px; text-align:right; font-size:13px;}
+#view-login .auth-esqueci a{color:var(--teal); cursor:pointer;}
+#view-login .auth-msg{font-size:12.5px; color:var(--coral); margin:0 0 10px;}
+#view-login .auth-msg:empty{display:none;}
+#view-login .auth-alt{display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:20px; padding-top:18px; border-top:1px solid var(--border); font-size:13px; color:#FFFFFF;}
+#view-login .auth-alt .btn-ghost{width:100%;}
+html[data-theme="light"] #view-login .auth-head p,html[data-theme="light"] #view-login .auth-alt{color:var(--ink-muted);}
+/* ===== Minha conta: progresso do perfil e cadeado Pro ===== */
+.perfil-prog{margin:16px 0 4px; padding-top:14px; border-top:1px solid var(--border);}
+.perfil-prog .pp-top{display:flex; justify-content:space-between; align-items:baseline; font-size:13px; margin-bottom:8px;}
+.perfil-prog .pp-top strong{font-family:var(--font-display); font-size:18px; color:var(--teal);}
+.perfil-prog .pp-bar{height:6px; border-radius:99px; background:var(--bg-elevated); overflow:hidden;}
+.perfil-prog .pp-bar i{display:block; height:100%; background:var(--teal); border-radius:99px;}
+.perfil-prog .btn-ghost{margin-top:12px; width:100%;}
+.ico-cadeado{width:1em; height:1em; vertical-align:-.12em; color:var(--amber);}
+.indicator-card .num .ico-cadeado{width:24px; height:24px; vertical-align:middle;}
+.btn-pro-ghost{border-color:var(--amber) !important; color:var(--amber) !important;}
+.btn-pro-ghost:hover{background:rgba(245,169,62,.12) !important;}
 .conta-atalhos{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:0 0 20px;}
 .conta-atalho{display:flex; align-items:center; gap:14px; text-align:left; font:inherit; color:var(--ink); background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; cursor:pointer; transition:border-color .15s, transform .15s; min-height:64px;}
 .conta-atalho:hover,.conta-atalho:focus-visible{border-color:var(--amber); transform:translateY(-2px); outline:none;}
@@ -1423,16 +1452,16 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== LOGIN ===================== -->
 <section class="view" id="view-login">
-  <div class="page-head"><span class="eyebrow">Acesso</span><h2>Entrar</h2></div>
-  <div class="form-card">
+  <div class="page-head auth-head"><span class="eyebrow">Acesso</span><h2>Entrar</h2><p>Acesse sua área para acompanhar favoritos, alertas e editais compatíveis com o seu perfil.</p></div>
+  <div class="form-card auth-card">
     <div class="form-row"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email"></div>
     <div class="form-row"><label>Senha</label><input type="password" id="login-senha" placeholder="Sua senha" autocomplete="current-password"></div>
-    <div id="login-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
+    <p class="auth-esqueci"><a href="#esqueci-senha" onclick="event.preventDefault(); userForgotPassword()">Esqueci minha senha</a></p>
+    <div id="login-msg" class="auth-msg"></div>
     <div class="form-actions">
       <button class="btn-primary" style="flex:1;" onclick="userLogin()">Entrar</button>
     </div>
-    <p style="font-size:12px; margin-top:12px;"><a href="#esqueci-senha" style="color:var(--teal); cursor:pointer;" onclick="event.preventDefault(); userForgotPassword()">Esqueci minha senha</a></p>
-    <p style="font-size:12.5px; color:var(--ink-dim); margin-top:10px;">Ainda não tem conta? <a href="#cadastro" style="color:var(--teal); cursor:pointer;" onclick="event.preventDefault(); nav('cadastro')">Criar conta</a></p>
+    <div class="auth-alt"><span>Ainda não tem conta?</span><button type="button" class="btn-ghost" onclick="nav('cadastro')">Criar conta grátis</button></div>
   </div>
 </section>
 
@@ -3910,6 +3939,7 @@ function updateNavCta(){
     ctaBtn.dataset.view = 'login';
   }
 }
+const ICONE_CADEADO = '<svg class="ico-cadeado" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
 function renderMinhaConta(){
   const el = document.getElementById('minha-conta-content');
   if(!userProfile){
@@ -4002,8 +4032,8 @@ function renderMinhaConta(){
       </div>
       <div>
         <div class="account-stats">
-          <div class="indicator-card"><div class="num">${ehPro() ? altaAderencia : '🔒'}</div><div class="label">Editais com alta aderência (70%+)${ehPro() ? '' : ' — Plano Pro'}</div></div>
-          <div class="indicator-card"><div class="num">${ehPro() ? (melhorAderencia !== null ? melhorAderencia + '%' : '—') : '🔒'}</div><div class="label">Maior aderência ao seu perfil${ehPro() ? '' : ' — Plano Pro'}</div></div>
+          <div class="indicator-card"><div class="num">${ehPro() ? altaAderencia : (todasAderencias.length ? todasAderencias.length : ICONE_CADEADO)}</div><div class="label">${ehPro() ? 'Editais com alta aderência (70%+)' : (todasAderencias.length ? 'Editais ativos com aderência ao seu perfil' : 'Aderência ao seu perfil — Plano Pro')}</div></div>
+          <div class="indicator-card"><div class="num">${ehPro() ? (melhorAderencia !== null ? melhorAderencia + '%' : '—') : ICONE_CADEADO}</div><div class="label">Maior aderência ao seu perfil${ehPro() ? '' : ' — Plano Pro'}</div></div>
           <div class="indicator-card" style="cursor:pointer;" onclick="nav('perfil')" title="Completar perfil"><div class="num">${perfilPct}%</div><div class="label">Perfil preenchido${perfilPct < 100 ? ' — completar ›' : ''}</div></div>
         </div>
 
@@ -4012,16 +4042,25 @@ function renderMinhaConta(){
         <div id="conta-aderentes-aviso"></div>
         <div class="op-grid" id="conta-aderentes"></div>` : ''}
 
-        ${ehPro() ? '' : `<div class="pro-lock-box" style="margin-top:32px;"><div style="font-weight:600; margin-bottom:6px;">🔒 Editais mais aderentes ao seu perfil — Plano Pro</div><div style="font-size:13px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${todasAderencias.length ? `Encontramos ${todasAderencias.length} edital(is) ativo(s) com algum grau de aderência ao seu perfil` + (altaAderencia ? `, ${altaAderencia} com 70% ou mais` : '') + '.' : 'Complete seu perfil para a Transformare apontar onde você tem mais chance.'} Assine o Plano Pro para ver a lista ordenada, sem perder tempo procurando edital por edital.</div><button class="btn-primary" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button></div>`}
+        ${ehPro() ? '' : `<div class="pro-lock-box" style="margin-top:32px;"><div style="font-weight:600; margin-bottom:6px;">${ICONE_CADEADO} Editais mais aderentes ao seu perfil — Plano Pro</div><div style="font-size:13px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${todasAderencias.length ? `Encontramos ${todasAderencias.length} edital(is) ativo(s) com algum grau de aderência ao seu perfil` + (altaAderencia ? `, ${altaAderencia} com 70% ou mais` : '') + '.' : 'Complete seu perfil para a Transformare apontar onde você tem mais chance.'} Assine o Plano Pro para ver a lista ordenada, sem perder tempo procurando edital por edital.</div><button class="btn-ghost btn-pro-ghost" onclick="solicitarPlanoEssencial()">Conhecer o plano Pro</button></div>`}
 
         <div class="lead-box" style="margin-top:32px;">
           <h4>Precisa de ajuda com alguma oportunidade?</h4>
           <p>Fale com a Transformare — podemos ajudar a avaliar requisitos, documentação e prazos.</p>
-          <button class="btn-primary" style="width:100%;" onclick="openLeadModal(null,'minha_conta')">Falar com a Transformare</button>
+          <button class="btn-ghost" style="width:100%;" onclick="openLeadModal(null,'minha_conta')">Falar com a Transformare</button>
         </div>
       </div>
     </div>
   `;
+  // Perfil enxuto: só o que está preenchido + barra de progresso (o resto vira "Completar perfil")
+  (function(){
+    const card = el.querySelector('.profile-card'); if(!card) return;
+    card.querySelectorAll('.profile-field').forEach(f=>{ const v = f.querySelector('.v'); const t = v ? v.textContent.trim() : ''; if(t === 'Não informado' || t === '—') f.remove(); });
+    const q = card.querySelector('.account-quicklinks');
+    const bloco = document.createElement('div'); bloco.className = 'perfil-prog';
+    bloco.innerHTML = '<div class="pp-top"><span>Perfil preenchido</span><strong>' + perfilPct + '%</strong></div><div class="pp-bar"><i style="width:' + perfilPct + '%"></i></div>' + (perfilPct < 100 ? '<button type="button" class="btn-ghost" onclick="nav(\'perfil\')">Completar perfil</button>' : '');
+    card.insertBefore(bloco, q);
+  })();
 
   const adBox = document.getElementById('conta-aderentes');
   const adAviso = document.getElementById('conta-aderentes-aviso');
