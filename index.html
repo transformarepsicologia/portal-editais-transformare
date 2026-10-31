@@ -7270,6 +7270,7 @@ async function saveAdminForm(){
     urlPncp: document.getElementById('af-url-pncp').value.trim() || null,
     urlInscricao: (editingId && (oportunidades.find(x=>x.id===editingId)||{}).urlInscricao) || null
   };
+  Object.assign(data, padronizarCamposEdital(data));   // regra permanente: texto sempre em sentence case
 
   // Prazo de 2040 em diante: avisa e pede confirmação antes de salvar.
   const _dPrazo = parseDate(data.prazo);
@@ -9805,13 +9806,14 @@ function renderImportResultado(){
       <button class="inbox-approve" onclick="importarNovosCandidatos()">Adicionar selecionados</button>
     </div>`;
     novos.forEach((n, i) => {
-      const objetoCurto = n.objeto.length > 220 ? n.objeto.slice(0,220) + '…' : n.objeto;
+      const _objPad = padronizarTexto(n.objeto, {protegidos:[n.municipio]}) || '';
+      const objetoCurto = _objPad.length > 220 ? _objPad.slice(0,220) + '…' : _objPad;
       html += `
         <div class="inbox-card" style="padding:12px 14px; margin-top:8px;">
           <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
             <input type="checkbox" checked class="import-novo-check" data-idx="${i}" style="margin-top:3px;">
             <span>
-              <div style="font-size:13px; font-weight:600;">${esc(n.orgao)}${n.uf ? ' — '+esc(n.uf) : ''}</div>
+              <div style="font-size:13px; font-weight:600;">${esc(padronizarOrgao(n.orgao, {protegidos:[n.municipio]}))}${n.uf ? ' — '+esc(n.uf) : ''}</div>
               <div class="inbox-profs" style="margin:4px 0;">${n.profissoes_detectadas.map(p=>`<span>${esc(p)}</span>`).join('')}</div>
               <div style="font-size:12px; color:var(--ink-muted);">${esc(objetoCurto)}</div>
               <div style="font-size:11px; color:var(--ink-dim); margin-top:4px;">${esc(n.numero_controle_pncp)}${n.situacao ? (' · '+esc(n.situacao)) : ''}</div>
@@ -9855,9 +9857,9 @@ async function importarNovosCandidatos(){
     const n = _importResultado.novos[Number(chk.dataset.idx)];
     const { data, error } = await _sb.rpc('importar_credenciamento_pncp', {
       p_numero_controle_pncp: n.numero_controle_pncp,
-      p_orgao: n.orgao,
+      p_orgao: padronizarOrgao(n.orgao, {protegidos:[n.municipio]}),
       p_orgao_cnpj: n.orgao_cnpj,
-      p_objeto: n.objeto,
+      p_objeto: padronizarTexto(n.objeto, {protegidos:[n.municipio, padronizarOrgao(n.orgao, {protegidos:[n.municipio]})]}),
       p_uf: n.uf,
       p_municipio: n.municipio,
       p_modalidade: n.modalidade,
@@ -10103,13 +10105,223 @@ function formatarDataBR(iso){
   if(isNaN(d.getTime())) return 'Não informado';
   return d.toLocaleDateString('pt-BR');
 }
+/* ===== Padronização de texto (sentence case) dos editais =====
+   Só a primeira letra de cada frase em maiúscula; preserva siglas, nomes próprios, órgãos, leis e termos oficiais.
+   Aplicada na exibição de todo edital (já publicado ou novo) e ao gravar/importar, qualquer que seja a grafia da fonte. */
+const PAD_PREP = new Set(['de','da','do','das','dos','e','em','na','no','nas','nos','a','o','as','os','para','por','com','sem','ao','aos','à','às','ou','pela','pelo','pelas','pelos','que','sob','entre','até','ante','após','como','se']);
+const PAD_NOME_LIG = new Set(['de','da','do','das','dos']);
+const PAD_PARAR = new Set(['para','a','as','o','os','ao','aos','à','às','na','no','nas','nos','em','com','sem','por','pelo','pela','pelos','pelas','que','e','ou','ser','será','visando','destinado','destinada','destinados','destinadas','conforme','mediante','sob','entre','durante','objeto','credenciamento','contratação','prestação','serviços','serviço','empresa','empresas','pessoa','pessoas','profissionais','profissional','referente','relativo','cujo','atendimento','atender','regulados','regulado','ref','processo','edital','chamamento','chamada','abertura','realização','aquisição','fornecimento','locação','especializada','especializadas','especializado','especializados','jurídica','jurídicas','física','físicas','interessadas','interessados','habilitados','habilitadas']);
+const PAD_GATILHOS = new Set(['prefeitura','município','municipio','secretaria','fundação','fundacao','fundo','hospital','consórcio','consorcio','universidade','instituto','câmara','camara','ministério','ministerio','tribunal','governo','autarquia','associação','associacao','comando','exército','exercito','marinha','aeronáutica','aeronautica','conselho','defensoria','polícia','policia','santa','estado','distrito','policlínica','policlinica','maternidade','cooperativa','faculdade','centro','departamento','superintendência','superintendencia','agência','agencia','companhia','sociedade','federação','federacao','sindicato','delegacia','são','sao','santo','nossa']);
+const PAD_SIGLAS = new Set('PNCP CNPJ CPF SUS UBS UPA CAPS CAPSI CRP CRM CRO CRN CRF CREFITO CREFONO COREN CRESS CRBM CRMV CREF CFP CFM CFO ME EPP MEI LTDA PJ PF CID TEA TDAH TCC TFD CNES CBO TUSS SIGTAP SIA SIH RENAME EAD IPTU CTPS RG CNH CNAE FGTS INSS ISS IRPF PIS SISREG ANVISA ANS AMB CBHPM UTI CTI SAMU CEO NASF ESF PSF APS ACS ESB SAE CEREST CER NIS ABNT ISO IBGE ART ICMS CAPES MEC OMS OPAS HIV AIDS COVID DST EPI TI RH EAP PCA MP AME CRAS CREAS CNJ CNPJ/MF IR PIX OAB CBM PM DF SC RS SP RJ MG PR MT MS GO RR RO AC AP CE PB PI RN'.split(' '));
+const PAD_COMUNS = new Set(['ultima','atualizacao','edital','editais','anexo','anexos','termo','lote','item','itens','objeto','contrato','saude','saúde','prazo','valor','preco','preço','tabela','proposta','processo','chamamento','publico','público','pregao','pregão','dispensa','inexigibilidade','licitacao','licitação','servicos','serviços','servico','serviço','vagas','vaga']);
+const PAD_UF_AMB = new Set(['PA','MA','TO','AM','AL','SE','ES','BA','PE']);
+const PAD_UFS = new Set(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']);
+const PAD_ACENTOS = {municipio:'município',fundacao:'fundação',saude:'saúde',consorcio:'consórcio',regiao:'região',microrregiao:'microrregião',assistencia:'assistência',parana:'Paraná',publico:'público',publica:'pública',publicos:'públicos',publicas:'públicas',servico:'serviço',servicos:'serviços',prestacao:'prestação',realizacao:'realização',juridica:'jurídica',juridicas:'jurídicas',juridico:'jurídico',fisica:'física',fisicas:'físicas',medico:'médico',medicos:'médicos',medica:'médica',medicas:'médicas',atencao:'atenção',contratacao:'contratação',aquisicao:'aquisição',orgao:'órgão',orgaos:'órgãos',camara:'câmara',ministerio:'ministério',policia:'polícia',sao:'São',conceicao:'Conceição',clinica:'clínica',clinicas:'clínicas',diagnostico:'diagnóstico',diagnosticos:'diagnósticos',cirurgicos:'cirúrgicos',cirurgicas:'cirúrgicas',odontologicos:'odontológicos',odontologicas:'odontológicas',fonoaudiologicos:'fonoaudiológicos',psicologica:'psicológica',psicologicas:'psicológicas',educacao:'educação',administracao:'administração',policlinica:'policlínica',aeronautica:'aeronáutica',exercito:'exército',autarquia:'autarquia',associacao:'associação',federacao:'federação',superintendencia:'superintendência',agencia:'agência',ocupacional:'ocupacional',tecnicos:'técnicos',tecnica:'técnica',unico:'único',unica:'única',especialidade:'especialidade'};
+const PAD_PHRASES = ['Acre','Alagoas','Amapá','Amazonas','Bahia','Ceará','Distrito Federal','Espírito Santo','Goiás','Maranhão','Mato Grosso do Sul','Mato Grosso','Minas Gerais','Pará','Paraíba','Paraná','Pernambuco','Piauí','Rio de Janeiro','Rio Grande do Norte','Rio Grande do Sul','Rondônia','Roraima','Santa Catarina','São Paulo','Sergipe','Tocantins','Brasil','Sistema Único de Saúde','Portal Nacional de Contratações Públicas','Constituição Federal','Código Civil','Código de Defesa do Consumidor','Ministério da Saúde','Lei Orgânica','Estatuto da Criança e do Adolescente','Rede de Atenção Psicossocial','Política Nacional'];
+const PAD_LEIS = new Set(['lei','decreto','portaria','resolução','resolucao','instrução','instrucao','medida','emenda','súmula','sumula','norma','deliberação','deliberacao','ato']);
+const PAD_LEI_SEG = /^(n[º°o]?|\d.*|complementar|federal|estadual|municipal|normativa|provisória|provisoria|ordinária|ordinaria|conjunta|constitucional)$/i;
+const PAD_ROMANO = /^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
+const PAD_NOMES_FIXOS = new Set(['são','santa','santo','santos','nossa','senhora','dom','dona']);
+const PAD_VOCAB = new Set();
+/* vocabulário aprendido dos próprios editais: palavras que aparecem em minúscula são palavras comuns (não nomes próprios) */
+function padConstruirVocab(textos){ try{ for(const tx of textos){ if(typeof tx!=='string') continue; const m=tx.match(/(?:^|[^A-Za-zÀ-ÿ0-9])([a-zß-ÿ]{3,})(?![A-Za-zÀ-ÿ0-9])/g); if(m) for(const w of m){ const x=w.replace(/^[^a-zß-ÿ]+/,''); if(x) PAD_VOCAB.add(x); } } }catch(e){} }
+function _padNorm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+function _padCap(w){ return w ? w.charAt(0).toUpperCase() + w.slice(1) : w; }
+function _padTokens(txt){ return String(txt).match(/\s+|[A-Za-zÀ-ÿ0-9][A-Za-zÀ-ÿ0-9ºª°]*|[^\sA-Za-zÀ-ÿ0-9]/g) || []; }
+function _padEhWord(t){ return /^[A-Za-zÀ-ÿ0-9]/.test(t); }
+function _padTodoCaps(t){ return /[A-ZÀ-Þ]/.test(t) && !/[a-zß-ÿ]/.test(t) && (t.match(/[A-Za-zÀ-ÿ]/g)||[]).length >= 2; }
+function _padCamel(t){ return /[a-zß-ÿ][A-ZÀ-Þ]/.test(t); }
+
+function padronizarTexto(txt, opts){
+  if(txt === null || txt === undefined) return txt;
+  if(typeof txt !== 'string') return txt;
+  if(!txt.trim()) return txt;
+  opts = opts || {};
+  const tk = _padTokens(txt);
+  const n = tk.length;
+  const out = tk.slice();
+  const idxW = [];
+  for(let i=0;i<n;i++) if(_padEhWord(tk[i])) idxW.push(i);
+  // dentro de colchetes: não mexe
+  const fixo = new Array(n).fill(false);
+  { let dentro = false; for(let i=0;i<n;i++){ if(tk[i]==='[') { dentro = true; fixo[i]=true; continue; } if(tk[i]===']'){ dentro=false; fixo[i]=true; continue; } if(dentro) fixo[i]=true; } }
+  // texto em maiúsculas ou em "Título Capitalizado"?
+  let nUp=0,nLow=0,capMed=0,totMed=0;
+  for(const i of idxW){ if(fixo[i]) continue; const t=tk[i]; if(/\d/.test(t)) continue;
+    for(const ch of t){ if(/[A-ZÀ-Þ]/.test(ch)) nUp++; else if(/[a-zß-ÿ]/.test(ch)) nLow++; }
+    if(t.length>=4 && !PAD_PREP.has(t.toLowerCase())){ totMed++; if(/^[A-ZÀ-Þ]/.test(t) && !_padTodoCaps(t)) capMed++; } }
+  const modoCaps = (nUp+nLow) > 0 && nUp/(nUp+nLow) > 0.6;
+  const modoTitulo = !modoCaps && totMed >= 3 && capMed/totMed >= 0.5;
+  const lower = new Array(n).fill(null);    // decisão por token
+  // palavras vizinhas (separadas só por espaço)
+  const prevW = i => { let j=i-1; if(j>=0 && /^\s+$/.test(tk[j])) j--; return (j>=0 && _padEhWord(tk[j]) && !fixo[j]) ? j : -1; };
+  const nextW = i => { let j=i+1; if(j<n && /^\s+$/.test(tk[j])) j++; return (j<n && _padEhWord(tk[j]) && !fixo[j]) ? j : -1; };
+  const ehCapsPal = j => j>=0 && _padTodoCaps(tk[j]) && !/\d/.test(tk[j]);
+  // frases protegidas (UF por extenso, SUS por extenso, cidade/órgão informados)
+  const protegidas = PAD_PHRASES.concat((opts.protegidos||[]).filter(Boolean).map(String));
+  const fraseDe = new Array(n).fill(null);
+  for(const fr of protegidas){
+    const pal = fr.match(/[A-Za-zÀ-ÿ0-9ºª°]+/g); if(!pal || !pal.length) continue;
+    const alvo = pal.map(_padNorm);
+    for(let a=0;a<idxW.length;a++){
+      let ok=true;
+      for(let k=0;k<alvo.length;k++){ const j=idxW[a+k]; if(j===undefined || fixo[j] || _padNorm(tk[j])!==alvo[k]){ ok=false; break; } if(k>0){ const sep=tk.slice(idxW[a+k-1]+1, j).join(''); if(!/^(\s+|\s*-\s*)$/.test(sep)){ ok=false; break; } } }
+      if(ok){ if(alvo.length===1 && pal[0].length<=2) continue; if(alvo.length===1 && alvo[0]==='para' && !/[á]/i.test(tk[idxW[a]])) continue; for(let k=0;k<alvo.length;k++) if(!fraseDe[idxW[a+k]]) fraseDe[idxW[a+k]] = pal[k]; }
+    }
+  }
+  // sequências de nome de instituição
+  const nomeProprio = new Array(n).fill(false);
+  for(let a=0;a<idxW.length;a++){
+    const i=idxW[a]; if(fixo[i]) continue;
+    const t=tk[i], tl=t.toLowerCase();
+    if(!PAD_GATILHOS.has(tl)) continue;
+    if(nomeProprio[i]) continue;
+    if(!(/^[A-ZÀ-Þ]/.test(t))) continue;            // gatilho em minúscula = palavra comum
+    const seq=[i]; let b=a+1;
+    while(b<idxW.length && seq.length<8){
+      const j=idxW[b]; if(fixo[j]) break;
+      const sep=tk.slice(idxW[b-1]+1, j).join('');
+      if(!/^(\s+|-)$/.test(sep)) break;
+      const w=tk[j], wl=w.toLowerCase();
+      if(PAD_NOME_LIG.has(wl)){ // preposição: só continua se vier nome depois
+        const j2=idxW[b+1]; if(j2===undefined || fixo[j2] || !/^\s+$/.test(tk.slice(j+1,j2).join('')) ) break;
+        const w2=tk[j2], w2l=w2.toLowerCase();
+        if(PAD_PARAR.has(w2l) || PAD_NOME_LIG.has(w2l)) break;
+        if(!(/^[A-ZÀ-Þ]/.test(w2))) break;
+        seq.push(j); b++; continue;
+      }
+      if(PAD_PARAR.has(wl)) break;
+      if(!(/^[A-ZÀ-Þ]/.test(w))) break;
+      seq.push(j); b++;
+    }
+    // sem continuação, só vale se for gatilho "forte" já capitalizado no meio do texto de forma isolada: não marca
+    if(seq.length<2) continue;
+    // não termina em preposição
+    while(seq.length && PAD_NOME_LIG.has(tk[seq[seq.length-1]].toLowerCase())) seq.pop();
+    if(seq.length<2) continue;
+    // em texto misto, exige que as palavras já estivessem capitalizadas (garantido acima); em caps, vale a sequência
+    for(const j of seq) nomeProprio[j]=true;
+    a = idxW.indexOf(seq[seq.length-1]);
+  }
+  let inicioFrase = true;
+  for(let i=0;i<n;i++){
+    const t=tk[i];
+    if(fixo[i]){ if(t===']'){ inicioFrase = true; } continue; }
+    if(!_padEhWord(t)){
+      if(/^[!?]+$/.test(t) || (t==='.' && (i+1>=n || /^\s/.test(tk[i+1]))) || /\n/.test(t)) inicioFrase = true;
+      else if(t==='-'||t==='–'||t==='—'||t===' '||/^\s+$/.test(t)) { /* mantém */ }
+      else if(t==='('||t===')'||t===','||t===';'||t===':'||t==='/'||t==='"'||t==='“'||t==='”'||t==="'"||t==='•'||t==='*'||t==='&'||t==='+'||t==='%'||t==='$') { /* mantém */ }
+      if(/\n/.test(t)) inicioFrase = true;
+      continue;
+    }
+    let w=t, final=null;
+    const wl=t.toLowerCase();
+    const ant = (()=>{ let j=i-1; while(j>=0 && /^\s+$/.test(tk[j])) j--; return j>=0?tk[j]:''; })();
+    const sepAnt = tk[i-1]||'';
+    if(/\d/.test(t)){ final = t; if(inicioFrase && /^[\d]+$/.test(t)) { out[i]=final; continue; } }
+    else if(fraseDe[i]){ final = fraseDe[i]; }
+    else if(_padCamel(t) || /^[A-ZÀ-Þ]{2,}[a-zß-ÿ]+$/.test(t)){ final = t; }
+    else if(/^n[º°]$/i.test(t)){ final = 'nº'; }
+    else if(PAD_SIGLAS.has(t.toUpperCase()) && _padTodoCaps(t) && !PAD_UF_AMB.has(t)) { final = t; }
+    else if(PAD_UF_AMB.has(t) && (/[\/\-–]/.test(ant) || /^\(/.test(ant))) { final = t; }
+    else if(PAD_UFS.has(t) && /[\/\-–]/.test(ant)) { final = t; }
+    else if(PAD_SIGLAS.has(t.toUpperCase()) && t.length>=3 && !PAD_PREP.has(wl) && /^[A-ZÀ-Þ][a-zß-ÿ]+$/.test(t) && ['pncp','cnpj','cpf','sus'].includes(wl)) { final = t.toUpperCase(); }
+    else if(['pncp','cnpj','cpf','sus'].includes(wl) && t===wl) { final = t.toUpperCase(); }
+    else if(PAD_LEIS.has(wl) && /^[A-ZÀ-Þ]/.test(t)){ const j=nextW(i); if(j>=0 && PAD_LEI_SEG.test(tk[j])) final = _padCap(wl); }
+    if(final === null && /^[IVXLCDM]+$/.test(t) && PAD_ROMANO.test(t) && t.length<=4 && /^(fase|lote|anexo|item|art|artigo|seção|secao|capítulo|capitulo|título|titulo|grupo|etapa|classe|nível|nivel|parte|módulo|modulo|tipo|inciso)$/i.test(ant) ) final = t;
+    if(final === null && /^[IVXLCDM]+$/.test(t) && PAD_ROMANO.test(t) && t.length<=4 && inicioFrase && /^\s*[-–.)]/.test(tk.slice(i+1,i+3).join(''))) final = t;
+    if(final === null && /^[A-ZÀ-Þ]$/.test(t) && (tk[i+1]==='.' || ant.endsWith('.')) ) final = t;     // S.A.
+    if(final === null && /^[A-ZÀ-Þ]$/.test(t) && tk[i+1]===')') final = wl;
+    if(final === null && /^[a-zß-ÿ]$/.test(t) && tk[i+1]===')') final = t;                                // A) B)
+    if(final === null && /^[A-ZÀ-Þ]$/.test(t) && !inicioFrase){ final = wl; }
+    if(final === null){
+      const caps = _padTodoCaps(t);
+      if(caps){
+        // sigla isolada (não vizinha de outra palavra em maiúsculas) é mantida
+        const p=prevW(i), q=nextW(i);
+        const isolada = !(ehCapsPal(p) || ehCapsPal(q));
+        const viaBarra = t.length<=5 && ((tk[i+1]==='/' && ehCapsPal(i+2<n&&_padEhWord(tk[i+2])?i+2:-1) && tk[i+2].length<=5) || (tk[i-1]==='/' && i>=2 && _padEhWord(tk[i-2]) && _padTodoCaps(tk[i-2]) && tk[i-2].length<=5));
+        const eAcento = PAD_ACENTOS[_padNorm(t)];
+        if(nomeProprio[i]){ final = PAD_NOME_LIG.has(wl) ? wl : _padCap(eAcento ? eAcento.toLowerCase() : wl); }
+        else if(viaBarra && !PAD_PREP.has(wl) && !eAcento && !PAD_COMUNS.has(_padNorm(t))){ final = t; }
+        else if(isolada && !PAD_PREP.has(wl) && t.length>=2 && t.length<=6 && !eAcento && !modoCaps && !PAD_COMUNS.has(_padNorm(t))){ final = t; }
+        else if(isolada && !PAD_PREP.has(wl) && t.length>=2 && t.length<=8 && !eAcento && modoCaps && /[\(\/\-–]/.test(ant) && !PAD_COMUNS.has(_padNorm(t))){ final = t; }
+        else if(isolada && t.length<=4 && !PAD_PREP.has(wl) && !eAcento && modoCaps && !PAD_PARAR.has(wl) && /^[BCDFGHJKLMNPQRSTVWXZ]+$/.test(t)) { final = t; }   // sem vogal: sigla
+        else { final = eAcento ? eAcento : wl; }
+      } else if(nomeProprio[i]){
+        final = PAD_NOME_LIG.has(wl) ? wl : _padCap(PAD_ACENTOS[_padNorm(wl)] ? PAD_ACENTOS[_padNorm(wl)].toLowerCase() : wl);
+      } else if(/^[A-ZÀ-Þ]/.test(t)){
+        // Capitalizada: em texto "Título Capitalizado" vira minúscula; em texto comum pode ser nome próprio — mantém
+        final = (!PAD_NOMES_FIXOS.has(wl) && (PAD_VOCAB.has(wl) || PAD_COMUNS.has(_padNorm(wl)) || PAD_PARAR.has(wl) || PAD_ACENTOS[_padNorm(wl)])) ? wl : t;
+      } else {
+        final = t;
+      }
+      if(final === wl && PAD_ACENTOS[_padNorm(wl)] && wl === _padNorm(wl)) final = PAD_ACENTOS[_padNorm(wl)];
+    }
+    // primeira letra da frase
+    if(inicioFrase && !(t.length===1 && tk[i+1]===')')){ final = final.charAt(0).toUpperCase() + final.slice(1); }
+    out[i] = final;
+    inicioFrase = false;
+  }
+  return out.join('');
+}
+
+/* Nome de órgão: preserva o nome, só ajusta a caixa (Title Case com "de/da/do" em minúsculas e siglas mantidas) */
+function padronizarOrgao(txt, opts){
+  if(txt === null || txt === undefined || typeof txt !== 'string' || !txt.trim()) return txt;
+  const letras = (txt.match(/[A-Za-zÀ-ÿ]/g)||[]);
+  const maius = letras.filter(c=>/[A-ZÀ-Þ]/.test(c)).length;
+  if(letras.length && maius/letras.length < 0.6) return txt;       // já está em caixa mista: é o nome oficial, não mexe
+  const prot = (opts && opts.protegidos || []).filter(Boolean);
+  const tk = _padTokens(txt);
+  const n = tk.length;
+  const out = tk.slice();
+  const protNorm = prot.map(p=>String(p).match(/[A-Za-zÀ-ÿ0-9ºª°]+/g)||[]);
+  const idxW = []; for(let i=0;i<n;i++) if(_padEhWord(tk[i])) idxW.push(i);
+  const fraseDe = new Array(n).fill(null);
+  protNorm.forEach(pal=>{ if(!pal.length) return; const alvo=pal.map(_padNorm);
+    for(let a=0;a<idxW.length;a++){ let ok=true; for(let k=0;k<alvo.length;k++){ const j=idxW[a+k]; if(j===undefined||_padNorm(tk[j])!==alvo[k]){ok=false;break;} }
+      if(ok && !(alvo.length===1 && pal[0].length<=2)) for(let k=0;k<alvo.length;k++) fraseDe[idxW[a+k]]=pal[k]; } });
+  const sig = new Set(); { let ap=false; for(let i=0;i<n;i++){ const t=tk[i]; if(!_padEhWord(t)){ if(/[\(\/\-–—]/.test(t)) ap=true; continue; } if(ap && _padTodoCaps(t) && t.length>=3 && t.length<=8) sig.add(t); ap=false; } }
+  let apos = false;   // depois de " - ", "/", "(" : trecho de sigla/complemento
+  for(let i=0;i<n;i++){
+    const t=tk[i];
+    if(!_padEhWord(t)){ if(/[\(\/\-–—]/.test(t)) apos = true; continue; }
+    const wl=t.toLowerCase();
+    let f;
+    if(/\d/.test(t)) f=t;
+    else if(fraseDe[i]) f=fraseDe[i];
+    else if(PAD_UFS.has(t) && apos && !PAD_PREP.has(wl) ) f=t;
+    else if(apos && t.length>=2 && t.length<=8 && _padTodoCaps(t) && !PAD_PREP.has(wl) && !PAD_ACENTOS[_padNorm(t)] && !PAD_GATILHOS.has(wl)) f=t;   // sigla do órgão (CIS/AMEOSC, COMESP)
+    else if(PAD_SIGLAS.has(t.toUpperCase()) && t.length>=3) f=t.toUpperCase();
+    else if(sig.has(t.toUpperCase()) && _padTodoCaps(t) && !PAD_PREP.has(wl)) f=t.toUpperCase();
+    else if(PAD_NOME_LIG.has(wl) || wl==='e') f=wl;
+    else { const ac = PAD_ACENTOS[_padNorm(wl)]; f = _padCap(ac ? ac.toLowerCase() : wl); }
+    if(i===0 || (idxW[0]===i)) f=_padCap(f);
+    out[i]=f;
+    apos = false;
+  }
+  return out.join('');
+}
+
+/* Padroniza os campos de texto de um edital (exibição, gravação e importação usam a mesma regra) */
+function padronizarCamposEdital(o){
+  const cid = o.cidade || '';
+  const org = padronizarOrgao(o.orgao, {protegidos:[cid]});
+  const pr = {protegidos:[cid, org]};
+  return {
+    edital: padronizarTexto(o.edital, pr), orgao: org, objeto: padronizarTexto(o.objeto, pr),
+    requisitos: padronizarTexto(o.requisitos, pr), pontosPositivos: padronizarTexto(o.pontosPositivos, pr), pontosAtencao: padronizarTexto(o.pontosAtencao, pr)
+  };
+}
 function mapEditalSupabase(row){
+  const _pad = padronizarCamposEdital({edital:row.edital, orgao:row.orgao, objeto:row.objeto, cidade:row.cidade, requisitos:row.requisitos, pontosPositivos:row.pontos_positivos, pontosAtencao:row.pontos_atencao});
   const indice = (row.indice !== null && row.indice !== undefined) ? Number(row.indice) : null;
   return {
     id: 900000 + row.id,
     origemSupabase: true,
-    edital: row.edital || 'Credenciamento (PNCP)',
-    orgao: row.orgao || 'Órgão não identificado',
+    edital: _pad.edital || 'Credenciamento (PNCP)',
+    orgao: _pad.orgao || 'Órgão não identificado',
     uf: row.uf || '—',
     cidade: row.cidade || '',
     tipo: row.tipo || 'Credenciamento',
@@ -10126,7 +10338,7 @@ function mapEditalSupabase(row){
     escolaridadeMinima: normEscolaridade(row.escolaridade_minima) || null,
     experienciaMinimaAnos: row.experiencia_minima_anos || null,
     situacao: row.situacao || 'Aberto',
-    objeto: row.objeto || '',
+    objeto: _pad.objeto || '',
     prazo: row.prazo_indeterminado ? 'Indeterminado' : formatarDataBR(row.prazo),
     prazoIndeterminado: !!row.prazo_indeterminado,
     prazoConfirmado: !!row.prazo_confirmado,
@@ -10141,9 +10353,9 @@ function mapEditalSupabase(row){
     volume: row.volume_estimado || 'Não informado',
     valorMaximo: formatarMoedaBR(row.valor_maximo) ? formatarMoedaBR(row.valor_maximo) + ' (valor total estimado no edital, conforme PNCP)' : (row.valor_maximo || 'Não informado'),
     remuneracao: (row.remuneracao && row.remuneracao.length) ? row.remuneracao : [],
-    requisitos: row.requisitos || 'Consulte o edital oficial no PNCP para os requisitos completos.',
-    pontosPositivos: row.pontos_positivos || '',
-    pontosAtencao: row.pontos_atencao || '',
+    requisitos: _pad.requisitos || 'Consulte o edital oficial no PNCP para os requisitos completos.',
+    pontosPositivos: _pad.pontosPositivos || '',
+    pontosAtencao: _pad.pontosAtencao || '',
     documentos: documentosGenericos(row.documentos) ? DOCUMENTOS_PADRAO : row.documentos,
     documentosPadrao: documentosGenericos(row.documentos),
     urlOficial: row.url_oficial || row.url_pncp || 'https://pncp.gov.br/app/editais',
@@ -10210,6 +10422,7 @@ async function carregarEditaisSupabase(){
     const av = document.getElementById('aviso-cache-editais'); if(av) av.remove();
   }
 
+  padConstruirVocab(linhas.flatMap(r=>[r.edital, r.objeto, r.requisitos, r.pontos_positivos, r.pontos_atencao]));
   const reais = linhas.map(mapEditalSupabase);
   // remove versões antigas dos mesmos editais reais; os editais de demonstração
   // do protótipo só continuam aparecendo se o banco ainda não tiver nenhum edital real.
@@ -10355,7 +10568,7 @@ async function renderCaixaEntrada(){
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
       </summary>
       <div style="margin-top:10px;">
-        <p style="font-size:13px; color:var(--ink-muted); margin:0 0 8px;">${esc(item.resumo || item.objeto || '')}</p>
+        <p style="font-size:13px; color:var(--ink-muted); margin:0 0 8px;">${esc(padronizarTexto(item.resumo || item.objeto || '', {protegidos:[item.cidade || item.municipio]}))}</p>
         ${item.amparo_legal ? `<p style="font-size:11.5px; color:var(--ink-dim); margin:0 0 8px;">Amparo legal (PNCP): ${esc(item.amparo_legal)}</p>` : ''}
         ${item.link_pncp ? `<a href="${item.link_pncp}" target="_blank" rel="noopener" style="font-size:12px; color:var(--teal);">Ver no PNCP ↗</a>` : ''}
         <div class="inbox-actions" style="margin-top:10px;">
