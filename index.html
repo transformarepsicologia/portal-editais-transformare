@@ -8517,25 +8517,18 @@ function consAbrir(id){ consId = id; consDetalhe(); const el = document.getEleme
 function consNova(){
   const el = document.getElementById('cons-nova');
   el.innerHTML = `<div class="form-row" style="border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px; margin-bottom:12px;">
-    <div class="two-col">
-      <div class="form-row"><label>Nome do cliente / clínica</label><input type="text" id="cn-nome"></div>
-      <div class="form-row"><label>Profissões (separe por vírgula)</label><input type="text" id="cn-prof" placeholder="Ex: Psicologia, Fonoaudiologia"></div>
-    </div>
-    <div class="two-col">
-      <div class="form-row"><label>Cidade/UF onde atua</label><input type="text" id="cn-cidade" placeholder="Ex: Canoas/RS"></div>
-      <div class="form-row"><label>Telefone / e-mail</label><input type="text" id="cn-contato"></div>
-    </div>
-    <button class="btn-primary" onclick="consCriar()">Cadastrar</button> <button class="btn-ghost" onclick="document.getElementById('cons-nova').innerHTML=''">Cancelar</button></div>`;
+    <div class="form-row"><label>Nome do cliente / clínica</label><input type="text" id="cn-nome" onkeydown="if(event.key==='Enter') consCriar()"></div>
+    <p class="section-sub" style="margin:0 0 10px;">Em seguida abre o cadastro completo, com os mesmos campos de "Minha conta" do plano Pro, para você preencher.</p>
+    <button class="btn-primary" onclick="consCriar()">Criar e abrir cadastro</button> <button class="btn-ghost" onclick="document.getElementById('cons-nova').innerHTML=''">Cancelar</button></div>`;
+  const i = document.getElementById('cn-nome'); if(i) i.focus();
 }
 async function consCriar(){
   const nome = document.getElementById('cn-nome').value.trim(); if(!nome){ toast('Informe o nome'); return; }
-  const ct = document.getElementById('cn-contato').value.trim();
-  const ficha = { fantasia:nome, profissoes:document.getElementById('cn-prof').value.trim(), cidade:document.getElementById('cn-cidade').value.trim() };
-  if(/@/.test(ct)) ficha.email = ct; else if(ct) ficha.telefone = ct;
-  const { data, error } = await _sb.from('aae_clientes').insert({ nome, tipo:'PJ', ficha, consultoria: consDados(null) }).select();
+  const { data, error } = await _sb.from('aae_clientes').insert({ nome, tipo:'PJ', ficha:{ fantasia:nome }, consultoria: consDados(null) }).select();
   if(error){ toast('Erro ao cadastrar: '+error.message); return; }
   document.getElementById('cons-nova').innerHTML = '';
-  await aaeCarregar(); consId = data[0].id; consRender(); consDetalhe(); toast('Cliente cadastrado');
+  await aaeCarregar(); consId = data[0].id; consRender(); consDetalhe(); toast('Cliente criado — preencha o cadastro abaixo');
+  const el = document.getElementById('cons-detalhe'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
 }
 async function consGravar(c, d, extra){
   const row = Object.assign({ consultoria:d, atualizado_em:new Date().toISOString() }, extra||{});
@@ -8561,24 +8554,43 @@ async function consSalvarCadastro(){
 }
 // Cadastro e contrato/valores são gravados juntos (cidade e remuneração aparecem nos dois blocos e são o mesmo dado)
 async function consSalvarContrato(){ return consSalvarCadastro(); }
-// Editais abertos compatíveis com a profissão e a região do cliente (reaproveita a pontuação da AAE)
-function consSugestoes(c){
-  const f = c.ficha||{}, ja = new Set(consDados(c).processos.map(p=>String(p.id)));
-  let out = [];
+// Aderência do cliente: a MESMA conta e os mesmos cartões do "Minha conta" (visão do plano Pro), só que para uso do consultor.
+let consAderMin = 70, consAderTodos = false;
+function consAderencias(c){
   const up = consPerfilParaAderencia(c);
-  if((up.profs||[]).length){
-    // mesma aderência que o cliente veria no site; prioriza 70% ou mais
-    const todos = oportunidades.filter(o=>visivelAoCliente(o) && ['Aberto','Próximo do encerramento','Próximo da abertura'].includes(situacaoExibida(o)) && !ja.has(String(o.id)))
-      .map(o=>({ o, score: calcularAderencia(o, up).pct })).filter(r=>r.score !== null && r.score > 0).sort((a,b)=>b.score - a.score || (b.o.indice||0) - (a.o.indice||0));
-    const altos = todos.filter(r=>r.score >= 70);
-    return (altos.length ? altos : todos).slice(0, 8);
-  }
-  try{
-    out = oportunidades.filter(o=>visivelAoCliente(o) && ['Aberto','Próximo do encerramento','Próximo da abertura'].includes(situacaoExibida(o)) && !ja.has(String(o.id)))
-      .map(o=>Object.assign({ o }, aaePontuar(f, aaeDeCatalogo(o))))
-      .filter(r=>r.profOk && r.geo!==false).sort((a,b)=>b.score-a.score).slice(0,8);
-  }catch(e){ out = []; }
-  return out;
+  return oportunidades.filter(o=>visivelAoCliente(o) && situacaoExibida(o) !== 'Encerrado')
+    .map(o=>({ o, ad: calcularAderencia(o, up) })).filter(x=>x.ad.pct !== null && x.ad.pct > 0)
+    .sort((a,b)=>b.ad.pct - a.ad.pct || (b.o.indice||0) - (a.o.indice||0));
+}
+function consAderResumoHTML(c){
+  const todas = consAderencias(c), info = perfilCompletude(consPerfilBase(c));
+  const alta = todas.filter(x=>x.ad.pct >= 70).length, melhor = todas.length ? todas[0].ad.pct + '%' : '—';
+  return `<div class="account-stats">
+      <div class="indicator-card"><div class="num">${alta}</div><div class="label">Editais com alta aderência (70%+)</div></div>
+      <div class="indicator-card"><div class="num">${melhor}</div><div class="label">Maior aderência ao perfil</div></div>
+      <div class="indicator-card"><div class="num">${info.pct}%</div><div class="label">Cadastro preenchido</div></div>
+    </div>`
+    + (info.pct < 100 ? `<div class="atencao-box" style="margin:12px 0 0;">⚠ <strong>Cadastro ${info.pct}% preenchido.</strong> Cadastro incompleto não reduz a nota, mas deixa a análise parcial. Faltam: ${esc(info.faltam.join(', '))}.</div>` : '');
+}
+function consAderRender(){
+  const c = consCliente(), box = document.getElementById('cons-aderentes'); if(!c || !box) return;
+  const ja = new Set(consDados(c).processos.map(p=>String(p.id)));
+  const todas = consAderencias(c).filter(x=>x.ad.pct >= consAderMin);
+  box.innerHTML = '';
+  if(!todas.length){ box.innerHTML = '<div class="empty-state">Nenhum edital com '+consAderMin+'% ou mais de aderência no momento. Complete o cadastro do cliente ou baixe o corte acima.</div>'; return; }
+  (consAderTodos ? todas : todas.slice(0,20)).forEach(({o, ad})=>{
+    const card = renderCard(o);
+    const fav = card.querySelector('.fav-btn'); if(fav) fav.style.display = 'none'; // o favorito é da conta do consultor, não do cliente
+    card.querySelectorAll('.btn-editar-adm').forEach(b=>b.remove()); // editar/excluir edital do catálogo não faz parte da visão do cliente
+    inserirNotaNoCard(card, ad);
+    // "Completar perfil" aqui leva ao cadastro DESTE cliente, não ao perfil do consultor
+    card.querySelectorAll('a').forEach(a=>{ if(/completar perfil/i.test(a.textContent)){ a.onclick = e=>{ e.preventDefault(); e.stopPropagation(); const f = document.getElementById('cons-nome'); if(f){ f.scrollIntoView({behavior:'smooth', block:'center'}); f.focus(); } }; a.textContent = 'Completar o cadastro do cliente'; } });
+    card.insertAdjacentHTML('beforeend', ja.has(String(o.id))
+      ? '<div style="margin-top:8px; font-size:12.5px; color:var(--teal);">✓ Em acompanhamento (veja no item 3)</div>'
+      : `<div style="margin-top:8px;"><button class="btn-ghost" onclick="event.stopPropagation(); consAdicionarProcesso('${esc(String(o.id))}')">+ Acompanhar para este cliente</button></div>`);
+    box.appendChild(card);
+  });
+  if(todas.length > 20 && !consAderTodos) box.insertAdjacentHTML('beforeend', `<div style="grid-column:1/-1; text-align:center; margin-top:8px;"><button class="btn-ghost" onclick="consAderTodos=true; consAderRender()">Mostrar todos os ${todas.length}</button></div>`);
 }
 async function consAdicionarProcesso(oid){
   const c = consCliente(); if(!c) return; const o = oportunidades.find(x=>String(x.id)===String(oid)); if(!o) return;
@@ -8732,11 +8744,6 @@ function consDetalhe(){
   const c = consCliente(); if(!c){ el.innerHTML = ''; return; }
   const d = consDados(c), f = c.ficha||{};
   const opt = (obj, sel) => Object.entries(obj).map(([k,v])=>`<option value="${k}" ${k===sel?'selected':''}>${esc(v)}</option>`).join('');
-  const sug = consSugestoes(c);
-  const sugHtml = sug.length ? sug.map(r=>`<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:8px 0; border-bottom:1px solid var(--border-soft);">
-      <div style="flex:1; min-width:220px;"><strong>${esc(r.o.orgao||'')}</strong> — ${esc(r.o.edital||'')}<br><span style="font-size:12px;color:var(--ink-dim);">${esc(r.o.cidade? r.o.cidade+'/':'')}${esc(r.o.uf||'')} · prazo ${esc(r.o.prazo||'—')} · Índice ${r.o.indice!=null?esc(r.o.indice):'—'} · aderência ${r.score}%</span></div>
-      <button class="btn-ghost" onclick="consAdicionarProcesso('${esc(String(r.o.id))}')">+ Acompanhar</button></div>`).join('')
-    : '<span class="section-sub">Nenhum edital aberto compatível com o cadastro deste cliente (confira Profissão e Estado/Cidade no cadastro).</span>';
   const procHtml = d.processos.length ? d.processos.map((p,i)=>{
     const o = oportunidades.find(x=>String(x.id)===String(p.id)), docs = (o && o.documentos) || [], ok = new Set(p.docs_ok||[]);
     const feitos = docs.filter(x=>ok.has(x)).length;
@@ -8749,7 +8756,7 @@ function consDetalhe(){
       ${docs.length ? `<details style="margin-top:8px;"><summary style="cursor:pointer; font-weight:600;">Documentos: ${feitos}/${docs.length}</summary>${docs.map((doc,k)=>`<label style="display:flex; gap:8px; align-items:flex-start; font-size:13px; padding:3px 0; cursor:pointer;"><input type="checkbox" ${ok.has(doc)?'checked':''} onchange="consDoc(${i},${k},this.checked)"> <span>${esc(doc)}</span></label>`).join('')}</details>` : '<div class="section-sub" style="margin-top:6px;">Este edital ainda não tem lista de documentos.</div>'}
       <input type="text" placeholder="Observações do processo" value="${esc(p.obs||'')}" onchange="consObsProcesso(${i}, this.value)" style="margin-top:8px; width:100%;">
     </div>`;
-  }).join('') : '<span class="section-sub">Nenhum edital em acompanhamento. Use as sugestões acima.</span>';
+  }).join('') : '<span class="section-sub">Nenhum edital em acompanhamento. Use "+ Acompanhar" nos editais aderentes acima.</span>';
   const histHtml = d.historico.length ? d.historico.map((h,i)=>`<div style="border-left:3px solid var(--teal); padding:4px 0 4px 12px; margin-bottom:10px;">
       <div style="font-size:12px; color:var(--ink-dim);">${esc(new Date(h.data).toLocaleDateString('pt-BR'))} <button class="btn-ghost" style="padding:0 6px; margin-left:6px;" onclick="consExcluirHist(${i})">apagar</button></div>
       ${(h.editais||[]).length?'<div style="font-size:13px;">'+h.editais.map(e=>esc(e.orgao+' — '+e.edital)+(e.indice!=null?' (Índice '+esc(e.indice)+')':'')).join('<br>')+'</div>':''}
@@ -8775,7 +8782,11 @@ function consDetalhe(){
       <div class="form-row"><label>Observações</label><input type="text" id="cd-obs" value="${esc(d.obs)}"></div>
       <button class="btn-primary" onclick="consSalvarContrato()">Salvar contrato e valores</button>
     </div>
-    <div class="form-row" style="margin-top:14px;"><label>2. Editais abertos que combinam com este cliente</label>${sugHtml}</div>
+    <div class="form-row" style="margin-top:14px;"><label>2. Editais aderentes ao perfil do cliente <span style="font-weight:400; color:var(--ink-muted);">(a mesma visão do plano Pro; salve o cadastro para atualizar)</span></label>
+      <div id="cons-ader-resumo" style="margin:8px 0 12px;">${consAderResumoHTML(c)}</div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px;"><span style="font-size:13px;">Mostrar aderência de</span>
+        <select id="cons-ader-min" onchange="consAderMin=+this.value; consAderTodos=false; consAderRender()" style="width:auto;"><option value="70">70% ou mais</option><option value="50">50% ou mais</option><option value="1">todas</option></select></div>
+      <div class="op-grid" id="cons-aderentes"></div></div>
     <div class="form-row" style="margin-top:14px;"><label>3. Acompanhamento do credenciamento e documentos</label>${procHtml}</div>
     <div class="form-row" style="margin-top:14px;"><label>4. Histórico de análises</label>
       <textarea id="ch-texto" rows="4" placeholder="Anotações da análise: Índice, prós e contras, o que foi apresentado ao cliente…"></textarea>
@@ -8787,6 +8798,8 @@ function consDetalhe(){
       <button class="btn-ghost" style="margin-bottom:10px;" onclick="dehCopiarResumo()">Copiar resumo e pendências</button>
       ${dehHTML(c, d)}</div>`;
   consPerfilPreencher(c);
+  const mn = document.getElementById('cons-ader-min'); if(mn) mn.value = String(consAderMin);
+  consAderRender();
 }
 // ===== PCA (aba admin): serviços de saúde planejados, ainda não abertos =====
 let pcaDados = null, pcaPag = 1;
