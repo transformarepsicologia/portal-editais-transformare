@@ -820,14 +820,6 @@ table.admin-table tr:hover td{background:var(--bg-elevated);}
 .pw-toggle{position:absolute; right:4px; top:50%; transform:translateY(-50%); width:38px; height:38px; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; color:var(--ink-muted); cursor:pointer; padding:0;}
 .pw-toggle:hover,.pw-toggle:focus-visible{color:var(--teal); outline:none; background:rgba(47,217,196,.10);}
 .pw-toggle svg{width:20px; height:20px; display:block;}
-/* ===== Entrar / Criar conta: abas ===== */
-.auth-tabs{display:flex; gap:6px; max-width:460px; margin:28px auto 22px; padding:4px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px;}
-.auth-tabs button{flex:1; font:inherit; font-weight:600; font-size:14px; padding:10px 12px; border:none; border-radius:9px; background:none; color:#FFFFFF; cursor:pointer; min-height:42px; transition:background .15s, color .15s;}
-.auth-tabs button:hover{color:var(--teal);}
-.auth-tabs button.on{background:var(--teal); color:var(--bg);}
-html[data-theme="light"] .auth-tabs button{color:var(--ink);}
-html[data-theme="light"] .auth-tabs button.on{color:#fff;}
-#view-cadastro .auth-tabs{max-width:520px;}
 #view-cadastro .page-head{max-width:520px; margin-left:auto; margin-right:auto; text-align:center;}
 #view-cadastro .page-head .eyebrow{display:inline-flex;}
 #view-cadastro .form-card{margin-left:auto; margin-right:auto;}
@@ -1464,10 +1456,6 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== LOGIN ===================== -->
 <section class="view" id="view-login">
-  <div class="auth-tabs" role="tablist" aria-label="Acesso">
-    <button type="button" role="tab" class="on" onclick="nav('login')">Entrar</button>
-    <button type="button" role="tab" class="" onclick="nav('cadastro')">Criar conta</button>
-  </div>
   <div class="page-head auth-head"><span class="eyebrow">Acesso</span><h2>Entrar</h2><p>Acesse sua área para acompanhar favoritos, alertas e editais compatíveis com o seu perfil.</p></div>
   <div class="form-card auth-card">
     <div class="form-row"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email"></div>
@@ -1483,10 +1471,6 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== CADASTRO ===================== -->
 <section class="view" id="view-cadastro">
-  <div class="auth-tabs" role="tablist" aria-label="Acesso">
-    <button type="button" role="tab" class="" onclick="nav('login')">Entrar</button>
-    <button type="button" role="tab" class="on" onclick="nav('cadastro')">Criar conta</button>
-  </div>
   <div class="page-head"><span class="eyebrow">Nova conta</span><h2>Criar minha conta</h2><p>Dois passos rápidos: seu acesso e seus dados de contato. O perfil profissional você completa depois.</p></div>
   <div class="form-card" style="max-width:520px;">
     <div id="cad-etapa-1">
