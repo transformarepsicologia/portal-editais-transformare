@@ -3369,7 +3369,7 @@ function renderCard(o){
         </div>
         <span class="badge ${badgeClass(situacaoExibida(o))}">${situacaoExibida(o)}</span>
         ${inscricaoProximaHTML(o)}
-        ${(o.indice != null && !ehPro()) ? travaProHTML('Índice Transformare') : scoreMini(o.indice, o.indiceLabel)}
+        ${(o.indice != null && !ehPro()) ? travaProHTML('Índice Transformare', true) : scoreMini(o.indice, o.indiceLabel)}
       </div>
     </div>
   `;
@@ -3930,8 +3930,8 @@ const PLANOS = {gratuito:'Gratuito', essencial:'Transformare Pro'};
 function ehEssencial(){ return !!(adminAuthed || (userProfile && userProfile.plano === 'essencial')); }
 const ehPro = ehEssencial;
 // Trava visual de recurso do Plano Pro (só interface: o conteúdo continua nos dados do navegador)
-function travaProHTML(texto){
-  return `<div class="pro-lock" onclick="solicitarPlanoEssencial()" title="Disponível no Plano Transformare Pro"><span>🔒</span><span>${texto}</span></div>`;
+function travaProHTML(texto, semIcone){
+  return `<div class="pro-lock" onclick="solicitarPlanoEssencial()" title="Disponível no Plano Transformare Pro">${semIcone?'':'<span>🔒</span>'}<span>${texto}</span></div>`;
 }
 function exigePro(recurso){
   if(ehPro()) return true;
@@ -4543,7 +4543,7 @@ function openDetalhe(id){
         <div class="score-hero ${scoreClass}">
           ${(temIndice && !ehPro()) ? `
           <div class="score-hero-body" style="flex:1;">
-            <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — nota de 1 a 5 disponível no Plano Pro</div>
+            <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${ICONE_CADEADO} nota de 1 a 5 disponível no Plano Pro</div>
             <div class="caption">Este edital já foi avaliado pela Transformare (retorno financeiro, facilidade de entrada, aderência e complexidade documental). Assine o Plano Transformare Pro para ver a nota e os pontos de destaque do edital.</div>
             <button class="btn-primary" style="margin-top:10px;" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
           </div>
