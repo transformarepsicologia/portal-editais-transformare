@@ -650,12 +650,46 @@ html:not([data-theme="light"]) #view-home ::placeholder{color:rgba(255,255,255,.
 #view-home .step-card h3{color:var(--teal);}
 #view-home .promo-band.consultoria .promo-tag{color:var(--amber);}
 #view-home .section-title,#view-home .cta-band h3,#view-home .promo-band.consultoria h3{color:var(--teal);}
-/* ===== Editais: rótulo dourado, título verde, textos em branco ===== */
-#view-editais .page-head .eyebrow{color:var(--amber);}
-#view-editais .page-head .eyebrow::before{background:var(--amber); box-shadow:0 0 0 4px rgba(245,169,62,.18);}
-#view-editais .page-head h2{color:var(--teal);}
-html:not([data-theme="light"]) #view-editais{--ink-muted:#FFFFFF; --ink-dim:#FFFFFF;}
-html:not([data-theme="light"]) #view-editais ::placeholder{color:rgba(255,255,255,.6);}
+/* ===== Demais seções: rótulo pequeno dourado, título grande verde, textos em branco ===== */
+#view-editais .page-head .eyebrow,
+#view-favoritos .page-head .eyebrow,
+#view-alertas .page-head .eyebrow,
+#view-sobre .page-head .eyebrow,
+#view-planos .page-head .eyebrow,
+#view-minha-conta .page-head .eyebrow{color:var(--amber);}
+#view-editais .page-head .eyebrow::before,
+#view-favoritos .page-head .eyebrow::before,
+#view-alertas .page-head .eyebrow::before,
+#view-sobre .page-head .eyebrow::before,
+#view-planos .page-head .eyebrow::before,
+#view-minha-conta .page-head .eyebrow::before{background:var(--amber); box-shadow:0 0 0 4px rgba(245,169,62,.18);}
+#view-editais .page-head h2,
+#view-favoritos .page-head h2,
+#view-alertas .page-head h2,
+#view-sobre .page-head h2,
+#view-planos .page-head h2,
+#view-minha-conta .page-head h2{color:var(--teal);}
+#view-editais .section-title,
+#view-favoritos .section-title,
+#view-alertas .section-title,
+#view-sobre .section-title,
+#view-planos .section-title,
+#view-minha-conta .section-title{color:var(--teal);}
+html:not([data-theme="light"]) #view-editais,
+html:not([data-theme="light"]) #view-favoritos,
+html:not([data-theme="light"]) #view-alertas,
+html:not([data-theme="light"]) #view-sobre,
+html:not([data-theme="light"]) #view-planos,
+html:not([data-theme="light"]) #view-minha-conta{--ink-muted:#FFFFFF; --ink-dim:#FFFFFF;}
+html:not([data-theme="light"]) #view-editais ::placeholder,
+html:not([data-theme="light"]) #view-favoritos ::placeholder,
+html:not([data-theme="light"]) #view-alertas ::placeholder,
+html:not([data-theme="light"]) #view-sobre ::placeholder,
+html:not([data-theme="light"]) #view-planos ::placeholder,
+html:not([data-theme="light"]) #view-minha-conta ::placeholder{color:rgba(255,255,255,.6);}
+#view-sobre .sobre-texto h3,#view-sobre .mp-card h3,#view-planos .pl-card h3,#view-planos .pl-cons h3,#view-planos .pl-head h2{color:var(--teal);}
+#view-planos .pl-eyebrow,#view-planos .pl-sub{color:var(--amber);}
+#view-planos .pl-eyebrow span{background:var(--amber);}
 .mp-tip{position:fixed; z-index:50; pointer-events:none; background:var(--ink); color:var(--bg); border-radius:6px; padding:6px 9px; font-size:12px; max-width:240px; opacity:0;}
 .chip-opt{font-size:12.5px; padding:7px 13px; border:1px solid var(--border); border-radius:20px; cursor:pointer; background:var(--bg-elevated); color:var(--ink-muted); flex:0 0 auto; max-width:100%; white-space:normal; overflow-wrap:anywhere;}
 .chip-opt.selected{background:var(--teal); border-color:var(--teal); color:var(--bg); font-weight:600;}
@@ -1272,17 +1306,17 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <section class="view" id="view-sobre">
   <div class="sobre-grid">
   <div class="sobre-texto" style="font-size:14.5px; line-height:1.75; color:var(--ink-muted);">
-    <div class="page-head"><span class="eyebrow">Sobre o Radar</span><h2 style="color:var(--ink);">O edital é só o começo.</h2></div>
+    <div class="page-head"><span class="eyebrow">Sobre o Radar</span><h2>O edital é só o começo.</h2></div>
     <p style="color:var(--ink);">Encontrar uma publicação é apenas a primeira etapa. Entender as condições, comparar oportunidades e identificar os requisitos para participar exige tempo e atenção.</p>
     <p>O Radar Transformare foi criado para tornar esse processo mais simples, reunindo oportunidades de credenciamento da área da saúde e organizando as principais informações em um só lugar.</p>
     <p>Monitoramos o Portal Nacional de Contratações Públicas (PNCP) e outras fontes públicas oficiais, com oportunidades para Psicologia, Nutrição, Fonoaudiologia, Odontologia, Medicina, Enfermagem e outras profissões contempladas pela plataforma.</p>
     <p>Assim, você economiza tempo na busca e consegue comparar oportunidades para decidir quais merecem sua atenção.</p>
-    <h3 style="font-family:var(--font-display); font-size:19px; color:var(--ink); margin:30px 0 10px;">Conheça o Índice Transformare</h3>
+    <h3 style="font-family:var(--font-display); font-size:19px; margin:30px 0 10px;">Conheça o Índice Transformare</h3>
     <p>Para ajudar na análise das oportunidades, o Radar utiliza o <strong style="color:var(--ink);">Índice Transformare</strong>, uma avaliação interna que atribui notas de 1 a 5 às oportunidades avaliadas.</p>
     <p>A avaliação é realizada manualmente por um analista da Transformare e considera o retorno financeiro, a facilidade de entrada e a complexidade documental.</p>
     <p>O índice não é uma classificação oficial, não garante que uma oportunidade seja vantajosa e não substitui a leitura do edital.</p>
     <p>Nem todas as oportunidades foram avaliadas. Quando uma avaliação não estiver disponível, essa informação será indicada na página correspondente, com a possibilidade de solicitar uma análise.</p>
-    <h3 style="font-family:var(--font-display); font-size:19px; color:var(--ink); margin:30px 0 10px;">Informação pública. Análise própria. Decisão sua.</h3>
+    <h3 style="font-family:var(--font-display); font-size:19px; margin:30px 0 10px;">Informação pública. Análise própria. Decisão sua.</h3>
     <p>As informações podem conter imprecisões ou sofrer alterações. Antes de se inscrever, consulte o edital original e confirme as condições diretamente na fonte oficial.</p>
     <p>Encontrou alguma informação incorreta? <a href="#" style="color:var(--teal); cursor:pointer;" onclick="openFeedbackModal(); return false;">Envie seu feedback</a> e ajude a melhorar o Radar.</p>
     <div style="background:rgba(47,217,196,0.08); border:1px solid rgba(47,217,196,0.3); border-radius:14px; padding:18px 20px; margin-top:22px;">
