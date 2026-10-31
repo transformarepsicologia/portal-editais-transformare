@@ -173,6 +173,9 @@ body.pro .so-nao-pro{display:none !important;}
 .logo-mark svg{width:100%; height:100%;}
 .logo-text{font-family:var(--font-display); font-weight:700; font-size:22px; letter-spacing:0.3px;}
 .logo-text span{color:var(--teal);}
+.logo-col{display:flex; flex-direction:column; gap:3px; min-width:0; line-height:1.1;}
+.logo-sub{font-size:12px; font-weight:500; letter-spacing:.2px; color:#FFFFFF;}
+html[data-theme="light"] .logo-sub{color:var(--ink-muted);}
 .r-espelho{display:inline-block; color:inherit !important; transform:perspective(220px) rotateY(180deg); transition:transform .9s cubic-bezier(.4,0,.2,1);}
 .r-espelho.normal{transform:perspective(220px) rotateY(0deg);}
 .logo:hover .r-espelho.normal{transform:perspective(220px) rotateY(180deg);}
@@ -219,6 +222,10 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
   font-family:var(--font-display); font-size:44px; line-height:1.12; font-weight:700; margin:0 0 18px; letter-spacing:-0.5px;
 }
 .hero h1 em{font-style:normal; color:var(--teal);}
+/* Título premium: primeira frase leve, segunda em verde-água da marca com degradê e brilho discreto */
+.hero h1 .h1-leve{font-weight:500; letter-spacing:-0.8px; color:var(--ink);}
+.hero h1 .h1-ouro{display:inline-block; font-weight:700; letter-spacing:-0.8px; padding-bottom:.06em; color:var(--teal); -webkit-text-fill-color:var(--teal);}
+html[data-theme="light"] .hero h1 .h1-ouro{color:#0A7F72; -webkit-text-fill-color:#0A7F72;}
 .hero .lead{font-size:16px; color:var(--ink-muted); line-height:1.6; max-width:520px; margin:0 0 28px;}
 
 .search-box{
@@ -328,8 +335,29 @@ main{max-width:1240px; margin:0 auto; padding:0 28px 90px;}
 .how-it-works{margin:60px 0;}
 .section-title{font-family:var(--font-display); font-size:26px; font-weight:700; margin:0 0 8px;}
 .section-sub{color:var(--ink-muted); font-size:14.5px; margin:0 0 30px;}
-.steps-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:18px;}
-.step-card{background:var(--bg-elevated); border:1px solid var(--border-soft); border-radius:12px; padding:22px; display:flex; flex-direction:column;}
+.steps-row{display:grid; grid-template-columns:repeat(6,1fr); grid-auto-rows:1fr; gap:24px; max-width:1120px; margin:0 auto;}
+.steps-row .step-card{grid-column:span 2; padding:26px 24px;}
+/* Segunda linha: 2 cards centralizados em relação aos 3 de cima */
+.steps-row .step-card:nth-child(4){grid-column:2 / span 2;}
+.steps-row .step-card:nth-child(5){grid-column:4 / span 2;}
+@media (max-width:980px){
+  .steps-row{grid-template-columns:repeat(4,1fr); gap:20px; max-width:720px;}
+  .steps-row .step-card:nth-child(n){grid-column:span 2;}
+  .steps-row .step-card:nth-child(5){grid-column:2 / span 2;}
+}
+@media (max-width:620px){
+  .steps-row{grid-template-columns:1fr; grid-auto-rows:auto; gap:14px; max-width:none;}
+  .steps-row .step-card:nth-child(n){grid-column:1 / -1; padding:18px 16px;}
+}
+.step-card{background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:22px; display:flex; flex-direction:column; transition:border-color .15s, transform .15s;}
+.step-card:hover{border-color:var(--teal); transform:translateY(-2px);}
+.step-card.pro:hover{border-color:var(--amber);}
+.indicators .indicator-card:hover,.indicators .indicator-card.is-on{border-color:var(--teal); transform:translateY(-2px);}
+.step-card.is-on{border-color:var(--teal); transform:translateY(-2px);}
+.step-card.pro.is-on{border-color:var(--amber);}
+.indicators .indicator-card,.step-card{-webkit-tap-highlight-color:transparent; cursor:default;}
+.how-intro{color:var(--ink-muted); font-size:14.5px; line-height:1.6; max-width:760px; margin:0 0 26px;}
+.step-card .how-extra{margin-top:10px; color:var(--ink-dim);}
 .step-num{font-family:var(--font-mono); color:var(--teal); font-size:12px; margin-bottom:10px;}
 .step-card h3{font-family:var(--font-display); font-size:16px; margin:0 0 8px;}
 .step-card p{font-size:13.5px; color:var(--ink-muted); line-height:1.6; margin:0;}
@@ -537,7 +565,7 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 /* Mapa de editais (Como funciona) */
 .sobre-grid{margin-top:32px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:40px; align-items:stretch;}
 @media (max-width:1000px){.sobre-grid{grid-template-columns:minmax(0,1fr);}}
-#mp-wrap{max-width:100%;}
+#mp-wrap{max-width:100%; align-self:start;}
 .sobre-texto .page-head{padding:0 0 8px;}
 .sobre-texto .page-head h2{line-height:1.2; margin:8px 0 0;}
 .mp-rank{display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%; border:1px solid var(--border); border-radius:10px; padding:8px 11px; cursor:pointer; background:transparent; color:inherit; font:inherit; text-align:left;}
@@ -567,32 +595,114 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .mp-kpi .l{font-family:var(--font-mono); font-size:9.5px; letter-spacing:1.1px; text-transform:uppercase; color:var(--ink-dim);}
 .mp-kpi .v{font-family:var(--font-display); font-size:22px; font-weight:700; margin-top:2px;}
 .mp-mapa{position:relative; border-radius:10px; overflow:hidden; background:var(--bg); display:flex; align-items:center; justify-content:center;}
-#mp-svg{width:100%; height:auto; display:block; touch-action:none; cursor:grab; user-select:none;}
-#mp-svg.arrastando{cursor:grabbing;}
-#mp-svg .land{fill:var(--bg-elevated); stroke:var(--border); stroke-linejoin:round;}
-#mp-svg .gl{stroke:var(--border-soft); stroke-dasharray:3 4;}
-#mp-svg .gt{fill:var(--ink-dim);}
-#mp-svg .bub{fill:var(--teal); fill-opacity:.5; stroke:var(--bg-card); cursor:pointer;}
-#mp-svg .bub{pointer-events:none;}
-#mp-svg .hit{fill:transparent; cursor:pointer;}
-#mp-svg .bub:has(+ .hit:hover),#mp-svg .bub.sel{fill-opacity:.9;}
-#mp-svg .bub.sel{stroke:var(--ink);}
-#mp-svg .cid{fill:var(--ink); pointer-events:none; paint-order:stroke; stroke:var(--bg); stroke-linejoin:round;}
-.mp-zoom{position:absolute; right:8px; top:8px; display:flex; flex-direction:column; gap:4px;}
-.mp-zoom button{width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--ink); font-size:16px; line-height:1; cursor:pointer;}
-.mp-zoom button:hover{background:var(--bg-card-hover);}
-.mp-painel{border-top:1px solid var(--border); padding-top:10px; display:flex; flex-direction:column; gap:8px;}
-.mp-painel[hidden]{display:none;}
-.mp-x[hidden]{display:none !important;}
-.mp-x{all:unset; cursor:pointer; color:var(--ink-muted); font-size:20px; line-height:1; padding:0 4px;}
-.mp-lista{display:flex; flex-direction:column; gap:8px; max-height:230px; overflow:auto; padding-right:4px;}
-.mp-item{border:1px solid var(--border); border-radius:10px; padding:9px 11px; display:flex; flex-direction:column; gap:3px; min-width:0; cursor:pointer; text-align:left; background:transparent; color:inherit; font:inherit;}
-.mp-item:hover{background:var(--bg-card-hover);}
-.mp-item .t{display:flex; justify-content:space-between; gap:8px; font-weight:600; font-size:13.5px;}
-.mp-item .t span:first-child{overflow-wrap:anywhere;}
-.mp-item .o{color:var(--ink-muted); font-size:12px; overflow-wrap:anywhere;}
-.mp-tags{display:flex; flex-wrap:wrap; gap:5px; margin-top:2px;}
-.mp-tag{font-size:11px; border:1px solid var(--border); border-radius:4px; padding:1px 6px; color:var(--ink-muted);}
+#mp-svg{width:100%; height:auto; display:block; user-select:none; -webkit-tap-highlight-color:transparent;}
+#mp-svg .uf{fill:var(--bg-elevated); stroke:var(--bg); stroke-width:1; stroke-linejoin:round; transition:fill .15s, fill-opacity .15s;}
+#mp-svg .uf:hover{fill:var(--bg-card-hover);}
+#mp-svg .uf.on{fill:var(--teal); fill-opacity:.62; cursor:pointer;}
+#mp-svg .uf.on:hover,#mp-svg .uf.on.sel{fill-opacity:.95;}
+/* ===== Planos ===== */
+.pl-wrap{max-width:1080px; margin:0 auto; padding:14px 0 30px;}
+.pl-head{text-align:center; max-width:720px; margin:0 auto 30px;}
+.pl-eyebrow{display:flex; align-items:center; justify-content:center; gap:14px; font-family:var(--font-mono); font-size:12px; letter-spacing:3px; color:var(--teal); margin-bottom:10px;}
+.pl-eyebrow span{width:48px; height:1px; background:var(--teal); opacity:.6;}
+.pl-head h2{font-family:var(--font-display); font-size:clamp(27px,4vw,38px); line-height:1.15; margin:0 0 12px; color:var(--ink); font-weight:700;}
+.pl-head p{margin:0; color:var(--ink-muted); font-size:15px; line-height:1.65;}
+.pl-grid{display:grid; grid-template-columns:1fr 1fr; gap:22px; align-items:stretch;}
+.pl-card{position:relative; background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:26px 26px 24px; display:flex; flex-direction:column; overflow:hidden;}
+.pl-pro{border:2px solid var(--teal); background:linear-gradient(180deg, rgba(47,217,196,.07), var(--bg-card) 40%); box-shadow:0 10px 36px rgba(47,217,196,.10);}
+.pl-fita{position:absolute; top:0; right:0; display:flex; align-items:center; gap:7px; background:var(--teal); color:var(--bg); font-weight:600; font-size:13.5px; padding:9px 20px 9px 22px; border-radius:0 0 0 16px;}
+html[data-theme="light"] .pl-fita{color:#fff;}
+.pl-tag{align-self:flex-start; background:rgba(47,217,196,.14); color:var(--teal); border-radius:999px; padding:5px 14px; font-size:12.5px; font-weight:500;}
+.pl-card h3{font-family:var(--font-display); font-size:30px; line-height:1.1; margin:14px 0 8px; color:var(--ink);}
+.pl-preco{font-family:var(--font-display); font-size:44px; font-weight:700; color:var(--teal); line-height:1.05;}
+.pl-preco small{font-size:17px; font-weight:500; color:var(--ink-muted);}
+.pl-desc{color:var(--ink-muted); font-size:14.5px; line-height:1.6; margin:10px 0 0;}
+.pl-card hr{border:0; border-top:1px solid var(--border); margin:18px 0 16px;}
+.pl-sub{font-family:var(--font-mono); font-size:11.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--teal); font-weight:600; margin-bottom:12px;}
+.pl-lista{list-style:none; margin:0 0 22px; padding:0; display:flex; flex-direction:column; gap:14px; flex:1;}
+.pl-lista li{display:flex; gap:12px; align-items:flex-start; font-size:14px; line-height:1.5; color:var(--ink-muted);}
+.pl-lista li svg{flex:none; margin-top:1px;}
+.pl-lista b{display:block; color:var(--ink); font-weight:600;}
+.pl-lista em{display:block; font-style:normal; color:var(--ink-muted); font-size:13.5px;}
+.pl-btn{display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:14px 18px; border-radius:10px; font:inherit; font-weight:600; font-size:15px; cursor:pointer; transition:transform .15s, background .15s, border-color .15s;}
+.pl-btn:hover{transform:translateY(-1px);}
+.pl-btn-ghost{background:transparent; color:var(--teal); border:1.5px solid var(--teal);}
+.pl-btn-ghost:hover{background:rgba(47,217,196,.1);}
+.pl-btn-cheio{background:var(--teal); color:var(--bg); border:1.5px solid var(--teal);}
+.pl-btn-cheio:hover{background:var(--teal-deep);}
+html[data-theme="light"] .pl-btn-cheio{color:#fff;}
+.pl-cons{margin-top:22px; display:grid; grid-template-columns:auto 1.4fr 1fr; gap:26px; align-items:center; background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:26px;}
+.pl-cons-ico{width:92px; height:92px; border-radius:50%; background:rgba(47,217,196,.12); color:var(--teal); display:flex; align-items:center; justify-content:center;}
+.pl-cons-ico svg{width:44px; height:44px;}
+.pl-cons h3{font-family:var(--font-display); font-size:25px; margin:0 0 8px; color:var(--ink);}
+.pl-cons-txt p{margin:0; color:var(--ink-muted); font-size:14px; line-height:1.65;}
+.pl-aviso{display:flex; align-items:center; gap:9px; margin-top:14px; font-size:13px; color:var(--ink-muted);}
+.pl-aviso svg{color:var(--ink-dim); flex:none;}
+.pl-cons-lado{border-left:1px solid var(--border); padding-left:26px; display:flex; flex-direction:column; gap:14px;}
+.pl-vant{display:flex; gap:11px; align-items:flex-start; font-size:13px; line-height:1.5; color:var(--ink-muted);}
+.pl-vant svg{flex:none; color:var(--teal); margin-top:2px;}
+.pl-vant b{display:block; color:var(--ink); font-size:13.5px;}
+.pl-vant span{display:block;}
+.pl-cons-lado .pl-btn{padding:11px 16px; font-size:14px; margin-top:2px;}
+@media (max-width:900px){
+  .pl-grid{grid-template-columns:1fr;}
+  .pl-cons{grid-template-columns:1fr; gap:18px;}
+  .pl-cons-ico{width:72px; height:72px;}
+  .pl-cons-lado{border-left:0; padding-left:0; border-top:1px solid var(--border); padding-top:18px;}
+}
+@media (max-width:520px){
+  .pl-card{padding:22px 18px 20px;}
+  .pl-card h3{font-size:26px;}
+  .pl-preco{font-size:38px;}
+  .pl-fita{font-size:12.5px; padding:8px 14px 8px 16px;}
+}
+/* ===== Início: textos em branco; títulos de seção em verde ===== */
+html:not([data-theme="light"]) #view-home{--ink-muted:#FFFFFF; --ink-dim:#FFFFFF;}
+html:not([data-theme="light"]) #view-home ::placeholder{color:rgba(255,255,255,.6);}
+#view-home .step-card .step-num{color:var(--amber);}
+#view-home .step-card h3{color:var(--teal);}
+#view-home .promo-band.consultoria .promo-tag{color:var(--amber);}
+#view-home .section-title,#view-home .cta-band h3,#view-home .promo-band.consultoria h3{color:var(--teal);}
+/* ===== Demais seções: rótulo pequeno dourado, título grande verde, textos em branco ===== */
+#view-editais .page-head .eyebrow,
+#view-favoritos .page-head .eyebrow,
+#view-alertas .page-head .eyebrow,
+#view-sobre .page-head .eyebrow,
+#view-planos .page-head .eyebrow,
+#view-minha-conta .page-head .eyebrow{color:var(--amber);}
+#view-editais .page-head .eyebrow::before,
+#view-favoritos .page-head .eyebrow::before,
+#view-alertas .page-head .eyebrow::before,
+#view-sobre .page-head .eyebrow::before,
+#view-planos .page-head .eyebrow::before,
+#view-minha-conta .page-head .eyebrow::before{background:var(--amber); box-shadow:0 0 0 4px rgba(245,169,62,.18);}
+#view-editais .page-head h2,
+#view-favoritos .page-head h2,
+#view-alertas .page-head h2,
+#view-sobre .page-head h2,
+#view-planos .page-head h2,
+#view-minha-conta .page-head h2{color:var(--teal);}
+#view-editais .section-title,
+#view-favoritos .section-title,
+#view-alertas .section-title,
+#view-sobre .section-title,
+#view-planos .section-title,
+#view-minha-conta .section-title{color:var(--teal);}
+html:not([data-theme="light"]) #view-editais,
+html:not([data-theme="light"]) #view-favoritos,
+html:not([data-theme="light"]) #view-alertas,
+html:not([data-theme="light"]) #view-sobre,
+html:not([data-theme="light"]) #view-planos,
+html:not([data-theme="light"]) #view-minha-conta{--ink-muted:#FFFFFF; --ink-dim:#FFFFFF;}
+html:not([data-theme="light"]) #view-editais ::placeholder,
+html:not([data-theme="light"]) #view-favoritos ::placeholder,
+html:not([data-theme="light"]) #view-alertas ::placeholder,
+html:not([data-theme="light"]) #view-sobre ::placeholder,
+html:not([data-theme="light"]) #view-planos ::placeholder,
+html:not([data-theme="light"]) #view-minha-conta ::placeholder{color:rgba(255,255,255,.6);}
+#view-sobre .sobre-texto h3,#view-sobre .mp-card h3,#view-planos .pl-card h3,#view-planos .pl-cons h3,#view-planos .pl-head h2{color:var(--teal);}
+#view-planos .pl-eyebrow,#view-planos .pl-sub{color:var(--amber);}
+#view-planos .pl-eyebrow span{background:var(--amber);}
 .mp-tip{position:fixed; z-index:50; pointer-events:none; background:var(--ink); color:var(--bg); border-radius:6px; padding:6px 9px; font-size:12px; max-width:240px; opacity:0;}
 .chip-opt{font-size:12.5px; padding:7px 13px; border:1px solid var(--border); border-radius:20px; cursor:pointer; background:var(--bg-elevated); color:var(--ink-muted); flex:0 0 auto; max-width:100%; white-space:normal; overflow-wrap:anywhere;}
 .chip-opt.selected{background:var(--teal); border-color:var(--teal); color:var(--bg); font-weight:600;}
@@ -775,7 +885,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   .hero .lead{font-size:14.5px;}
   .resumo-grid, .fin-grid, .two-col{grid-template-columns:1fr;}
   .topbar-inner{padding:12px 16px; gap:10px;}
-  .logo-text{font-size:15px;} .logo-mark{width:44px;height:44px;} .logo{gap:8px;}
+  .logo-text{font-size:15px;} .logo-mark{width:44px;height:44px;} .logo{gap:8px;} .logo-sub{font-size:9.5px; letter-spacing:0;}
   .score-hero{flex-direction:column; align-items:flex-start; padding:18px 20px;}
   .score-hero-num{font-size:32px;}
   .filter-panel{padding:14px 16px;}
@@ -892,7 +1002,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <img class="marca-escura" src="assets/radar-marca-112.webp" alt="Radar Transformare" width="56" height="56" style="width:100%; height:100%; object-fit:contain;">
         <img class="marca-clara" src="assets/radar-marca-verde.webp" alt="" aria-hidden="true" width="56" height="56" style="width:100%; height:100%; object-fit:contain;">
       </div>
-      <div class="logo-text"><span class="rl" aria-hidden="true">R</span><span class="rl" aria-hidden="true">A</span><span class="rl" aria-hidden="true">D</span><span class="rl" aria-hidden="true">A</span><span class="rl ultimo" aria-hidden="true">R</span><span class="sr-only-rl">RADAR</span> TRANSFORMARE<span>.</span></div>
+      <div class="logo-col">
+        <div class="logo-text"><span class="rl" aria-hidden="true">R</span><span class="rl" aria-hidden="true">A</span><span class="rl" aria-hidden="true">D</span><span class="rl" aria-hidden="true">A</span><span class="rl ultimo" aria-hidden="true">R</span><span class="sr-only-rl">RADAR</span> TRANSFORMARE</div>
+        <div class="logo-sub">Editais e credenciamentos para sua profissão</div>
+      </div>
     </div>
     <nav class="main-nav" id="mainNav">
       <button data-view="home" class="active">Início</button>
@@ -900,6 +1013,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <button data-view="favoritos">Favoritos</button>
       <button data-view="alertas">Alertas</button>
       <button data-view="sobre">Sobre o Radar</button>
+      <button data-view="planos">Planos</button>
       <button data-view="minha-conta" id="nav-minha-conta"><span class="nav-minha">Minha </span>Conta</button>
       <button data-view="login" class="nav-cta" id="nav-cta-btn">Entrar</button>
     </nav>
@@ -926,17 +1040,16 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="hero">
     <div>
       <span class="eyebrow">Radar Transformare · Monitoramento contínuo</span>
-      <h1>O radar que encontra editais e credenciamentos para <em>sua profissão</em></h1>
-      <p class="lead"><strong style="color:var(--ink);">Credenciamento</strong> é quando prefeituras, hospitais e secretarias de saúde abrem um edital público para contratar profissionais — e qualquer profissional habilitado pode se inscrever. O problema: esses editais ficam espalhados em centenas de portais, têm prazos curtos e quase ninguém avisa. Muita gente só descobre depois que o prazo acabou.</p>
-      <p class="lead" style="margin-top:12px;">O <strong style="color:var(--ink);">Radar Transformare</strong> faz essa busca por você todos os dias: reúne as oportunidades da área da saúde, organiza valores, prazos e requisitos em um formato só e calcula um Índice de atratividade — para você decidir rápido onde vale a pena se inscrever.</p>
+      <h1><span class="h1-leve">Você não precisa procurar</span><br><span class="h1-ouro">o Radar procura por você</span></h1>
+      <p class="lead">Encontre editais e credenciamentos para sua profissão em um só lugar. Consulte valores, prazos e requisitos, compare oportunidades e descubra quais merecem sua atenção.</p>
+      <p class="lead" style="margin-top:12px;">Oportunidades da área da saúde reunidas em um só lugar.</p>
       <div class="search-box">
         <input type="text" id="home-search" placeholder="Busque por profissão, órgão, cidade ou palavra-chave...">
         <button onclick="searchFromHome()">Pesquisar</button>
       </div>
       <div style="display:flex; gap:22px; flex-wrap:wrap; margin-top:24px;">
-        <div style="font-size:12.5px; color:var(--ink-muted); display:flex; align-items:center; gap:7px;"><span style="color:var(--teal);">●</span>Monitoramento diário do PNCP</div>
-        <div style="font-size:12.5px; color:var(--ink-muted); display:flex; align-items:center; gap:7px;"><span style="color:var(--teal);">●</span>Dados organizados e comparáveis</div>
-        <div style="font-size:12.5px; color:var(--ink-muted); display:flex; align-items:center; gap:7px;"><span style="color:var(--teal);">●</span>Índice de atratividade próprio</div>
+        <div style="font-size:12.5px; color:var(--ink-muted); display:flex; align-items:center; gap:7px;"><span style="color:var(--teal);">●</span>Filtros por profissão e região de interesse</div>
+        <div style="font-size:12.5px; color:var(--ink-muted); display:flex; align-items:center; gap:7px;"><span style="color:var(--teal);">●</span>Ferramentas para organizar e avaliar oportunidades</div>
       </div>
     </div>
     <div class="radar-wrap">
@@ -961,8 +1074,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
   <div id="home-painel" style="margin-top:44px;">
     <div id="home-radar-slot"></div>
-    <h2 class="section-title" style="margin-bottom:4px;">Números do Radar</h2>
-    <p class="section-sub" style="margin-bottom:18px;">Um retrato rápido do que está sendo monitorado agora.</p>
+    <h2 class="section-title" style="margin-bottom:4px;">O Radar em números</h2>
+    <p class="section-sub" style="margin-bottom:18px;">Oportunidades monitoradas para aproximar você do seu próximo credenciamento.</p>
     <div class="indicators" id="indicators"></div>
   </div>
 <script>
@@ -976,38 +1089,31 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 }catch(e){} })();
 </script>
 
-  <div class="promo-band so-visitante" id="promo-cadastro">
-    <div><div class="promo-tag">Grátis · leva 2 minutos</div><h3>Crie sua conta e acompanhe as oportunidades da sua profissão</h3><p>Favorite editais, configure alertas e receba o que combina com o seu perfil.</p></div>
-    <button class="btn-primary" onclick="nav('cadastro')">Criar conta grátis</button>
-  </div>
 
   <div class="how-it-works">
     <h2 class="section-title">Como funciona</h2>
-    <p class="section-sub">Do edital disperso à decisão em poucos minutos.</p>
+    <p class="section-sub" style="margin-bottom:10px;">Da busca à decisão, em um só lugar.</p>
+    <p class="how-intro">O Radar Transformare reúne oportunidades de credenciamento, organiza as informações e oferece ferramentas para facilitar sua busca e avaliação.</p>
     <div class="steps-row">
-      <div class="step-card"><div class="step-num">01 · ENCONTRAR</div><h3>Monitoramos as fontes oficiais</h3><p>PNCP e outras fontes públicas são varridas continuamente em busca de oportunidades para a saúde.</p><div style="margin-top:auto; padding-top:12px;"><span style="display:inline-block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--teal); border:1px solid var(--teal); background:rgba(47,217,196,0.10); border-radius:999px; padding:4px 12px;">✓ Grátis</span></div></div>
-      <div class="step-card"><div class="step-num">02 · ORGANIZAR</div><h3>Estruturamos cada oportunidade</h3><p>Profissão, valores, prazos, requisitos e documentos — tudo em um formato só, fácil de comparar.</p><div style="margin-top:auto; padding-top:12px;"><span style="display:inline-block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--teal); border:1px solid var(--teal); background:rgba(47,217,196,0.10); border-radius:999px; padding:4px 12px;">✓ Grátis</span></div></div>
-      <div class="step-card"><div class="step-num">03 · AGIR</div><h3>Você decide e participa</h3><p>Favorite, configure alertas e vá direto à fonte oficial para dar entrada na sua inscrição.</p><div style="margin-top:auto; padding-top:12px;"><span style="display:inline-block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--teal); border:1px solid var(--teal); background:rgba(47,217,196,0.10); border-radius:999px; padding:4px 12px;">✓ Grátis</span></div></div>
-      <div class="step-card"><div class="step-num">04 · ANALISAR</div><h3>Índice e checklist de documentos</h3><p>Receba o Índice Transformare, o checklist completo de documentos e os links para emitir as principais certidões negativas.</p><div style="margin-top:auto; padding-top:12px;"><span style="display:inline-block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--amber); border:1px solid var(--amber); background:rgba(245,169,62,0.10); border-radius:999px; padding:4px 12px;">🔒 Plano Pro</span></div></div>
-      <div class="step-card"><div class="step-num">05 · ADERÊNCIA</div><h3>Veja os editais mais aderentes ao seu perfil</h3><p>Conheça os editais que mais combinam com você, sem perder tempo procurando edital por edital.</p><div style="margin-top:auto; padding-top:12px;"><span style="display:inline-block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--amber); border:1px solid var(--amber); background:rgba(245,169,62,0.10); border-radius:999px; padding:4px 12px;">🔒 Plano Pro</span></div></div>
+      <div class="step-card"><div class="step-num">01 · ENCONTRAR</div><h3>Oportunidades encontradas para você</h3><p>Monitoramos o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais para identificar editais de credenciamento voltados aos profissionais da saúde.</p><p class="how-extra">Menos tempo buscando em diferentes portais. Mais praticidade para encontrar oportunidades e ampliar suas possibilidades profissionais.</p><div style="margin-top:auto; padding-top:12px;"><span style="display:inline-block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--teal); border:1px solid var(--teal); background:rgba(47,217,196,0.10); border-radius:999px; padding:4px 12px;">✓ Acesso gratuito</span></div></div>
+      <div class="step-card"><div class="step-num">02 · CONSULTAR</div><h3>Tudo o que você precisa saber sobre cada oportunidade</h3><p>Consulte remuneração, prazos, requisitos e documentos em informações organizadas para facilitar sua busca e comparação.</p><p class="how-extra">Informações reunidas para você encontrar o que precisa sem percorrer documentos e portais diferentes.</p><div style="margin-top:auto; padding-top:12px;"><span style="display:inline-block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--teal); border:1px solid var(--teal); background:rgba(47,217,196,0.10); border-radius:999px; padding:4px 12px;">✓ Acesso gratuito</span></div></div>
+      <div class="step-card"><div class="step-num">03 · ORGANIZAR</div><h3>Suas oportunidades, organizadas em um só lugar</h3><p>Salve editais nos favoritos e configure seus critérios de interesse para acompanhar com mais facilidade as oportunidades relevantes para sua atuação.</p><p class="how-extra">Tenha suas oportunidades de interesse sempre à mão.</p><div style="margin-top:auto; padding-top:12px;"><span style="display:inline-block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--teal); border:1px solid var(--teal); background:rgba(47,217,196,0.10); border-radius:999px; padding:4px 12px;">✓ Acesso gratuito</span></div></div>
+      <div class="step-card pro"><div class="step-num">04 · ANALISAR</div><h3>Mais informações para uma decisão consciente</h3><p>Consulte o Índice Transformare nas oportunidades avaliadas, utilize checklists para organizar documentos e acesse links para emissão das principais certidões negativas, conforme os recursos do Plano Pro.</p><p class="how-extra">Mais elementos para avaliar as exigências e se preparar para cada oportunidade.</p><div style="margin-top:auto; padding-top:12px;"><span style="display:inline-block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--amber); border:1px solid var(--amber); background:rgba(245,169,62,0.10); border-radius:999px; padding:4px 12px;">🔒 Exclusivo Pro</span></div></div>
+      <div class="step-card pro"><div class="step-num">05 · DIRECIONAR</div><h3>Encontre oportunidades alinhadas ao seu perfil</h3><p>Visualize as oportunidades com maior compatibilidade com seus critérios profissionais e priorize aquelas que mais correspondem ao que você procura.</p><p class="how-extra">Mais foco nas oportunidades certas para você.</p><div style="margin-top:auto; padding-top:12px;"><span style="display:inline-block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--amber); border:1px solid var(--amber); background:rgba(245,169,62,0.10); border-radius:999px; padding:4px 12px;">🔒 Exclusivo Pro</span></div></div>
     </div>
       </div>
 
-  <div class="promo-band pro so-nao-pro">
-    <div><div class="promo-tag">🔒 Para assinantes</div><h3>Plano Transformare Pro</h3><p>Índice Transformare, checklist de documentos e links para emissão das principais certidões negativas para dar entrada na proposta — tudo para decidir e se credenciar com mais segurança.</p></div>
-    <button class="btn-primary" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
-  </div>
-
   <div class="cta-band">
     <div>
-      <h3>Pronto para ver as oportunidades ativas?</h3>
-      <p>Explore o banco completo de editais e credenciamentos monitorados.</p>
+      <h3>Sua próxima oportunidade pode estar aqui.</h3>
+      <p>Explore editais e credenciamentos reunidos pelo Radar Transformare.</p>
+      <p style="margin-top:8px;">Utilize os filtros para encontrar oportunidades por profissão, localização e critérios de interesse.</p>
     </div>
     <button class="btn-primary" onclick="nav('editais')">Encontrar oportunidades</button>
   </div>
 
   <div class="promo-band consultoria">
-    <div><div class="promo-tag">Consultoria Transformare</div><h3>Encontrou uma oportunidade, mas não sabe como participar?</h3><p>A Transformare pode ajudar na análise dos requisitos, documentação e processo de credenciamento.</p></div>
+    <div><div class="promo-tag">CONSULTORIA TRANSFORMARE</div><h3>Encontrou uma oportunidade e precisa de ajuda para participar?</h3><p>Entender as exigências de um edital e reunir a documentação necessária pode ser um desafio.</p><p style="margin-top:8px;">A Consultoria Transformare auxilia você na análise dos requisitos, na organização dos documentos e na preparação dos próximos passos para o credenciamento.</p></div>
     <button class="btn-primary" onclick="openLeadModal(null,'home')">Quero conhecer a consultoria</button>
   </div>
 </section>
@@ -1017,7 +1123,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="page-head">
     <span class="eyebrow">Banco de dados</span>
     <h2>Editais e credenciamentos</h2>
-    <p>Use os filtros para chegar direto ao que faz sentido para você.</p>
+    <p>Use os filtros para encontrar o que faz sentido para você.</p>
   </div>
 
   <div class="search-box" style="margin-bottom:16px;">
@@ -1070,7 +1176,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== FAVORITOS ===================== -->
 <section class="view" id="view-favoritos">
-  <div class="page-head"><span class="eyebrow">Sua seleção</span><h2>Favoritos</h2><p>Oportunidades que você salvou para acompanhar.</p></div>
+  <div class="page-head"><span class="eyebrow">Sua seleção</span><h2>Favoritos</h2><p>Reúna os editais e credenciamentos que despertaram seu interesse e volte a eles sempre que quiser.</p></div>
   <div class="gate-cadastro center-empty" style="display:none;">
     <h3>Entre para salvar seus favoritos</h3>
     <p>Crie sua conta gratuita para favoritar editais e acompanhar os que mais interessam a você.</p>
@@ -1095,7 +1201,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== ALERTAS ===================== -->
 <section class="view" id="view-alertas">
-  <div class="page-head"><span class="eyebrow">Personalização</span><h2>Meus alertas</h2><p>Escolha seus critérios — avisamos quando surgir algo compatível.</p></div>
+  <div class="page-head"><span class="eyebrow">Personalização</span><h2>Meus alertas</h2><p>Escolha seus critérios e acompanhe novas oportunidades compatíveis.</p></div>
   <div class="gate-cadastro center-empty" style="display:none;">
     <h3>Entre para criar seus alertas</h3>
     <p>Com uma conta gratuita você escolhe profissões e estados de interesse e vê aqui os editais compatíveis com o seu perfil.</p>
@@ -1124,7 +1230,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== MINHA CONTA ===================== -->
 <section class="view" id="view-minha-conta">
-  <div class="page-head"><span class="eyebrow">Minha área</span><h2>Minha conta</h2><p>Seu perfil, seu plano e seus editais favoritos.</p></div>
+  <div class="page-head"><span class="eyebrow">Minha área</span><h2>Minha conta</h2><p>Seu perfil, suas preferências e suas oportunidades.</p><p style="margin-top:8px;">Mantenha seus dados profissionais e suas preferências atualizados para encontrar oportunidades mais alinhadas aos seus interesses.</p></div>
   <div id="minha-conta-content"></div>
 </section>
 
@@ -1213,11 +1319,19 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <section class="view" id="view-sobre">
   <div class="sobre-grid">
   <div class="sobre-texto" style="font-size:14.5px; line-height:1.75; color:var(--ink-muted);">
-    <div class="page-head"><span class="eyebrow">Sobre o Radar</span><h2>Veja no mapa onde estão as oportunidades</h2></div>
-    <p style="color:var(--ink);">O edital é a matéria-prima. A Transformare agrega valor ao encontrar, filtrar, organizar, analisar e explicar — conectando cada oportunidade ao profissional certo.</p>
-    <p>Monitoramos continuamente o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, reunindo oportunidades para profissionais da saúde — como Psicologia, Nutrição, Fonoaudiologia, Odontologia, Medicina, Enfermagem e outras áreas — e ampliando a cobertura a cada nova profissão.</p>
-    <p>Quando avaliada, cada oportunidade recebe um <strong style="color:var(--ink);">Índice Transformare</strong> — uma nota de 1 a 5 que leva em conta retorno financeiro, facilidade de entrada, aderência aos serviços da Transformare e complexidade documental. É um indicador interno, atribuído manualmente por um analista da Transformare — não é uma informação oficial do órgão responsável, não representa classificação oficial e não substitui o julgamento previsto no edital. Nem todo edital publicado já foi avaliado; quando ainda não foi, isso fica informado na página do edital, com a opção de solicitar a avaliação.</p>
-    <p>Os editais vêm de fontes públicas oficiais, mas podem conter imprecisões — confira sempre o edital oficial antes de se inscrever. Encontrou algo estranho? <a href="#" style="color:var(--teal); cursor:pointer;" onclick="openFeedbackModal(); return false;">Envie seu feedback</a>.</p>
+    <div class="page-head"><span class="eyebrow">Sobre o Radar</span><h2>O edital é só o começo.</h2></div>
+    <p style="color:var(--ink);">Encontrar uma publicação é apenas a primeira etapa. Entender as condições, comparar oportunidades e identificar os requisitos para participar exige tempo e atenção.</p>
+    <p>O Radar Transformare foi criado para tornar esse processo mais simples, reunindo oportunidades de credenciamento da área da saúde e organizando as principais informações em um só lugar.</p>
+    <p>Monitoramos o Portal Nacional de Contratações Públicas (PNCP) e outras fontes públicas oficiais, com oportunidades para Psicologia, Nutrição, Fonoaudiologia, Odontologia, Medicina, Enfermagem e outras profissões contempladas pela plataforma.</p>
+    <p>Assim, você economiza tempo na busca e consegue comparar oportunidades para decidir quais merecem sua atenção.</p>
+    <h3 style="font-family:var(--font-display); font-size:19px; margin:30px 0 10px;">Conheça o Índice Transformare</h3>
+    <p>Para ajudar na análise das oportunidades, o Radar utiliza o <strong style="color:var(--ink);">Índice Transformare</strong>, uma avaliação interna que atribui notas de 1 a 5 às oportunidades avaliadas.</p>
+    <p>A avaliação é realizada manualmente por um analista da Transformare e considera o retorno financeiro, a facilidade de entrada e a complexidade documental.</p>
+    <p>O índice não é uma classificação oficial, não garante que uma oportunidade seja vantajosa e não substitui a leitura do edital.</p>
+    <p>Nem todas as oportunidades foram avaliadas. Quando uma avaliação não estiver disponível, essa informação será indicada na página correspondente, com a possibilidade de solicitar uma análise.</p>
+    <h3 style="font-family:var(--font-display); font-size:19px; margin:30px 0 10px;">Informação pública. Análise própria. Decisão sua.</h3>
+    <p>As informações podem conter imprecisões ou sofrer alterações. Antes de se inscrever, consulte o edital original e confirme as condições diretamente na fonte oficial.</p>
+    <p>Encontrou alguma informação incorreta? <a href="#" style="color:var(--teal); cursor:pointer;" onclick="openFeedbackModal(); return false;">Envie seu feedback</a> e ajude a melhorar o Radar.</p>
     <div style="background:rgba(47,217,196,0.08); border:1px solid rgba(47,217,196,0.3); border-radius:14px; padding:18px 20px; margin-top:22px;">
       <p style="color:var(--ink); margin:0 0 6px; font-weight:600;">⇄ Compare oportunidades lado a lado</p>
       <p style="margin:0;">Encontrou mais de um edital interessante? Clique em "Comparar" nos cards que te chamaram atenção e veja prazo, remuneração, índice de atratividade e requisitos lado a lado — sem precisar abrir cada um separadamente.</p>
@@ -1225,21 +1339,64 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <p class="sobre-cta-wrap"><a href="#" class="sobre-cta" onclick="event.preventDefault(); nav('cadastro');">✨ Quero criar minha conta</a></p>
   </div>
   <aside id="mp-wrap" class="mp-card">
-    <div class="mp-hd"><h3>Mapa de editais abertos</h3><span id="mp-nota" class="mp-hint"></span></div>
-    <div id="mp-kpis" class="mp-kpis"></div>
+    <div class="mp-hd"><h3>Mapa de oportunidades</h3></div>
+    <p style="margin:2px 0 4px; font-size:13.5px; color:var(--ink-muted);">Veja onde estão os editais abertos</p>
     <div class="mp-mapa">
-      <svg id="mp-svg" viewBox="0 0 600 610" role="img" aria-label="Mapa do Brasil com bolhas por cidade"></svg>
-      <div class="mp-zoom"><button type="button" onclick="mpZoomBtn(0.6)" aria-label="Aproximar">+</button><button type="button" onclick="mpZoomBtn(1/0.6)" aria-label="Afastar">−</button><button type="button" onclick="mpZoomReset()" aria-label="Ver o Brasil inteiro">⟲</button></div>
-    </div>
-    <p class="mp-hint">Clique numa cidade para ver os editais abertos. Aproxime com + e − ou arraste o mapa. As bolhas crescem com o número de editais.</p>
-    <div id="mp-painel" class="mp-painel">
-      <div class="mp-hd"><h3 id="mp-ptitulo">Editais abertos</h3><button type="button" class="mp-x" id="mp-fechar" onclick="mpFechar()" aria-label="Fechar lista" hidden>×</button></div>
-      <div id="mp-lista" class="mp-lista"></div>
+      <svg id="mp-svg" viewBox="0 0 600 610" role="img" aria-label="Mapa do Brasil com os estados que têm editais abertos pintados"></svg>
     </div>
     <div id="mp-tip" class="mp-tip"></div>
   </aside>
   </div>
 </section>
+
+<!-- ===================== PLANOS ===================== -->
+<section class="view" id="view-planos">
+  <div class="pl-wrap">
+    <div class="pl-head">
+      <div class="pl-eyebrow"><span></span>PLANOS<span></span></div>
+      <h2>Escolha o plano ideal para você</h2>
+      <p>O Radar Transformare reúne editais e credenciamentos da área da saúde para facilitar sua busca por novas oportunidades. Conheça os planos e encontre o que melhor atende às suas necessidades.</p>
+    </div>
+    <div class="pl-grid">
+      <article class="pl-card">
+        <span class="pl-tag">Para conhecer e explorar</span>
+        <h3>Plano Gratuito</h3>
+        <div class="pl-preco">R$ 0</div>
+        <p class="pl-desc">Encontre oportunidades e acompanhe as que interessam a você.</p>
+        <hr>
+        <div class="pl-sub">O que está incluído</div>
+        <ul class="pl-lista"><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Consulta aos editais e credenciamentos disponíveis no Radar.</span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Visualização das profissões contempladas, dos prazos e dos requisitos.</span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Consulta a até 5 documentos exigidos por oportunidade.</span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Favoritos para salvar oportunidades de interesse.</span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Alertas para acompanhar oportunidades, conforme os recursos disponíveis.</span></li></ul>
+        <button type="button" class="pl-btn pl-btn-ghost" onclick="nav('cadastro')">Começar gratuitamente <span aria-hidden="true">→</span></button>
+      </article>
+      <article class="pl-card pl-pro">
+        <div class="pl-fita"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" fill="currentColor"/></svg> Plano Pro</div>
+        <span class="pl-tag">Mais recursos para sua análise</span>
+        <h3>Plano Pro</h3>
+        <div class="pl-preco">R$ 39,90 <small>/mês</small></div>
+        <p class="pl-desc">Tenha mais informações para avaliar oportunidades e se preparar para participar.</p>
+        <hr>
+        <div class="pl-sub">Tudo do Plano Gratuito, mais</div>
+        <ul class="pl-lista"><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Lista completa de documentos</b><em>Consulte todos os documentos exigidos em cada oportunidade.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Links para emissão de certidões negativas</b><em>Acesse os canais oficiais para emitir as principais certidões.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Comparação de oportunidades</b><em>Veja as diferenças entre os editais para apoiar sua decisão.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Aderência ao seu perfil</b><em>Identifique oportunidades que combinam com sua profissão e com os critérios utilizados pelo Radar.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Índice Transformare</b><em>Consulte a análise interna de retorno financeiro, facilidade de entrada e complexidade documental.</em></span></li></ul>
+        <button type="button" class="pl-btn pl-btn-cheio" onclick="solicitarPlanoEssencial()">Quero conhecer o Plano Pro <span aria-hidden="true">→</span></button>
+      </article>
+    </div>
+    <div class="pl-cons">
+      <div class="pl-cons-ico"><svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><rect x="5" y="4.5" width="14" height="16.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="2.5" width="6" height="4" rx="1" fill="var(--bg-card)" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 11h7M8.5 14.5h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="17" cy="18" r="4" fill="var(--teal)"/><path d="M15.2 18l1.4 1.4 2.4-2.6" fill="none" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="pl-cons-txt">
+        <div class="pl-sub" style="margin:0 0 4px;">Serviço adicional</div>
+        <h3>Consultoria para credenciamento</h3>
+        <p>A Transformare oferece apoio individualizado para comparar os documentos que você já possui com os requisitos do edital, identificar ajustes necessários e orientar sobre o que precisa ser corrigido ou providenciado.</p>
+        <div class="pl-aviso"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 11v6M12 7.2v.1" stroke="var(--bg-card)" stroke-width="2.2" stroke-linecap="round"/></svg><span>Este é um serviço distinto da assinatura do Radar.</span></div>
+      </div>
+      <div class="pl-cons-lado">
+        <div class="pl-vant"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2.2 2.2L15.5 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Mais segurança no processo</b><span>Conte com orientação especializada para se preparar melhor para o credenciamento.</span></div></div>
+        <div class="pl-vant"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c.6-3.6 3.4-5.6 7-5.6s6.4 2 7 5.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><div><b>Atendimento individualizado</b><span>Análise dos seus documentos, identificação de pendências e orientações sobre as adequações ou providências necessárias.</span></div></div>
+        <button type="button" class="pl-btn pl-btn-ghost" onclick="openLeadModal(null,'planos')">Conhecer a consultoria <span aria-hidden="true">→</span></button>
+      </div>
+    </div>
+  </div>
+</section>
+
 
 <!-- ===================== LOGIN ===================== -->
 <section class="view" id="view-login">
@@ -7126,6 +7283,7 @@ async function saveAdminForm(){
     urlPncp: document.getElementById('af-url-pncp').value.trim() || null,
     urlInscricao: (editingId && (oportunidades.find(x=>x.id===editingId)||{}).urlInscricao) || null
   };
+  Object.assign(data, padronizarCamposEdital(data));   // regra permanente: texto sempre em sentence case
 
   // Prazo de 2040 em diante: avisa e pede confirmação antes de salvar.
   const _dPrazo = parseDate(data.prazo);
@@ -9088,108 +9246,27 @@ function _prazoParaDate(txt){
 }
 // Mesma regra do robô do PNCP: "CONTRATAÇÃO DA EMPRESA FULANO LTDA, PARA PRESTAÇÃO DE..."
 // é contratação de fornecedor já escolhido, não edital aberto para credenciar.
-// ===== Mapa de editais (aba Como funciona) =====
-const MP_OUT=[[-51.5,4.4],[-50.9,2.4],[-50.2,1.6],[-50.5,0.4],[-50.0,-0.2],[-49.0,-0.8],[-47.4,-0.7],[-46.0,-1.0],[-44.8,-2.3],[-43.0,-2.4],[-41.4,-2.9],[-40.0,-2.85],[-38.5,-3.7],[-37.2,-4.6],[-35.4,-5.1],[-35.1,-6.4],[-34.8,-7.2],[-35.0,-8.4],[-35.6,-9.4],[-36.4,-10.5],[-37.1,-11.2],[-37.9,-12.4],[-38.5,-13.0],[-38.9,-14.5],[-39.1,-16.5],[-39.2,-17.9],[-39.7,-18.8],[-40.1,-20.0],[-40.9,-21.5],[-41.8,-22.8],[-43.0,-22.95],[-44.7,-23.4],[-46.3,-24.0],[-47.9,-25.0],[-48.6,-26.0],[-48.6,-27.7],[-48.8,-28.6],[-49.8,-29.4],[-50.5,-30.7],[-51.4,-31.7],[-52.3,-32.4],[-53.4,-33.7],[-53.4,-32.6],[-54.1,-32.0],[-55.5,-30.9],[-56.4,-30.2],[-57.6,-30.2],[-57.1,-29.7],[-56.1,-28.7],[-55.2,-27.8],[-54.2,-27.2],[-53.7,-26.2],[-54.45,-25.6],[-54.3,-24.1],[-55.0,-23.6],[-55.7,-22.3],[-57.0,-22.1],[-57.9,-21.7],[-57.7,-19.0],[-58.2,-17.8],[-58.4,-16.3],[-60.1,-16.3],[-60.3,-15.2],[-60.5,-13.9],[-61.6,-13.5],[-63.0,-12.6],[-64.5,-12.0],[-65.4,-10.4],[-68.8,-11.0],[-70.6,-11.0],[-70.6,-9.5],[-72.7,-9.5],[-74.0,-7.5],[-73.3,-7.3],[-72.3,-5.8],[-70.9,-4.4],[-70.0,-4.2],[-69.4,-1.0],[-70.0,-0.2],[-69.5,0.8],[-67.9,1.9],[-66.9,1.2],[-66.0,0.8],[-64.4,1.5],[-63.4,2.2],[-62.8,3.7],[-61.0,4.5],[-60.7,5.2],[-60.2,4.5],[-59.7,4.2],[-60.0,2.8],[-59.7,1.8],[-58.9,1.2],[-58.3,1.6],[-57.0,1.9],[-56.0,1.9],[-55.9,2.5],[-54.6,2.3],[-52.9,2.2],[-52.3,3.3]];
-let mpGeo = null, mpGeoPromessa = null;
-function mpNorm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); }
-function mpCarregarGeo(){
-  if(mpGeo) return Promise.resolve(mpGeo);
-  if(!mpGeoPromessa) mpGeoPromessa = fetch('municipios.json').then(r=>r.json()).then(j=>{ mpGeo=j; return j; }).catch(()=>{ mpGeoPromessa=null; mpGeo={}; return mpGeo; });
-  return mpGeoPromessa;
-}
-function mpNum(o){
-  const m = String(o.valorMaximo||'').match(/R\$\s*([\d.]+,\d{2})/);
-  return m ? parseFloat(m[1].replace(/\./g,'').replace(',','.')) : 0;
-}
+// ===== Mapa de oportunidades (página Sobre o Radar): estados com editais abertos ficam pintados =====
+const MP_NOMES={"AC": "Acre", "AL": "Alagoas", "AM": "Amazonas", "AP": "Amapá", "BA": "Bahia", "CE": "Ceará", "DF": "Distrito Federal", "ES": "Espírito Santo", "GO": "Goiás", "MA": "Maranhão", "MG": "Minas Gerais", "MS": "Mato Grosso do Sul", "MT": "Mato Grosso", "PA": "Pará", "PB": "Paraíba", "PE": "Pernambuco", "PI": "Piauí", "PR": "Paraná", "RJ": "Rio de Janeiro", "RN": "Rio Grande do Norte", "RO": "Rondônia", "RR": "Roraima", "RS": "Rio Grande do Sul", "SC": "Santa Catarina", "SE": "Sergipe", "SP": "São Paulo", "TO": "Tocantins"};
+const MP_UF={"AC":"M78.5 252.6L53.1 252.6L52.5 230.4L22.5 229.8L3.2 199.4L12.8 196.1L17.2 190.2L19.3 192.1L19.6 194.9L21.3 198.5L23.9 201.2L33.9 205.2L37.4 205.2L45.3 199.1L47.9 198.1L54.9 202.5L67.2 207.2L69.8 207.0L79.4 201.9L81.2 201.9L85.8 204.9L89.6 219.5L91.3 222.2L93.4 223.4L104.8 225.4L120.6 218.3L125.2 218.6L125.3 220.4L115.3 245.3L113.6 246.2L78.5 252.6Z","AL":"M552.5 243.5L546.3 239.9L542.8 236.5L537.6 235.3L532.3 232.0L529.7 231.6L527.6 229.5L526.8 225.9L528.8 223.7L531.4 222.7L536.7 222.7L543.7 225.3L549.8 225.4L558.6 220.1L563.9 219.0L568.2 219.5L563.3 228.6L552.5 243.5Z","AM":"M105.7 225.3L96.9 224.3L91.3 222.2L89.6 219.5L85.8 204.9L81.2 201.9L79.4 201.9L69.8 207.0L67.2 207.2L54.9 202.5L47.9 198.1L45.3 199.1L37.4 205.2L33.9 205.2L23.4 200.8L21.3 198.5L17.7 189.4L26.9 174.4L47.9 152.5L59.3 149.6L61.3 148.4L70.2 100.9L62.5 90.0L61.6 87.2L68.9 73.1L90.8 56.9L94.3 57.8L107.5 67.5L119.7 72.7L136.4 65.7L145.1 61.1L150.4 56.9L152.1 56.9L155.6 63.0L160.0 67.6L175.3 77.2L181.9 84.1L187.6 91.8L191.6 94.8L205.6 93.2L208.2 94.1L228.3 95.9L236.2 92.4L239.1 97.3L244.7 113.7L247.6 119.6L248.5 120.4L251.1 120.5L255.5 118.9L257.6 120.1L263.7 126.5L265.6 131.0L264.6 133.8L261.1 137.4L256.4 139.8L253.7 142.5L247.2 154.7L244.1 157.8L237.1 158.1L233.6 159.9L223.1 168.9L220.2 173.0L220.2 177.5L221.9 182.1L232.7 204.9L230.1 207.0L205.6 213.7L199.4 216.3L187.2 206.4L184.5 206.4L174.9 211.6L166.1 212.6L160.9 210.7L150.4 204.6L148.6 204.4L128.5 215.5L125.9 218.0L120.6 218.3L105.7 225.3Z","AP":"M321.2 104.9L309.8 102.1L304.6 99.6L288.8 83.1L284.7 74.5L280.0 69.4L269.8 54.4L266.5 50.8L267.8 47.8L270.4 47.6L285.3 50.3L310.7 51.1L313.6 47.1L321.8 31.6L329.1 21.2L331.7 19.5L340.2 48.9L345.7 54.9L350.4 61.7L346.3 77.2L346.8 80.9L344.4 82.7L342.8 85.4L340.8 95.5L337.8 97.7L333.5 96.8L328.2 97.0L321.2 104.9Z","BA":"M506.9 364.7L505.7 364.5L498.6 358.1L496.4 355.1L492.5 353.6L491.6 351.7L492.6 345.3L494.4 341.7L499.9 335.7L501.9 331.7L501.7 326.9L498.2 325.0L493.8 324.7L489.4 322.2L480.6 321.9L478.6 320.7L475.4 315.9L465.7 315.5L458.7 310.4L448.2 309.2L442.5 305.2L441.5 301.6L440.3 300.4L438.6 300.4L428.1 306.4L422.6 306.1L420.8 300.7L420.5 297.0L419.0 294.3L418.7 285.2L416.1 279.7L411.1 274.2L410.1 271.5L410.3 261.4L412.0 255.1L414.6 250.5L422.8 250.0L427.2 252.6L429.8 252.6L434.2 247.5L448.2 240.9L450.3 238.6L449.7 233.2L452.6 229.2L454.4 228.5L456.1 229.3L458.7 232.7L460.5 233.5L469.2 227.4L474.5 227.1L476.3 226.2L482.4 219.2L485.9 219.0L488.5 220.2L489.7 222.2L490.3 226.3L492.0 228.0L494.6 228.1L497.6 225.9L497.9 222.2L499.9 220.1L505.2 221.6L511.3 216.3L517.4 220.2L520.1 225.2L521.8 226.2L525.3 225.6L526.2 226.4L531.7 235.9L531.9 240.5L530.9 245.9L528.8 248.1L525.8 248.7L525.0 251.4L527.5 256.0L535.8 263.0L536.1 264.2L530.6 272.8L522.2 281.5L520.6 284.2L515.4 305.2L514.4 312.5L510.7 358.1L506.9 364.7Z","CE":"M514.8 203.4L512.2 203.4L505.2 197.3L492.9 197.9L491.7 196.7L491.6 194.0L493.2 190.3L493.2 186.7L491.1 184.5L486.8 184.2L484.8 183.0L484.7 179.4L486.3 175.7L485.5 170.2L486.3 165.7L482.0 157.5L483.5 145.6L479.5 135.6L479.5 131.9L480.6 129.0L499.9 128.9L521.8 141.7L539.6 154.7L538.8 157.5L532.9 161.1L525.3 175.2L519.8 179.4L517.9 189.4L518.6 199.4L517.4 201.6L514.8 203.4Z","DF":"M386.0 327.4L382.3 326.2L381.2 323.5L382.5 321.3L384.3 321.3L387.3 324.4L387.9 325.3L386.0 327.4Z","ES":"M486.8 409.5L482.4 408.7L478.9 409.5L477.1 408.6L472.5 402.8L472.5 398.2L474.5 394.2L482.7 384.6L484.4 380.9L483.7 374.5L484.6 371.8L484.6 364.5L485.6 361.8L490.3 357.8L494.6 358.6L498.2 358.0L500.8 359.5L506.0 365.0L506.3 366.3L503.1 371.8L497.6 390.0L489.7 405.5L486.8 409.5Z","GO":"M332.6 381.0L330.0 379.5L329.4 376.4L328.2 375.1L326.5 375.1L323.0 378.5L321.2 378.5L319.4 376.7L319.7 370.9L318.6 368.8L312.9 366.3L310.4 362.7L311.0 355.4L306.3 350.3L306.0 349.0L308.6 346.3L312.4 344.7L315.4 341.7L317.3 336.2L316.5 332.6L320.3 327.6L323.0 326.7L327.3 328.3L330.3 325.3L331.1 320.7L327.8 314.3L327.9 310.7L329.1 308.5L330.8 307.5L340.5 307.3L343.4 304.3L343.4 300.7L337.6 290.6L338.4 286.1L340.0 283.3L345.7 278.5L355.4 285.2L361.5 282.3L366.8 284.7L372.0 283.9L376.4 286.5L379.9 286.4L384.3 284.7L390.4 285.6L396.5 284.5L400.0 282.9L404.4 283.8L407.9 282.9L416.7 282.3L417.6 282.9L418.7 285.2L418.9 293.4L420.5 297.0L422.0 305.2L421.5 306.1L419.3 308.3L414.1 311.0L406.2 311.2L403.3 312.5L401.4 318.9L402.2 326.2L400.9 328.3L399.2 328.3L393.9 325.7L391.3 326.9L390.1 328.9L390.1 331.7L394.3 339.9L394.2 342.6L391.9 347.2L390.8 352.6L391.0 355.4L393.1 359.9L392.4 361.8L382.5 365.9L377.3 365.9L372.9 364.2L368.5 364.0L362.4 366.6L357.1 366.0L349.2 370.5L348.6 375.4L346.6 377.6L341.3 377.9L332.6 381.0ZM386.4 327.1L387.9 325.3L387.3 324.4L384.3 321.3L382.1 321.6L381.2 323.5L382.3 326.2L384.3 327.4L386.4 327.1Z","MA":"M409.7 228.7L407.7 227.7L404.0 221.3L404.1 216.8L407.3 210.4L406.5 205.8L403.5 202.8L396.5 199.1L392.2 198.8L390.1 196.7L390.1 193.0L391.7 189.4L390.0 177.5L390.8 173.0L388.9 168.4L384.3 164.5L377.3 164.3L376.2 163.9L376.1 162.9L377.3 161.7L384.3 159.5L385.4 157.5L385.7 153.8L387.3 151.1L391.3 148.1L395.7 146.8L397.7 144.7L398.6 142.9L398.9 137.4L403.0 129.2L405.9 110.0L412.3 101.8L429.8 120.4L456.1 121.6L470.1 126.2L471.9 127.1L472.2 128.3L466.2 136.5L459.3 142.9L454.1 153.8L454.1 156.6L457.3 160.2L457.4 162.0L455.8 164.8L455.5 171.2L451.6 176.6L457.3 181.2L457.3 184.8L454.4 187.9L452.6 187.9L447.3 185.5L443.0 188.8L436.0 189.2L434.5 193.0L432.5 195.2L427.2 197.1L422.8 196.4L418.4 198.3L417.3 200.3L416.4 205.8L424.9 214.0L424.9 217.7L422.8 219.8L415.8 220.1L412.9 223.1L409.7 228.7Z","MG":"M412.3 432.3L406.7 432.0L401.5 423.8L403.0 412.8L400.9 410.7L397.2 409.2L394.5 403.7L394.2 398.2L392.6 394.6L394.0 390.9L392.2 388.8L383.4 389.7L379.9 391.4L372.0 391.4L366.8 393.1L360.6 387.9L354.5 387.7L347.5 385.9L339.6 386.6L339.2 385.5L340.0 381.8L339.4 379.1L341.3 377.9L346.6 377.6L348.6 375.4L349.2 370.5L357.1 366.0L362.4 366.6L368.5 364.0L372.9 364.2L377.3 365.9L382.5 365.9L392.2 362.0L393.1 359.9L391.0 355.4L390.8 352.6L391.9 347.2L394.2 342.6L394.3 339.9L390.1 331.7L390.1 328.9L391.0 327.1L393.9 325.7L399.2 328.3L401.8 327.5L402.2 325.3L401.4 318.9L403.5 312.3L406.2 311.2L414.1 311.0L421.9 306.0L428.1 306.4L438.6 300.4L440.7 300.7L442.5 305.2L448.2 309.2L458.7 310.4L465.7 315.5L475.4 315.9L478.6 320.7L480.6 321.9L489.4 322.2L493.8 324.7L498.2 325.0L501.7 326.9L501.9 331.7L499.9 335.7L494.4 341.7L492.6 345.3L491.6 351.7L492.9 353.9L497.3 355.9L497.5 358.1L494.6 358.6L490.3 357.8L485.6 361.8L484.6 364.5L484.6 371.8L483.7 374.5L484.4 380.9L482.4 385.0L474.2 394.6L472.5 398.2L472.1 401.9L469.8 403.7L466.3 410.1L465.7 416.0L464.0 417.7L459.6 418.0L452.6 420.4L446.5 420.7L441.2 424.1L433.3 424.4L431.6 425.9L425.4 427.1L421.1 429.5L417.6 429.0L412.3 432.3Z","MS":"M290.5 450.5L287.9 449.6L280.0 443.3L270.4 424.4L266.9 423.3L251.1 421.3L238.6 414.7L238.4 403.7L239.3 401.0L239.3 391.9L240.2 389.1L240.2 379.1L241.0 374.5L233.3 355.4L233.6 352.4L246.7 352.2L256.4 355.7L259.0 355.7L272.1 344.1L274.8 343.1L280.9 343.2L285.3 345.8L293.2 354.8L297.5 356.0L304.6 361.1L309.8 361.5L312.9 366.3L318.6 368.8L319.9 371.8L319.2 376.4L321.2 378.5L323.0 378.5L327.3 375.0L329.4 376.4L329.7 379.1L330.8 380.3L332.6 381.0L337.8 379.6L339.9 380.9L338.1 390.0L333.8 394.6L329.5 397.3L329.4 401.9L320.9 413.7L318.9 422.0L312.4 426.6L308.1 426.2L306.3 428.6L301.9 430.6L297.3 435.6L296.1 441.1L292.6 448.4L290.5 450.5Z","MT":"M309.8 361.1L304.6 361.1L297.5 356.0L293.2 354.8L284.8 345.3L280.0 343.1L274.8 343.1L272.1 344.1L259.0 355.7L256.4 355.7L246.7 352.2L233.6 352.0L232.3 347.2L231.3 335.3L230.1 333.2L206.2 332.6L202.7 316.2L200.9 300.7L204.1 296.1L204.4 292.4L206.2 287.9L214.6 281.5L216.4 276.0L216.4 270.6L209.7 262.4L207.6 254.1L202.9 249.3L200.3 248.4L193.3 252.6L186.3 252.8L183.7 251.7L182.4 248.7L182.5 245.0L185.0 240.5L188.0 237.4L195.1 234.4L197.1 232.3L198.1 229.5L198.1 220.4L199.4 216.5L205.6 213.7L227.5 207.9L231.8 205.5L239.7 205.3L242.4 204.4L250.2 204.6L259.0 209.8L273.0 215.4L283.5 214.5L302.8 210.8L314.2 211.7L327.3 218.9L331.7 220.1L344.5 234.1L350.1 236.4L353.2 241.4L353.0 245.0L351.4 249.6L352.3 255.1L352.1 262.4L347.2 272.4L346.0 277.9L339.3 284.2L337.4 289.7L343.4 300.7L343.4 304.3L340.5 307.3L330.8 307.5L328.8 308.9L327.8 314.3L331.1 320.7L330.3 325.3L327.3 328.3L323.0 326.7L320.3 327.6L316.5 332.6L317.3 336.2L315.4 341.7L312.4 344.7L308.6 346.3L306.0 349.0L306.3 350.3L311.0 355.4L311.0 359.9L309.8 361.1Z","PA":"M350.1 235.2L346.6 235.3L344.5 234.1L331.7 220.1L327.3 218.9L315.1 211.9L302.8 210.8L283.5 214.5L273.0 215.4L259.0 209.8L250.2 204.6L233.6 205.2L221.9 182.1L220.0 176.6L220.2 173.0L221.8 170.2L233.6 159.9L237.1 158.1L244.5 157.5L247.9 153.8L253.7 142.5L256.4 139.8L261.1 137.4L265.4 131.9L265.4 130.1L263.7 126.5L257.3 119.8L254.6 118.9L252.0 120.4L249.4 120.5L247.3 119.2L236.8 91.8L246.7 82.2L261.9 60.8L263.1 58.1L265.4 56.2L266.9 52.4L269.5 54.0L280.0 69.4L284.7 74.5L289.2 83.6L305.0 100.0L309.8 102.1L320.3 105.0L322.1 104.1L328.2 97.0L338.7 97.6L340.8 95.5L341.9 88.2L343.7 83.6L346.6 81.3L348.4 82.2L353.6 88.5L366.8 96.7L380.8 96.8L383.4 95.9L393.0 95.9L409.7 99.7L411.6 100.9L410.8 103.7L405.9 110.0L403.0 129.2L398.9 137.4L398.6 142.9L397.7 144.7L395.7 146.8L391.3 148.1L387.3 151.1L385.7 153.8L385.4 157.5L384.3 159.5L377.3 161.7L373.5 165.7L375.1 168.4L379.0 170.8L380.2 174.8L378.6 177.5L361.2 195.8L360.2 198.5L360.3 203.1L364.4 209.5L362.8 212.2L357.7 215.8L359.2 220.4L358.9 222.6L357.1 223.6L352.7 221.9L350.7 224.0L351.4 232.3L350.1 235.2Z","PB":"M543.7 210.7L542.0 209.9L539.9 206.7L539.8 202.2L540.6 198.5L540.2 197.4L538.4 196.6L528.8 203.4L525.3 202.6L520.9 203.5L518.1 202.2L518.7 194.9L517.9 189.4L518.9 183.0L519.7 182.1L520.9 181.8L524.4 183.5L527.1 183.3L536.7 178.2L538.5 180.3L537.3 183.0L537.3 186.7L539.3 188.0L543.7 187.1L548.1 187.9L552.5 181.8L559.5 184.4L562.1 183.5L565.6 184.4L570.9 183.9L574.7 193.0L574.4 199.4L570.9 198.1L566.5 198.2L561.2 202.5L550.7 204.6L543.7 210.7Z","PE":"M495.5 228.0L492.0 228.0L490.0 225.9L489.7 222.2L488.5 220.2L486.8 219.2L482.4 218.8L482.0 217.7L482.4 214.5L488.8 208.5L489.7 206.7L490.0 201.2L492.0 198.2L504.3 197.2L507.8 199.1L512.2 203.4L514.8 203.4L517.4 202.1L520.9 203.5L525.3 202.6L527.9 203.5L530.6 202.5L538.4 196.6L540.2 197.4L540.6 198.5L539.8 202.2L539.9 206.7L542.8 210.7L545.5 209.8L550.7 204.6L561.2 202.5L566.5 198.2L570.9 198.1L573.7 199.4L573.9 204.0L572.9 210.4L570.3 216.8L568.2 218.9L558.6 220.1L549.8 225.4L544.6 225.4L537.6 222.8L531.4 222.7L526.2 226.0L524.4 225.4L521.8 226.2L519.8 225.0L517.4 220.2L511.3 216.3L505.2 221.6L499.9 220.1L497.9 222.2L497.6 225.9L495.5 228.0Z","PI":"M429.8 252.6L427.2 252.6L423.7 250.2L414.9 249.8L414.3 244.1L410.3 235.9L409.6 229.5L413.2 222.7L415.8 220.1L422.8 219.8L424.9 217.7L424.9 214.0L416.4 205.8L417.3 200.3L418.4 198.3L422.8 196.4L427.2 197.1L432.5 195.2L434.5 193.0L436.0 189.2L443.0 188.8L447.3 185.5L453.5 188.0L456.5 185.7L457.3 184.8L457.3 181.2L451.6 176.6L455.5 171.2L455.8 164.8L457.4 162.0L457.3 160.2L454.1 156.6L454.1 153.8L459.3 142.9L466.2 136.5L472.7 127.4L479.8 129.2L479.5 135.6L483.5 145.6L482.1 158.4L486.3 165.7L485.5 170.2L486.3 175.7L484.7 179.4L484.8 183.0L486.8 184.2L491.1 184.5L493.3 187.6L493.2 190.3L491.6 194.0L492.1 197.6L490.0 201.2L489.7 206.7L488.1 209.5L482.1 214.9L481.8 219.5L476.3 226.2L474.5 227.1L469.2 227.4L460.5 233.5L458.7 232.7L456.1 229.3L454.4 228.5L452.6 229.2L449.7 233.2L450.3 238.6L448.2 240.9L434.2 247.5L429.8 252.6Z","PR":"M328.2 490.7L323.8 489.7L311.6 484.6L299.3 484.2L297.5 481.7L288.5 473.9L290.3 451.1L292.6 448.4L296.1 441.1L297.3 435.6L302.4 430.2L304.6 428.9L309.8 428.6L312.4 427.0L315.9 428.6L318.6 428.8L322.1 427.1L324.7 427.0L328.2 428.6L333.5 428.9L343.1 434.1L351.0 433.5L354.5 435.3L357.4 438.4L359.2 442.0L363.0 456.6L364.6 459.3L367.6 460.9L372.0 465.1L374.6 466.2L377.3 465.4L381.7 468.5L373.8 479.7L371.1 478.2L369.4 478.2L366.8 480.6L362.4 482.6L345.7 480.9L337.8 484.6L332.6 489.7L328.2 490.7Z","RJ":"M429.8 441.4L428.9 441.3L428.5 440.2L429.5 435.6L435.1 432.2L436.0 430.2L432.2 426.5L432.9 424.7L441.2 424.1L446.5 420.7L452.6 420.4L459.6 418.0L464.0 417.7L466.0 415.6L466.3 410.1L471.0 402.5L472.2 402.8L476.3 407.8L478.9 409.5L483.3 408.7L486.7 410.1L479.2 422.9L472.7 431.4L469.2 432.4L457.0 433.5L429.8 441.4Z","RN":"M548.1 187.9L543.7 187.1L541.1 188.0L538.1 187.6L537.3 186.7L537.1 183.9L538.5 180.3L536.7 178.2L527.1 183.3L523.6 183.3L519.8 181.2L520.1 179.0L525.6 174.8L533.2 160.7L538.4 157.8L540.2 155.4L566.7 162.9L570.9 183.0L570.4 183.9L565.6 184.4L562.1 183.5L559.5 184.4L552.5 181.8L548.1 187.9Z","RO":"M202.1 299.3L201.2 299.7L198.6 295.8L187.2 291.8L181.9 289.1L165.3 277.6L142.5 268.1L139.6 264.2L128.5 243.8L116.0 245.0L125.6 218.6L127.6 216.3L148.6 204.4L150.4 204.6L160.9 210.7L166.1 212.6L174.9 211.6L184.5 206.4L187.2 206.4L193.7 211.3L198.1 215.8L199.0 217.7L198.1 220.4L198.1 229.5L197.1 232.3L195.1 234.4L188.0 237.4L185.0 240.5L182.5 245.0L182.4 248.7L183.4 251.4L186.3 252.8L193.3 252.6L200.3 248.4L202.9 249.3L207.6 254.1L209.7 262.4L216.4 270.6L216.4 276.0L214.6 281.5L206.2 287.9L204.4 292.4L204.1 296.1L202.1 299.3Z","RR":"M229.2 95.8L208.2 94.1L205.6 93.2L191.6 94.8L187.6 91.8L181.9 84.1L175.3 77.2L160.0 67.6L155.6 63.0L152.7 58.1L152.1 56.2L152.6 55.3L157.4 51.9L158.6 49.9L166.1 29.4L191.6 17.3L193.6 15.2L196.8 6.8L197.9 7.0L205.6 17.5L211.1 21.6L211.1 25.2L207.2 42.6L211.4 57.2L220.5 64.8L224.0 66.6L232.7 60.5L247.6 56.9L263.4 57.2L261.9 60.8L246.3 82.7L236.2 92.1L229.2 95.8Z","RS":"M304.6 596.5L303.7 597.0L303.3 596.1L303.1 580.6L292.7 570.6L260.8 544.8L242.4 544.2L276.5 508.1L291.4 498.9L294.0 494.9L298.4 497.9L305.4 497.2L315.1 499.8L322.1 500.1L331.7 504.6L336.5 507.7L342.2 514.4L347.5 515.6L353.2 519.5L354.0 521.4L353.3 527.7L356.2 531.4L346.9 550.5L343.1 555.5L332.6 567.4L322.6 575.2L315.5 582.5L304.6 596.5Z","SC":"M358.0 530.8L355.4 530.7L353.3 527.7L354.0 521.4L351.9 518.2L347.5 515.6L342.2 514.4L336.5 507.7L331.7 504.6L322.1 500.1L315.1 499.8L305.4 497.2L298.4 497.9L294.5 494.0L298.1 485.8L300.2 484.4L311.6 484.6L327.3 490.8L332.6 489.7L337.8 484.6L345.7 480.9L362.4 482.6L366.8 480.6L369.4 478.2L371.1 478.2L373.3 481.2L373.3 508.6L371.4 517.7L367.6 522.7L358.0 530.8Z","SE":"M536.7 262.7L534.9 262.7L530.6 259.2L526.8 255.1L525.0 251.4L525.8 248.7L528.8 248.1L530.9 245.9L531.9 236.8L530.1 233.2L531.4 231.8L537.6 235.3L542.8 236.5L546.3 239.9L549.3 241.4L551.7 244.1L542.0 254.7L536.7 262.7Z","SP":"M381.6 467.6L377.3 465.4L373.8 466.0L364.1 458.8L360.3 448.4L359.2 442.0L357.4 438.4L354.5 435.3L350.1 433.4L343.1 434.1L333.5 428.9L328.2 428.6L325.6 427.1L322.1 427.1L319.4 428.6L316.8 428.8L313.2 426.5L318.9 422.0L320.9 413.7L329.4 401.9L329.5 397.3L334.3 394.1L337.8 390.4L339.6 387.1L347.5 385.9L354.5 387.7L360.6 387.9L367.6 393.2L371.1 391.6L379.9 391.4L383.4 389.7L392.2 388.8L394.0 390.9L392.6 394.6L394.2 398.2L394.5 403.7L397.2 409.2L400.9 410.7L403.0 412.8L401.5 423.8L406.7 432.0L412.3 432.3L417.6 429.0L421.1 429.5L428.9 426.1L431.6 426.2L436.0 430.2L435.1 432.2L429.5 435.6L428.4 441.1L427.2 442.3L407.0 449.9L386.0 463.6L381.6 467.6ZM309.8 428.6L307.2 428.6L306.9 427.4L308.1 426.2L311.6 426.5L309.8 428.6Z","TO":"M379.9 286.4L375.5 286.4L371.1 283.8L365.9 284.5L361.5 282.3L355.4 285.2L348.0 279.7L346.2 276.9L347.2 272.4L351.3 265.1L352.3 261.4L351.4 249.6L353.0 245.0L353.2 241.4L350.0 235.9L351.4 232.3L350.7 224.0L352.7 221.9L357.1 223.6L359.2 222.2L357.7 215.8L362.8 212.2L364.4 209.5L360.3 203.1L360.3 197.6L361.9 194.9L378.6 177.5L380.2 174.8L379.0 170.8L373.5 166.6L373.8 165.3L375.5 163.8L384.3 164.5L388.9 168.4L390.8 173.0L390.0 177.5L391.7 189.4L390.1 193.0L390.1 196.7L392.2 198.8L396.5 199.1L403.5 202.8L407.3 207.6L407.3 210.4L404.1 216.8L404.1 222.2L410.0 230.4L410.3 235.9L414.5 245.0L414.3 250.5L412.0 255.1L410.3 261.4L410.1 271.5L411.1 274.2L415.8 279.3L416.8 281.5L414.9 282.9L407.9 282.9L405.3 283.8L400.0 282.9L396.5 284.5L391.3 285.5L386.9 285.6L384.3 284.7L379.9 286.4Z"};
 function mpBase(){
   return (typeof oportunidades!=='undefined' ? oportunidades : []).filter(o=>o.origemSupabase && visivelAoCliente(o) && !ehContratacaoDeFornecedor(o.objeto));
 }
 // Mesmo critério do número "editais ativos" da tela inicial: só os que estão recebendo propostas agora.
 function mpAtivo(o){ return editalAtivo(o); }
-function mpBRL(v){ if(!v) return '—'; if(v>=1e6) return 'R$ '+(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi'; if(v>=1e3) return 'R$ '+Math.round(v/1e3).toLocaleString('pt-BR')+' mil'; return 'R$ '+Math.round(v); }
-function mpPx(lon,lat){ return [(lon+74.2)*14.6,(5.6-lat)*15.2]; }
-function mpTip(e,html){ const t=document.getElementById('mp-tip'); t.innerHTML=html; t.style.opacity=1; let x=e.clientX+14; if(x+250>window.innerWidth) x=e.clientX-250; t.style.left=Math.max(8,x)+'px'; t.style.top=(e.clientY+14)+'px'; }
-function mpTipOff(){ document.getElementById('mp-tip').style.opacity=0; }
-let mpV = {x:0, y:0, w:600, h:610}, mpSel = '', mpDados = null, mpArrastou = false;
-function mpEmArea(x){ const q=mpPx(mpGeo[x.k][1],mpGeo[x.k][0]); return q[0]>=mpV.x && q[0]<=mpV.x+mpV.w && q[1]>=mpV.y && q[1]<=mpV.y+mpV.h; }
-function mpDesenhar(){
-  const svg=document.getElementById('mp-svg'), k=mpV.w/600, geo=mpGeo;
-  svg.setAttribute('viewBox', mpV.x+' '+mpV.y+' '+mpV.w+' '+mpV.h);
-  svg.style.touchAction = mpV.w>=600 ? 'pan-y' : 'none'; // sem zoom, o dedo rola a página; com zoom, arrasta o mapa
-  let h='';
-  [0,-10,-20,-30].forEach(la=>{ const y=mpPx(-74,la)[1]; h+='<line class="gl" x1="0" x2="600" y1="'+y+'" y2="'+y+'" style="stroke-width:'+k+'"/><text class="gt" x="'+(mpV.x+4)+'" y="'+(y-4*k)+'" style="font-size:'+(10*k)+'px">'+(la===0?'Equador':Math.abs(la)+'° S')+'</text>'; });
-  h+='<path class="land" style="stroke-width:'+k+'" d="M'+MP_OUT.map(p=>{ const q=mpPx(p[0],p[1]); return q[0].toFixed(1)+' '+q[1].toFixed(1); }).join('L')+'Z"/>';
-  const esc_r = Math.sqrt(k);
-  mpDados.arr.forEach((x,i)=>{ const q=mpPx(geo[x.k][1],geo[x.k][0]); const r=(3.5+3.2*Math.sqrt(x.n))*esc_r;
-    h+='<circle class="bub'+(mpSel===x.k?' sel':'')+'" data-i="'+i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(2)+'" style="stroke-width:'+(2*k)+'"/><circle class="hit" data-i="'+i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+Math.max(r, (window.matchMedia('(pointer:coarse)').matches?15:7)*k).toFixed(2)+'"/>'; });
-  if(mpV.w<=300){
-    mpDados.arr.filter(x=>mpEmArea(x)).forEach(x=>{ const q=mpPx(geo[x.k][1],geo[x.k][0]); const r=(3.5+3.2*Math.sqrt(x.n))*esc_r;
-      h+='<text class="cid" x="'+(q[0]+r+2*k).toFixed(1)+'" y="'+(q[1]+3.5*k).toFixed(1)+'" style="font-size:'+(11*k)+'px; stroke-width:'+(3*k)+'">'+esc(x.c)+'</text>'; });
-  }
-  svg.innerHTML=h;
-  svg.querySelectorAll('.hit').forEach(el=>{ const x=mpDados.arr[+el.dataset.i];
-    el.addEventListener('mousemove',e=>mpTip(e,'<b>'+esc(x.c)+'/'+esc(x.u)+'</b><br>'+x.n+(x.n>1?' editais abertos':' edital aberto')));
+function mpTip(e,html){ const t=document.getElementById('mp-tip'); if(!t) return; t.innerHTML=html; t.style.opacity=1; let x=e.clientX+14; if(x+250>window.innerWidth) x=e.clientX-250; t.style.left=Math.max(8,x)+'px'; t.style.top=(e.clientY+14)+'px'; }
+function mpTipOff(){ const t=document.getElementById('mp-tip'); if(t) t.style.opacity=0; }
+function renderMapaEditais(){
+  const svg=document.getElementById('mp-svg'); if(!svg) return;
+  const n={}; mpBase().filter(o=>mpAtivo(o)).forEach(o=>{ if(o.uf) n[o.uf]=(n[o.uf]||0)+1; });
+  svg.innerHTML=Object.keys(MP_UF).map(u=>'<path class="uf'+(n[u]?' on':'')+'" data-u="'+u+'" d="'+MP_UF[u]+'"/>').join('');
+  svg.querySelectorAll('.uf').forEach(el=>{
+    const u=el.dataset.u, q=n[u]||0;
+    const html='<b>'+MP_NOMES[u]+'</b>';
+    el.addEventListener('mousemove',e=>mpTip(e,html));
     el.addEventListener('mouseleave',mpTipOff);
-    el.addEventListener('click',()=>{ if(mpArrastou) return; mpSel = mpSel===x.k ? '' : x.k; mpTipOff(); mpDesenhar(); mpPainel(); });
+    el.addEventListener('click',e=>{ mpTip(e,html); clearTimeout(window._mpT); window._mpT=setTimeout(mpTipOff,2500); });
   });
-}
-function mpPainel(){
-  const pn=document.getElementById('mp-painel'); let lista=[], titulo='';
-  if(mpSel){ const x=mpDados.arr.find(a=>a.k===mpSel); lista=mpDados.rows.filter(o=>o.cidade && (mpNorm(o.cidade)+'|'+o.uf)===mpSel); titulo='Editais abertos em '+(x?x.c+'/'+x.u:''); }
-  else if(mpV.w<=200){ const ks=new Set(mpDados.arr.filter(x=>mpEmArea(x)).map(x=>x.k)); lista=mpDados.rows.filter(o=>o.cidade && ks.has(mpNorm(o.cidade)+'|'+o.uf)); titulo='Editais abertos nesta área ('+lista.length+')'; }
-  const fx=document.getElementById('mp-fechar');
-  if(!lista.length){
-    fx.hidden=true; document.getElementById('mp-ptitulo').textContent='Cidades com mais editais abertos';
-    document.getElementById('mp-lista').innerHTML = mpDados.arr.slice(0,5).map(x=>'<button type="button" class="mp-rank" onclick="mpEscolher(\''+esc(x.k).replace(/'/g,'')+'\')"><span>'+esc(x.c+'/'+x.u)+'</span><b>'+x.n+'</b></button>').join('');
-    return;
-  }
-  fx.hidden=!mpSel; document.getElementById('mp-ptitulo').textContent=titulo;
-  lista=lista.slice().sort((a,b)=>mpNum(b)-mpNum(a)||b.id-a.id).slice(0,60);
-  document.getElementById('mp-lista').innerHTML = lista.map(o=>{
-    const pf=(o.profissoes||[]); const pt = pf.length>3 ? pf.slice(0,3).join(', ')+' +'+(pf.length-3) : pf.join(', ');
-    return '<button type="button" class="mp-item" onclick="openDetalhe('+o.id+')"><div class="t"><span>'+esc(o.cidade+'/'+o.uf)+'</span><span>'+mpBRL(mpNum(o))+'</span></div><div class="o">'+esc(o.orgao||'')+'</div><div class="o">'+esc(pt||'Profissão não informada')+'</div><div class="mp-tags"><span class="mp-tag">'+esc(o.modalidade||'')+'</span><span class="mp-tag">'+esc(situacaoExibida(o))+'</span></div></button>';
-  }).join('');
-}
-function mpEscolher(k){ mpSel=k; mpDesenhar(); mpPainel(); }
-function mpFechar(){ mpSel=''; if(mpDados){ mpDesenhar(); mpPainel(); } }
-function mpZoom(f, cx, cy){
-  const nw=Math.min(600, Math.max(50, mpV.w*f)), nh=nw*610/600;
-  if(cx==null){ cx=mpV.x+mpV.w/2; cy=mpV.y+mpV.h/2; }
-  mpV.x = cx-(cx-mpV.x)*(nw/mpV.w); mpV.y = cy-(cy-mpV.y)*(nh/mpV.h); mpV.w=nw; mpV.h=nh; mpLimitar();
-}
-function mpLimitar(){ mpV.x=Math.max(0,Math.min(600-mpV.w,mpV.x)); mpV.y=Math.max(0,Math.min(610-mpV.h,mpV.y)); }
-function mpZoomBtn(f){ if(!mpDados) return; mpZoom(f); mpDesenhar(); mpPainel(); }
-function mpZoomReset(){ if(!mpDados) return; mpV={x:0,y:0,w:600,h:610}; mpDesenhar(); mpPainel(); }
-function mpLigarMapa(){
-  const svg=document.getElementById('mp-svg'); let ini=null;
-  svg.addEventListener('pointerdown',e=>{ ini={x:e.clientX,y:e.clientY,vx:mpV.x,vy:mpV.y}; mpArrastou=false; });
-  svg.addEventListener('pointermove',e=>{ if(!ini) return; const dx=e.clientX-ini.x, dy=e.clientY-ini.y;
-    if(!mpArrastou && Math.hypot(dx,dy)<5) return;
-    if(mpV.w>=600) return; // sem zoom não há o que arrastar
-    mpArrastou=true; svg.classList.add('arrastando'); const r=svg.getBoundingClientRect();
-    mpV.x=ini.vx-dx*mpV.w/r.width; mpV.y=ini.vy-dy*mpV.h/r.height; mpLimitar(); mpDesenhar(); });
-  const fim=()=>{ if(!ini) return; ini=null; svg.classList.remove('arrastando'); if(mpArrastou){ mpPainel(); setTimeout(()=>{ mpArrastou=false; },0); } };
-  svg.addEventListener('pointerup',fim); svg.addEventListener('pointerleave',fim); svg.addEventListener('pointercancel',fim);
-  svg.addEventListener('dblclick',e=>{ const r=svg.getBoundingClientRect(); mpZoom(0.5, mpV.x+(e.clientX-r.left)*mpV.w/r.width, mpV.y+(e.clientY-r.top)*mpV.h/r.height); mpDesenhar(); mpPainel(); });
-}
-let mpLigado=false;
-window.addEventListener('resize',()=>{ const v=document.getElementById('view-sobre'); if(v && v.classList.contains('active')) renderMapaEditais(); });
-async function renderMapaEditais(){
-  if(!document.getElementById('mp-svg')) return;
-  const geo = await mpCarregarGeo();
-  if(!mpLigado){ mpLigado=true; mpLigarMapa(); }
-  const rows = mpBase().filter(o=>mpAtivo(o));
-  const g={}; let semCidade=0, semCoord=0; const ufs=new Set();
-  rows.forEach(o=>{ if(o.uf) ufs.add(o.uf); if(!o.cidade){ semCidade++; return; } const k=mpNorm(o.cidade)+'|'+o.uf; if(!geo[k]){ semCoord++; return; } (g[k]=g[k]||{k,c:o.cidade,u:o.uf,n:0}); g[k].n++; });
-  const arr=Object.values(g).sort((a,b)=>b.n-a.n);
-  mpDados={rows,arr};
-  document.getElementById('mp-kpis').innerHTML =
-    '<div class="mp-kpi"><div class="l">Editais abertos</div><div class="v">'+rows.length+'</div></div>'+
-    '<div class="mp-kpi"><div class="l">Cidades</div><div class="v">'+arr.length+'</div></div>'+
-    '<div class="mp-kpi"><div class="l">Estados</div><div class="v">'+ufs.size+'</div></div>';
-  const abrem = mpBase().filter(o=>situacaoExibida(o)==='Próximo da abertura').length;
-  document.getElementById('mp-nota').textContent = [(semCidade+semCoord) ? (semCidade+semCoord)+' sem cidade no mapa' : '', abrem ? abrem+' ainda não abriram (não contados)' : ''].filter(Boolean).join(' · ');
-  mpDesenhar(); mpPainel();
 }
 function ehContratacaoDeFornecedor(objeto){
   const t = (objeto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
@@ -9755,13 +9832,14 @@ function renderImportResultado(){
       <button class="inbox-approve" onclick="importarNovosCandidatos()">Adicionar selecionados</button>
     </div>`;
     novos.forEach((n, i) => {
-      const objetoCurto = n.objeto.length > 220 ? n.objeto.slice(0,220) + '…' : n.objeto;
+      const _objPad = padronizarTexto(n.objeto, {protegidos:[n.municipio]}) || '';
+      const objetoCurto = _objPad.length > 220 ? _objPad.slice(0,220) + '…' : _objPad;
       html += `
         <div class="inbox-card" style="padding:12px 14px; margin-top:8px;">
           <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
             <input type="checkbox" checked class="import-novo-check" data-idx="${i}" style="margin-top:3px;">
             <span>
-              <div style="font-size:13px; font-weight:600;">${esc(n.orgao)}${n.uf ? ' — '+esc(n.uf) : ''}</div>
+              <div style="font-size:13px; font-weight:600;">${esc(padronizarOrgao(n.orgao, {protegidos:[n.municipio]}))}${n.uf ? ' — '+esc(n.uf) : ''}</div>
               <div class="inbox-profs" style="margin:4px 0;">${n.profissoes_detectadas.map(p=>`<span>${esc(p)}</span>`).join('')}</div>
               <div style="font-size:12px; color:var(--ink-muted);">${esc(objetoCurto)}</div>
               <div style="font-size:11px; color:var(--ink-dim); margin-top:4px;">${esc(n.numero_controle_pncp)}${n.situacao ? (' · '+esc(n.situacao)) : ''}</div>
@@ -9805,9 +9883,9 @@ async function importarNovosCandidatos(){
     const n = _importResultado.novos[Number(chk.dataset.idx)];
     const { data, error } = await _sb.rpc('importar_credenciamento_pncp', {
       p_numero_controle_pncp: n.numero_controle_pncp,
-      p_orgao: n.orgao,
+      p_orgao: padronizarOrgao(n.orgao, {protegidos:[n.municipio]}),
       p_orgao_cnpj: n.orgao_cnpj,
-      p_objeto: n.objeto,
+      p_objeto: padronizarTexto(n.objeto, {protegidos:[n.municipio, padronizarOrgao(n.orgao, {protegidos:[n.municipio]})]}),
       p_uf: n.uf,
       p_municipio: n.municipio,
       p_modalidade: n.modalidade,
@@ -10053,13 +10131,223 @@ function formatarDataBR(iso){
   if(isNaN(d.getTime())) return 'Não informado';
   return d.toLocaleDateString('pt-BR');
 }
+/* ===== Padronização de texto (sentence case) dos editais =====
+   Só a primeira letra de cada frase em maiúscula; preserva siglas, nomes próprios, órgãos, leis e termos oficiais.
+   Aplicada na exibição de todo edital (já publicado ou novo) e ao gravar/importar, qualquer que seja a grafia da fonte. */
+const PAD_PREP = new Set(['de','da','do','das','dos','e','em','na','no','nas','nos','a','o','as','os','para','por','com','sem','ao','aos','à','às','ou','pela','pelo','pelas','pelos','que','sob','entre','até','ante','após','como','se']);
+const PAD_NOME_LIG = new Set(['de','da','do','das','dos']);
+const PAD_PARAR = new Set(['para','a','as','o','os','ao','aos','à','às','na','no','nas','nos','em','com','sem','por','pelo','pela','pelos','pelas','que','e','ou','ser','será','visando','destinado','destinada','destinados','destinadas','conforme','mediante','sob','entre','durante','objeto','credenciamento','contratação','prestação','serviços','serviço','empresa','empresas','pessoa','pessoas','profissionais','profissional','referente','relativo','cujo','atendimento','atender','regulados','regulado','ref','processo','edital','chamamento','chamada','abertura','realização','aquisição','fornecimento','locação','especializada','especializadas','especializado','especializados','jurídica','jurídicas','física','físicas','interessadas','interessados','habilitados','habilitadas']);
+const PAD_GATILHOS = new Set(['prefeitura','município','municipio','secretaria','fundação','fundacao','fundo','hospital','consórcio','consorcio','universidade','instituto','câmara','camara','ministério','ministerio','tribunal','governo','autarquia','associação','associacao','comando','exército','exercito','marinha','aeronáutica','aeronautica','conselho','defensoria','polícia','policia','santa','estado','distrito','policlínica','policlinica','maternidade','cooperativa','faculdade','centro','departamento','superintendência','superintendencia','agência','agencia','companhia','sociedade','federação','federacao','sindicato','delegacia','são','sao','santo','nossa']);
+const PAD_SIGLAS = new Set('PNCP CNPJ CPF SUS UBS UPA CAPS CAPSI CRP CRM CRO CRN CRF CREFITO CREFONO COREN CRESS CRBM CRMV CREF CFP CFM CFO ME EPP MEI LTDA PJ PF CID TEA TDAH TCC TFD CNES CBO TUSS SIGTAP SIA SIH RENAME EAD IPTU CTPS RG CNH CNAE FGTS INSS ISS IRPF PIS SISREG ANVISA ANS AMB CBHPM UTI CTI SAMU CEO NASF ESF PSF APS ACS ESB SAE CEREST CER NIS ABNT ISO IBGE ART ICMS CAPES MEC OMS OPAS HIV AIDS COVID DST EPI TI RH EAP PCA MP AME CRAS CREAS CNJ CNPJ/MF IR PIX OAB CBM PM DF SC RS SP RJ MG PR MT MS GO RR RO AC AP CE PB PI RN'.split(' '));
+const PAD_COMUNS = new Set(['ultima','atualizacao','edital','editais','anexo','anexos','termo','lote','item','itens','objeto','contrato','saude','saúde','prazo','valor','preco','preço','tabela','proposta','processo','chamamento','publico','público','pregao','pregão','dispensa','inexigibilidade','licitacao','licitação','servicos','serviços','servico','serviço','vagas','vaga']);
+const PAD_UF_AMB = new Set(['PA','MA','TO','AM','AL','SE','ES','BA','PE']);
+const PAD_UFS = new Set(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']);
+const PAD_ACENTOS = {municipio:'município',fundacao:'fundação',saude:'saúde',consorcio:'consórcio',regiao:'região',microrregiao:'microrregião',assistencia:'assistência',parana:'Paraná',publico:'público',publica:'pública',publicos:'públicos',publicas:'públicas',servico:'serviço',servicos:'serviços',prestacao:'prestação',realizacao:'realização',juridica:'jurídica',juridicas:'jurídicas',juridico:'jurídico',fisica:'física',fisicas:'físicas',medico:'médico',medicos:'médicos',medica:'médica',medicas:'médicas',atencao:'atenção',contratacao:'contratação',aquisicao:'aquisição',orgao:'órgão',orgaos:'órgãos',camara:'câmara',ministerio:'ministério',policia:'polícia',sao:'São',conceicao:'Conceição',clinica:'clínica',clinicas:'clínicas',diagnostico:'diagnóstico',diagnosticos:'diagnósticos',cirurgicos:'cirúrgicos',cirurgicas:'cirúrgicas',odontologicos:'odontológicos',odontologicas:'odontológicas',fonoaudiologicos:'fonoaudiológicos',psicologica:'psicológica',psicologicas:'psicológicas',educacao:'educação',administracao:'administração',policlinica:'policlínica',aeronautica:'aeronáutica',exercito:'exército',autarquia:'autarquia',associacao:'associação',federacao:'federação',superintendencia:'superintendência',agencia:'agência',ocupacional:'ocupacional',tecnicos:'técnicos',tecnica:'técnica',unico:'único',unica:'única',especialidade:'especialidade'};
+const PAD_PHRASES = ['Acre','Alagoas','Amapá','Amazonas','Bahia','Ceará','Distrito Federal','Espírito Santo','Goiás','Maranhão','Mato Grosso do Sul','Mato Grosso','Minas Gerais','Pará','Paraíba','Paraná','Pernambuco','Piauí','Rio de Janeiro','Rio Grande do Norte','Rio Grande do Sul','Rondônia','Roraima','Santa Catarina','São Paulo','Sergipe','Tocantins','Brasil','Sistema Único de Saúde','Portal Nacional de Contratações Públicas','Constituição Federal','Código Civil','Código de Defesa do Consumidor','Ministério da Saúde','Lei Orgânica','Estatuto da Criança e do Adolescente','Rede de Atenção Psicossocial','Política Nacional'];
+const PAD_LEIS = new Set(['lei','decreto','portaria','resolução','resolucao','instrução','instrucao','medida','emenda','súmula','sumula','norma','deliberação','deliberacao','ato']);
+const PAD_LEI_SEG = /^(n[º°o]?|\d.*|complementar|federal|estadual|municipal|normativa|provisória|provisoria|ordinária|ordinaria|conjunta|constitucional)$/i;
+const PAD_ROMANO = /^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
+const PAD_NOMES_FIXOS = new Set(['são','santa','santo','santos','nossa','senhora','dom','dona']);
+const PAD_VOCAB = new Set();
+/* vocabulário aprendido dos próprios editais: palavras que aparecem em minúscula são palavras comuns (não nomes próprios) */
+function padConstruirVocab(textos){ try{ for(const tx of textos){ if(typeof tx!=='string') continue; const m=tx.match(/(?:^|[^A-Za-zÀ-ÿ0-9])([a-zß-ÿ]{3,})(?![A-Za-zÀ-ÿ0-9])/g); if(m) for(const w of m){ const x=w.replace(/^[^a-zß-ÿ]+/,''); if(x) PAD_VOCAB.add(x); } } }catch(e){} }
+function _padNorm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+function _padCap(w){ return w ? w.charAt(0).toUpperCase() + w.slice(1) : w; }
+function _padTokens(txt){ return String(txt).match(/\s+|[A-Za-zÀ-ÿ0-9][A-Za-zÀ-ÿ0-9ºª°]*|[^\sA-Za-zÀ-ÿ0-9]/g) || []; }
+function _padEhWord(t){ return /^[A-Za-zÀ-ÿ0-9]/.test(t); }
+function _padTodoCaps(t){ return /[A-ZÀ-Þ]/.test(t) && !/[a-zß-ÿ]/.test(t) && (t.match(/[A-Za-zÀ-ÿ]/g)||[]).length >= 2; }
+function _padCamel(t){ return /[a-zß-ÿ][A-ZÀ-Þ]/.test(t); }
+
+function padronizarTexto(txt, opts){
+  if(txt === null || txt === undefined) return txt;
+  if(typeof txt !== 'string') return txt;
+  if(!txt.trim()) return txt;
+  opts = opts || {};
+  const tk = _padTokens(txt);
+  const n = tk.length;
+  const out = tk.slice();
+  const idxW = [];
+  for(let i=0;i<n;i++) if(_padEhWord(tk[i])) idxW.push(i);
+  // dentro de colchetes: não mexe
+  const fixo = new Array(n).fill(false);
+  { let dentro = false; for(let i=0;i<n;i++){ if(tk[i]==='[') { dentro = true; fixo[i]=true; continue; } if(tk[i]===']'){ dentro=false; fixo[i]=true; continue; } if(dentro) fixo[i]=true; } }
+  // texto em maiúsculas ou em "Título Capitalizado"?
+  let nUp=0,nLow=0,capMed=0,totMed=0;
+  for(const i of idxW){ if(fixo[i]) continue; const t=tk[i]; if(/\d/.test(t)) continue;
+    for(const ch of t){ if(/[A-ZÀ-Þ]/.test(ch)) nUp++; else if(/[a-zß-ÿ]/.test(ch)) nLow++; }
+    if(t.length>=4 && !PAD_PREP.has(t.toLowerCase())){ totMed++; if(/^[A-ZÀ-Þ]/.test(t) && !_padTodoCaps(t)) capMed++; } }
+  const modoCaps = (nUp+nLow) > 0 && nUp/(nUp+nLow) > 0.6;
+  const modoTitulo = !modoCaps && totMed >= 3 && capMed/totMed >= 0.5;
+  const lower = new Array(n).fill(null);    // decisão por token
+  // palavras vizinhas (separadas só por espaço)
+  const prevW = i => { let j=i-1; if(j>=0 && /^\s+$/.test(tk[j])) j--; return (j>=0 && _padEhWord(tk[j]) && !fixo[j]) ? j : -1; };
+  const nextW = i => { let j=i+1; if(j<n && /^\s+$/.test(tk[j])) j++; return (j<n && _padEhWord(tk[j]) && !fixo[j]) ? j : -1; };
+  const ehCapsPal = j => j>=0 && _padTodoCaps(tk[j]) && !/\d/.test(tk[j]);
+  // frases protegidas (UF por extenso, SUS por extenso, cidade/órgão informados)
+  const protegidas = PAD_PHRASES.concat((opts.protegidos||[]).filter(Boolean).map(String));
+  const fraseDe = new Array(n).fill(null);
+  for(const fr of protegidas){
+    const pal = fr.match(/[A-Za-zÀ-ÿ0-9ºª°]+/g); if(!pal || !pal.length) continue;
+    const alvo = pal.map(_padNorm);
+    for(let a=0;a<idxW.length;a++){
+      let ok=true;
+      for(let k=0;k<alvo.length;k++){ const j=idxW[a+k]; if(j===undefined || fixo[j] || _padNorm(tk[j])!==alvo[k]){ ok=false; break; } if(k>0){ const sep=tk.slice(idxW[a+k-1]+1, j).join(''); if(!/^(\s+|\s*-\s*)$/.test(sep)){ ok=false; break; } } }
+      if(ok){ if(alvo.length===1 && pal[0].length<=2) continue; if(alvo.length===1 && alvo[0]==='para' && !/[á]/i.test(tk[idxW[a]])) continue; for(let k=0;k<alvo.length;k++) if(!fraseDe[idxW[a+k]]) fraseDe[idxW[a+k]] = pal[k]; }
+    }
+  }
+  // sequências de nome de instituição
+  const nomeProprio = new Array(n).fill(false);
+  for(let a=0;a<idxW.length;a++){
+    const i=idxW[a]; if(fixo[i]) continue;
+    const t=tk[i], tl=t.toLowerCase();
+    if(!PAD_GATILHOS.has(tl)) continue;
+    if(nomeProprio[i]) continue;
+    if(!(/^[A-ZÀ-Þ]/.test(t))) continue;            // gatilho em minúscula = palavra comum
+    const seq=[i]; let b=a+1;
+    while(b<idxW.length && seq.length<8){
+      const j=idxW[b]; if(fixo[j]) break;
+      const sep=tk.slice(idxW[b-1]+1, j).join('');
+      if(!/^(\s+|-)$/.test(sep)) break;
+      const w=tk[j], wl=w.toLowerCase();
+      if(PAD_NOME_LIG.has(wl)){ // preposição: só continua se vier nome depois
+        const j2=idxW[b+1]; if(j2===undefined || fixo[j2] || !/^\s+$/.test(tk.slice(j+1,j2).join('')) ) break;
+        const w2=tk[j2], w2l=w2.toLowerCase();
+        if(PAD_PARAR.has(w2l) || PAD_NOME_LIG.has(w2l)) break;
+        if(!(/^[A-ZÀ-Þ]/.test(w2))) break;
+        seq.push(j); b++; continue;
+      }
+      if(PAD_PARAR.has(wl)) break;
+      if(!(/^[A-ZÀ-Þ]/.test(w))) break;
+      seq.push(j); b++;
+    }
+    // sem continuação, só vale se for gatilho "forte" já capitalizado no meio do texto de forma isolada: não marca
+    if(seq.length<2) continue;
+    // não termina em preposição
+    while(seq.length && PAD_NOME_LIG.has(tk[seq[seq.length-1]].toLowerCase())) seq.pop();
+    if(seq.length<2) continue;
+    // em texto misto, exige que as palavras já estivessem capitalizadas (garantido acima); em caps, vale a sequência
+    for(const j of seq) nomeProprio[j]=true;
+    a = idxW.indexOf(seq[seq.length-1]);
+  }
+  let inicioFrase = true;
+  for(let i=0;i<n;i++){
+    const t=tk[i];
+    if(fixo[i]){ if(t===']'){ inicioFrase = true; } continue; }
+    if(!_padEhWord(t)){
+      if(/^[!?]+$/.test(t) || (t==='.' && (i+1>=n || /^\s/.test(tk[i+1]))) || /\n/.test(t)) inicioFrase = true;
+      else if(t==='-'||t==='–'||t==='—'||t===' '||/^\s+$/.test(t)) { /* mantém */ }
+      else if(t==='('||t===')'||t===','||t===';'||t===':'||t==='/'||t==='"'||t==='“'||t==='”'||t==="'"||t==='•'||t==='*'||t==='&'||t==='+'||t==='%'||t==='$') { /* mantém */ }
+      if(/\n/.test(t)) inicioFrase = true;
+      continue;
+    }
+    let w=t, final=null;
+    const wl=t.toLowerCase();
+    const ant = (()=>{ let j=i-1; while(j>=0 && /^\s+$/.test(tk[j])) j--; return j>=0?tk[j]:''; })();
+    const sepAnt = tk[i-1]||'';
+    if(/\d/.test(t)){ final = t; if(inicioFrase && /^[\d]+$/.test(t)) { out[i]=final; continue; } }
+    else if(fraseDe[i]){ final = fraseDe[i]; }
+    else if(_padCamel(t) || /^[A-ZÀ-Þ]{2,}[a-zß-ÿ]+$/.test(t)){ final = t; }
+    else if(/^n[º°]$/i.test(t)){ final = 'nº'; }
+    else if(PAD_SIGLAS.has(t.toUpperCase()) && _padTodoCaps(t) && !PAD_UF_AMB.has(t)) { final = t; }
+    else if(PAD_UF_AMB.has(t) && (/[\/\-–]/.test(ant) || /^\(/.test(ant))) { final = t; }
+    else if(PAD_UFS.has(t) && /[\/\-–]/.test(ant)) { final = t; }
+    else if(PAD_SIGLAS.has(t.toUpperCase()) && t.length>=3 && !PAD_PREP.has(wl) && /^[A-ZÀ-Þ][a-zß-ÿ]+$/.test(t) && ['pncp','cnpj','cpf','sus'].includes(wl)) { final = t.toUpperCase(); }
+    else if(['pncp','cnpj','cpf','sus'].includes(wl) && t===wl) { final = t.toUpperCase(); }
+    else if(PAD_LEIS.has(wl) && /^[A-ZÀ-Þ]/.test(t)){ const j=nextW(i); if(j>=0 && PAD_LEI_SEG.test(tk[j])) final = _padCap(wl); }
+    if(final === null && /^[IVXLCDM]+$/.test(t) && PAD_ROMANO.test(t) && t.length<=4 && /^(fase|lote|anexo|item|art|artigo|seção|secao|capítulo|capitulo|título|titulo|grupo|etapa|classe|nível|nivel|parte|módulo|modulo|tipo|inciso)$/i.test(ant) ) final = t;
+    if(final === null && /^[IVXLCDM]+$/.test(t) && PAD_ROMANO.test(t) && t.length<=4 && inicioFrase && /^\s*[-–.)]/.test(tk.slice(i+1,i+3).join(''))) final = t;
+    if(final === null && /^[A-ZÀ-Þ]$/.test(t) && (tk[i+1]==='.' || ant.endsWith('.')) ) final = t;     // S.A.
+    if(final === null && /^[A-ZÀ-Þ]$/.test(t) && tk[i+1]===')') final = wl;
+    if(final === null && /^[a-zß-ÿ]$/.test(t) && tk[i+1]===')') final = t;                                // A) B)
+    if(final === null && /^[A-ZÀ-Þ]$/.test(t) && !inicioFrase){ final = wl; }
+    if(final === null){
+      const caps = _padTodoCaps(t);
+      if(caps){
+        // sigla isolada (não vizinha de outra palavra em maiúsculas) é mantida
+        const p=prevW(i), q=nextW(i);
+        const isolada = !(ehCapsPal(p) || ehCapsPal(q));
+        const viaBarra = t.length<=5 && ((tk[i+1]==='/' && ehCapsPal(i+2<n&&_padEhWord(tk[i+2])?i+2:-1) && tk[i+2].length<=5) || (tk[i-1]==='/' && i>=2 && _padEhWord(tk[i-2]) && _padTodoCaps(tk[i-2]) && tk[i-2].length<=5));
+        const eAcento = PAD_ACENTOS[_padNorm(t)];
+        if(nomeProprio[i]){ final = PAD_NOME_LIG.has(wl) ? wl : _padCap(eAcento ? eAcento.toLowerCase() : wl); }
+        else if(viaBarra && !PAD_PREP.has(wl) && !eAcento && !PAD_COMUNS.has(_padNorm(t))){ final = t; }
+        else if(isolada && !PAD_PREP.has(wl) && t.length>=2 && t.length<=6 && !eAcento && !modoCaps && !PAD_COMUNS.has(_padNorm(t))){ final = t; }
+        else if(isolada && !PAD_PREP.has(wl) && t.length>=2 && t.length<=8 && !eAcento && modoCaps && /[\(\/\-–]/.test(ant) && !PAD_COMUNS.has(_padNorm(t))){ final = t; }
+        else if(isolada && t.length<=4 && !PAD_PREP.has(wl) && !eAcento && modoCaps && !PAD_PARAR.has(wl) && /^[BCDFGHJKLMNPQRSTVWXZ]+$/.test(t)) { final = t; }   // sem vogal: sigla
+        else { final = eAcento ? eAcento : wl; }
+      } else if(nomeProprio[i]){
+        final = PAD_NOME_LIG.has(wl) ? wl : _padCap(PAD_ACENTOS[_padNorm(wl)] ? PAD_ACENTOS[_padNorm(wl)].toLowerCase() : wl);
+      } else if(/^[A-ZÀ-Þ]/.test(t)){
+        // Capitalizada: em texto "Título Capitalizado" vira minúscula; em texto comum pode ser nome próprio — mantém
+        final = (!PAD_NOMES_FIXOS.has(wl) && (PAD_VOCAB.has(wl) || PAD_COMUNS.has(_padNorm(wl)) || PAD_PARAR.has(wl) || PAD_ACENTOS[_padNorm(wl)])) ? wl : t;
+      } else {
+        final = t;
+      }
+      if(final === wl && PAD_ACENTOS[_padNorm(wl)] && wl === _padNorm(wl)) final = PAD_ACENTOS[_padNorm(wl)];
+    }
+    // primeira letra da frase
+    if(inicioFrase && !(t.length===1 && tk[i+1]===')')){ final = final.charAt(0).toUpperCase() + final.slice(1); }
+    out[i] = final;
+    inicioFrase = false;
+  }
+  return out.join('');
+}
+
+/* Nome de órgão: preserva o nome, só ajusta a caixa (Title Case com "de/da/do" em minúsculas e siglas mantidas) */
+function padronizarOrgao(txt, opts){
+  if(txt === null || txt === undefined || typeof txt !== 'string' || !txt.trim()) return txt;
+  const letras = (txt.match(/[A-Za-zÀ-ÿ]/g)||[]);
+  const maius = letras.filter(c=>/[A-ZÀ-Þ]/.test(c)).length;
+  if(letras.length && maius/letras.length < 0.6) return txt;       // já está em caixa mista: é o nome oficial, não mexe
+  const prot = (opts && opts.protegidos || []).filter(Boolean);
+  const tk = _padTokens(txt);
+  const n = tk.length;
+  const out = tk.slice();
+  const protNorm = prot.map(p=>String(p).match(/[A-Za-zÀ-ÿ0-9ºª°]+/g)||[]);
+  const idxW = []; for(let i=0;i<n;i++) if(_padEhWord(tk[i])) idxW.push(i);
+  const fraseDe = new Array(n).fill(null);
+  protNorm.forEach(pal=>{ if(!pal.length) return; const alvo=pal.map(_padNorm);
+    for(let a=0;a<idxW.length;a++){ let ok=true; for(let k=0;k<alvo.length;k++){ const j=idxW[a+k]; if(j===undefined||_padNorm(tk[j])!==alvo[k]){ok=false;break;} }
+      if(ok && !(alvo.length===1 && pal[0].length<=2)) for(let k=0;k<alvo.length;k++) fraseDe[idxW[a+k]]=pal[k]; } });
+  const sig = new Set(); { let ap=false; for(let i=0;i<n;i++){ const t=tk[i]; if(!_padEhWord(t)){ if(/[\(\/\-–—]/.test(t)) ap=true; continue; } if(ap && _padTodoCaps(t) && t.length>=3 && t.length<=8) sig.add(t); ap=false; } }
+  let apos = false;   // depois de " - ", "/", "(" : trecho de sigla/complemento
+  for(let i=0;i<n;i++){
+    const t=tk[i];
+    if(!_padEhWord(t)){ if(/[\(\/\-–—]/.test(t)) apos = true; continue; }
+    const wl=t.toLowerCase();
+    let f;
+    if(/\d/.test(t)) f=t;
+    else if(fraseDe[i]) f=fraseDe[i];
+    else if(PAD_UFS.has(t) && apos && !PAD_PREP.has(wl) ) f=t;
+    else if(apos && t.length>=2 && t.length<=8 && _padTodoCaps(t) && !PAD_PREP.has(wl) && !PAD_ACENTOS[_padNorm(t)] && !PAD_GATILHOS.has(wl)) f=t;   // sigla do órgão (CIS/AMEOSC, COMESP)
+    else if(PAD_SIGLAS.has(t.toUpperCase()) && t.length>=3) f=t.toUpperCase();
+    else if(sig.has(t.toUpperCase()) && _padTodoCaps(t) && !PAD_PREP.has(wl)) f=t.toUpperCase();
+    else if(PAD_NOME_LIG.has(wl) || wl==='e') f=wl;
+    else { const ac = PAD_ACENTOS[_padNorm(wl)]; f = _padCap(ac ? ac.toLowerCase() : wl); }
+    if(i===0 || (idxW[0]===i)) f=_padCap(f);
+    out[i]=f;
+    apos = false;
+  }
+  return out.join('');
+}
+
+/* Padroniza os campos de texto de um edital (exibição, gravação e importação usam a mesma regra) */
+function padronizarCamposEdital(o){
+  const cid = o.cidade || '';
+  const org = padronizarOrgao(o.orgao, {protegidos:[cid]});
+  const pr = {protegidos:[cid, org]};
+  return {
+    edital: padronizarTexto(o.edital, pr), orgao: org, objeto: padronizarTexto(o.objeto, pr),
+    requisitos: padronizarTexto(o.requisitos, pr), pontosPositivos: padronizarTexto(o.pontosPositivos, pr), pontosAtencao: padronizarTexto(o.pontosAtencao, pr)
+  };
+}
 function mapEditalSupabase(row){
+  const _pad = padronizarCamposEdital({edital:row.edital, orgao:row.orgao, objeto:row.objeto, cidade:row.cidade, requisitos:row.requisitos, pontosPositivos:row.pontos_positivos, pontosAtencao:row.pontos_atencao});
   const indice = (row.indice !== null && row.indice !== undefined) ? Number(row.indice) : null;
   return {
     id: 900000 + row.id,
     origemSupabase: true,
-    edital: row.edital || 'Credenciamento (PNCP)',
-    orgao: row.orgao || 'Órgão não identificado',
+    edital: _pad.edital || 'Credenciamento (PNCP)',
+    orgao: _pad.orgao || 'Órgão não identificado',
     uf: row.uf || '—',
     cidade: row.cidade || '',
     tipo: row.tipo || 'Credenciamento',
@@ -10076,7 +10364,7 @@ function mapEditalSupabase(row){
     escolaridadeMinima: normEscolaridade(row.escolaridade_minima) || null,
     experienciaMinimaAnos: row.experiencia_minima_anos || null,
     situacao: row.situacao || 'Aberto',
-    objeto: row.objeto || '',
+    objeto: _pad.objeto || '',
     prazo: row.prazo_indeterminado ? 'Indeterminado' : formatarDataBR(row.prazo),
     prazoIndeterminado: !!row.prazo_indeterminado,
     prazoConfirmado: !!row.prazo_confirmado,
@@ -10091,9 +10379,9 @@ function mapEditalSupabase(row){
     volume: row.volume_estimado || 'Não informado',
     valorMaximo: formatarMoedaBR(row.valor_maximo) ? formatarMoedaBR(row.valor_maximo) + ' (valor total estimado no edital, conforme PNCP)' : (row.valor_maximo || 'Não informado'),
     remuneracao: (row.remuneracao && row.remuneracao.length) ? row.remuneracao : [],
-    requisitos: row.requisitos || 'Consulte o edital oficial no PNCP para os requisitos completos.',
-    pontosPositivos: row.pontos_positivos || '',
-    pontosAtencao: row.pontos_atencao || '',
+    requisitos: _pad.requisitos || 'Consulte o edital oficial no PNCP para os requisitos completos.',
+    pontosPositivos: _pad.pontosPositivos || '',
+    pontosAtencao: _pad.pontosAtencao || '',
     documentos: documentosGenericos(row.documentos) ? DOCUMENTOS_PADRAO : row.documentos,
     documentosPadrao: documentosGenericos(row.documentos),
     urlOficial: row.url_oficial || row.url_pncp || 'https://pncp.gov.br/app/editais',
@@ -10160,6 +10448,7 @@ async function carregarEditaisSupabase(){
     const av = document.getElementById('aviso-cache-editais'); if(av) av.remove();
   }
 
+  padConstruirVocab(linhas.flatMap(r=>[r.edital, r.objeto, r.requisitos, r.pontos_positivos, r.pontos_atencao]));
   const reais = linhas.map(mapEditalSupabase);
   // remove versões antigas dos mesmos editais reais; os editais de demonstração
   // do protótipo só continuam aparecendo se o banco ainda não tiver nenhum edital real.
@@ -10305,7 +10594,7 @@ async function renderCaixaEntrada(){
         <div class="inbox-profs" style="margin-top:6px;">${(item.profissoes_detectadas || []).map(p => `<span>${esc(p)}</span>`).join('')}${(item.sinais_gerais_detectados||[]).map(g => `<span style="background:rgba(148,163,184,.14); color:var(--ink-muted);">${esc(g)}</span>`).join('')}</div>
       </summary>
       <div style="margin-top:10px;">
-        <p style="font-size:13px; color:var(--ink-muted); margin:0 0 8px;">${esc(item.resumo || item.objeto || '')}</p>
+        <p style="font-size:13px; color:var(--ink-muted); margin:0 0 8px;">${esc(padronizarTexto(item.resumo || item.objeto || '', {protegidos:[item.cidade || item.municipio]}))}</p>
         ${item.amparo_legal ? `<p style="font-size:11.5px; color:var(--ink-dim); margin:0 0 8px;">Amparo legal (PNCP): ${esc(item.amparo_legal)}</p>` : ''}
         ${item.link_pncp ? `<a href="${item.link_pncp}" target="_blank" rel="noopener" style="font-size:12px; color:var(--teal);">Ver no PNCP ↗</a>` : ''}
         <div class="inbox-actions" style="margin-top:10px;">
@@ -11871,5 +12160,10 @@ function radarGira(){
   setTimeout(function(){ e.classList.remove('gira'); }, 1900);
 }
 </script>
+<script>/* cards reagem ao toque (celular/tablet não têm hover) */
+(function(){var sel=".indicators .indicator-card,.step-card";
+document.addEventListener("click",function(e){var c=e.target.closest&&e.target.closest(sel);
+document.querySelectorAll(".is-on").forEach(function(x){if(x!==c)x.classList.remove("is-on")});
+if(c)c.classList.toggle("is-on");});})();</script>
 </body>
 </html>
