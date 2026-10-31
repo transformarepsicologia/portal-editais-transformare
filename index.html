@@ -197,6 +197,8 @@ nav.main-nav button.active{color:var(--teal); background:rgba(47,217,196,0.1);}
   background:var(--teal); color:var(--bg) !important; font-weight:700 !important; padding:9px 18px !important;
 }
 .nav-cta:hover{background:var(--teal-deep) !important; color:var(--bg) !important;}
+html:not([data-theme="light"]) nav.main-nav button:not(.nav-cta){color:#FFFFFF;}
+html:not([data-theme="light"]) nav.main-nav button.active:not(.nav-cta){color:#FFFFFF; font-weight:600;}
 nav.main-nav button.nav-cta{background:var(--teal); color:var(--bg) !important;}
 nav.main-nav button.nav-cta:hover{background:var(--teal-deep); color:var(--bg) !important;}
 html[data-theme="light"] nav.main-nav button.nav-cta, html[data-theme="light"] nav.main-nav button.nav-cta:hover{color:#fff !important;}
