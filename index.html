@@ -4370,6 +4370,17 @@ function renderIndicators(){
     box.appendChild(el);
   });
 }
+/* Clique num estado do mapa: abre a página de editais já filtrada por aquele estado */
+function irParaEditaisDoEstado(uf){
+  ['ed-search'].forEach(id=>document.getElementById(id).value='');
+  ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit','f-sort'].forEach(id=>document.getElementById(id).value='');
+  filtroSomenteComIndice = false;
+  filtroRadar = null;
+  nav('editais');
+  const fu = document.getElementById('f-uf');
+  if(fu){ fu.value = uf; if(fu.value !== uf) fu.value = ''; }
+  applyFilters();
+}
 function irParaEditaisComFiltro(filtro){
   if(filtro === 'indice' && !ehPro()) filtro = null;   // sem Plano Pro: lista geral
   ['ed-search'].forEach(id=>document.getElementById(id).value='');
@@ -9316,7 +9327,7 @@ function renderMapaEditais(){
     const html='<b>'+MP_NOMES[u]+'</b>';
     el.addEventListener('mousemove',e=>mpTip(e,html));
     el.addEventListener('mouseleave',mpTipOff);
-    el.addEventListener('click',e=>{ mpTip(e,html); clearTimeout(window._mpT); window._mpT=setTimeout(mpTipOff,2500); });
+    el.addEventListener('click',e=>{ if(q){ mpTipOff(); irParaEditaisDoEstado(u); return; } mpTip(e,html); clearTimeout(window._mpT); window._mpT=setTimeout(mpTipOff,2500); });
   });
 }
 function ehContratacaoDeFornecedor(objeto){
