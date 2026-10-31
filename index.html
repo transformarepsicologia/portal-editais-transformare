@@ -788,6 +788,11 @@ table.admin-table tr:hover td{background:var(--bg-elevated);}
 .profile-field .v{color:var(--ink); text-align:right;}
 .account-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:22px;}
 .account-stats .indicator-card .num{font-size:24px;}
+.pw-wrap{position:relative; display:block; width:100%;}
+.pw-wrap > input{padding-right:46px !important; width:100%; box-sizing:border-box;}
+.pw-toggle{position:absolute; right:4px; top:50%; transform:translateY(-50%); width:38px; height:38px; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; color:var(--ink-muted); cursor:pointer; padding:0;}
+.pw-toggle:hover,.pw-toggle:focus-visible{color:var(--teal); outline:none; background:rgba(47,217,196,.10);}
+.pw-toggle svg{width:20px; height:20px; display:block;}
 .conta-atalhos{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:0 0 20px;}
 .conta-atalho{display:flex; align-items:center; gap:14px; text-align:left; font:inherit; color:var(--ink); background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; cursor:pointer; transition:border-color .15s, transform .15s; min-height:64px;}
 .conta-atalho:hover,.conta-atalho:focus-visible{border-color:var(--amber); transform:translateY(-2px); outline:none;}
@@ -3192,6 +3197,29 @@ function nav(view){
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
   currentView = view;
 }
+
+/* Olho para mostrar/ocultar a senha em todos os campos de senha */
+(function(){
+  const OLHO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const OLHO_CORTADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 19c-7 0-11-7-11-7a19.8 19.8 0 0 1 5.06-5.94M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 7 11 7a19.9 19.9 0 0 1-3.17 4.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  document.querySelectorAll('input[type="password"]').forEach(inp=>{
+    if(inp.parentElement.classList.contains('pw-wrap')) return;
+    const wrap = document.createElement('span'); wrap.className = 'pw-wrap';
+    inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'pw-toggle'; b.innerHTML = OLHO;
+    b.setAttribute('aria-label','Mostrar senha'); b.setAttribute('aria-pressed','false'); b.title = 'Mostrar senha';
+    b.addEventListener('click', ()=>{
+      const ver = inp.type === 'password';
+      inp.type = ver ? 'text' : 'password';
+      b.innerHTML = ver ? OLHO_CORTADO : OLHO;
+      b.setAttribute('aria-pressed', ver ? 'true' : 'false');
+      b.setAttribute('aria-label', ver ? 'Ocultar senha' : 'Mostrar senha'); b.title = ver ? 'Ocultar senha' : 'Mostrar senha';
+      inp.focus();
+    });
+    wrap.appendChild(b);
+  });
+})();
 document.getElementById('mainNav').addEventListener('click', e=>{
   if(e.target.dataset.view) nav(e.target.dataset.view);
 });
