@@ -209,6 +209,8 @@ nav.main-nav button.nav-cta{background:transparent; color:#FFFFFF !important; bo
 nav.main-nav button.nav-cta:hover{background:var(--teal); color:var(--bg) !important; box-shadow:inset 0 0 0 1px var(--teal);}
 html[data-theme="light"] nav.main-nav button.nav-cta{color:var(--ink) !important; box-shadow:inset 0 0 0 1px var(--ink-muted);}
 html[data-theme="light"] nav.main-nav button.nav-cta:hover{background:var(--teal); color:#fff !important; box-shadow:inset 0 0 0 1px var(--teal);}
+nav.main-nav button.nav-cta.active{box-shadow:inset 0 0 0 1px var(--teal); color:var(--teal) !important;}
+html[data-theme="light"] nav.main-nav button.nav-cta.active{color:var(--teal-deep) !important; box-shadow:inset 0 0 0 1px var(--teal-deep);}
 
 .mobile-toggle{display:none; background:none; border:1px solid var(--border); color:var(--ink); border-radius:6px; padding:8px 10px; cursor:pointer;}
 
@@ -818,6 +820,17 @@ table.admin-table tr:hover td{background:var(--bg-elevated);}
 .pw-toggle{position:absolute; right:4px; top:50%; transform:translateY(-50%); width:38px; height:38px; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; color:var(--ink-muted); cursor:pointer; padding:0;}
 .pw-toggle:hover,.pw-toggle:focus-visible{color:var(--teal); outline:none; background:rgba(47,217,196,.10);}
 .pw-toggle svg{width:20px; height:20px; display:block;}
+/* ===== Entrar / Criar conta: abas ===== */
+.auth-tabs{display:flex; gap:6px; max-width:460px; margin:28px auto 22px; padding:4px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px;}
+.auth-tabs button{flex:1; font:inherit; font-weight:600; font-size:14px; padding:10px 12px; border:none; border-radius:9px; background:none; color:#FFFFFF; cursor:pointer; min-height:42px; transition:background .15s, color .15s;}
+.auth-tabs button:hover{color:var(--teal);}
+.auth-tabs button.on{background:var(--teal); color:var(--bg);}
+html[data-theme="light"] .auth-tabs button{color:var(--ink);}
+html[data-theme="light"] .auth-tabs button.on{color:#fff;}
+#view-cadastro .auth-tabs{max-width:520px;}
+#view-cadastro .page-head{max-width:520px; margin-left:auto; margin-right:auto; text-align:center;}
+#view-cadastro .page-head .eyebrow{display:inline-flex;}
+#view-cadastro .form-card{margin-left:auto; margin-right:auto;}
 /* ===== Entrar: cartão centralizado e acabamento ===== */
 #view-login .auth-head{max-width:460px; margin:0 auto; text-align:center;}
 #view-login .auth-head .eyebrow{display:inline-flex;}
@@ -1074,8 +1087,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <button data-view="editais">Editais</button>
       <button data-view="sobre">Sobre o Radar</button>
       <button data-view="planos">Planos</button>
-      <button data-view="minha-conta" id="nav-minha-conta"><span class="nav-minha">Minha </span>Conta</button>
-      <button data-view="login" class="nav-cta" id="nav-cta-btn">Entrar</button>
+      <button data-view="login" class="nav-cta" id="nav-minha-conta">Minha conta</button>
     </nav>
     <div class="nav-icones">
     <div class="bell-wrap">
@@ -1452,6 +1464,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== LOGIN ===================== -->
 <section class="view" id="view-login">
+  <div class="auth-tabs" role="tablist" aria-label="Acesso">
+    <button type="button" role="tab" class="on" onclick="nav('login')">Entrar</button>
+    <button type="button" role="tab" class="" onclick="nav('cadastro')">Criar conta</button>
+  </div>
   <div class="page-head auth-head"><span class="eyebrow">Acesso</span><h2>Entrar</h2><p>Acesse sua área para acompanhar favoritos, alertas e editais compatíveis com o seu perfil.</p></div>
   <div class="form-card auth-card">
     <div class="form-row"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email"></div>
@@ -1467,6 +1483,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 <!-- ===================== CADASTRO ===================== -->
 <section class="view" id="view-cadastro">
+  <div class="auth-tabs" role="tablist" aria-label="Acesso">
+    <button type="button" role="tab" class="" onclick="nav('login')">Entrar</button>
+    <button type="button" role="tab" class="on" onclick="nav('cadastro')">Criar conta</button>
+  </div>
   <div class="page-head"><span class="eyebrow">Nova conta</span><h2>Criar minha conta</h2><p>Dois passos rápidos: seu acesso e seus dados de contato. O perfil profissional você completa depois.</p></div>
   <div class="form-card" style="max-width:520px;">
     <div id="cad-etapa-1">
@@ -3218,7 +3238,7 @@ function nav(view){
   }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
-  document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === ((view==='favoritos'||view==='alertas') ? 'minha-conta' : view)));
+  document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.id === 'nav-minha-conta' ? ['minha-conta','login','cadastro','perfil','favoritos','alertas'].includes(view) : b.dataset.view === view));
   document.getElementById('mainNav').classList.remove('open');
   (function(){ const nv=document.getElementById('mainNav'), ativo=nv.querySelector('button.active'); if(ativo && nv.scrollWidth>nv.clientWidth){ nv.scrollTo({left: ativo.offsetLeft - (nv.clientWidth-ativo.offsetWidth)/2, behavior:'smooth'}); } })();
   window.scrollTo({top:0, behavior:'smooth'});
@@ -3927,17 +3947,12 @@ function atualizarPromos(){
 function updateNavCta(){
   atualizarPromos();
   atualizarOrdenarPro();
-  const ctaBtn = document.getElementById('nav-cta-btn');
-  // Logado: o botão com o nome já leva para a conta, então "Conta" sai do menu (não aparecem os dois).
-  const navConta = document.getElementById('nav-minha-conta');
-  if(navConta) navConta.style.display = userProfile ? 'none' : '';
-  if(userProfile){
-    ctaBtn.textContent = (userProfile.nome || '').split(' ')[0] || 'Minha conta';
-    ctaBtn.dataset.view = 'minha-conta';
-  } else {
-    ctaBtn.textContent = 'Entrar';
-    ctaBtn.dataset.view = 'login';
-  }
+  // Um único item no menu: "Minha conta". Sem login leva à tela de autenticação (entrar ou criar conta);
+  // com login leva à área do usuário (perfil, favoritos e alertas).
+  const btn = document.getElementById('nav-minha-conta');
+  if(!btn) return;
+  btn.textContent = 'Minha conta';
+  btn.dataset.view = userProfile ? 'minha-conta' : 'login';
 }
 const ICONE_CADEADO = '<svg class="ico-cadeado" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
 function renderMinhaConta(){
