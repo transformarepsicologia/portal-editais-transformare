@@ -439,7 +439,7 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .badge.aberto{color:var(--teal); background:rgba(47,217,196,0.12);}
 .badge.encerrando{color:var(--amber); background:rgba(245,169,62,0.12);}
 .badge.analise{color:var(--violet); background:rgba(140,124,240,0.14);}
-.badge.retificado{color:#F0A25E; background:rgba(240,162,94,0.12);}
+.badge.retificado{color:var(--amber); background:rgba(245,169,62,0.12);}
 .badge.encerrado{color:#fff; background:#D6402C; border:1px solid #F0654E;}
 .badge.divulgada{color:#8FA6BE; background:rgba(143,166,190,0.14); border:1px dashed rgba(143,166,190,0.4);}
 .badge.suspenso{color:var(--coral); background:rgba(240,101,78,0.12);}
@@ -691,6 +691,11 @@ html:not([data-theme="light"]) #view-home ::placeholder{color:rgba(255,255,255,.
 #view-sobre .page-head .eyebrow,
 #view-planos .page-head .eyebrow,
 #view-minha-conta .page-head .eyebrow,
+#view-comparar .page-head .eyebrow,
+#view-privacidade .page-head .eyebrow,
+#view-perfil .page-head .eyebrow,
+#view-admin-login .page-head .eyebrow,
+#view-admin-reset-senha .page-head .eyebrow,
 #view-login .page-head .eyebrow,
 #view-cadastro .page-head .eyebrow{color:var(--amber);}
 #view-editais .page-head .eyebrow::before,
@@ -699,6 +704,11 @@ html:not([data-theme="light"]) #view-home ::placeholder{color:rgba(255,255,255,.
 #view-sobre .page-head .eyebrow::before,
 #view-planos .page-head .eyebrow::before,
 #view-minha-conta .page-head .eyebrow::before,
+#view-comparar .page-head .eyebrow::before,
+#view-privacidade .page-head .eyebrow::before,
+#view-perfil .page-head .eyebrow::before,
+#view-admin-login .page-head .eyebrow::before,
+#view-admin-reset-senha .page-head .eyebrow::before,
 #view-login .page-head .eyebrow::before,
 #view-cadastro .page-head .eyebrow::before{background:var(--amber); box-shadow:0 0 0 4px rgba(245,169,62,.18);}
 #view-editais .page-head h2,
@@ -707,6 +717,11 @@ html:not([data-theme="light"]) #view-home ::placeholder{color:rgba(255,255,255,.
 #view-sobre .page-head h2,
 #view-planos .page-head h2,
 #view-minha-conta .page-head h2,
+#view-comparar .page-head h2,
+#view-privacidade .page-head h2,
+#view-perfil .page-head h2,
+#view-admin-login .page-head h2,
+#view-admin-reset-senha .page-head h2,
 #view-login .page-head h2,
 #view-cadastro .page-head h2{color:var(--teal);}
 #view-editais .section-title,
@@ -3313,7 +3328,7 @@ function inscricaoProximaHTML(o){
   const dias = diasParaPrazo(o);
   if(dias === null || dias < 0 || dias > DIAS_INSCRICAO_PROXIMA) return '';
   const texto = dias === 0 ? 'Encerra hoje' : (dias === 1 ? 'Encerra amanhã' : `Encerra em ${dias} dias`);
-  return `<span class="badge" style="background:rgba(245,158,11,.16); color:#f59e0b; border:1px solid rgba(245,158,11,.4);">⏰ ${texto}</span>`;
+  return `<span class="badge" style="background:rgba(245,169,62,.16); color:#F5A93E; border:1px solid rgba(245,169,62,.4);">⏰ ${texto}</span>`;
 }
 function scoreMini(score, label){
   if(score === null || score === undefined){
