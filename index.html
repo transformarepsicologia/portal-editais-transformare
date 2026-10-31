@@ -886,13 +886,13 @@ input:disabled{opacity:.6; cursor:not-allowed;}
 
 /* ===== Sino de notificações ===== */
 .nav-icones{display:flex; align-items:center; gap:8px; flex-shrink:0;}
-.bell-wrap{position:relative;}
-.bell-btn{background:none; border:1px solid var(--border); color:var(--ink-muted); width:36px; height:36px; border-radius:9px; cursor:pointer; position:relative; display:flex; align-items:center; justify-content:center; font-size:15px;}
-.bell-btn:hover{color:var(--teal); border-color:var(--teal);}
+.conta-sino{max-width:1240px; margin:26px 0 0; padding:18px 20px; border:1px solid var(--border); border-radius:14px; background:var(--bg-card);}
+.conta-sino .bell-badge{position:static; display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; margin-left:8px;}
+.conta-sino-nota{font-family:var(--font-mono); font-size:10.5px; color:var(--ink-dim); margin:2px 0 12px; line-height:1.5;}
+.conta-sino .bell-item .t{color:var(--ink);}
+@media(min-width:861px){ nav.main-nav{margin-left:auto;} }
 .bell-badge{position:absolute; top:-5px; right:-5px; background:var(--coral); color:#fff; font-family:var(--font-mono); font-size:9.5px; font-weight:700; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;}
-.bell-panel{position:absolute; top:46px; right:0; width:320px; max-height:420px; overflow-y:auto; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px; z-index:150; display:none; box-shadow:0 12px 32px rgba(0,0,0,0.35);}
-.bell-panel.open{display:block;}
-.bell-panel h5,.bell-panel .bell-titulo{font-family:var(--font-display); font-size:13.5px; font-weight:700; margin:0 0 10px;}
+.conta-sino .bell-titulo,.bell-panel h5,.bell-panel .bell-titulo{font-family:var(--font-display); font-size:13.5px; font-weight:700; margin:0 0 10px;}
 .bell-item{padding:10px 0; border-top:1px solid var(--border-soft); cursor:pointer; font-size:12.5px;}
 .bell-item:first-child{border-top:none;}
 .bell-item .t{font-weight:600; margin-bottom:3px;}
@@ -978,7 +978,6 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   .score-hero-num{font-size:32px;}
   .filter-panel{padding:14px 16px;}
   .search-box input{font-size:13px;}
-  .bell-panel{width:270px; right:-40px;}
   .op-title{font-size:15px;}
   .link-row{flex-direction:column; align-items:stretch;}
   .link-row a, .link-row button{width:100%; box-sizing:border-box; text-align:center;}
@@ -1097,20 +1096,12 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
     <nav class="main-nav" id="mainNav">
       <button data-view="home" class="active">Início</button>
-      <button data-view="editais">Editais</button>
       <button data-view="sobre">Sobre o Radar</button>
+      <button data-view="editais">Editais</button>
       <button data-view="planos">Planos</button>
       <button data-view="login" class="nav-cta" id="nav-minha-conta">Minha conta</button>
     </nav>
     <div class="nav-icones">
-    <div class="bell-wrap">
-      <button class="bell-btn" onclick="toggleBell(event)" title="Alertas do portal (demonstrativo — não envia e-mail/WhatsApp)">🔔<span class="bell-badge" id="bell-badge" style="display:none;">0</span></button>
-      <div class="bell-panel" id="bell-panel">
-        <div class="bell-titulo">Alertas do portal</div>
-        <div style="font-family:var(--font-mono); font-size:9.5px; color:var(--ink-dim); margin-bottom:10px; line-height:1.5;">Exibidos apenas aqui dentro. Não é enviado e-mail, WhatsApp ou push neste protótipo.</div>
-        <div id="bell-list"></div>
-      </div>
-    </div>
     <button class="theme-btn" id="btn-instalar-app" onclick="instalarApp()" style="display:none; width:auto; padding:0 10px; font-size:12px; font-weight:600;" title="Instalar o Radar como app no seu aparelho">⬇ Instalar app</button>
     <button class="theme-btn" id="theme-btn" onclick="alternarTema()" aria-label="Alternar entre tema escuro e claro" title="Tema claro / escuro">☀️</button>
     </div>
@@ -1300,7 +1291,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     </div>
   </div>
 
-  <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:var(--violet-texto);">ℹ Os alertas aparecem aqui e no sino do menu. Para ser avisado no celular, ative as notificações logo abaixo.</div>
+  <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:var(--violet-texto);">ℹ Os alertas aparecem aqui e na sua área Minha conta. Para ser avisado no celular, ative as notificações logo abaixo.</div>
   <div class="filter-panel" id="push-card" style="display:none;"></div>
 
   <div class="filter-panel">
@@ -1321,6 +1312,11 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <section class="view" id="view-minha-conta">
   <div class="page-head"><span class="eyebrow">Minha área</span><h2>Minha conta</h2><p>Seu perfil, suas preferências e suas oportunidades.</p><p style="margin-top:8px;">Mantenha seus dados profissionais e suas preferências atualizados para encontrar oportunidades mais alinhadas aos seus interesses.</p></div>
   <div id="minha-conta-content"></div>
+  <div class="conta-sino" id="conta-sino">
+    <div class="conta-sino-head"><div class="bell-titulo">🔔 Alertas do portal <span class="bell-badge" id="bell-badge" style="display:none;">0</span></div></div>
+    <div class="conta-sino-nota">Exibidos apenas aqui dentro. Não é enviado e-mail, WhatsApp ou push neste protótipo.</div>
+    <div id="bell-list"></div>
+  </div>
 </section>
 
 <!-- ===================== POLÍTICA DE PRIVACIDADE E SEGURANÇA ===================== -->
@@ -5464,10 +5460,11 @@ function renderBell(){
   const items = matchedAlertItems();
   const novos = items.filter(o=>!sinoVistos.has(o.id));
   const badge = document.getElementById('bell-badge');
+  const list = document.getElementById('bell-list');
+  if(!badge || !list) return;
   if(novos.length>0){ badge.style.display='flex'; badge.textContent = novos.length; }
   else{ badge.style.display='none'; }
 
-  const list = document.getElementById('bell-list');
   if(items.length===0){
     list.innerHTML = `<div style="font-size:12.5px; color:var(--ink-dim);">Configure seus alertas para receber novidades aqui.</div>`;
     return;
@@ -5475,22 +5472,12 @@ function renderBell(){
   const ordenados = [...novos, ...items.filter(o=>sinoVistos.has(o.id))];
   list.innerHTML = (novos.length ? `<div style="text-align:right; margin-bottom:6px;"><button class="btn-ghost" style="padding:3px 9px; font-size:11px;" onclick="marcarTodosVistosSino(event)">Marcar todos como lidos</button></div>` : '')
     + ordenados.slice(0,6).map(o=>`
-    <div class="bell-item" style="${sinoVistos.has(o.id)?'opacity:.55;':''}" onclick="closeBell(); openDetalhe(${o.id});">
+    <div class="bell-item" style="${sinoVistos.has(o.id)?'opacity:.55;':''}" onclick="openDetalhe(${o.id});">
       <div class="t">${o.objeto}</div>
       <div class="m">${o.orgao} — ${o.uf} · Prazo ${o.prazo}</div>
     </div>
   `).join('');
 }
-function toggleBell(e){
-  e.stopPropagation();
-  document.getElementById('bell-panel').classList.toggle('open');
-}
-function closeBell(){ document.getElementById('bell-panel').classList.remove('open'); }
-document.addEventListener('click', (e)=>{
-  const panel = document.getElementById('bell-panel');
-  if(panel.classList.contains('open') && !e.target.closest('.bell-wrap')) panel.classList.remove('open');
-});
-
 /* ================= CONTAS DE USUÁRIO (locais a este navegador) ================= */
 /* Atenção: contas ficam no localStorage deste navegador — não há servidor, e-mail de
    confirmação, recuperação de senha ou sincronização entre dispositivos. É uma base
