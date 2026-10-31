@@ -610,6 +610,13 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 #mp-svg .uf:hover{fill:var(--bg-card-hover);}
 #mp-svg .uf.on{fill:var(--teal); fill-opacity:.62; cursor:pointer;}
 #mp-svg .uf.on:hover,#mp-svg .uf.on.sel{fill-opacity:.95;}
+/* Cores por região (paleta de referência do Radar) */
+#mp-svg .uf.on.rg-n{fill:#A8CDA5; fill-opacity:1;}
+#mp-svg .uf.on.rg-ne{fill:#E8C99B; fill-opacity:1;}
+#mp-svg .uf.on.rg-co{fill:#E9D477; fill-opacity:1;}
+#mp-svg .uf.on.rg-se{fill:#DDA5A5; fill-opacity:1;}
+#mp-svg .uf.on.rg-s{fill:#B7A4D2; fill-opacity:1;}
+#mp-svg .uf.on[class*="rg-"]:hover,#mp-svg .uf.on[class*="rg-"].sel{fill-opacity:1; filter:brightness(1.12);}
 /* ===== Planos ===== */
 .pl-wrap{max-width:1080px; margin:0 auto; padding:14px 0 30px;}
 .pl-head{text-align:center; max-width:720px; margin:0 auto 30px;}
@@ -9296,10 +9303,11 @@ function mpBase(){
 function mpAtivo(o){ return editalAtivo(o); }
 function mpTip(e,html){ const t=document.getElementById('mp-tip'); if(!t) return; t.innerHTML=html; t.style.opacity=1; let x=e.clientX+14; if(x+250>window.innerWidth) x=e.clientX-250; t.style.left=Math.max(8,x)+'px'; t.style.top=(e.clientY+14)+'px'; }
 function mpTipOff(){ const t=document.getElementById('mp-tip'); if(t) t.style.opacity=0; }
+const MP_REGIAO={AC:'n',AM:'n',AP:'n',PA:'n',RO:'n',RR:'n',TO:'n',AL:'ne',BA:'ne',CE:'ne',MA:'ne',PB:'ne',PE:'ne',PI:'ne',RN:'ne',SE:'ne',DF:'co',GO:'co',MT:'co',MS:'co',ES:'se',MG:'se',RJ:'se',SP:'se',PR:'s',RS:'s',SC:'s'};
 function renderMapaEditais(){
   const svg=document.getElementById('mp-svg'); if(!svg) return;
   const n={}; mpBase().filter(o=>mpAtivo(o)).forEach(o=>{ if(o.uf) n[o.uf]=(n[o.uf]||0)+1; });
-  svg.innerHTML=Object.keys(MP_UF).map(u=>'<path class="uf'+(n[u]?' on':'')+'" data-u="'+u+'" d="'+MP_UF[u]+'"/>').join('');
+  svg.innerHTML=Object.keys(MP_UF).map(u=>'<path class="uf'+(n[u]?' on':'')+(MP_REGIAO[u]?' rg-'+MP_REGIAO[u]:'')+'" data-u="'+u+'" d="'+MP_UF[u]+'"/>').join('');
   svg.querySelectorAll('.uf').forEach(el=>{
     const u=el.dataset.u, q=n[u]||0;
     const html='<b>'+MP_NOMES[u]+'</b>';
