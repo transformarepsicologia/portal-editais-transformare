@@ -605,6 +605,7 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .mp-kpi .l{font-family:var(--font-mono); font-size:9.5px; letter-spacing:1.1px; text-transform:uppercase; color:var(--ink-dim);}
 .mp-kpi .v{font-family:var(--font-display); font-size:22px; font-weight:700; margin-top:2px;}
 .mp-mapa{position:relative; border-radius:10px; overflow:hidden; background:var(--bg); display:flex; align-items:center; justify-content:center;}
+.mp-legenda{margin:10px 2px 0; font-size:12.5px; line-height:1.5; color:var(--ink-muted); text-align:center;}
 #mp-svg{width:100%; height:auto; display:block; user-select:none; -webkit-tap-highlight-color:transparent;}
 #mp-svg .uf{fill:var(--bg-elevated); stroke:var(--bg); stroke-width:1; stroke-linejoin:round; transition:fill .15s, fill-opacity .15s;}
 #mp-svg .uf:hover{fill:var(--bg-card-hover);}
@@ -1369,6 +1370,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="mp-mapa">
       <svg id="mp-svg" viewBox="0 0 600 610" role="img" aria-label="Mapa do Brasil com os estados que têm editais abertos pintados"></svg>
     </div>
+    <p class="mp-legenda">Estados destacados indicam onde há oportunidades abertas. Passe o mouse para visualizar o nome de cada estado.</p>
     <div id="mp-tip" class="mp-tip"></div>
   </aside>
   </div>
