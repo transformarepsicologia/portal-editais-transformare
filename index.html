@@ -335,7 +335,20 @@ html[data-theme="light"] .hero h1 .h1-ouro{color:#0A7F72; -webkit-text-fill-colo
 .how-it-works{margin:60px 0;}
 .section-title{font-family:var(--font-display); font-size:26px; font-weight:700; margin:0 0 8px;}
 .section-sub{color:var(--ink-muted); font-size:14.5px; margin:0 0 30px;}
-.steps-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:18px;}
+.steps-row{display:grid; grid-template-columns:repeat(6,1fr); grid-auto-rows:1fr; gap:24px; max-width:1120px; margin:0 auto;}
+.steps-row .step-card{grid-column:span 2; padding:26px 24px;}
+/* Segunda linha: 2 cards centralizados em relação aos 3 de cima */
+.steps-row .step-card:nth-child(4){grid-column:2 / span 2;}
+.steps-row .step-card:nth-child(5){grid-column:4 / span 2;}
+@media (max-width:980px){
+  .steps-row{grid-template-columns:repeat(4,1fr); gap:20px; max-width:720px;}
+  .steps-row .step-card:nth-child(n){grid-column:span 2;}
+  .steps-row .step-card:nth-child(5){grid-column:2 / span 2;}
+}
+@media (max-width:620px){
+  .steps-row{grid-template-columns:1fr; grid-auto-rows:auto; gap:14px; max-width:none;}
+  .steps-row .step-card:nth-child(n){grid-column:1 / -1; padding:18px 16px;}
+}
 .step-card{background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:22px; display:flex; flex-direction:column; transition:border-color .15s, transform .15s;}
 .step-card:hover{border-color:var(--teal); transform:translateY(-2px);}
 .step-card.pro:hover{border-color:var(--amber);}
