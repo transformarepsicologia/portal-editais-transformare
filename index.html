@@ -1075,6 +1075,14 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   .center-empty{padding:48px 12px;}
   footer.site-footer{padding:22px 16px;}
 }
+/* ===== Tablet (761–900px): números separados do monitoramento, 4 cards em linha, margens padronizadas ===== */
+@media (min-width:761px) and (max-width:900px){
+  #view-home #home-painel{background:transparent; border:0; border-radius:0; padding:0; box-shadow:none; margin-top:12px !important;}
+  #view-home #home-radar-slot .radar-wrap{border:1px solid var(--border); border-radius:18px; padding:28px 20px 20px; margin:0 0 36px;}
+  #view-home #home-painel .indicators{grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:22px;}
+  #view-home #home-painel .indicators .indicator-card{padding:18px 16px; justify-content:flex-start;}
+  .how-it-works .how-head,.how-it-works .steps-row{max-width:none;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
