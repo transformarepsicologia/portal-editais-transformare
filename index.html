@@ -1129,6 +1129,13 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   header.topbar nav.main-nav button{padding:9px 8px; font-size:13px; white-space:nowrap;}
   header.topbar nav.main-nav button.nav-cta{padding:9px 12px !important;}
 }
+/* Instalar app: mesmo contorno do "Minha conta", em dourado */
+nav.main-nav button#nav-instalar-app{background:transparent; color:#FFFFFF !important; font-weight:700; padding:9px 18px; box-shadow:inset 0 0 0 1px var(--amber);}
+nav.main-nav button#nav-instalar-app:hover{background:var(--amber); color:var(--bg) !important; box-shadow:inset 0 0 0 1px var(--amber);}
+html[data-theme="light"] nav.main-nav button#nav-instalar-app{color:var(--ink) !important; box-shadow:inset 0 0 0 1px #B8922A;}
+html[data-theme="light"] nav.main-nav button#nav-instalar-app:hover{background:#D4AF37; color:#2A1D05 !important; box-shadow:inset 0 0 0 1px #D4AF37;}
+@media (max-width:900px){ header.topbar nav.main-nav button#nav-instalar-app{margin:4px 0 0; padding:11px 18px;} }
+@media (min-width:901px) and (max-width:1099px){ header.topbar nav.main-nav button#nav-instalar-app{padding:9px 12px;} }
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
