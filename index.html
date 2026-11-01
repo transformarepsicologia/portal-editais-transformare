@@ -1122,6 +1122,13 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 }
 #view-sobre .sobre-texto > p{hyphens:none; -webkit-hyphens:none;}
 @media (max-width:760px){ #view-sobre .sobre-texto > p{hyphens:auto; -webkit-hyphens:auto;} }
+/* Instalar app no menu: em telas de computador estreitas, aperta o espaço do menu para manter uma única linha */
+@media (min-width:901px) and (max-width:1099px){
+  .topbar-inner{gap:12px;}
+  header.topbar nav.main-nav{flex-wrap:nowrap;}
+  header.topbar nav.main-nav button{padding:9px 8px; font-size:13px; white-space:nowrap;}
+  header.topbar nav.main-nav button.nav-cta{padding:9px 12px !important;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -1150,10 +1157,10 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
       <button data-view="sobre">Sobre o Radar</button>
       <button data-view="editais">Editais</button>
       <button data-view="planos">Planos</button>
+      <button type="button" id="nav-instalar-app" onclick="instalarApp()" title="Instalar o Radar como app no seu aparelho">Instalar app</button>
       <button data-view="login" class="nav-cta" id="nav-minha-conta">Minha conta</button>
     </nav>
     <div class="nav-icones">
-    <button class="theme-btn" id="btn-instalar-app" onclick="instalarApp()" style="display:none; width:auto; padding:0 10px; font-size:12px; font-weight:600;" title="Instalar o Radar como app no seu aparelho">⬇ Instalar app</button>
     <button class="theme-btn" id="theme-btn" onclick="alternarTema()" aria-label="Alternar entre tema escuro e claro" title="Tema claro / escuro">☀️</button>
     </div>
     <button type="button" class="mobile-toggle" id="menu-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainNav">
@@ -2180,6 +2187,18 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 </section>
 
 </main>
+
+<div class="modal-overlay" id="instalar-modal" style="z-index:1300;" onclick="if(event.target===this)closeModal('instalar-modal')">
+  <div class="modal-box" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('instalar-modal')" aria-label="Fechar">×</button>
+    <div class="section-title" style="font-size:17px;">Instalar o Radar Transformare</div>
+    <p class="section-sub" style="margin-bottom:10px;">Tenha o Radar na tela inicial do seu aparelho, como um aplicativo.</p>
+    <div id="instalar-passos" style="font-size:14px; line-height:1.6; color:var(--ink);"></div>
+    <div class="form-actions" style="display:flex; gap:8px; margin-top:14px;">
+      <button class="btn-primary" style="flex:1;" onclick="closeModal('instalar-modal')">Entendi</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="problema-modal" style="z-index:1300;">
   <div class="modal-box" style="max-width:520px;">
@@ -10232,29 +10251,54 @@ function registrarEventoApp(tipo, tentativa){
   }catch(e){}
 }
 let _promptInstalar = null;
+function _appJaInstalado(){
+  try{ return !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone); }catch(e){ return false; }
+}
+function _atualizaNavInstalar(){
+  const b = document.getElementById('nav-instalar-app');
+  if (!b) return;
+  const ua = navigator.userAgent || '';
+  const firefoxDesktop = /Firefox/i.test(ua) && !/Android|Mobile|Tablet/i.test(ua);
+  const possivel = !!_promptInstalar || (window.isSecureContext && !firefoxDesktop);
+  b.style.display = (_appJaInstalado() || !possivel) ? 'none' : '';
+}
 window.addEventListener('beforeinstallprompt', (ev) => {
   ev.preventDefault();
   _promptInstalar = ev;
-  const b = document.getElementById('btn-instalar-app');
-  if (b) b.style.display = '';
+  _atualizaNavInstalar();
   registrarEventoApp('botao_exibido');
 });
 window.addEventListener('appinstalled', () => {
   _promptInstalar = null;
-  const b = document.getElementById('btn-instalar-app');
-  if (b) b.style.display = 'none';
+  _atualizaNavInstalar();
   registrarEventoApp('instalou');
   try { toast('Radar instalado!'); } catch (e) {}
 });
-async function instalarApp(){
-  if (!_promptInstalar) return;
-  registrarEventoApp('botao_clicado');
-  _promptInstalar.prompt();
-  try { const r = await _promptInstalar.userChoice; registrarEventoApp(r && r.outcome === 'accepted' ? 'aceitou' : 'recusou'); } catch (e) {}
-  _promptInstalar = null;
-  const b = document.getElementById('btn-instalar-app');
-  if (b) b.style.display = 'none';
+function _passosInstalacao(){
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(ua);
+  const li = (t) => '<li style="margin-bottom:6px;">' + t + '</li>';
+  if (ios) return '<ol style="margin:0; padding-left:20px;">' + li('Abra o Radar no <strong>Safari</strong>.') + li('Toque no botão <strong>Compartilhar</strong> (quadrado com seta para cima).') + li('Escolha <strong>Adicionar à Tela de Início</strong>.') + li('Confirme em <strong>Adicionar</strong>.') + '</ol>';
+  if (android) return '<ol style="margin:0; padding-left:20px;">' + li('Toque no menu <strong>⋮</strong> do navegador (canto superior).') + li('Escolha <strong>Instalar app</strong> ou <strong>Adicionar à tela inicial</strong>.') + li('Confirme a instalação.') + '</ol>';
+  return '<ol style="margin:0; padding-left:20px;">' + li('Procure o ícone de <strong>instalar</strong> na barra de endereço do navegador, ou abra o menu <strong>⋮</strong>.') + li('Escolha <strong>Instalar Radar Transformare</strong> (ou <strong>Salvar e compartilhar › Instalar página como app</strong>).') + li('Confirme a instalação.') + '</ol>';
 }
+async function instalarApp(){
+  try{ document.getElementById('mainNav').classList.remove('open'); }catch(e){}
+  registrarEventoApp('botao_clicado');
+  if (!_promptInstalar) {
+    const c = document.getElementById('instalar-passos');
+    if (c) c.innerHTML = _passosInstalacao();
+    openModal('instalar-modal');
+    return;
+  }
+  const pr = _promptInstalar;
+  pr.prompt();
+  try { const r = await pr.userChoice; registrarEventoApp(r && r.outcome === 'accepted' ? 'aceitou' : 'recusou'); } catch (e) {}
+  _promptInstalar = null;
+  _atualizaNavInstalar();
+}
+_atualizaNavInstalar();
 window.addEventListener('load', () => { setTimeout(() => { try{ if((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone) registrarEventoApp('abriu_app'); }catch(e){} }, 1500); });
 if ('serviceWorker' in navigator && window.isSecureContext) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
