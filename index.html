@@ -1142,6 +1142,17 @@ html[data-theme="light"] nav.main-nav button#nav-instalar-app:hover{background:#
   #view-planos .pl-head h2{text-align:center; text-wrap:balance; max-width:11em; margin-left:auto; margin-right:auto;}
   #view-planos .pl-head p{text-align:justify; hyphens:auto; -webkit-hyphens:auto;}
 }
+/* ===== Tema claro: verde dos fundos mais presente (só tema claro; escuro intocado) ===== */
+html[data-theme="light"]{--teal-fundo:rgba(10,127,114,.15); --teal-fundo-forte:rgba(10,127,114,.22); --teal-borda:rgba(10,127,114,.45);}
+html[data-theme="light"] nav.main-nav button.active, html[data-theme="light"] nav.main-nav button:not(.nav-cta):hover, html[data-theme="light"] .pw-toggle:hover, html[data-theme="light"] .pw-toggle:focus-visible{background:rgba(10,127,114,.12);}
+html[data-theme="light"] .badge.aberto, html[data-theme="light"] .plan-badge, html[data-theme="light"] .inbox-profs span, html[data-theme="light"] .pl-tag{background:var(--teal-fundo); color:var(--teal-deep);}
+html[data-theme="light"] .pl-cons-ico{background:var(--teal-fundo-forte); color:var(--teal-deep);}
+html[data-theme="light"] .pontos-box.positivo, html[data-theme="light"] .checklist-cta, html[data-theme="light"] .compare-btn{background:rgba(10,127,114,.11); border-color:var(--teal-borda);}
+html[data-theme="light"] .compare-btn:hover, html[data-theme="light"] .sobre-cta:hover, html[data-theme="light"] .pl-btn-ghost:hover{background:var(--teal-fundo);}
+html[data-theme="light"] .compare-table td.compare-highlight{background:var(--teal-fundo);}
+html[data-theme="light"] .pl-pro{background:linear-gradient(180deg, rgba(10,127,114,.14), var(--bg-card) 45%); box-shadow:0 10px 36px rgba(10,127,114,.16);}
+html[data-theme="light"] .lead-box{background:linear-gradient(135deg, rgba(10,127,114,.12), rgba(85,70,187,.07));}
+html[data-theme="light"] .eyebrow::before{box-shadow:0 0 0 4px rgba(10,127,114,.22);}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
