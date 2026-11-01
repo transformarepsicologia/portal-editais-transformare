@@ -617,7 +617,7 @@ select:focus, input:focus, textarea:focus{outline:1.5px solid var(--teal); borde
 .mp-kpi .l{font-family:var(--font-mono); font-size:9.5px; letter-spacing:1.1px; text-transform:uppercase; color:var(--ink-dim);}
 .mp-kpi .v{font-family:var(--font-display); font-size:22px; font-weight:700; margin-top:2px;}
 .mp-mapa{position:relative; border-radius:10px; overflow:hidden; background:var(--bg); display:flex; align-items:center; justify-content:center;}
-.mp-legenda{margin:10px 2px 0; font-size:12.5px; line-height:1.5; color:#FFFFFF; text-align:center;}
+.mp-legenda{margin:10px 2px 0; font-size:12.5px; line-height:1.5; color:#FFFFFF; text-align:center; text-wrap:balance;}
 html[data-theme="light"] .mp-legenda{color:var(--ink-muted);}
 #mp-svg{width:100%; height:auto; display:block; user-select:none; -webkit-tap-highlight-color:transparent;}
 #mp-svg .uf{fill:var(--bg-elevated); stroke:var(--bg); stroke-width:1; stroke-linejoin:round; transition:fill .15s, fill-opacity .15s;}
@@ -1459,7 +1459,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="page-head"><span class="eyebrow">Sobre o Radar</span><h2>O edital é só o começo.</h2></div>
     <p style="color:var(--ink);">En&shy;con&shy;trar uma pu&shy;bli&shy;ca&shy;ção é apenas a pri&shy;mei&shy;ra etapa. En&shy;ten&shy;der as con&shy;di&shy;ções, com&shy;pa&shy;rar opor&shy;tu&shy;ni&shy;da&shy;des e iden&shy;ti&shy;fi&shy;car os re&shy;qui&shy;si&shy;tos para par&shy;ti&shy;ci&shy;par exige tempo e atenção.<br>O Radar Trans&shy;for&shy;ma&shy;re fa&shy;ci&shy;li&shy;ta esse pro&shy;ces&shy;so ao mo&shy;ni&shy;to&shy;rar o Portal Na&shy;ci&shy;o&shy;nal de Con&shy;tra&shy;ta&shy;ções Pú&shy;bli&shy;cas (PNCP) e outras fontes ofi&shy;ci&shy;ais, reu&shy;nin&shy;do editais e cre&shy;den&shy;ci&shy;a&shy;men&shy;tos da área da saúde em um só lugar. Assim, você en&shy;con&shy;tra as prin&shy;ci&shy;pais in&shy;for&shy;ma&shy;ções de forma or&shy;ga&shy;ni&shy;za&shy;da e ganha mais clareza para avaliar cada opor&shy;tu&shy;ni&shy;da&shy;de.</p>
     <h3 style="font-family:var(--font-display); font-size:19px; margin:30px 0 10px;">Conheça o Índice Transformare</h3>
-    <p>O <strong style="color:var(--ink);">Índice Trans&shy;for&shy;ma&shy;re</strong> atribui notas de 1 a 5 às opor&shy;tu&shy;ni&shy;da&shy;des ava&shy;li&shy;a&shy;das, com base em três cri&shy;té&shy;rios: retorno fi&shy;nan&shy;cei&shy;ro, fa&shy;ci&shy;li&shy;da&shy;de de entrada e com&shy;ple&shy;xi&shy;da&shy;de do&shy;cu&shy;men&shy;tal. A ava&shy;li&shy;a&shy;ção é realizada ma&shy;nu&shy;al&shy;men&shy;te por um pro&shy;fis&shy;si&shy;o&shy;nal da Trans&shy;for&shy;ma&shy;re e serve como pa&shy;râ&shy;me&shy;tro adi&shy;ci&shy;o&shy;nal para ajudar na tomada de decisão, sem subs&shy;ti&shy;tuir a con&shy;sul&shy;ta ao edital ori&shy;gi&shy;nal.</p>
+    <p>O <strong style="color:var(--ink);">Índice Trans&shy;for&shy;ma&shy;re</strong> atribui notas de 1 a 5 às opor&shy;tu&shy;ni&shy;da&shy;des ava&shy;li&shy;a&shy;das, com base em três cri&shy;té&shy;rios: retorno fi&shy;nan&shy;cei&shy;ro, cri&shy;té&shy;rios de entrada e com&shy;ple&shy;xi&shy;da&shy;de do&shy;cu&shy;men&shy;tal. A ava&shy;li&shy;a&shy;ção é realizada ma&shy;nu&shy;al&shy;men&shy;te por um pro&shy;fis&shy;si&shy;o&shy;nal da Trans&shy;for&shy;ma&shy;re e serve como pa&shy;râ&shy;me&shy;tro adi&shy;ci&shy;o&shy;nal para ajudar na tomada de decisão, sem subs&shy;ti&shy;tuir a con&shy;sul&shy;ta ao edital ori&shy;gi&shy;nal.</p>
     <h3 style="font-family:var(--font-display); font-size:19px; margin:30px 0 10px;">Informação pública. Análise própria. Decisão sua.</h3>
     <p>As in&shy;for&shy;ma&shy;ções são or&shy;ga&shy;ni&shy;za&shy;das pelo Radar Trans&shy;for&shy;ma&shy;re com base em fontes ofi&shy;ci&shy;ais e podem ser atu&shy;a&shy;li&shy;za&shy;das con&shy;for&shy;me novas pu&shy;bli&shy;ca&shy;ções. Antes de par&shy;ti&shy;ci&shy;par, con&shy;sul&shy;te a fonte oficial.</p>
     <p>En&shy;con&shy;trou alguma in&shy;for&shy;ma&shy;ção que precisa ser cor&shy;ri&shy;gi&shy;da ou atu&shy;a&shy;li&shy;za&shy;da? <a href="#" style="color:var(--teal); cursor:pointer;" onclick="openFeedbackModal(); return false;">Envie seu feedback</a> e con&shy;tri&shy;bua para apri&shy;mo&shy;rar o Radar.</p>
@@ -1470,7 +1470,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <div class="mp-mapa">
       <svg id="mp-svg" viewBox="0 0 600 610" role="img" aria-label="Mapa do Brasil com os estados que têm editais abertos pintados"></svg>
     </div>
-    <p class="mp-legenda">Estados destacados indicam onde há oportunidades abertas.<br>Passe o mouse para visualizar o nome de cada estado.</p>
+    <p class="mp-legenda">Estados destacados indicam onde há oportunidades abertas.<br>Clique no seu estado para ver as oportunidades.</p>
     <div id="mp-tip" class="mp-tip"></div>
   </aside>
   </div>
@@ -1503,7 +1503,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
         <p class="pl-desc">Tenha mais informações para avaliar oportunidades e se preparar para participar.</p>
         <hr>
         <div class="pl-sub">Tudo do Plano Gratuito, mais</div>
-        <ul class="pl-lista"><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Lista completa de documentos</b><em>Consulte todos os documentos exigidos em cada oportunidade.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Links para emissão de certidões negativas</b><em>Acesse os canais oficiais para emitir as principais certidões.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Comparação de oportunidades</b><em>Veja as diferenças entre os editais para apoiar sua decisão.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Aderência ao seu perfil</b><em>Identifique oportunidades que combinam com sua profissão e com os critérios utilizados pelo Radar.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Índice Transformare</b><em>Consulte a análise interna de retorno financeiro, facilidade de entrada e complexidade documental.</em></span></li></ul>
+        <ul class="pl-lista"><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Lista completa de documentos</b><em>Consulte todos os documentos exigidos em cada oportunidade.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Links para emissão de certidões negativas</b><em>Acesse os canais oficiais para emitir as principais certidões.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Comparação de oportunidades</b><em>Veja as diferenças entre os editais para apoiar sua decisão.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Aderência ao seu perfil</b><em>Identifique oportunidades que combinam com sua profissão e com os critérios utilizados pelo Radar.</em></span></li><li><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--teal)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Índice Transformare</b><em>Consulte a análise interna de retorno financeiro, critérios de entrada e complexidade documental.</em></span></li></ul>
         <button type="button" class="pl-btn pl-btn-cheio" onclick="solicitarPlanoEssencial()">Quero conhecer o Plano Pro <span aria-hidden="true">→</span></button>
       </article>
     </div>
@@ -3559,7 +3559,7 @@ function openCompare(){
   html += `</tbody></table></div>`;
   html += `<div class="lead-box" style="margin-top:20px;">
       <h4>Está em dúvida sobre qual oportunidade faz mais sentido para o seu perfil?</h4>
-      <p>A Transformare pode ajudar você a avaliar os critérios — requisitos, documentação, remuneração e facilidade de entrada.</p>
+      <p>A Transformare pode ajudar você a avaliar os critérios — requisitos, documentação, remuneração e critérios de entrada.</p>
       <button class="btn-primary" style="width:100%;" onclick="openLeadModalMulti([${items.map(o=>o.id).join(',')}],'comparacao')">Quero ajuda para decidir</button>
     </div>`;
   document.getElementById('compare-content').innerHTML = html;
@@ -4615,7 +4615,7 @@ function openDetalhe(id){
           ${(temIndice && !ehPro()) ? `
           <div class="score-hero-body" style="flex:1;">
             <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${ICONE_CADEADO} nota de 1 a 5 disponível no Plano Pro</div>
-            <div class="caption">Este edital já foi avaliado pela Transformare (retorno financeiro, facilidade de entrada, aderência e complexidade documental). Assine o Plano Transformare Pro para ver a nota e os pontos de destaque do edital.</div>
+            <div class="caption">Este edital já foi avaliado pela Transformare (retorno financeiro, critérios de entrada, aderência e complexidade documental). Assine o Plano Transformare Pro para ver a nota e os pontos de destaque do edital.</div>
             <button class="btn-primary" style="margin-top:10px;" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
           </div>
           ` : temIndice ? `
@@ -4623,7 +4623,7 @@ function openDetalhe(id){
           <div class="score-hero-body">
             <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${o.indiceLabel}</div>
             <div class="score-gauge" style="margin:6px 0;">${scoreSegs}</div>
-            <div class="caption">Leitura de atratividade da Transformare (retorno financeiro, facilidade de entrada, aderência e complexidade documental) — não é uma informação oficial do órgão.</div>
+            <div class="caption">Leitura de atratividade da Transformare (retorno financeiro, critérios de entrada, aderência e complexidade documental) — não é uma informação oficial do órgão.</div>
           </div>
           ` : `
           <div class="score-hero-body" style="flex:1;">
@@ -10636,6 +10636,7 @@ async function carregarEditaisSupabase(){
   populateSelects();
   applyFilters();
   renderIndicators();
+  renderMapaEditais();   // o mapa também precisa repintar quando os editais chegam depois de a tela já estar aberta
   if(adminAuthed){ carregarIdsComTexto(); sincronizarProfissoesDosEditais(); }
 }
 
@@ -11102,7 +11103,7 @@ let _aprovarAlvo = null;  // { id, tipo }
 // uma INDICAÇÃO textual (ex.: "tende a nota 4 ou 5"), baseada no retorno
 // financeiro (valor estimado do PNCP) e na aderência ao perfil da
 // Transformare (profissões/objeto), para ajudar o analista a decidir mais
-// rápido. Facilidade de entrada e complexidade documental não entram nessa
+// rápido. Critérios de entrada e complexidade documental não entram nessa
 // indicação automática — exigem ler o edital completo e ficam a cargo do
 // analista. O campo de índice pode ficar em branco (edital publicado como
 // "ainda não avaliado"), e só quando preenchido o edital ganha o Selo
@@ -11131,7 +11132,7 @@ function notaAderenciaSugerida(profissoes, objeto){
   return { nota:null, texto:'Não foi possível identificar profissões no objeto do edital.' };
 }
 // Monta só uma indicação de faixa (ex.: "nota 4 ou 5"), nunca um número fechado.
-// Facilidade de entrada e complexidade documental exigem ler o edital completo
+// Critérios de entrada e complexidade documental exigem ler o edital completo
 // e por isso não entram nesse cálculo automático — ficam a cargo do analista.
 function sugerirFaixaIndice(dados){
   const d = dados || {};
@@ -11172,7 +11173,7 @@ function atualizarSugestaoIndice(){
       <strong>${esc(resultado.faixaTexto)}</strong>
       <div style="margin-top:6px;">• Retorno financeiro: ${esc(resultado.fin.texto)}</div>
       <div>• Aderência ao perfil: ${esc(resultado.ader.texto)}</div>
-      <div style="margin-top:6px; color:var(--ink-dim);">Esta é apenas uma indicação, não o índice oficial — a Transformare ainda não avaliou facilidade de entrada e complexidade documental (dependem da leitura completa do edital). Favor revisar e incluir o índice manualmente, se desejar. O campo pode ficar em branco: o edital será publicado sem nota, informando que ainda não foi avaliado.</div>
+      <div style="margin-top:6px; color:var(--ink-dim);">Esta é apenas uma indicação, não o índice oficial — a Transformare ainda não avaliou critérios de entrada e complexidade documental (dependem da leitura completa do edital). Favor revisar e incluir o índice manualmente, se desejar. O campo pode ficar em branco: o edital será publicado sem nota, informando que ainda não foi avaliado.</div>
     `;
   }
 }
