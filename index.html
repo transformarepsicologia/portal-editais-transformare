@@ -1100,6 +1100,8 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   header.topbar nav.main-nav button.nav-cta{margin:4px 0 0; padding:11px 14px;}
 }
 @media (max-width:760px){ header.topbar nav.main-nav{right:16px;} }
+/* Celular: o rótulo do topo mostra só "Monitoramento contínuo" */
+@media (max-width:760px){ #view-home .eyebrow .eb-marca{display:none;} }
 /* ===== Celular (até 760px): números do Radar fora do motor de monitoramento, logo abaixo dele ===== */
 @media (max-width:760px){
   #view-home #home-painel{background:transparent; border:0; border-radius:0; padding:0; box-shadow:none;}
@@ -1151,7 +1153,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 <section class="view active" id="view-home">
   <div class="hero">
     <div>
-      <span class="eyebrow">Radar Transformare · Monitoramento contínuo</span>
+      <span class="eyebrow"><span><span class="eb-marca">Radar Transformare · </span>Monitoramento contínuo</span></span>
       <h1><span class="h1-leve">Você não precisa procurar</span><br><span class="h1-ouro">o Radar procura por você</span></h1>
       <p class="lead">Encontre oportunidades de credenciamento para sua profissão. Consulte valores, prazos, requisitos, compare oportunidades e descubra quais merecem sua atenção.</p>
       <p class="lead" style="margin-top:12px;">Oportunidades da área da saúde reunidas em um só lugar.</p>
