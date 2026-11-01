@@ -1083,6 +1083,23 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   #view-home #home-painel .indicators .indicator-card{padding:18px 16px; justify-content:flex-start;}
   .how-it-works .how-head,.how-it-works .steps-row{max-width:none;}
 }
+/* ===== Menu recolhido (hambúrguer) em tablet e celular: só até 900px; o desktop não muda ===== */
+.mobile-toggle .ic-fechar{display:none;}
+@media (max-width:900px){
+  header.topbar .topbar-inner{flex-wrap:nowrap; position:relative; gap:10px;}
+  header.topbar .topbar-inner .logo{order:1; flex:1 1 0; min-width:0;}
+  header.topbar .topbar-inner .nav-icones{order:2; margin-left:auto;}
+  header.topbar .mobile-toggle{display:inline-flex; align-items:center; justify-content:center; order:3; flex:none; width:40px; height:40px; padding:0; border-radius:9px; background:none; border:1px solid var(--border); color:var(--ink); cursor:pointer;}
+  header.topbar .mobile-toggle:hover{color:var(--teal); border-color:var(--teal);}
+  header.topbar .mobile-toggle:focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+  header.topbar .mobile-toggle[aria-expanded="true"] .ic-barras{display:none;}
+  header.topbar .mobile-toggle[aria-expanded="true"] .ic-fechar{display:inline;}
+  header.topbar nav.main-nav{display:none; position:absolute; top:calc(100% + 6px); right:28px; z-index:120; order:0; flex:none; flex-direction:column; align-items:stretch; flex-wrap:nowrap; gap:2px; width:max-content; min-width:230px; max-width:calc(100vw - 32px); margin:0; padding:8px; overflow:visible; background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px; box-shadow:0 14px 34px rgba(0,0,0,.38); -webkit-mask-image:none; mask-image:none;}
+  header.topbar nav.main-nav.open{display:flex;}
+  header.topbar nav.main-nav button{flex:none; width:100%; min-height:44px; padding:11px 14px; font-size:14.5px; text-align:left; white-space:nowrap;}
+  header.topbar nav.main-nav button.nav-cta{margin:4px 0 0; padding:11px 14px;}
+}
+@media (max-width:760px){ header.topbar nav.main-nav{right:16px;} }
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -1117,7 +1134,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
     <button class="theme-btn" id="btn-instalar-app" onclick="instalarApp()" style="display:none; width:auto; padding:0 10px; font-size:12px; font-weight:600;" title="Instalar o Radar como app no seu aparelho">⬇ Instalar app</button>
     <button class="theme-btn" id="theme-btn" onclick="alternarTema()" aria-label="Alternar entre tema escuro e claro" title="Tema claro / escuro">☀️</button>
     </div>
-    <button class="mobile-toggle" onclick="document.getElementById('mainNav').classList.toggle('open')">☰</button>
+    <button type="button" class="mobile-toggle" id="menu-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainNav">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="ic-barras" d="M4 6h16M4 12h16M4 18h16"/><path class="ic-fechar" d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
   </div>
 </header>
 
@@ -3295,6 +3314,21 @@ function nav(view){
 document.getElementById('mainNav').addEventListener('click', e=>{
   if(e.target.dataset.view) nav(e.target.dataset.view);
 });
+
+/* Menu recolhido: abre no ícone; fecha ao escolher uma opção, clicar fora, apertar Esc ou voltar ao desktop */
+(function(){
+  const tg=document.getElementById('menu-toggle'), nv=document.getElementById('mainNav');
+  if(!tg||!nv) return;
+  function sync(){ const a=nv.classList.contains('open'); tg.setAttribute('aria-expanded', a?'true':'false'); tg.setAttribute('aria-label', a?'Fechar menu':'Abrir menu'); }
+  function fecha(){ nv.classList.remove('open'); }
+  tg.addEventListener('click', e=>{ e.stopPropagation(); nv.classList.toggle('open'); });
+  nv.addEventListener('click', e=>{ if(e.target.closest('button')) fecha(); });
+  document.addEventListener('click', e=>{ if(nv.classList.contains('open') && !nv.contains(e.target) && !tg.contains(e.target)) fecha(); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && nv.classList.contains('open')){ fecha(); tg.focus(); } });
+  window.addEventListener('resize', ()=>{ if(window.innerWidth>900) fecha(); });
+  new MutationObserver(sync).observe(nv,{attributes:true, attributeFilter:['class']});
+  sync();
+})();
 
 function toast(msg){
   const t = document.getElementById('toast');
