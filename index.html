@@ -1113,10 +1113,15 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   #view-home .hero h1{text-align:center;}
   #view-home .hero .lead{text-align:justify; hyphens:auto; -webkit-hyphens:auto; max-width:704px; margin-left:auto; margin-right:auto;}
 }
-/* ===== Celular (até 760px): textos de "Sobre o Radar" centralizados ===== */
+/* ===== Celular (até 760px): "Sobre o Radar" — títulos à esquerda, textos justificados ===== */
 @media (max-width:760px){
-  #view-sobre .sobre-texto, #view-sobre .sobre-texto > *{text-align:center;}
+  #view-sobre .sobre-texto, #view-sobre .sobre-texto > *{text-align:left;}
+  #view-sobre .sobre-texto > p{text-align:justify; text-justify:inter-word; hyphens:auto; -webkit-hyphens:auto; line-height:1.7;}
+  #view-sobre .sobre-grid{gap:16px;}
+  #view-sobre .sobre-texto > h3{margin:14px 0 -6px !important; line-height:1.3;}
 }
+#view-sobre .sobre-texto > p{hyphens:none; -webkit-hyphens:none;}
+@media (max-width:760px){ #view-sobre .sobre-texto > p{hyphens:auto; -webkit-hyphens:auto;} }
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -1452,12 +1457,12 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
   <div class="sobre-grid">
   <div class="sobre-texto" style="font-size:14.5px; line-height:1.75; color:var(--ink-muted);">
     <div class="page-head"><span class="eyebrow">Sobre o Radar</span><h2>O edital é só o começo.</h2></div>
-    <p style="color:var(--ink);">Encontrar uma publicação é apenas a primeira etapa. Entender as condições, comparar oportunidades e identificar os requisitos para participar exige tempo e atenção.<br>O Radar Transformare facilita esse processo ao monitorar o Portal Nacional de Contratações Públicas (PNCP) e outras fontes oficiais, reunindo editais e credenciamentos da área da saúde em um só lugar. Assim, você encontra as principais informações de forma organizada e ganha mais clareza para avaliar cada oportunidade.</p>
+    <p style="color:var(--ink);">En&shy;con&shy;trar uma pu&shy;bli&shy;ca&shy;ção é apenas a pri&shy;mei&shy;ra etapa. En&shy;ten&shy;der as con&shy;di&shy;ções, com&shy;pa&shy;rar opor&shy;tu&shy;ni&shy;da&shy;des e iden&shy;ti&shy;fi&shy;car os re&shy;qui&shy;si&shy;tos para par&shy;ti&shy;ci&shy;par exige tempo e atenção.<br>O Radar Trans&shy;for&shy;ma&shy;re fa&shy;ci&shy;li&shy;ta esse pro&shy;ces&shy;so ao mo&shy;ni&shy;to&shy;rar o Portal Na&shy;ci&shy;o&shy;nal de Con&shy;tra&shy;ta&shy;ções Pú&shy;bli&shy;cas (PNCP) e outras fontes ofi&shy;ci&shy;ais, reu&shy;nin&shy;do editais e cre&shy;den&shy;ci&shy;a&shy;men&shy;tos da área da saúde em um só lugar. Assim, você en&shy;con&shy;tra as prin&shy;ci&shy;pais in&shy;for&shy;ma&shy;ções de forma or&shy;ga&shy;ni&shy;za&shy;da e ganha mais clareza para avaliar cada opor&shy;tu&shy;ni&shy;da&shy;de.</p>
     <h3 style="font-family:var(--font-display); font-size:19px; margin:30px 0 10px;">Conheça o Índice Transformare</h3>
-    <p>O <strong style="color:var(--ink);">Índice Transformare</strong> atribui notas de 1 a 5 às oportunidades avaliadas, com base em três critérios: retorno financeiro, facilidade de entrada e complexidade documental. A avaliação é realizada manualmente por um profissional da Transformare e serve como parâmetro adicional para ajudar na tomada de decisão, sem substituir a consulta ao edital original.</p>
+    <p>O <strong style="color:var(--ink);">Índice Trans&shy;for&shy;ma&shy;re</strong> atribui notas de 1 a 5 às opor&shy;tu&shy;ni&shy;da&shy;des ava&shy;li&shy;a&shy;das, com base em três cri&shy;té&shy;rios: retorno fi&shy;nan&shy;cei&shy;ro, fa&shy;ci&shy;li&shy;da&shy;de de entrada e com&shy;ple&shy;xi&shy;da&shy;de do&shy;cu&shy;men&shy;tal. A ava&shy;li&shy;a&shy;ção é realizada ma&shy;nu&shy;al&shy;men&shy;te por um pro&shy;fis&shy;si&shy;o&shy;nal da Trans&shy;for&shy;ma&shy;re e serve como pa&shy;râ&shy;me&shy;tro adi&shy;ci&shy;o&shy;nal para ajudar na tomada de decisão, sem subs&shy;ti&shy;tuir a con&shy;sul&shy;ta ao edital ori&shy;gi&shy;nal.</p>
     <h3 style="font-family:var(--font-display); font-size:19px; margin:30px 0 10px;">Informação pública. Análise própria. Decisão sua.</h3>
-    <p>As informações são organizadas pelo Radar Transformare com base em fontes oficiais e podem ser atualizadas conforme novas publicações. Antes de participar, consulte a fonte oficial.</p>
-    <p>Encontrou alguma informação que precisa ser corrigida ou atualizada? <a href="#" style="color:var(--teal); cursor:pointer;" onclick="openFeedbackModal(); return false;">Envie seu feedback</a> e contribua para aprimorar o Radar.</p>
+    <p>As in&shy;for&shy;ma&shy;ções são or&shy;ga&shy;ni&shy;za&shy;das pelo Radar Trans&shy;for&shy;ma&shy;re com base em fontes ofi&shy;ci&shy;ais e podem ser atu&shy;a&shy;li&shy;za&shy;das con&shy;for&shy;me novas pu&shy;bli&shy;ca&shy;ções. Antes de par&shy;ti&shy;ci&shy;par, con&shy;sul&shy;te a fonte oficial.</p>
+    <p>En&shy;con&shy;trou alguma in&shy;for&shy;ma&shy;ção que precisa ser cor&shy;ri&shy;gi&shy;da ou atu&shy;a&shy;li&shy;za&shy;da? <a href="#" style="color:var(--teal); cursor:pointer;" onclick="openFeedbackModal(); return false;">Envie seu feedback</a> e con&shy;tri&shy;bua para apri&shy;mo&shy;rar o Radar.</p>
   </div>
   <aside id="mp-wrap" class="mp-card">
     <div class="mp-hd"><h3>Mapa de oportunidades</h3></div>
