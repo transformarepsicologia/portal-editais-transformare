@@ -1137,6 +1137,11 @@ html[data-theme="light"] nav.main-nav button#nav-instalar-app{color:var(--ink) !
 html[data-theme="light"] nav.main-nav button#nav-instalar-app:hover{background:#D4AF37; color:#2A1D05 !important; box-shadow:inset 0 0 0 1px #D4AF37;}
 @media (max-width:900px){ header.topbar nav.main-nav button#nav-instalar-app{margin:4px 0 0; padding:11px 18px;} }
 @media (min-width:901px) and (max-width:1099px){ header.topbar nav.main-nav button#nav-instalar-app{padding:9px 12px;} }
+/* Planos — somente celular: título centralizado em duas linhas e texto justificado */
+@media (max-width:760px){
+  #view-planos .pl-head h2{text-align:center; text-wrap:balance; max-width:11em; margin-left:auto; margin-right:auto;}
+  #view-planos .pl-head p{text-align:justify; hyphens:auto; -webkit-hyphens:auto;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
