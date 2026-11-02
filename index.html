@@ -1160,6 +1160,9 @@ html[data-theme="light"] nav.main-nav button.nav-cta.active{color:var(--teal-dee
 /* Tema claro: item ativo do menu sem fundo verde (só no hover); Instalar app com hover dourado leve */
 html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):not(:hover){background:none;}
 html[data-theme="light"] nav.main-nav button#nav-instalar-app:hover{background:rgba(212,175,55,.2); color:var(--ink) !important; box-shadow:inset 0 0 0 1px #B8922A;}
+/* Tema claro: item ativo do menu na cor dos demais; verde só no hover */
+html[data-theme="light"] nav.main-nav button.active:not(.nav-cta){color:var(--ink);}
+html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):hover{color:var(--teal) !important;}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
