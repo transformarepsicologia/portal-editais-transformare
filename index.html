@@ -1235,6 +1235,11 @@ html[data-theme="light"] .search-box input{border-color:#BDB8AD;}
 html[data-theme="light"] .search-box, html[data-theme="light"] .filter-panel{border-color:#CFCAC0;}
 /* Claro (tablet e celular): moldura do radar com a mesma largura do tema escuro */
 @media (max-width:900px){ html[data-theme="light"] .radar-wrap{justify-self:stretch; align-self:stretch;} }
+/* Celular: botões Anterior/Próxima na 1ª linha, "Página X de Y · N itens" na linha de baixo */
+@media (max-width:760px){
+  .pag-barra .btn-ghost{order:1; flex:0 1 auto;}
+  .pag-barra .pag-info{order:2; flex:1 1 100%; text-align:center;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -3496,9 +3501,10 @@ function paginarLista(chave, arr, porPag, rerender){
   const fatia = arr.slice((pg-1)*porPag, pg*porPag);
   const barra = document.createElement('div');
   if(total > 1){
+    barra.className = 'pag-barra';
     barra.style.cssText = 'display:flex; gap:12px; align-items:center; justify-content:center; margin:18px 0; flex-wrap:wrap;';
     barra.innerHTML = `<button class="btn-ghost" ${pg<=1?'disabled':''} onclick="pagIr('${chave}',-1,${total})">← Anterior</button>
-      <span style="font-size:12.5px; color:var(--ink-dim);">Página ${pg} de ${total} · ${arr.length} itens</span>
+      <span class="pag-info" style="font-size:12.5px; color:var(--ink-dim);">Página ${pg} de ${total} · ${arr.length} itens</span>
       <button class="btn-ghost" ${pg>=total?'disabled':''} onclick="pagIr('${chave}',1,${total})">Próxima →</button>`;
   }
   return { fatia, barra, pg, total };
