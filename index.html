@@ -1246,6 +1246,15 @@ main{padding-bottom:28px;}
 br.br-cel{display:none;}
 @media (max-width:760px){ header.topbar br.br-cel{display:inline;} header.topbar .logo-sub{white-space:nowrap;} }
 @media (max-width:760px){ footer.site-footer br.br-cel{display:inline;} }
+/* ===== Celular (até 760px): margens laterais padronizadas e sem rolagem horizontal ===== */
+@media (max-width:760px){
+  /* O feixe girando do radar (caixa girada) criava rolagem lateral: o radar passa a recortar o que sai dele */
+  #view-home .radar-wrap{overflow:hidden;}
+  html, body{overflow-x:clip; max-width:100%;}
+  /* Espaço interno lateral único (18px) em todos os cartões e painéis */
+  .mp-card, .filter-panel, .op-card, .step-card, .cta-band, .promo-band, .pl-card, .pl-cons, .form-card, .conta-sino, .panel, .detail-head, .indicator-card,
+  #view-home #home-radar-slot .radar-wrap{padding-left:18px !important; padding-right:18px !important;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
