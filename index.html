@@ -1153,6 +1153,10 @@ html[data-theme="light"] .compare-table td.compare-highlight{background:var(--te
 html[data-theme="light"] .pl-pro{background:linear-gradient(180deg, rgba(10,127,114,.14), var(--bg-card) 45%); box-shadow:0 10px 36px rgba(10,127,114,.16);}
 html[data-theme="light"] .lead-box{background:linear-gradient(135deg, rgba(10,127,114,.12), rgba(85,70,187,.07));}
 html[data-theme="light"] .eyebrow::before{box-shadow:0 0 0 4px rgba(10,127,114,.22);}
+/* Minha conta (tema claro): sem fundo verde, só a moldura */
+html[data-theme="light"] nav.main-nav button.nav-cta, html[data-theme="light"] .nav-cta{background:transparent !important; color:var(--ink) !important; box-shadow:inset 0 0 0 1.5px var(--teal);}
+html[data-theme="light"] nav.main-nav button.nav-cta:hover, html[data-theme="light"] .nav-cta:hover{background:rgba(10,127,114,.12) !important; color:var(--ink) !important; box-shadow:inset 0 0 0 1.5px var(--teal);}
+html[data-theme="light"] nav.main-nav button.nav-cta.active{color:var(--teal-deep) !important;}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
