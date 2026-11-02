@@ -1225,14 +1225,16 @@ html[data-theme="light"] .blip .blip-label{font-size:12px; font-weight:600; colo
 html[data-theme="light"] .blip .blip-label.ambient{opacity:.9;}
 html[data-theme="light"] #home-painel .blip .blip-label{font-size:9.5px;}
 @media(max-width:600px){ html[data-theme="light"] .blip .blip-label{font-size:11px;} }
-/* ===== Claro (computador): moldura do radar igual à do tablet/celular (borda fina, cantos 18px) ===== */
+/* ===== Claro (computador): radar sem moldura, igual ao tema escuro ===== */
 @media (min-width:901px){
-  html[data-theme="light"] #view-home .hero .radar-wrap{border:1px solid var(--border); border-radius:18px; padding:28px 32px 22px; zoom:1; justify-self:center;}
+  html[data-theme="light"] .radar-wrap{border:none; padding:0; border-radius:0; zoom:1;}
 }
 /* ===== Claro: borda dos campos de filtro e busca mais marcada ===== */
 html[data-theme="light"] .filter-field select,
 html[data-theme="light"] .search-box input{border-color:#BDB8AD;}
 html[data-theme="light"] .search-box, html[data-theme="light"] .filter-panel{border-color:#CFCAC0;}
+/* Claro (tablet e celular): moldura do radar com a mesma largura do tema escuro */
+@media (max-width:900px){ html[data-theme="light"] .radar-wrap{justify-self:stretch; align-self:stretch;} }
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
