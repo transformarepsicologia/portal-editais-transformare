@@ -1243,12 +1243,10 @@ html[data-theme="light"] .search-box, html[data-theme="light"] .filter-panel{bor
 /* Rodapé mais próximo do conteúdo (menos espaço vazio acima do logo) */
 main{padding-bottom:28px;}
 @media (max-width:760px){ main{padding-bottom:20px;} }
-/* Celular: frase do cabeçalho em linha própria, centralizada */
+/* Celular: frase do cabeçalho sob o título, em duas linhas e centralizada */
 @media (max-width:760px){
-  header.topbar .topbar-inner{flex-wrap:wrap; row-gap:6px;}
-  header.topbar .logo-sub{display:none;}
-  header.topbar .topbar-inner::after{content:"Oportunidades de credenciamento na área da saúde"; order:4; flex:0 0 100%; text-align:center; font-size:12px; font-weight:400; line-height:1.3; color:#FFFFFF;}
-  html[data-theme="light"] header.topbar .topbar-inner::after{color:var(--ink-muted);}
+  header.topbar .logo-col{display:flex; flex-direction:column; align-items:center;}
+  header.topbar .logo-sub{font-size:9.5px; letter-spacing:0; text-align:center; max-width:21em; text-wrap:balance;}
 }
 </style>
 <!--
