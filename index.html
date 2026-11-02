@@ -1167,6 +1167,10 @@ html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):hover{color:va
 #view-home .hero .eyebrow{font-weight:700;}
 /* Tablet e celular: mapa do Sobre o Radar abaixo de todos os textos */
 @media (max-width:900px){ #view-sobre #mp-wrap{order:4;} }
+/* Sobre o Radar (tablet): espaço menor entre títulos e textos */
+@media (min-width:761px) and (max-width:900px){
+  #view-sobre .sobre-texto > h3{margin:14px 0 -6px !important; line-height:1.3;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
