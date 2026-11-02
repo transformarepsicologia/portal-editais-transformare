@@ -1144,7 +1144,7 @@ html[data-theme="light"] nav.main-nav button#nav-instalar-app:hover{background:#
 }
 /* ===== Tema claro: verde dos fundos mais presente (só tema claro; escuro intocado) ===== */
 html[data-theme="light"]{--teal-fundo:rgba(10,127,114,.15); --teal-fundo-forte:rgba(10,127,114,.22); --teal-borda:rgba(10,127,114,.45);}
-html[data-theme="light"] nav.main-nav button.active, html[data-theme="light"] nav.main-nav button:not(.nav-cta):hover, html[data-theme="light"] .pw-toggle:hover, html[data-theme="light"] .pw-toggle:focus-visible{background:rgba(10,127,114,.12);}
+html[data-theme="light"] nav.main-nav button:not(.nav-cta):hover, html[data-theme="light"] .pw-toggle:hover, html[data-theme="light"] .pw-toggle:focus-visible{background:rgba(10,127,114,.12);}
 html[data-theme="light"] .badge.aberto, html[data-theme="light"] .plan-badge, html[data-theme="light"] .inbox-profs span, html[data-theme="light"] .pl-tag{background:var(--teal-fundo); color:var(--teal-deep);}
 html[data-theme="light"] .pl-cons-ico{background:var(--teal-fundo-forte); color:var(--teal-deep);}
 html[data-theme="light"] .pontos-box.positivo, html[data-theme="light"] .checklist-cta, html[data-theme="light"] .compare-btn{background:rgba(10,127,114,.11); border-color:var(--teal-borda);}
@@ -1157,6 +1157,9 @@ html[data-theme="light"] .eyebrow::before{box-shadow:0 0 0 4px rgba(10,127,114,.
 html[data-theme="light"] nav.main-nav button.nav-cta, html[data-theme="light"] .nav-cta{background:transparent !important; color:var(--ink) !important; box-shadow:inset 0 0 0 1.5px var(--teal);}
 html[data-theme="light"] nav.main-nav button.nav-cta:hover, html[data-theme="light"] .nav-cta:hover{background:rgba(10,127,114,.12) !important; color:var(--ink) !important; box-shadow:inset 0 0 0 1.5px var(--teal);}
 html[data-theme="light"] nav.main-nav button.nav-cta.active{color:var(--teal-deep) !important;}
+/* Tema claro: item ativo do menu sem fundo verde (só no hover); Instalar app com hover dourado leve */
+html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):not(:hover){background:none;}
+html[data-theme="light"] nav.main-nav button#nav-instalar-app:hover{background:rgba(212,175,55,.2); color:var(--ink) !important; box-shadow:inset 0 0 0 1px #B8922A;}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
