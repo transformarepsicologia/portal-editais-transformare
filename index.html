@@ -1181,6 +1181,13 @@ html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):hover{color:va
 @media (min-width:901px){ #view-sobre .sobre-texto > h3 + p, #view-sobre .sobre-texto > .page-head + p{margin-top:6px;} }
 @media (max-width:900px){ #view-sobre .sobre-texto > .page-head{margin-bottom:-8px;} }
 @media (max-width:760px){ #view-sobre .sobre-texto > h3{margin:14px 0 -10px !important;} }
+/* Mapa: botões de zoom (+, −, restaurar) */
+.mp-zoom{position:absolute; right:8px; top:8px; z-index:2; display:flex; flex-direction:column; gap:8px;}
+.mp-zoom button{width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:10px; border:1px solid var(--border); background:var(--bg-card); color:var(--ink); font-size:22px; line-height:1; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.18); transition:background .15s, border-color .15s;}
+.mp-zoom button:hover{background:var(--bg-card-hover); border-color:var(--teal);}
+.mp-zoom button svg{width:18px; height:18px; display:block;}
+#mp-svg.zoomed{cursor:grab;}
+#mp-svg.arrastando{cursor:grabbing;}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -1528,6 +1535,7 @@ html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):hover{color:va
     <p style="margin:2px 0 4px; font-size:13.5px; color:var(--ink-muted);">Veja onde estão os editais abertos</p>
     <div class="mp-mapa">
       <svg id="mp-svg" viewBox="0 0 600 610" role="img" aria-label="Mapa do Brasil com os estados que têm editais abertos pintados"></svg>
+      <div class="mp-zoom"><button type="button" onclick="mpZoomBtn(0.6)" aria-label="Aproximar">+</button><button type="button" onclick="mpZoomBtn(1/0.6)" aria-label="Afastar">−</button><button type="button" onclick="mpZoomReset()" aria-label="Restaurar o mapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></div>
     </div>
     <p class="mp-legenda">Estados destacados indicam onde há oportunidades abertas.<br>Clique no seu estado para ver as oportunidades.</p>
     <div id="mp-tip" class="mp-tip"></div>
@@ -9511,6 +9519,38 @@ function renderMapaEditais(){
     el.addEventListener('click',e=>{ if(q){ mpTipOff(); irParaEditaisDoEstado(u); return; } mpTip(e,html); clearTimeout(window._mpT); window._mpT=setTimeout(mpTipOff,2500); });
   });
 }
+/* Zoom do mapa: aproximar, afastar, restaurar e arrastar quando aproximado */
+const mpV = {x:0, y:0, w:600, h:610};
+function mpAplicaV(){
+  const svg=document.getElementById('mp-svg'); if(!svg) return;
+  svg.setAttribute('viewBox', mpV.x+' '+mpV.y+' '+mpV.w+' '+mpV.h);
+  svg.classList.toggle('zoomed', mpV.w<599);
+  svg.style.touchAction = mpV.w>=599 ? 'pan-y' : 'none';
+}
+function mpZoomBtn(f){
+  const cx=mpV.x+mpV.w/2, cy=mpV.y+mpV.h/2;
+  let w=Math.min(600, Math.max(100, mpV.w*f)), h=w*610/600;
+  mpV.x=Math.min(600-w, Math.max(0, cx-w/2)); mpV.y=Math.min(610-h, Math.max(0, cy-h/2)); mpV.w=w; mpV.h=h;
+  mpAplicaV();
+}
+function mpZoomReset(){ mpV.x=0; mpV.y=0; mpV.w=600; mpV.h=610; mpAplicaV(); }
+(function(){
+  let arr=null, moveu=false;
+  document.addEventListener('pointerdown', e=>{
+    const svg=document.getElementById('mp-svg'); if(!svg || !svg.contains(e.target) || mpV.w>=599) return;
+    arr={x:e.clientX, y:e.clientY, vx:mpV.x, vy:mpV.y}; moveu=false;
+  });
+  document.addEventListener('pointermove', e=>{
+    if(!arr) return; const svg=document.getElementById('mp-svg'); const r=svg.getBoundingClientRect();
+    const dx=e.clientX-arr.x, dy=e.clientY-arr.y; if(Math.abs(dx)+Math.abs(dy)>4){ moveu=true; svg.classList.add('arrastando'); }
+    if(!moveu) return;
+    mpV.x=Math.min(600-mpV.w, Math.max(0, arr.vx - dx*mpV.w/r.width));
+    mpV.y=Math.min(610-mpV.h, Math.max(0, arr.vy - dy*mpV.h/r.height));
+    mpAplicaV();
+  });
+  document.addEventListener('pointerup', ()=>{ const svg=document.getElementById('mp-svg'); if(svg) svg.classList.remove('arrastando'); arr=null; setTimeout(()=>{moveu=false;},0); });
+  document.addEventListener('click', e=>{ if(moveu && e.target.closest && e.target.closest('#mp-svg')){ e.stopPropagation(); e.preventDefault(); } }, true);
+})();
 function ehContratacaoDeFornecedor(objeto){
   const t = (objeto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   if(!/^(contratacao|inexigibilidade)\s+d[aeo]s?\s+/.test(t)) return false;
