@@ -1165,6 +1165,8 @@ html[data-theme="light"] nav.main-nav button.active:not(.nav-cta){color:var(--in
 html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):hover{color:var(--teal) !important;}
 /* Início: frase "Radar Transformare · Monitoramento contínuo" em negrito */
 #view-home .hero .eyebrow{font-weight:700;}
+/* Tablet e celular: mapa do Sobre o Radar abaixo de todos os textos */
+@media (max-width:900px){ #view-sobre #mp-wrap{order:4;} }
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
