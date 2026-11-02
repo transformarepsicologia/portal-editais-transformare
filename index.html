@@ -1173,6 +1173,14 @@ html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):hover{color:va
 }
 /* Como funciona: espaço entre o texto e os cards igual ao de "O Radar em números" */
 .how-it-works .how-head{margin-bottom:18px;}
+/* Sobre o Radar: menos espaço entre títulos e textos */
+#view-sobre .sobre-texto > h3{margin-bottom:0 !important;}
+@media (max-width:900px){
+  #view-sobre .sobre-texto > h3{margin:14px 0 -12px !important;}
+}
+@media (min-width:901px){ #view-sobre .sobre-texto > h3 + p, #view-sobre .sobre-texto > .page-head + p{margin-top:6px;} }
+@media (max-width:900px){ #view-sobre .sobre-texto > .page-head{margin-bottom:-8px;} }
+@media (max-width:760px){ #view-sobre .sobre-texto > h3{margin:14px 0 -10px !important;} }
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
