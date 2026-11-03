@@ -5141,7 +5141,81 @@ async function editarItemChecklist(oppId, i){
   openDetalhe(oppId);
   toast('Item do checklist salvo');
 }
+/* Seletor de links salvos: o botão "✎ link" abre a lista dos links já cadastrados (tabela links_documentos),
+   com busca e os mais parecidos com o item no topo. Assim dá para vincular um deles a este item mesmo quando
+   o nome do documento no edital é diferente do nome/palavras do link salvo. */
+let _selLink = null;
+function _normBusca(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+function _pontuaLinkSalvo(texto, l){
+  const toks = _normBusca(texto).split(/[^a-z0-9]+/).filter(w=>w.length > 3);
+  if(!toks.length) return 0;
+  const alvo = _normBusca((l.nome || '') + ' ' + (l.palavras || []).join(' '));
+  return toks.filter(w=>alvo.includes(w)).length;
+}
 async function editarLinkChecklist(oppId, i){
+  const o = oportunidades.find(x=>x.id===oppId); if(!o || !_sb || oppId < 900000) return;
+  const texto = docsPreview(o.documentos)[i]; if(texto == null) return;
+  if(!PORTAIS_DOCS.length) return editarLinkChecklistManual(oppId, i);
+  _selLink = { oppId, i, texto };
+  const velho = document.getElementById('seletor-link-doc'); if(velho) velho.remove();
+  const atual = (o.linksDocs && o.linksDocs[_chaveDoc(texto)] !== undefined) ? o.linksDocs[_chaveDoc(texto)] : null;
+  const estado = atual === null ? 'Neste edital: automático' : (atual === '' ? 'Neste edital: sem botão' : 'Neste edital: ' + atual);
+  const ov = document.createElement('div');
+  ov.id = 'seletor-link-doc';
+  ov.style.cssText = 'position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.6); display:flex; align-items:flex-end; justify-content:center;';
+  ov.addEventListener('click', e=>{ if(e.target === ov) ov.remove(); });
+  ov.innerHTML = '<div style="background:var(--bg-elevated, #10233f); width:100%; max-width:560px; max-height:88vh; display:flex; flex-direction:column; border:1px solid var(--border); border-radius:16px 16px 0 0; padding:16px;">' +
+    '<div style="font-family:var(--font-display); font-weight:700; margin-bottom:4px;">Escolher um link salvo</div>' +
+    '<div style="font-size:12.5px; color:var(--ink-muted); line-height:1.45;">Para o item: <strong>' + esc(texto) + '</strong></div>' +
+    '<div style="font-size:11.5px; color:var(--ink-dim); margin:2px 0 10px; word-break:break-all;">' + esc(estado) + '</div>' +
+    '<input type="search" id="sel-link-busca" placeholder="Buscar pelo nome ou endereço" oninput="renderSeletorLinks()" style="width:100%; box-sizing:border-box; margin-bottom:8px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:inherit; font-size:14px;">' +
+    '<div id="sel-link-lista" style="overflow:auto; flex:1; min-height:120px; -webkit-overflow-scrolling:touch;"></div>' +
+    '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;">' +
+      '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="seletorLinkOutro()">Digitar outro endereço</button>' +
+      '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="seletorLinkAplicar(\'\')">Voltar ao automático</button>' +
+      '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="seletorLinkAplicar(\'-\')">Sem botão</button>' +
+      '<button type="button" class="btn-ghost" style="font-size:12px; margin-left:auto;" onclick="seletorLinkFechar()">Fechar</button>' +
+    '</div></div>';
+  document.body.appendChild(ov);
+  renderSeletorLinks();
+}
+function seletorLinkFechar(){ const e = document.getElementById('seletor-link-doc'); if(e) e.remove(); }
+function renderSeletorLinks(){
+  const s = _selLink, box = document.getElementById('sel-link-lista'); if(!s || !box) return;
+  const campo = document.getElementById('sel-link-busca');
+  const q = _normBusca(campo ? campo.value : '').trim();
+  let itens = PORTAIS_DOCS.map((l, idx)=>({ l, idx, pts: _pontuaLinkSalvo(s.texto, l) }));
+  if(q) itens = itens.filter(x=>_normBusca(x.l.nome + ' ' + x.l.url + ' ' + (x.l.palavras || []).join(' ')).includes(q));
+  itens.sort((a, b)=>b.pts - a.pts || a.idx - b.idx);
+  if(!itens.length){ box.innerHTML = '<div style="font-size:12.5px; color:var(--ink-muted); padding:10px 2px;">Nenhum link salvo com esse texto.</div>'; return; }
+  box.innerHTML = itens.map(x=>'<div role="button" tabindex="0" onclick="seletorLinkEscolher(' + x.idx + ')" onkeydown="if(event.key===\'Enter\')this.click()" style="padding:10px 6px; border-bottom:1px solid var(--border-soft); cursor:pointer;">' +
+    '<div style="font-size:13.5px; font-weight:600;">' + esc(x.l.nome) + ((!q && x.pts > 0) ? ' <span class="plan-badge" style="background:var(--teal); color:#000;">parecido</span>' : '') + '</div>' +
+    '<div style="font-size:11.5px; color:var(--ink-dim); word-break:break-all;">' + esc(x.l.url) + '</div></div>').join('');
+}
+// valor: '' = volta ao automático · '-' = sem botão neste edital · ou o endereço do link
+async function _salvarLinkItem(valor){
+  const s = _selLink; if(!s) return false;
+  const o = oportunidades.find(x=>x.id===s.oppId); if(!o) return false;
+  const chave = _chaveDoc(s.texto);
+  const novo = { ...(o.linksDocs || {}) };
+  if(valor === '') delete novo[chave]; else if(valor === '-') novo[chave] = ''; else novo[chave] = valor;
+  if(!(await _gravarLinksDocs(o, s.oppId, novo))) return false;
+  const alvo = document.getElementById('doc-link-' + s.oppId + '-' + s.i);
+  if(alvo) alvo.innerHTML = linkEmitirDocHTML(s.texto, o, s.i);
+  return true;
+}
+async function seletorLinkEscolher(idx){
+  const l = PORTAIS_DOCS[idx]; if(!l) return;
+  if(await _salvarLinkItem(l.url)){ seletorLinkFechar(); toast('Link "' + l.nome + '" vinculado a este item'); }
+}
+async function seletorLinkAplicar(v){
+  if(await _salvarLinkItem(v)){ seletorLinkFechar(); toast(v === '' ? 'Voltou ao automático' : 'Botão removido deste item'); }
+}
+function seletorLinkOutro(){
+  const s = _selLink; seletorLinkFechar();
+  if(s) editarLinkChecklistManual(s.oppId, s.i);
+}
+async function editarLinkChecklistManual(oppId, i){
   const o = oportunidades.find(x=>x.id===oppId); if(!o || !_sb || oppId < 900000) return;
   const docs = docsPreview(o.documentos); const texto = docs[i]; if(texto == null) return;
   const chave = _chaveDoc(texto);
