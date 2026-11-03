@@ -1279,7 +1279,8 @@ br.br-cel{display:none;}
   #view-home .hero .search-box{max-width:690px;}
 }
 /* ===== Selo Transformare em dourado (usa o tom âmbar do tema) ===== */
-.selo-transformare{color:var(--amber);}
+.selo-transformare{color:var(--ink);}
+.selo-transformare .selo-ico{fill:var(--amber); flex-shrink:0;}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -3581,7 +3582,7 @@ function scoreMini(score, label){
   const arredondado = Math.round(Number(score) || 0);
   let bars = '';
   for(let i=1;i<=5;i++) bars += `<div class="bar ${i<=arredondado?'on':''}"></div>`;
-  return `<div class="score-mini"><div class="bars">${bars}</div><span class="txt">${arredondado}/5</span></div><div class="score-mini-label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${label||''}</div>`;
+  return `<div class="score-mini"><div class="bars">${bars}</div><span class="txt">${arredondado}/5</span></div><div class="score-mini-label"><span class="selo-transformare"><svg class="selo-ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 2l8 3v6c0 5.2-3.4 9.5-8 11-4.6-1.5-8-5.8-8-11V5l8-3z"/></svg>Selo Transformare</span> — ${label||''}</div>`;
 }
 
 /* ================= CARD ================= */
@@ -4838,14 +4839,14 @@ function openDetalhe(id){
         <div class="score-hero ${scoreClass}">
           ${(temIndice && !ehPro()) ? `
           <div class="score-hero-body" style="flex:1;">
-            <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${ICONE_CADEADO} nota de 1 a 5 disponível no Plano Pro</div>
+            <div class="label"><span class="selo-transformare"><svg class="selo-ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 2l8 3v6c0 5.2-3.4 9.5-8 11-4.6-1.5-8-5.8-8-11V5l8-3z"/></svg>Selo Transformare</span> — ${ICONE_CADEADO} nota de 1 a 5 disponível no Plano Pro</div>
             <div class="caption">Este edital já foi avaliado pela Transformare (retorno financeiro, critérios de entrada, aderência e complexidade documental). Assine o Plano Transformare Pro para ver a nota e os pontos de destaque do edital.</div>
             <button class="btn-primary" style="margin-top:10px;" onclick="solicitarPlanoEssencial()">Quero o plano Pro</button>
           </div>
           ` : temIndice ? `
           <div class="score-hero-num">${Math.round(Number(o.indice))}<span>/5</span></div>
           <div class="score-hero-body">
-            <div class="label"><span class="selo-transformare">🛡️ Selo Transformare</span> — ${o.indiceLabel}</div>
+            <div class="label"><span class="selo-transformare"><svg class="selo-ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 2l8 3v6c0 5.2-3.4 9.5-8 11-4.6-1.5-8-5.8-8-11V5l8-3z"/></svg>Selo Transformare</span> — ${o.indiceLabel}</div>
             <div class="score-gauge" style="margin:6px 0;">${scoreSegs}</div>
             <div class="caption">Leitura de atratividade da Transformare (retorno financeiro, critérios de entrada, aderência e complexidade documental) — não é uma informação oficial do órgão.</div>
           </div>
