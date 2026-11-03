@@ -1,6 +1,6 @@
 # Política de Privacidade e Segurança — Portal de Editais Transformare
 
-*Versão 1.0 — vigente desde 4 de outubro de 2026.*
+*Versão 1.1 — vigente desde 3 de novembro de 2026.*
 
 Esta política explica como a **Transformare Psicologia & Projetos** ("Transformare", "nós") coleta, usa, guarda e protege os dados pessoais de quem usa o **Portal de Editais / Radar Transformare** ("Portal"), em conformidade com a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018 — LGPD).
 
@@ -24,6 +24,7 @@ Não coletamos dados sensíveis (como saúde, religião ou origem racial) e pedi
 
 - **Criar e manter sua conta e mostrar editais aderentes ao seu perfil** — execução de contrato e de procedimentos preliminares a pedido do titular (art. 7º, V).
 - **Responder pedidos de orientação e entrar em contato por WhatsApp ou e-mail** — consentimento, dado no momento do envio (art. 7º, I), que pode ser revogado a qualquer momento.
+- **Acessar, na consultoria, seus dados de contato e profissionais** (WhatsApp, registro profissional, CNPJ e dados da empresa, remuneração e meta mensal, regime de atuação e dados complementares) — consentimento específico, pedido a você dentro do Portal (art. 7º, I). É opcional: sem a sua autorização, a equipe não acessa esses dados. A autorização fica registrada (data e versão do texto), você pode ver quando os dados foram consultados e revogar a qualquer momento em "Minha conta".
 - **Melhorar o Portal, analisar feedback e manter a segurança** (prevenção a fraudes e abusos) — legítimo interesse (art. 7º, IX), sempre respeitando suas expectativas e direitos.
 - **Cumprir obrigações legais ou atender autoridades** — art. 7º, II.
 
