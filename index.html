@@ -3391,7 +3391,7 @@ document.addEventListener('keydown', e=>{
 
 /* ================= NAV ================= */
 let currentView = null;
-// Alertas, Favoritos e Comparar exigem cadastro (conta gratuita basta); visitante vê o convite para criar conta
+// Alertas e Favoritos exigem cadastro (conta gratuita basta); Comparar é exclusivo do Plano Pro
 function ehCadastrado(){ return !!(userProfile || adminAuthed); }
 function aplicarGateCadastro(view){
   const sec = document.getElementById('view-' + view); if(!sec) return false;
@@ -3422,6 +3422,7 @@ function nav(view){
   if(view === 'admin' && !adminAuthed) view = 'admin-login';
   if(view === 'perfil' && !userProfile) view = 'login';
   if((view === 'login' || view === 'cadastro') && userProfile) view = 'minha-conta';
+  if(view === 'comparar' && !ehPro()){ toast('Comparar editais é um recurso do Plano Pro.'); view = 'planos'; }
 
   // Os filtros de Editais permanecem como a pessoa deixou ao navegar entre telas —
   // ela só perde o filtro se clicar em "Limpar filtros" de propósito.
@@ -3441,7 +3442,7 @@ function nav(view){
   const pc=document.getElementById('promo-cadastro'); if(pc) pc.style.display = userProfile ? 'none' : '';
   if(view === 'cadastro') iniciarCaptchaCadastro();
   if(view === 'editais') applyFilters();
-  if(['favoritos','alertas','comparar'].includes(view)) aplicarGateCadastro(view);
+  if(['favoritos','alertas'].includes(view)) aplicarGateCadastro(view);
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
   if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); adminTab(adminTabAtual||'hoje'); carregarContagensHoje(); renderUsuariosAdmin(); renderFeedbacksAdmin(); renderSugestoesProfissaoAdmin(); renderSolicitacoesIndiceAdmin(); }
@@ -3577,7 +3578,7 @@ function renderCard(o){
       </div>
       <div class="op-right">
         <div style="display:flex; gap:4px;">
-          <button class="compare-btn ${isCmp?'active':''}" onclick="toggleCompare(${o.id})" title="Adicionar à comparação">${isCmp?'✓ Comparando':'⇄ Comparar'}</button>
+          <button class="compare-btn ${isCmp?'active':''}" onclick="toggleCompare(${o.id})" title="${ehPro()?'Adicionar à comparação':'Comparar editais é do Plano Pro'}">${!ehPro()?'🔒 Comparar':(isCmp?'✓ Comparando':'⇄ Comparar')}</button>
           <button class="fav-btn ${isFav?'active':''}" onclick="toggleFav(${o.id})" title="Favoritar">${isFav?'★':'☆'}</button>
         </div>
         <span class="badge ${badgeClass(situacaoExibida(o))}">${situacaoExibida(o)}</span>
@@ -3591,8 +3592,14 @@ function renderCard(o){
 
 /* ================= COMPARAR ================= */
 let compareSet = new Set();
+function exigeProComparar(){
+  if(ehPro()) return true;
+  toast('Comparar editais é um recurso do Plano Pro.');
+  nav('planos');
+  return false;
+}
 function toggleCompare(id){
-  if(!exigirCadastro('comparar editais')) return;
+  if(!exigeProComparar()) return;
   if(compareSet.has(id)){ compareSet.delete(id); }
   else{
     if(compareSet.size>=3){ toast('Você pode comparar até 3 oportunidades por vez'); return; }
@@ -3648,6 +3655,7 @@ function melhorRemuneracaoValor(o){
   return null;
 }
 function openCompare(){
+  if(!exigeProComparar()) return;
   const items = oportunidades.filter(o=>compareSet.has(o.id));
   if(items.length===0){
     document.getElementById('compare-content').innerHTML = `<div class="empty-state">Nenhuma oportunidade selecionada. Volte aos editais e clique em ⇄ para comparar.</div>`;
