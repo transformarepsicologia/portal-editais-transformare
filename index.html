@@ -1142,138 +1142,17 @@ html[data-theme="light"] nav.main-nav button#nav-instalar-app:hover{background:#
   #view-planos .pl-head h2{text-align:center; text-wrap:balance; max-width:11em; margin-left:auto; margin-right:auto;}
   #view-planos .pl-head p{text-align:justify; hyphens:auto; -webkit-hyphens:auto;}
 }
-/* ===== Tema claro: verde dos fundos mais presente (só tema claro; escuro intocado) ===== */
-html[data-theme="light"]{--teal-fundo:rgba(10,127,114,.15); --teal-fundo-forte:rgba(10,127,114,.22); --teal-borda:rgba(10,127,114,.45);}
-html[data-theme="light"] nav.main-nav button:not(.nav-cta):hover, html[data-theme="light"] .pw-toggle:hover, html[data-theme="light"] .pw-toggle:focus-visible{background:rgba(10,127,114,.12);}
-html[data-theme="light"] .badge.aberto, html[data-theme="light"] .plan-badge, html[data-theme="light"] .inbox-profs span, html[data-theme="light"] .pl-tag{background:var(--teal-fundo); color:var(--teal-deep);}
-html[data-theme="light"] .pl-cons-ico{background:var(--teal-fundo-forte); color:var(--teal-deep);}
-html[data-theme="light"] .pontos-box.positivo, html[data-theme="light"] .checklist-cta, html[data-theme="light"] .compare-btn{background:rgba(10,127,114,.11); border-color:var(--teal-borda);}
-html[data-theme="light"] .compare-btn:hover, html[data-theme="light"] .sobre-cta:hover, html[data-theme="light"] .pl-btn-ghost:hover{background:var(--teal-fundo);}
-html[data-theme="light"] .compare-table td.compare-highlight{background:var(--teal-fundo);}
-html[data-theme="light"] .pl-pro{background:linear-gradient(180deg, rgba(10,127,114,.14), var(--bg-card) 45%); box-shadow:0 10px 36px rgba(10,127,114,.16);}
-html[data-theme="light"] .lead-box{background:linear-gradient(135deg, rgba(10,127,114,.12), rgba(85,70,187,.07));}
-html[data-theme="light"] .eyebrow::before{box-shadow:0 0 0 4px rgba(10,127,114,.22);}
-/* Minha conta (tema claro): sem fundo verde, só a moldura */
-html[data-theme="light"] nav.main-nav button.nav-cta, html[data-theme="light"] .nav-cta{background:transparent !important; color:var(--ink) !important; box-shadow:inset 0 0 0 1.5px var(--teal);}
-html[data-theme="light"] nav.main-nav button.nav-cta:hover, html[data-theme="light"] .nav-cta:hover{background:rgba(10,127,114,.12) !important; color:var(--ink) !important; box-shadow:inset 0 0 0 1.5px var(--teal);}
-html[data-theme="light"] nav.main-nav button.nav-cta.active{color:var(--teal-deep) !important;}
-/* Tema claro: item ativo do menu sem fundo verde (só no hover); Instalar app com hover dourado leve */
-html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):not(:hover){background:none;}
-html[data-theme="light"] nav.main-nav button#nav-instalar-app:hover{background:rgba(212,175,55,.2); color:var(--ink) !important; box-shadow:inset 0 0 0 1px #B8922A;}
-/* Tema claro: item ativo do menu na cor dos demais; verde só no hover */
-html[data-theme="light"] nav.main-nav button.active:not(.nav-cta){color:var(--ink);}
-html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):hover{color:var(--teal) !important;}
-/* Início: frase "Radar Transformare · Monitoramento contínuo" em negrito */
-#view-home .hero .eyebrow{font-weight:700;}
-/* Tablet e celular: mapa do Sobre o Radar abaixo de todos os textos */
-@media (max-width:900px){ #view-sobre #mp-wrap{order:4;} }
-/* Sobre o Radar (tablet): espaço menor entre títulos e textos */
-@media (min-width:761px) and (max-width:900px){
-  #view-sobre .sobre-texto > h3{margin:14px 0 -6px !important; line-height:1.3;}
-}
-/* Como funciona: espaço entre o texto e os cards igual ao de "O Radar em números" */
-.how-it-works .how-head{margin-bottom:18px;}
-/* Sobre o Radar: menos espaço entre títulos e textos */
-#view-sobre .sobre-texto > h3{margin-bottom:0 !important;}
-@media (max-width:900px){
-  #view-sobre .sobre-texto > h3{margin:14px 0 -12px !important;}
-}
-@media (min-width:901px){ #view-sobre .sobre-texto > h3 + p, #view-sobre .sobre-texto > .page-head + p{margin-top:6px;} }
-@media (max-width:900px){ #view-sobre .sobre-texto > .page-head{margin-bottom:-8px;} }
-@media (max-width:760px){ #view-sobre .sobre-texto > h3{margin:14px 0 -10px !important;} }
-/* Mapa: botões de zoom (+, −, restaurar) */
-.mp-zoom{position:absolute; right:8px; top:8px; z-index:2; display:flex; flex-direction:column; gap:8px;}
-.mp-zoom button{width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:10px; border:1px solid var(--border); background:var(--bg-card); color:var(--ink); font-size:22px; line-height:1; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.18); transition:background .15s, border-color .15s;}
-.mp-zoom button:hover{background:var(--bg-card-hover); border-color:var(--teal);}
-.mp-zoom button svg{width:18px; height:18px; display:block;}
-#mp-svg.zoomed{cursor:grab;}
-#mp-svg.arrastando{cursor:grabbing;}
-/* Editais: título do edital aberto com o favorito sempre ao lado, e respiro entre etiquetas */
-.detail-head-top > div:first-child{flex:1 1 320px; min-width:0;}
-.detail-head-top > div:last-child{flex-shrink:0;}
-.detail-head .op-tags{margin-top:16px !important;}
-.op-card .op-tags{margin-top:4px;}
-/* Escala tipográfica: títulos de página 28px (24px no celular), subtítulos 20px (18px no celular) */
+/* ===== Celular: correção da rolagem lateral (feixe do radar) ===== */
 @media (max-width:760px){
-  .section-title, .page-head h2, #view-planos .pl-head h2{font-size:24px;}
-  .promo-band h3, .cta-band h3, #view-sobre .sobre-texto h3, .pl-cons h3{font-size:18px !important;}
-}
-
-/* CTA da home: respiro entre título e textos */
-.cta-band h3{margin:0 0 10px; line-height:1.35;}
-.cta-band p{line-height:1.6;}
-.cta-band p + p{margin-top:10px !important;}
-
-/* ===== Escuro: rótulos do radar padronizados e protegidos do feixe ===== */
-html:not([data-theme="light"]) .blip .blip-label{font-size:11px; font-weight:500; color:#E8EEF6; text-shadow:0 0 3px #0E1A2B, 0 0 7px #0E1A2B, 0 0 10px #0E1A2B;}
-html:not([data-theme="light"]) .blip .blip-label.ambient{opacity:.75;}
-html:not([data-theme="light"]) #home-painel .blip .blip-label{font-size:9.5px;}
-/* ===== Escuro: campos de filtro e busca um tom abaixo do card, com borda visível ===== */
-html:not([data-theme="light"]) .filter-field select,
-html:not([data-theme="light"]) .search-box input{background:#0F2036; border-color:#2E5078;}
-/* ===== Escuro: regra única das eyebrows (verde só no status ao vivo da Home; títulos de seção em dourado) ===== */
-html:not([data-theme="light"]) #view-admin .eyebrow{color:var(--amber);}
-html:not([data-theme="light"]) #view-admin .eyebrow::before{background:var(--amber); box-shadow:0 0 0 4px rgba(245,169,62,.18);}
-
-/* ===== Claro: faixa de aviso clara (âmbar suave) ===== */
-html[data-theme="light"] #aviso-cache-editais{background:#FBF1D3 !important; color:#4A3600 !important; border-bottom:1px solid #E6D193 !important;}
-/* ===== Claro: eyebrows em dourado intermediário (contraste ≥ 4,5:1) ===== */
-html[data-theme="light"] .page-head .eyebrow, html[data-theme="light"] .how-head .eyebrow{color:#8A6100 !important;}
-html[data-theme="light"] .page-head .eyebrow::before, html[data-theme="light"] .how-head .eyebrow::before{background:#B8922A !important; box-shadow:0 0 0 4px rgba(184,146,42,.22) !important;}
-/* ===== Claro: rótulos do radar padronizados e protegidos ===== */
-html[data-theme="light"] .blip .blip-label{font-size:12px; font-weight:600; color:#111111; text-shadow:0 0 3px #F4F2EE, 0 0 7px #F4F2EE, 0 0 10px #F4F2EE;}
-html[data-theme="light"] .blip .blip-label.ambient{opacity:.9;}
-html[data-theme="light"] #home-painel .blip .blip-label{font-size:9.5px;}
-@media(max-width:600px){ html[data-theme="light"] .blip .blip-label{font-size:11px;} }
-/* ===== Claro (computador): radar sem moldura, igual ao tema escuro ===== */
-@media (min-width:901px){
-  html[data-theme="light"] .radar-wrap{border:none; padding:0; border-radius:0; zoom:1;}
-}
-/* ===== Claro: borda dos campos de filtro e busca mais marcada ===== */
-html[data-theme="light"] .filter-field select,
-html[data-theme="light"] .search-box input{border-color:#BDB8AD;}
-html[data-theme="light"] .search-box, html[data-theme="light"] .filter-panel{border-color:#CFCAC0;}
-/* Claro (tablet e celular): moldura do radar com a mesma largura do tema escuro */
-@media (max-width:900px){ html[data-theme="light"] .radar-wrap{justify-self:stretch; align-self:stretch;} }
-/* Celular: botões Anterior/Próxima na 1ª linha, "Página X de Y · N itens" na linha de baixo */
-@media (max-width:760px){
-  .pag-barra .btn-ghost{order:1; flex:0 1 auto;}
-  .pag-barra .pag-info{order:2; flex:1 1 100%; text-align:center;}
-}
-/* Rodapé mais próximo do conteúdo (menos espaço vazio acima do logo) */
-main{padding-bottom:28px;}
-@media (max-width:760px){ main{padding-bottom:20px;} }
-br.br-cel{display:none;}
-@media (max-width:760px){ header.topbar br.br-cel{display:inline;} header.topbar .logo-sub{white-space:nowrap;} }
-@media (max-width:760px){ footer.site-footer br.br-cel{display:inline;} }
-/* ===== Celular (até 760px): margens laterais padronizadas e sem rolagem horizontal ===== */
-@media (max-width:760px){
-  /* O feixe girando do radar (caixa girada) criava rolagem lateral: o radar passa a recortar o que sai dele */
   #view-home .radar-wrap{overflow:hidden;}
   html, body{overflow-x:clip; max-width:100%;}
-  /* Espaço interno lateral único (14px) em todos os cartões e painéis */
-  .mp-card, .filter-panel, .op-card, .step-card, .cta-band, .promo-band, .pl-card, .pl-cons, .form-card, .conta-sino, .panel, .detail-head, .indicator-card,
-  #view-home #home-radar-slot .radar-wrap{padding-left:14px !important; padding-right:14px !important;}
 }
-/* Celular: margem lateral da página um pouco maior (16px -> 18px) */
-@media (max-width:760px){
-  main{padding-left:18px; padding-right:18px;}
-  .topbar-inner{padding-left:18px; padding-right:18px;}
-  header.topbar nav.main-nav{right:18px;}
-  footer.site-footer{padding-left:18px; padding-right:18px;}
-  #aviso-cache-editais{padding-left:14px !important; padding-right:14px !important;}
-}
-/* Celular: textos soltos na página alinhados ao texto dos cartões (mesma largura da moldura do mapa: 18px da borda) */
-@media (max-width:760px){
-  .view:not(#view-admin) > .page-head,
-  #view-home .hero > div:first-child,
-  #home-painel > .section-title, #home-painel > .section-sub,
-  #view-home .how-head,
-  .view > .result-count,
-  .view > .politica,
-  #view-sobre .sobre-texto > *,
-  #view-planos .pl-head{padding-left:0; padding-right:0;}
-  .view:not(#view-admin) > .back-link{margin-left:0;}
+/* Celular: margem lateral da página 17px (era 16px); o restante igual ao site anterior */
+@media (max-width:640px){
+  main{padding-left:17px; padding-right:17px;}
+  .topbar-inner{padding-left:17px; padding-right:17px;}
+  header.topbar nav.main-nav{right:17px;}
+  footer.site-footer{padding-left:17px; padding-right:17px;}
 }
 /* Celular: parágrafos alinhados à esquerda, sem hifenização (leitura mais confortável) */
 @media (max-width:760px){
