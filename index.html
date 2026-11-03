@@ -1250,6 +1250,15 @@ main{padding-bottom:28px;}
 br.br-cel{display:none;}
 @media (max-width:760px){ header.topbar br.br-cel{display:inline;} header.topbar .logo-sub{white-space:nowrap;} }
 @media (max-width:760px){ footer.site-footer br.br-cel{display:inline;} }
+/* ===== Celular (até 760px): "Radar em números" com a mesma entrelinha dos demais textos; descrições de Como funciona, Sobre o Radar e Planos alinhadas à esquerda ===== */
+@media (max-width:760px){
+  #home-painel > .section-sub{line-height:1.6;}
+  .how-head .how-intro, #view-sobre .sobre-texto > p, #view-planos .pl-head p{text-align:left; text-justify:auto; hyphens:none; -webkit-hyphens:none;}
+}
+/* ===== Celular (até 760px): "O edital é só o começo" e "Informação pública. Análise própria. Decisão sua" — leitura mais equilibrada (alinhado à esquerda, quebras de linha sem linhas curtas sobrando) ===== */
+@media (max-width:760px){
+  #view-sobre .sobre-texto > .page-head + p, #view-sobre .sobre-texto > h3:nth-of-type(2) ~ p{text-align:left; text-wrap:pretty; hyphens:none; -webkit-hyphens:none;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
