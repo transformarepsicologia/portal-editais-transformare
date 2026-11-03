@@ -1255,6 +1255,10 @@ br.br-cel{display:none;}
   #home-painel > .section-sub{line-height:1.6;}
   .how-head .how-intro, #view-sobre .sobre-texto > p, #view-planos .pl-head p{text-align:left; text-justify:auto; hyphens:none; -webkit-hyphens:none;}
 }
+/* ===== Celular (até 760px): "O edital é só o começo" e "Informação pública. Análise própria. Decisão sua" — leitura mais equilibrada (alinhado à esquerda, quebras de linha sem linhas curtas sobrando) ===== */
+@media (max-width:760px){
+  #view-sobre .sobre-texto > .page-head + p, #view-sobre .sobre-texto > h3:nth-of-type(2) ~ p{text-align:left; text-wrap:pretty; hyphens:none; -webkit-hyphens:none;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
