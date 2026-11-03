@@ -4801,6 +4801,7 @@ function openDetalhe(id){
 
         <div class="panel">
           <h4><span class="dot"></span>Documentação necessária</h4>
+          ${(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="pasta-edital-' + o.id + '"></div>' : ''}
           ${(()=>{ const docsVisiveis = docsPreview(o.documentos); const ocultos = o.documentos.length - docsVisiveis.length; return `
           <div id="doc-progress-${o.id}">${docProgressHTML(o.id, docsVisiveis, checks)}</div>
           <ul class="doc-list" id="doc-list-${o.id}">
@@ -4816,7 +4817,6 @@ function openDetalhe(id){
             <button class="btn-primary" style="width:100%; margin-bottom:6px;" onclick="solicitarPlanoEssencial()">Quero o plano Pro (checklist completo)</button>
             <button class="btn-ghost" style="width:100%;" onclick="openLeadModal(${o.id},'detalhe_edital','Quero a lista completa de documentos')">Prefiro o apoio da Transformare</button>
           </div>` : ''}
-          ${(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="pastas-edital-' + o.id + '"></div>' : ''}
           `; })()}
         </div>
 
@@ -4859,7 +4859,7 @@ function openDetalhe(id){
     ${ehPro() ? '' : '<div class="detail-grid" style="margin-top:0;"><div>' + ctaProximoPasso + '</div></div>'}
   `;
   renderOutrosEditais(id, el);
-  if(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) carregarPastasEdital(o.id);   // ADM: pastas do Drive dos clientes neste edital
+  if(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) carregarPastaEdital(o.id);   // ADM: link da pasta do Drive deste edital
   nav('detalhe');
 }
 function brl(v){ return Number(v).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
@@ -12047,109 +12047,59 @@ async function voltarParaGratis(id){
   _usrAdmDados = null; renderUsuariosAdmin(); carregarContagensHoje();
 }
 
-/* ---- ADM: pastas de documentos (Google Drive) por cliente, dentro do checklist do edital — USO INTERNO ----
-   Uma pasta por cliente e por edital. O site só GUARDA o link e com qual e-mail a pasta foi compartilhada (como Editor);
-   a pasta é criada e compartilhada no próprio Google Drive. Só o ADM vê este bloco e só o ADM lê a tabela pastas_documentos. */
-let _pastasEdital = {};      // id do edital (oppId) -> pastas cadastradas
-let _clientesPasta = [];     // clientes (id, nome, email) para escolher no formulário
-async function listaClientesAdmin(){
-  if(typeof _usrAdmDados !== 'undefined' && _usrAdmDados && (_usrAdmDados.lista || []).length) return _usrAdmDados.lista;
-  let r = await _sb.rpc('admin_lista_usuarios');   // existe depois do PR de autorização do cadastro
-  if(r.error) r = await _sb.from('usuarios_perfil').select('id,nome,email,teste').order('nome');
-  return r.data || [];
-}
-function pastaMensagemCliente(nome, url){
-  const p = String(nome || '').trim().split(' ')[0];
-  return 'Olá' + (p ? ', ' + p : '') + '!\n\nCriei uma pasta no Google Drive para guardarmos os seus documentos deste credenciamento. Você tem acesso para enviar e organizar os arquivos por este link:\n' + url + '\n\nEnvie por lá os documentos que combinarmos. Qualquer dúvida, é só responder este e-mail.\n\nTransformare Psicologia & Projetos';
-}
-async function carregarPastasEdital(oppId){
-  const box = document.getElementById('pastas-edital-' + oppId); if(!box) return;
+/* ---- ADM: "Pasta do edital" — link da pasta do Google Drive com os documentos, acima do checklist — USO INTERNO ----
+   O site só GUARDA o link que o ADM cola (a pasta é criada e compartilhada no próprio Google Drive).
+   Fica na tabela pastas_edital, que só o ADM lê e altera: o cliente não vê. */
+let _pastaEdital = {};   // id do edital (oppId) -> { url, atualizado_em } ou null
+async function carregarPastaEdital(oppId){
+  const box = document.getElementById('pasta-edital-' + oppId); if(!box) return;
   if(!_sb || oppId < 900000){ box.innerHTML = ''; return; }
-  box.innerHTML = '<div style="font-size:12px; color:var(--ink-muted); margin-top:12px;">Carregando as pastas de documentos…</div>';
-  const { data, error } = await _sb.from('pastas_documentos').select('usuario_id,url,compartilhado_com,atualizado_em').eq('edital_id', oppId - 900000).order('atualizado_em', { ascending:false });
-  if(error){ box.innerHTML = '<div style="font-size:12px; color:var(--coral); margin-top:12px;">Não foi possível carregar as pastas: ' + esc(error.message) + '. Confira se o SQL <code>supabase/pasta_documentos.sql</code> foi rodado.</div>'; return; }
-  _pastasEdital[oppId] = data || [];
-  _clientesPasta = await listaClientesAdmin();
-  renderPastasEdital(oppId);
+  box.innerHTML = '<div style="font-size:12px; color:var(--ink-muted); margin:0 0 12px;">Carregando a pasta do edital…</div>';
+  const { data, error } = await _sb.from('pastas_edital').select('url,atualizado_em').eq('edital_id', oppId - 900000).maybeSingle();
+  if(error){ box.innerHTML = '<div style="font-size:12px; color:var(--coral); margin:0 0 12px;">Não foi possível carregar a pasta do edital: ' + esc(error.message) + '. Confira se o SQL <code>supabase/pasta_do_edital.sql</code> foi rodado.</div>'; return; }
+  _pastaEdital[oppId] = data || null;
+  renderPastaEdital(oppId, false);
 }
-function renderPastasEdital(oppId, editando){
-  const box = document.getElementById('pastas-edital-' + oppId); if(!box) return;
-  const lista = _pastasEdital[oppId] || [];
-  const cli = id => _clientesPasta.find(x=>x.id === id) || {};
-  const dia = x => x ? new Date(x).toLocaleDateString('pt-BR') : '';
-  const campo = 'width:100%; box-sizing:border-box; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:inherit; font-size:14px; margin-bottom:8px;';
-  const itens = lista.map(p=>{
-    const c = cli(p.usuario_id);
-    const com = p.compartilhado_com ? 'Editor: <strong>' + esc(p.compartilhado_com) + '</strong>' : '<strong>Ainda não compartilhada</strong>';
-    const mailto = p.compartilhado_com ? 'mailto:' + p.compartilhado_com + '?subject=' + encodeURIComponent('Pasta de documentos — Transformare') + '&body=' + encodeURIComponent(pastaMensagemCliente(c.nome, p.url)) : '';
-    return '<div style="padding:10px 0; border-bottom:1px solid var(--border-soft);">' +
-      '<div style="font-size:13.5px; font-weight:600;">' + esc(c.nome || c.email || 'Cliente') + '</div>' +
-      '<div style="font-size:12px; color:var(--ink-muted); line-height:1.55;"><a href="' + esc(p.url) + '" target="_blank" rel="noopener noreferrer" style="color:var(--teal); font-weight:600;">↗ Abrir pasta no Drive</a> · ' + com + (p.atualizado_em ? ' · ' + dia(p.atualizado_em) : '') + '</div>' +
-      '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">' +
-        '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="pastaEditalCopiar(' + oppId + ',\'' + esc(p.usuario_id) + '\')">Copiar link</button>' +
-        (mailto ? '<a class="btn-ghost" style="font-size:12px; text-decoration:none;" href="' + esc(mailto) + '">✉ Avisar o cliente</a>' : '') +
-        '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="renderPastasEdital(' + oppId + ',\'' + esc(p.usuario_id) + '\')">Editar</button>' +
-        '<button type="button" class="btn-ghost" style="font-size:12px; color:var(--coral); border-color:var(--coral);" onclick="pastaEditalRemover(' + oppId + ',\'' + esc(p.usuario_id) + '\')">Remover</button></div></div>';
-  }).join('');
-  let form = '';
-  if(editando){
-    const atual = editando === 'novo' ? null : lista.find(p=>p.usuario_id === editando);
-    const uid = atual ? atual.usuario_id : '';
-    const emailCad = (cli(uid).email || '');
-    const modo = !atual ? 'cadastro' : (!atual.compartilhado_com ? 'nenhum' : (emailCad && atual.compartilhado_com.toLowerCase() === emailCad.toLowerCase() ? 'cadastro' : 'outro'));
-    const opcoes = _clientesPasta.slice().sort((a, b)=>String(a.nome || a.email || '').localeCompare(String(b.nome || b.email || ''), 'pt-BR')).filter(c=>atual ? c.id === uid : !lista.some(p=>p.usuario_id === c.id))
-      .map(c=>'<option value="' + esc(c.id) + '"' + (c.id === uid ? ' selected' : '') + '>' + esc((c.nome || '(sem nome)') + (c.email ? ' — ' + c.email : '')) + '</option>').join('');
-    form = '<div style="margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:10px;">' +
-      '<div style="font-size:12px; color:var(--ink-muted); margin-bottom:8px;">Crie a pasta no Google Drive, compartilhe como <strong>Editor</strong> e cole o link aqui.</div>' +
-      '<select id="pe-cli-' + oppId + '" style="' + campo + '"' + (atual ? ' disabled' : '') + '><option value="">Escolha o cliente…</option>' + opcoes + '</select>' +
-      '<input type="url" id="pe-url-' + oppId + '" placeholder="Link da pasta (https://drive.google.com/...)" value="' + esc(atual ? atual.url : '') + '" style="' + campo + '">' +
-      '<select id="pe-modo-' + oppId + '" onchange="pastaEditalModo(' + oppId + ')" style="' + campo + '">' +
-        '<option value="cadastro"' + (modo === 'cadastro' ? ' selected' : '') + '>Compartilhada com o e-mail do cadastro</option>' +
-        '<option value="outro"' + (modo === 'outro' ? ' selected' : '') + '>Compartilhada com outro e-mail</option>' +
-        '<option value="nenhum"' + (modo === 'nenhum' ? ' selected' : '') + '>Ainda não compartilhei</option></select>' +
-      '<input type="email" id="pe-email-' + oppId + '" placeholder="E-mail que recebeu o acesso" value="' + esc(modo === 'outro' && atual ? atual.compartilhado_com : '') + '" style="' + campo + (modo === 'outro' ? '' : ' display:none;') + '">' +
-      '<div style="display:flex; gap:6px; flex-wrap:wrap;"><button type="button" class="btn-primary" style="font-size:12px; padding:5px 14px;" onclick="pastaEditalSalvar(' + oppId + ',\'' + esc(uid) + '\')">Salvar</button>' +
-      '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="renderPastasEdital(' + oppId + ')">Cancelar</button></div></div>';
+function renderPastaEdital(oppId, editando){
+  const box = document.getElementById('pasta-edital-' + oppId); if(!box) return;
+  const d = _pastaEdital[oppId];
+  const caixa = 'margin:0 0 14px; padding:10px 12px; border:1px dashed var(--border); border-radius:10px;';
+  const titulo = '<div style="font-weight:700; font-size:14px; margin-bottom:6px;">📁 Pasta do edital <span style="font-weight:400; font-size:11.5px; color:var(--ink-muted);">· só o ADM vê</span></div>';
+  if(d && !editando){
+    box.innerHTML = '<div style="' + caixa + '">' + titulo +
+      '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">' +
+        '<a class="doc-emitir" href="' + esc(d.url) + '" target="_blank" rel="noopener noreferrer">↗ Abrir pasta</a>' +
+        '<button type="button" class="doc-edit-link" onclick="pastaEditalCopiar(' + oppId + ')">Copiar link</button>' +
+        '<button type="button" class="doc-edit-link" onclick="renderPastaEdital(' + oppId + ', true)">✎ link</button>' +
+        '<button type="button" class="doc-edit-link" onclick="pastaEditalRemover(' + oppId + ')">🗑 link</button></div></div>';
+    return;
   }
-  box.innerHTML = '<div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border-soft);">' +
-    '<div style="font-weight:700; font-size:13px;">📁 Pastas de documentos dos clientes neste edital <span style="font-weight:400; color:var(--ink-muted);">· uso interno (só o ADM vê)</span></div>' +
-    (lista.length ? itens : '<div style="font-size:12.5px; color:var(--ink-muted); padding:8px 0;">Nenhuma pasta cadastrada para este edital.</div>') +
-    (editando ? form : '<div style="margin-top:8px;"><button type="button" class="btn-ghost" style="font-size:12px;" onclick="renderPastasEdital(' + oppId + ',\'novo\')">+ Adicionar pasta de um cliente</button></div>') +
-    '</div>';
+  box.innerHTML = '<div style="' + caixa + '">' + titulo +
+    '<input type="url" id="pasta-edital-url-' + oppId + '" placeholder="Cole aqui o link da pasta do Google Drive" value="' + esc(d ? d.url : '') + '" style="width:100%; box-sizing:border-box; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:inherit; font-size:14px; margin-bottom:8px;">' +
+    '<div style="display:flex; gap:6px; flex-wrap:wrap;"><button type="button" class="btn-primary" style="font-size:12px; padding:5px 14px;" onclick="pastaEditalSalvar(' + oppId + ')">Salvar</button>' +
+    (d ? '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="renderPastaEdital(' + oppId + ', false)">Cancelar</button>' : '') + '</div></div>';
 }
-function pastaEditalModo(oppId){
-  const m = document.getElementById('pe-modo-' + oppId), e = document.getElementById('pe-email-' + oppId);
-  if(m && e) e.style.display = m.value === 'outro' ? '' : 'none';
-}
-async function pastaEditalSalvar(oppId, uidEdicao){
+async function pastaEditalSalvar(oppId){
   if(!_sb || oppId < 900000) return;
-  const uid = uidEdicao || document.getElementById('pe-cli-' + oppId).value;
-  if(!uid){ toast('Escolha o cliente.'); return; }
-  const url = (document.getElementById('pe-url-' + oppId).value || '').trim();
-  const modo = document.getElementById('pe-modo-' + oppId).value;
+  let url = (document.getElementById('pasta-edital-url-' + oppId).value || '').trim().replace(/^http:\/\//i, 'https://');
+  if(url && !/^https:\/\//i.test(url)) url = 'https://' + url;
   if(!/^https:\/\/(drive|docs)\.google\.com\/\S+$/i.test(url)){ toast('Cole o link da pasta do Google Drive (começa com https://drive.google.com/...)'); return; }
-  let com = null;
-  if(modo === 'cadastro') com = ((_clientesPasta.find(x=>x.id === uid) || {}).email || '').trim().toLowerCase() || null;
-  else if(modo === 'outro'){
-    com = (document.getElementById('pe-email-' + oppId).value || '').trim().toLowerCase();
-    if(!validEmail(com)){ toast('Informe um e-mail válido para o compartilhamento.'); return; }
-  }
-  const { error } = await _sb.from('pastas_documentos').upsert({ usuario_id: uid, edital_id: oppId - 900000, url, compartilhado_com: com, atualizado_em: new Date().toISOString() }, { onConflict: 'usuario_id,edital_id' });
+  const { error } = await _sb.from('pastas_edital').upsert({ edital_id: oppId - 900000, url, atualizado_em: new Date().toISOString() }, { onConflict: 'edital_id' });
   if(error){ toast('Não foi possível salvar: ' + error.message); return; }
-  toast('Pasta registrada.');
-  carregarPastasEdital(oppId);
+  toast('Pasta do edital salva.');
+  carregarPastaEdital(oppId);
 }
-async function pastaEditalRemover(oppId, uid){
-  if(!_sb) return;
-  if(!confirm('Remover o link da pasta deste cliente neste edital? A pasta no Google Drive não é apagada, só o registro no site.')) return;
-  const { error } = await _sb.from('pastas_documentos').delete().eq('usuario_id', uid).eq('edital_id', oppId - 900000);
+async function pastaEditalRemover(oppId){
+  if(!_sb || oppId < 900000) return;
+  if(!confirm('Remover o link da pasta deste edital? A pasta no Google Drive não é apagada, só o registro no site.')) return;
+  const { error } = await _sb.from('pastas_edital').delete().eq('edital_id', oppId - 900000);
   if(error){ toast('Não foi possível remover: ' + error.message); return; }
-  toast('Registro removido.');
-  carregarPastasEdital(oppId);
+  toast('Link removido.');
+  carregarPastaEdital(oppId);
 }
-function pastaEditalCopiar(oppId, uid){
-  const p = (_pastasEdital[oppId] || []).find(x=>x.usuario_id === uid); if(!p) return;
-  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(p.url).then(()=>toast('Link copiado.'), ()=>toast('Não foi possível copiar.'));
+function pastaEditalCopiar(oppId){
+  const d = _pastaEdital[oppId]; if(!d) return;
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(d.url).then(()=>toast('Link copiado.'), ()=>toast('Não foi possível copiar.'));
   else toast('Não foi possível copiar neste navegador.');
 }
 
