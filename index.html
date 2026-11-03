@@ -10633,7 +10633,7 @@ function _passosInstalacao(){
   const li = (t) => '<li style="margin-bottom:6px;">' + t + '</li>';
   if (ios) return '<ol style="margin:0; padding-left:20px;">' + li('Abra o Radar no <strong>Safari</strong>.') + li('Toque no botão <strong>Compartilhar</strong> (quadrado com seta para cima).') + li('Escolha <strong>Adicionar à Tela de Início</strong>.') + li('Confirme em <strong>Adicionar</strong>.') + '</ol>';
   if (android) return '<ol style="margin:0; padding-left:20px;">' + li('Toque no menu <strong>⋮</strong> do navegador (canto superior).') + li('Escolha <strong>Instalar app</strong> ou <strong>Adicionar à tela inicial</strong>.') + li('Confirme a instalação.') + '</ol>';
-  return '<ol style="margin:0; padding-left:20px;">' + li('Procure o ícone de <strong>instalar</strong> na barra de endereço do navegador, ou abra o menu <strong>⋮</strong>.') + li('Escolha <strong>Instalar Radar Transformare</strong> (ou <strong>Salvar e compartilhar › Instalar página como app</strong>).') + li('Confirme a instalação.') + '</ol>';
+  return '<ol style="margin:0; padding-left:20px;">' + li('Procure o ícone de <strong>instalar</strong> na barra de endereço do navegador ou abra o menu <strong>(⋮)</strong>.') + li('Escolha <strong>Instalar Radar Transformare</strong> (ou <strong>Salvar e compartilhar › Instalar página como app</strong>).') + li('Confirme a instalação.') + '</ol>';
 }
 async function instalarApp(){
   try{ document.getElementById('mainNav').classList.remove('open'); }catch(e){}
