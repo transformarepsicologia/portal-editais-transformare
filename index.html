@@ -1263,6 +1263,18 @@ br.br-cel{display:none;}
   footer.site-footer{padding-left:24px; padding-right:24px;}
   #aviso-cache-editais{padding-left:24px !important; padding-right:24px !important;}
 }
+/* Celular: textos soltos na página alinhados ao texto dos cartões (24px de margem + 18px = 42px da borda) */
+@media (max-width:760px){
+  .view:not(#view-admin) > .page-head,
+  #view-home .hero > div:first-child,
+  #home-painel > .section-title, #home-painel > .section-sub,
+  #view-home .how-head,
+  .view > .result-count,
+  .view > .politica,
+  #view-sobre .sobre-texto > *,
+  #view-planos .pl-head{padding-left:18px; padding-right:18px;}
+  .view:not(#view-admin) > .back-link{margin-left:18px;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
