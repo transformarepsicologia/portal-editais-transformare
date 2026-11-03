@@ -11880,8 +11880,10 @@ async function renderUsuariosAdmin(semRecarregar){
         <button type="button" class="btn-ghost" style="font-size:12px;" title="Usuário de teste não entra nas contagens de acesso, visualização nem nos totais" onclick="marcarUsuarioTeste('${u.id}', ${u.teste ? 'false' : 'true'})">${u.teste ? '↩ Tirar de teste' : '🧪 Marcar como teste'}</button>
         <button type="button" class="btn-ghost" style="font-size:12px;" onclick="usrToggleCadastro('${u.id}', this)">👁 Ver cadastro</button>
         <button type="button" class="btn-ghost" style="font-size:12px;" onclick="enviarLinkRedefinicaoUsuario('${esc(u.email)}', this)">🔑 Redefinir senha</button>
+        <button type="button" class="btn-ghost" style="font-size:12px;" onclick="usrTogglePasta('${u.id}', this)">📁 Pasta de documentos</button>
       </div>
-      <div class="usr-cad" id="usr-cad-${u.id}" style="display:none; flex-basis:100%; width:100%;"></div>`;
+      <div class="usr-cad" id="usr-cad-${u.id}" style="display:none; flex-basis:100%; width:100%;"></div>
+      <div class="usr-pasta" id="usr-pasta-${u.id}" style="display:none; flex-basis:100%; width:100%;"></div>`;
     box.appendChild(row);
   });
   box.appendChild(pgUs.barra);
@@ -12043,6 +12045,97 @@ async function voltarParaGratis(id){
   if(e2){ toast('Erro ao mudar o plano: ' + e2.message); return; }
   toast('Voltou para o plano Grátis.');
   _usrAdmDados = null; renderUsuariosAdmin(); carregarContagensHoje();
+}
+
+/* ---- ADM: pasta de documentos do cliente no Google Drive (USO INTERNO da Transformare) ----
+   O site só GUARDA o link e com qual e-mail a pasta foi compartilhada (como Editor). A pasta é criada e
+   compartilhada no próprio Google Drive. O cliente não vê este bloco: só o ADM lê/altera a tabela pastas_documentos. */
+let _pastasDocs = {};
+function pastaUsuario(id){ return (_usrAdmDados && _usrAdmDados.lista || []).find(x=>x.id === id) || {}; }
+function pastaMensagemCliente(nome, url){
+  const p = String(nome || '').trim().split(' ')[0];
+  return 'Olá' + (p ? ', ' + p : '') + '!\n\nCriei uma pasta no Google Drive para guardarmos os seus documentos do credenciamento. Você tem acesso para enviar e organizar os arquivos por este link:\n' + url + '\n\nEnvie por lá os documentos que combinarmos. Qualquer dúvida, é só responder este e-mail.\n\nTransformare Psicologia & Projetos';
+}
+async function usrTogglePasta(id, btn){
+  const box = document.getElementById('usr-pasta-' + id); if(!box) return;
+  const abrir = box.style.display === 'none';
+  box.style.display = abrir ? '' : 'none';
+  if(btn) btn.textContent = abrir ? '▲ Ocultar pasta' : '📁 Pasta de documentos';
+  if(abrir) await usrCarregarPasta(id);
+}
+async function usrCarregarPasta(id){
+  const box = document.getElementById('usr-pasta-' + id); if(!box) return;
+  if(!_sb){ box.textContent = 'Indisponível: configure o Supabase.'; return; }
+  box.innerHTML = '<span style="font-size:12px; color:var(--ink-muted);">Carregando…</span>';
+  const { data, error } = await _sb.from('pastas_documentos').select('url,compartilhado_com,atualizado_em').eq('usuario_id', id).maybeSingle();
+  if(error){ box.innerHTML = '<span style="font-size:12px; color:var(--coral);">Não foi possível carregar a pasta: ' + esc(error.message) + '. Confira se o SQL <code>supabase/pasta_documentos.sql</code> foi rodado.</span>'; return; }
+  _pastasDocs[id] = data || null;
+  usrRenderPasta(id, !data);
+}
+function usrRenderPasta(id, editando){
+  const box = document.getElementById('usr-pasta-' + id); if(!box) return;
+  const d = _pastasDocs[id], u = pastaUsuario(id);
+  const dia = x => x ? new Date(x).toLocaleDateString('pt-BR') : '';
+  const tit = '<div style="font-weight:700; font-size:13px; margin:10px 0 4px;">Pasta de documentos (Google Drive) <span style="font-weight:400; color:var(--ink-muted);">· uso interno da Transformare</span></div>';
+  const nota = '<div style="font-size:11.5px; color:var(--ink-muted); margin-top:8px;">O cliente não vê este registro no site. Ele acessa a pasta pelo Drive, com o e-mail em que ela foi compartilhada.</div>';
+  let corpo = '';
+  if(d && !editando){
+    const com = d.compartilhado_com ? 'Compartilhada como <strong>Editor</strong> com <strong>' + esc(d.compartilhado_com) + '</strong>' : 'Ainda <strong>não compartilhada</strong> com o cliente';
+    const mailto = d.compartilhado_com ? 'mailto:' + d.compartilhado_com + '?subject=' + encodeURIComponent('Pasta de documentos — Transformare') + '&body=' + encodeURIComponent(pastaMensagemCliente(u.nome, d.url)) : '';
+    corpo = '<div style="font-size:12.5px; line-height:1.6;"><a href="' + esc(d.url) + '" target="_blank" rel="noopener noreferrer" style="color:var(--teal); font-weight:600;">↗ Abrir pasta no Drive</a><br>' + com + (d.atualizado_em ? ' · atualizada em ' + dia(d.atualizado_em) : '') + '</div>' +
+      '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">' +
+        '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="usrPastaCopiar(\'' + esc(id) + '\')">Copiar link</button>' +
+        (mailto ? '<a class="btn-ghost" style="font-size:12px; text-decoration:none;" href="' + esc(mailto) + '">✉ Avisar o cliente</a>' : '') +
+        '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="usrRenderPasta(\'' + esc(id) + '\', true)">Editar</button>' +
+        '<button type="button" class="btn-ghost" style="font-size:12px; color:var(--coral); border-color:var(--coral);" onclick="usrPastaRemover(\'' + esc(id) + '\')">Remover</button></div>';
+  } else {
+    const modo = d ? (!d.compartilhado_com ? 'nenhum' : (u.email && d.compartilhado_com.toLowerCase() === String(u.email).toLowerCase() ? 'cadastro' : 'outro')) : 'cadastro';
+    const outro = (d && modo === 'outro') ? d.compartilhado_com : '';
+    const campo = 'width:100%; box-sizing:border-box; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:inherit; font-size:14px; margin-bottom:8px;';
+    corpo = '<div style="font-size:12px; color:var(--ink-muted); margin-bottom:8px;">Crie a pasta no Google Drive, compartilhe como <strong>Editor</strong> e cole o link aqui.</div>' +
+      '<input type="url" id="pasta-url-' + esc(id) + '" placeholder="Link da pasta (https://drive.google.com/...)" value="' + esc(d ? d.url : '') + '" style="' + campo + '">' +
+      '<select id="pasta-modo-' + esc(id) + '" onchange="usrPastaModo(\'' + esc(id) + '\')" style="' + campo + '">' +
+        '<option value="cadastro"' + (modo === 'cadastro' ? ' selected' : '') + '>Compartilhada com o e-mail do cadastro' + (u.email ? ' (' + esc(u.email) + ')' : '') + '</option>' +
+        '<option value="outro"' + (modo === 'outro' ? ' selected' : '') + '>Compartilhada com outro e-mail</option>' +
+        '<option value="nenhum"' + (modo === 'nenhum' ? ' selected' : '') + '>Ainda não compartilhei</option></select>' +
+      '<input type="email" id="pasta-email-' + esc(id) + '" placeholder="E-mail que recebeu o acesso" value="' + esc(outro) + '" style="' + campo + (modo === 'outro' ? '' : ' display:none;') + '">' +
+      '<div style="display:flex; gap:6px; flex-wrap:wrap;"><button type="button" class="btn-primary" style="font-size:12px; padding:5px 14px;" onclick="usrPastaSalvar(\'' + esc(id) + '\')">Salvar</button>' +
+      (d ? '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="usrRenderPasta(\'' + esc(id) + '\', false)">Cancelar</button>' : '') + '</div>';
+  }
+  box.innerHTML = tit + corpo + nota;
+}
+function usrPastaModo(id){
+  const m = document.getElementById('pasta-modo-' + id), e = document.getElementById('pasta-email-' + id);
+  if(m && e) e.style.display = m.value === 'outro' ? '' : 'none';
+}
+async function usrPastaSalvar(id){
+  if(!_sb) return;
+  const url = (document.getElementById('pasta-url-' + id).value || '').trim();
+  const modo = document.getElementById('pasta-modo-' + id).value;
+  if(!/^https:\/\/(drive|docs)\.google\.com\/\S+$/i.test(url)){ toast('Cole o link da pasta do Google Drive (começa com https://drive.google.com/...)'); return; }
+  let com = null;
+  if(modo === 'cadastro') com = (pastaUsuario(id).email || '').trim().toLowerCase() || null;
+  else if(modo === 'outro'){
+    com = (document.getElementById('pasta-email-' + id).value || '').trim().toLowerCase();
+    if(!validEmail(com)){ toast('Informe um e-mail válido para o compartilhamento.'); return; }
+  }
+  const { error } = await _sb.from('pastas_documentos').upsert({ usuario_id: id, url, compartilhado_com: com, atualizado_em: new Date().toISOString() }, { onConflict: 'usuario_id' });
+  if(error){ toast('Não foi possível salvar: ' + error.message); return; }
+  toast('Pasta registrada.');
+  usrCarregarPasta(id);
+}
+async function usrPastaRemover(id){
+  if(!_sb) return;
+  if(!confirm('Remover o link da pasta deste cliente? A pasta no Google Drive não é apagada, só o registro no site.')) return;
+  const { error } = await _sb.from('pastas_documentos').delete().eq('usuario_id', id);
+  if(error){ toast('Não foi possível remover: ' + error.message); return; }
+  toast('Registro removido.');
+  usrCarregarPasta(id);
+}
+function usrPastaCopiar(id){
+  const d = _pastasDocs[id]; if(!d) return;
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(d.url).then(()=>toast('Link copiado.'), ()=>toast('Não foi possível copiar.'));
+  else toast('Não foi possível copiar neste navegador.');
 }
 
 /* ---- Admin: códigos de acesso (isenção) ---- */
