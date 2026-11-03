@@ -1250,6 +1250,12 @@ main{padding-bottom:28px;}
 br.br-cel{display:none;}
 @media (max-width:760px){ header.topbar br.br-cel{display:inline;} header.topbar .logo-sub{white-space:nowrap;} }
 @media (max-width:760px){ footer.site-footer br.br-cel{display:inline;} }
+/* ===== Celular (até 760px): respiro no copyright do rodapé ===== */
+@media (max-width:760px){
+  footer.site-footer{line-height:1.65;}
+  footer.site-footer > *{line-height:normal;}
+  footer.site-footer > div:first-child{margin-bottom:18px !important;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
