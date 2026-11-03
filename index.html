@@ -958,7 +958,7 @@ input:disabled{opacity:.6; cursor:not-allowed;}
 .top-op-row .cnt{font-family:var(--font-mono); color:var(--teal); font-weight:700;}
 
 footer.site-footer .rodape-logo{width:72px; height:auto; opacity:.92;}
-footer.site-footer .rodape-logo-escuro{background:#fff; border-radius:9px; padding:5px; box-sizing:content-box;}
+footer.site-footer .rodape-logo-escuro{background:none; padding:0;}
 footer.site-footer .rodape-logo-claro{display:none;}
 html[data-theme="light"] footer.site-footer .rodape-logo-claro{display:block;}
 html[data-theme="light"] footer.site-footer .rodape-logo-escuro{display:none;}
@@ -1258,6 +1258,12 @@ br.br-cel{display:none;}
 /* ===== Celular (até 760px): "O edital é só o começo" e "Informação pública. Análise própria. Decisão sua" — leitura mais equilibrada (alinhado à esquerda, quebras de linha sem linhas curtas sobrando) ===== */
 @media (max-width:760px){
   #view-sobre .sobre-texto > .page-head + p, #view-sobre .sobre-texto > h3:nth-of-type(2) ~ p{text-align:left; text-wrap:pretty; hyphens:none; -webkit-hyphens:none;}
+}
+/* ===== Celular (até 760px): respiro no copyright do rodapé ===== */
+@media (max-width:760px){
+  footer.site-footer{line-height:1.65;}
+  footer.site-footer > *{line-height:normal;}
+  footer.site-footer > div:first-child{margin-bottom:18px !important;}
 }
 </style>
 <!--
@@ -2466,7 +2472,7 @@ br.br-cel{display:none;}
 
 <footer class="site-footer">
   <div style="display:flex; justify-content:center; margin-bottom:10px;">
-    <img class="rodape-logo rodape-logo-claro" src="assets/logo-transformare-claro-160.webp" alt="Transformare Psicologia e Projetos" width="160" height="137" loading="lazy"><img class="rodape-logo rodape-logo-escuro" src="assets/logo-transformare-original-160.webp" alt="Transformare Psicologia e Projetos" width="160" height="137" loading="lazy">
+    <img class="rodape-logo rodape-logo-claro" src="assets/borboleta-clara-144.webp" srcset="assets/borboleta-clara-72.webp 1x, assets/borboleta-clara-144.webp 2x, assets/borboleta-clara-216.webp 3x" alt="Transformare Psicologia e Projetos" width="72" height="53" loading="lazy"><img class="rodape-logo rodape-logo-escuro" src="assets/borboleta-verde-144.webp" srcset="assets/borboleta-verde-72.webp 1x, assets/borboleta-verde-144.webp 2x, assets/borboleta-verde-216.webp 3x" alt="Transformare Psicologia e Projetos" width="72" height="54" loading="lazy">
   </div>
   © 2026 Transformare Psicologia e Projetos.<br class="br-cel"> Todos os direitos reservados.
   <div class="footer-links">
