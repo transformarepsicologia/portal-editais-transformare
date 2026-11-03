@@ -1487,6 +1487,7 @@ br.br-cel{display:none;}
 <!-- ===================== MINHA CONTA ===================== -->
 <section class="view" id="view-minha-conta">
   <div class="page-head"><span class="eyebrow">Minha área</span><h2>Minha conta</h2><p>Seu perfil, suas preferências e suas oportunidades.</p><p style="margin-top:8px;">Mantenha seus dados profissionais e suas preferências atualizados para encontrar oportunidades mais alinhadas aos seus interesses.</p></div>
+  <div id="consultoria-card"></div>
   <div id="minha-conta-content"></div>
   <div class="conta-sino" id="conta-sino">
     <div class="conta-sino-head"><div class="bell-titulo">🔔 Alertas do portal <span class="bell-badge" id="bell-badge" style="display:none;">0</span></div></div>
@@ -1497,7 +1498,7 @@ br.br-cel{display:none;}
 
 <!-- ===================== POLÍTICA DE PRIVACIDADE E SEGURANÇA ===================== -->
 <section class="view" id="view-privacidade">
-  <div class="page-head"><span class="eyebrow">LGPD</span><h2>Política de Privacidade e Segurança</h2><p>Versão 1.0 — vigente desde 4 de outubro de 2026.</p></div>
+  <div class="page-head"><span class="eyebrow">LGPD</span><h2>Política de Privacidade e Segurança</h2><p>Versão 1.1 — vigente desde 3 de novembro de 2026.</p></div>
   <div class="politica">
     <p>Esta política explica como a <strong>Transformare Psicologia &amp; Projetos</strong> ("Transformare", "nós") coleta, usa, guarda e protege os dados pessoais de quem usa o <strong>Portal de Editais / Radar Transformare</strong> ("Portal"), em conformidade com a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018 — LGPD).</p>
 
@@ -1521,6 +1522,7 @@ br.br-cel{display:none;}
     <ul>
       <li><strong>Criar e manter sua conta e mostrar editais aderentes ao seu perfil</strong> — execução de contrato e de procedimentos preliminares a pedido do titular (art. 7º, V).</li>
       <li><strong>Responder pedidos de orientação e entrar em contato por WhatsApp ou e-mail</strong> — consentimento, dado no momento do envio (art. 7º, I), que pode ser revogado a qualquer momento.</li>
+      <li><strong>Acessar, na consultoria, seus dados de contato e profissionais</strong> (WhatsApp, registro profissional, CNPJ e dados da empresa, remuneração e meta mensal, regime de atuação e dados complementares) — consentimento específico, pedido a você dentro do Portal (art. 7º, I). É opcional: sem a sua autorização, a equipe não acessa esses dados. A autorização fica registrada (data e versão do texto), você pode ver quando os dados foram consultados e revogar a qualquer momento em "Minha conta".</li>
       <li><strong>Melhorar o Portal, analisar feedback e manter a segurança</strong> (prevenção a fraudes e abusos) — legítimo interesse (art. 7º, IX), sempre respeitando suas expectativas e direitos.</li>
       <li><strong>Suporte e administração do Portal</strong> — a equipe da Transformare consulta, em área restrita, apenas os dados necessários para dar suporte, administrar planos e conferir a aderência de editais (nome, e-mail, profissão, localização e critérios de atendimento). Contato, registro profissional, CNPJ, remuneração e documentos não são exibidos nessa área. Base: execução de contrato (art. 7º, V) e legítimo interesse (art. 7º, IX), com acesso limitado ao mínimo necessário (art. 6º, III).</li>
       <li><strong>Cumprir obrigações legais ou atender autoridades</strong> — art. 7º, II.</li>
@@ -3441,7 +3443,7 @@ function nav(view){
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
   if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); adminTab(adminTabAtual||'hoje'); carregarContagensHoje(); renderUsuariosAdmin(); renderFeedbacksAdmin(); renderSugestoesProfissaoAdmin(); renderSolicitacoesIndiceAdmin(); }
-  if(view === 'minha-conta'){ renderMinhaConta(); atualizarStatusPedidoPlano(); carregarMinhaAssinatura(); carregarAvisoProEncerrado(); }
+  if(view === 'minha-conta'){ renderMinhaConta(); carregarConsultoriaUsuario(); atualizarStatusPedidoPlano(); carregarMinhaAssinatura(); carregarAvisoProEncerrado(); }
   if(view === 'sobre') renderMapaEditais();
   if(view === 'perfil') renderPerfil();
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
@@ -5309,7 +5311,7 @@ function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
 /* ================= FEEDBACK DO BETA ================= */
-const VERSAO_PRIVACIDADE = '1.0';
+const VERSAO_PRIVACIDADE = '1.1';
 function openFeedbackModal(){
   document.getElementById('feedback-msg').value = '';
   document.getElementById('feedback-email').value = (userProfile && userProfile.email) || '';
@@ -9928,6 +9930,8 @@ async function init(){
   // Link direto para a política (ex.: .../#privacidade em e-mails e mensagens do beta).
   if(location.hash === '#privacidade') nav('privacidade');
   if(location.hash === '#admin') nav('admin'); // atalho: radartransformare.com.br/#admin abre o login do administrador
+  // Link do e-mail de pedido de autorização: leva ao login (ou, se já houver sessão, a Minha conta, onde o pedido aparece).
+  if(location.hash === '#autorizar-consultoria') nav('login');
   carregarEditaisSupabase().then(abrirLinkDeNotificacao);
   carregarStatusFontes();
   pushCarregar();
@@ -10493,6 +10497,7 @@ if(_sb){
     await carregarPerfilUsuario(authUser);
     await loadUserData();
     updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
+    if(location.hash === '#autorizar-consultoria' && userProfile) nav('minha-conta');
   });
 }
 
@@ -11740,7 +11745,8 @@ async function renderUsuariosAdmin(semRecarregar){
   if(!(semRecarregar === true && _usrAdmDados)){
     status.textContent = 'Carregando...';
     // Minimização de dados (LGPD): o ADM carrega só o que precisa para administrar planos e conferir aderência. Ficam de fora WhatsApp, registro, CNPJ/empresa, remuneração, meta, regime, dados complementares e documentos.
-    const { data, error } = await _sb.from('usuarios_perfil').select('id,nome,email,uf,cidade,teste,profs,mods,plano,criado_em,abrangencias,escolaridade,anos_experiencia,atuacao,especialidades,formatos').order('criado_em', {ascending:false});
+    // A lista básica vem de uma função do banco (admin_lista_usuarios): o ADM não lê a tabela direto.
+    const { data, error } = await _sb.rpc('admin_lista_usuarios');
     if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
     const { data: pedidos } = await _sb.from('pedidos_plano').select('*').eq('status','pendente');
     const { data: assinaturas } = await _sb.from('assinaturas').select('*');
@@ -11846,7 +11852,123 @@ function usrToggleCadastro(id, btn){
     const r = (_usrAdmDados && _usrAdmDados.lista || []).find(x=>x.id === id);
     if(!r){ box.textContent = 'Usuário não encontrado.'; return; }
     box.innerHTML = usrCadastroHTML(r); box.dataset.pronto = '1';
+    usrCarregarConsultoria(id);
   }
+}
+
+/* ---- ADM: autorização do usuário para acessar o cadastro na consultoria (LGPD art. 7º, I) ----
+   Sem autorização, o ADM não lê WhatsApp, registro, CNPJ/empresa, remuneração, meta, regime e dados complementares.
+   A trava real está no banco (funções admin_cadastro_consultoria / consultoria_*); aqui é só a tela. */
+const VERSAO_CONSULTORIA = '1.0';
+const CONSULTORIA_CAMPOS_TXT = 'WhatsApp, registro profissional, CNPJ e dados da empresa, remuneração e meta mensal, regime de atuação e dados complementares';
+function consultoriaMensagem(nome){
+  const p = String(nome || '').trim().split(' ')[0];
+  return 'Olá' + (p ? ', ' + p : '') + '!\n\nPara te atender melhor na consultoria sobre credenciamento em editais, a Transformare precisa da sua autorização para acessar alguns dados do seu cadastro: ' + CONSULTORIA_CAMPOS_TXT + '.\n\nPara decidir, entre na sua conta pelo link abaixo (o pedido aparece em "Minha conta"):\nhttps://radartransformare.com.br/#autorizar-consultoria\n\nA autorização é opcional, fica registrada e você pode revogá-la a qualquer momento em "Minha conta". Se preferir não autorizar, seguimos normalmente, sem acessar esses dados.\n\nObrigado!\nTransformare Psicologia & Projetos';
+}
+function consultoriaMailto(u){
+  return 'mailto:' + (u.email || '') + '?subject=' + encodeURIComponent('Autorização para acessar seu cadastro — Radar Transformare') + '&body=' + encodeURIComponent(consultoriaMensagem(u.nome));
+}
+function consultoriaValorLegivel(v){
+  if(v == null || v === '') return '';
+  if(Array.isArray(v)) return v.map(consultoriaValorLegivel).filter(Boolean).join(', ');
+  if(typeof v === 'object') return Object.entries(v).map(([k, x])=>{ const t = consultoriaValorLegivel(x); return t ? k.replace(/_/g, ' ') + ': ' + t : ''; }).filter(Boolean).join(' · ');
+  return String(v);
+}
+async function usrCarregarConsultoria(id){
+  const box = document.getElementById('usr-cons-' + id); if(!box) return;
+  if(!_sb){ box.textContent = ''; return; }
+  box.innerHTML = '<span style="font-size:12px; color:var(--ink-muted);">Verificando autorização…</span>';
+  const { data, error } = await _sb.from('consultoria_acessos').select('status,solicitado_em,respondido_em').eq('usuario_id', id).order('solicitado_em', {ascending:false}).order('id', {ascending:false}).limit(1);
+  if(error){ box.innerHTML = '<span style="font-size:12px; color:var(--coral);">Não foi possível verificar a autorização: ' + esc(error.message) + '</span>'; return; }
+  const r = (data || [])[0], st = r ? r.status : null;
+  const dia = d => d ? new Date(d).toLocaleDateString('pt-BR') : '';
+  const u = (_usrAdmDados && _usrAdmDados.lista || []).find(x=>x.id === id) || {};
+  const tit = '<div style="font-weight:700; font-size:13px; margin:12px 0 4px;">Dados reservados <span style="font-weight:400; color:var(--ink-muted);">· só com autorização do usuário</span></div>';
+  const nota = '<div style="font-size:11.5px; color:var(--ink-muted); margin:2px 0 8px;">Liberaria: ' + esc(CONSULTORIA_CAMPOS_TXT) + '. Documentos do usuário continuam fora.</div>';
+  let corpo = '';
+  if(st === 'autorizado'){
+    corpo = '<div style="font-size:12.5px; margin-bottom:8px;"><span class="plan-badge" style="background:var(--teal); color:#000;">Autorizado</span> em ' + dia(r.respondido_em) + '. O usuário pode revogar a qualquer momento.</div>' +
+      '<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="usrVerDadosAutorizados(\'' + esc(id) + '\', this)">👁 Ver dados autorizados</button><div id="usr-cons-dados-' + esc(id) + '"></div>';
+  } else if(st === 'pendente'){
+    corpo = '<div style="font-size:12.5px; margin-bottom:8px;"><span class="plan-badge" style="background:var(--amber); color:#000;">Aguardando</span> pedido registrado em ' + dia(r.solicitado_em) + '. Até o usuário autorizar, você não vê esses dados.</div>' +
+      '<div style="display:flex; gap:6px; flex-wrap:wrap;"><a class="btn-primary" style="font-size:12px; padding:5px 12px; text-decoration:none;" href="' + esc(consultoriaMailto(u)) + '">✉ Enviar e-mail ao usuário</a>' +
+      '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="consultoriaCopiar(\'' + esc(id) + '\')">Copiar texto</button></div>';
+  } else {
+    const hist = st === 'recusado' ? 'O usuário <strong>não autorizou</strong> em ' + dia(r.respondido_em) + '. Respeite a decisão; só peça de novo se houver um motivo novo.' : st === 'revogado' ? 'O usuário <strong>revogou</strong> a autorização em ' + dia(r.respondido_em) + '.' : 'Nenhum pedido feito ainda.';
+    corpo = '<div style="font-size:12.5px; margin-bottom:8px;">' + hist + '</div>' +
+      '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="consultoriaSolicitar(\'' + esc(id) + '\')">📩 Pedir autorização</button>';
+  }
+  box.innerHTML = tit + nota + corpo;
+}
+async function consultoriaSolicitar(id){
+  if(!_sb) return;
+  const { error } = await _sb.rpc('consultoria_solicitar', { p_usuario: id });
+  if(error){ toast('Erro ao registrar o pedido: ' + error.message); return; }
+  toast('Pedido registrado. Agora envie o e-mail ao usuário.');
+  usrCarregarConsultoria(id);
+}
+function consultoriaCopiar(id){
+  const u = (_usrAdmDados && _usrAdmDados.lista || []).find(x=>x.id === id) || {};
+  const txt = consultoriaMensagem(u.nome);
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>toast('Texto copiado.'), ()=>toast('Não foi possível copiar.'));
+  else toast('Não foi possível copiar neste navegador.');
+}
+async function usrVerDadosAutorizados(id, btn){
+  const dest = document.getElementById('usr-cons-dados-' + id); if(!dest || !_sb) return;
+  if(dest.dataset.aberto === '1'){ dest.innerHTML = ''; dest.dataset.aberto = ''; if(btn) btn.textContent = '👁 Ver dados autorizados'; return; }
+  const { data, error } = await _sb.rpc('admin_cadastro_consultoria', { p_usuario: id });
+  if(error){ toast('Sem acesso a esses dados: ' + error.message); usrCarregarConsultoria(id); return; }
+  const d = data || {};
+  const lin = (k, v)=>{ const t = consultoriaValorLegivel(v); return t ? '<div style="display:flex; gap:8px; padding:3px 0; font-size:12.5px;"><span style="flex:0 0 150px; color:var(--ink-muted);">' + esc(k) + '</span><span style="flex:1; word-break:break-word;">' + esc(t) + '</span></div>' : ''; };
+  const brl = v => (v == null || v === '') ? '' : formatarMoedaBR(v);
+  const rem = d.rem_min != null ? (brl(d.rem_min) + ' ' + ({atendimento:'por atendimento', hora:'por hora', mensal:'por mês'}[d.rem_tipo] || '')) : '';
+  const html = lin('WhatsApp', d.whatsapp) + lin('Registro profissional', d.registro) + lin('CNPJ', d.cnpj) + lin('Empresa', d.empresa) +
+    lin('Remuneração mínima', rem.trim()) + lin('Meta mensal', brl(d.meta_mensal)) + lin('Regime', d.regime) + lin('Dados complementares', d.complemento);
+  dest.innerHTML = '<div style="border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-top:8px;">' + (html || '<div style="font-size:12.5px; color:var(--ink-muted);">O usuário autorizou, mas ainda não preencheu esses campos.</div>') +
+    '<div style="font-size:11px; color:var(--ink-dim); margin-top:6px;">Uso restrito à consultoria. Esta consulta ficou registrada e o usuário pode vê-la.</div></div>';
+  dest.dataset.aberto = '1';
+  if(btn) btn.textContent = '▲ Ocultar dados';
+}
+
+/* ---- Usuário: responder ao pedido de autorização (Minha conta) ---- */
+async function carregarConsultoriaUsuario(){
+  const el = document.getElementById('consultoria-card'); if(!el) return;
+  if(!_sb || !userProfile){ el.innerHTML = ''; return; }
+  const { data, error } = await _sb.from('consultoria_acessos').select('status,solicitado_em,respondido_em').eq('usuario_id', userProfile.id).in('status', ['pendente','autorizado']).limit(1);
+  const r = error ? null : (data || [])[0];
+  if(!r){ el.innerHTML = ''; return; }   // sem pedido (ou recurso ainda não ativo): não mostra nada
+  const dia = d => d ? new Date(d).toLocaleDateString('pt-BR') : '';
+  const pol = '<a href="#privacidade" onclick="event.preventDefault(); nav(\'privacidade\')" style="color:var(--teal);">Política de Privacidade</a>';
+  if(r.status === 'pendente'){
+    el.innerHTML = '<div style="background:var(--bg-elevated); border:1px solid var(--amber); border-radius:12px; padding:16px 18px; margin:0 0 18px;">' +
+      '<div style="font-family:var(--font-display); font-weight:700; margin-bottom:6px;">A Transformare pediu a sua autorização</div>' +
+      '<p style="font-size:13px; line-height:1.55; margin:0 0 8px;">Para te atender melhor na consultoria sobre credenciamento em editais, a equipe quer acessar estes dados do seu cadastro: <strong>' + esc(CONSULTORIA_CAMPOS_TXT) + '</strong>.</p>' +
+      '<p style="font-size:12.5px; color:var(--ink-muted); line-height:1.5; margin:0 0 12px;">É opcional. Se você não autorizar, a equipe não vê esses dados. A sua resposta fica registrada, você pode ver quando os dados forem consultados e revogar quando quiser. Mais detalhes na ' + pol + '.</p>' +
+      '<div style="display:flex; gap:8px; flex-wrap:wrap;"><button class="btn-primary" onclick="consultoriaResponder(true)">Autorizar acesso</button><button class="btn-ghost" onclick="consultoriaResponder(false)">Agora não</button></div></div>';
+    return;
+  }
+  const { data: cons, count } = await _sb.from('consultoria_consultas').select('consultado_em', { count: 'exact' }).eq('usuario_id', userProfile.id).order('consultado_em', { ascending: false }).limit(1);
+  const ultima = (cons || [])[0];
+  el.innerHTML = '<div style="background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin:0 0 18px;">' +
+    '<div style="font-family:var(--font-display); font-weight:700; margin-bottom:4px;">Você autorizou o acesso à consultoria</div>' +
+    '<p style="font-size:12.5px; color:var(--ink-muted); line-height:1.5; margin:0 0 10px;">Autorizado em ' + dia(r.respondido_em) + ' para: ' + esc(CONSULTORIA_CAMPOS_TXT) + '. ' +
+    (count ? 'A equipe consultou esses dados ' + count + ' vez(es); a última em ' + dia(ultima && ultima.consultado_em) + '.' : 'A equipe ainda não consultou esses dados.') + '</p>' +
+    '<button class="btn-ghost" style="border-color:var(--coral); color:var(--coral);" onclick="consultoriaRevogar()">Revogar autorização</button></div>';
+}
+async function consultoriaResponder(autoriza){
+  if(!_sb || !userProfile) return;
+  const { error } = await _sb.rpc('consultoria_responder', { p_autoriza: !!autoriza, p_versao: VERSAO_CONSULTORIA });
+  if(error){ toast('Não foi possível registrar sua resposta: ' + error.message); return; }
+  toast(autoriza ? 'Autorização registrada. Obrigado!' : 'Tudo bem, não vamos acessar esses dados.');
+  carregarConsultoriaUsuario();
+}
+async function consultoriaRevogar(){
+  if(!_sb || !userProfile) return;
+  if(!confirm('Revogar a autorização? A equipe deixa de ter acesso a esses dados do seu cadastro a partir de agora.')) return;
+  const { error } = await _sb.rpc('consultoria_revogar');
+  if(error){ toast('Não foi possível revogar: ' + error.message); return; }
+  toast('Autorização revogada.');
+  carregarConsultoriaUsuario();
 }
 function usrCadastroHTML(r){
   const u = perfilDeLinha(r);
@@ -11872,7 +11994,7 @@ function usrCadastroHTML(r){
     lin('Profissões', u.profs) + lin('Estado / cidade(s)', [u.uf, u.cidade].filter(Boolean).join(' · ')) +
     lin('Modalidades', u.mods) + lin('Abrangência', u.abrs) + lin('Instrução', u.escolaridade) + lin('Tempo de atuação', u.anosExp != null ? u.anosExp + ' ano(s)' : '') +
     lin('Atuação', u.atuacao) + lin('Especialidades', u.especialidades) + lin('Formato de atendimento', u.formatos) +
-    '<div style="font-size:11.5px; color:var(--ink-muted); margin-top:6px;">Por privacidade (LGPD), o ADM não vê contato, registro profissional, CNPJ, remuneração nem documentos do usuário.</div>' +
+    '<div id="usr-cons-' + esc(r.id) + '" style="margin-top:10px;"></div>' +
     '<div style="font-weight:700; font-size:13px; margin:12px 0 4px;">Editais aderentes <span style="font-weight:400; color:var(--ink-muted);">· '+altos.length+' com 70% ou mais'+(!altos.length && todos.length ? ' (mostrando os melhores)' : '')+' · não considera a remuneração mínima</span></div>' + edHTML +
     '</div>';
 }
@@ -11918,14 +12040,14 @@ async function enviarLinkRedefinicaoUsuario(email, btn){
 
 async function marcarUsuarioTeste(id, valor){
   if(!_sb) return;
-  const { error } = await _sb.from('usuarios_perfil').update({ teste: !!valor }).eq('id', id);
+  const { error } = await _sb.rpc('admin_atualizar_perfil', { p_id: id, p_teste: !!valor });
   if(error){ toast('Erro: ' + error.message); return; }
   toast(valor ? 'Marcado como teste: sai de todas as contagens e a atividade dele foi apagada.' : 'Voltou a ser contado como usuário normal.');
   _usrAdmDados = null; renderUsuariosAdmin(); carregarContagensHoje();
 }
 async function mudarPlanoUsuario(id, plano, pedidoId){
   if(!_sb) return;
-  const { error } = await _sb.from('usuarios_perfil').update({ plano }).eq('id', id);
+  const { error } = await _sb.rpc('admin_atualizar_perfil', { p_id: id, p_plano: plano });
   if(error){ toast('Erro ao mudar o plano: ' + error.message); return; }
   if(pedidoId) await _sb.from('pedidos_plano').update({ status: plano === 'essencial' ? 'aprovado' : 'recusado', decidido_em: new Date().toISOString() }).eq('id', pedidoId);
   toast('Plano atualizado: ' + (PLANOS[plano] || plano));
@@ -11953,7 +12075,7 @@ async function liberarProUsuario(id, pedidoId){
   }
   const { error } = await _sb.from('assinaturas').insert({ user_id: id, ciclo: 'cortesia', status: 'ativa', ativa_ate: ate, valor: 0 });
   if(error){ toast('Erro ao liberar (rode o SQL de permissão do admin): ' + error.message); return; }
-  const { error: e2 } = await _sb.from('usuarios_perfil').update({ plano: 'essencial' }).eq('id', id);
+  const { error: e2 } = await _sb.rpc('admin_atualizar_perfil', { p_id: id, p_plano: 'essencial' });
   if(e2){ toast('Erro ao mudar o plano: ' + e2.message); return; }
   if(pedidoId) await _sb.from('pedidos_plano').update({ status: 'aprovado', decidido_em: new Date().toISOString() }).eq('id', pedidoId);
   toast('Plano Pro liberado ' + (ate >= SEM_PRAZO_ISO ? 'sem prazo.' : 'até ' + dataBR(ate) + '.'));
@@ -11965,7 +12087,7 @@ async function voltarParaGratis(id){
   const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
   const { error } = await _sb.from('assinaturas').update({ status: 'cancelada', ativa_ate: ontem.toISOString().slice(0,10), atualizado_em: new Date().toISOString() }).eq('user_id', id).gte('ativa_ate', hojeISOAdmin());
   if(error){ toast('Erro ao encerrar o prazo (rode o SQL de permissão do admin): ' + error.message); return; }
-  const { error: e2 } = await _sb.from('usuarios_perfil').update({ plano: 'gratuito' }).eq('id', id);
+  const { error: e2 } = await _sb.rpc('admin_atualizar_perfil', { p_id: id, p_plano: 'gratuito' });
   if(e2){ toast('Erro ao mudar o plano: ' + e2.message); return; }
   toast('Voltou para o plano Grátis.');
   _usrAdmDados = null; renderUsuariosAdmin(); carregarContagensHoje();
