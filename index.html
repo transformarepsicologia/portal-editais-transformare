@@ -1256,6 +1256,8 @@ br.br-cel{display:none;}
 }
 @media (min-width:901px){
   #view-home .hero .lead:not(:last-of-type){margin-bottom:16px;}
+  html:not([data-theme="light"]) #view-home .hero .radar-ring-outer{border:1.5px solid rgba(232,184,96,.85); box-shadow:0 0 22px rgba(232,184,96,.18);}
+  html:not([data-theme="light"]) #view-home .hero .radar::before, html:not([data-theme="light"]) #view-home .hero .radar::after{border-color:rgba(232,184,96,.42);}
 }
 @media (min-width:1200px){
   #view-home .hero .radar-wrap > div[style*="margin-top:22px"]{transform:translateY(-6px);}
