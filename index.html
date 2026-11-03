@@ -9104,6 +9104,7 @@ function consPerfilPreencher(c){
     const ch = document.createElement('div'); ch.className = 'chip-opt' + ((p.profs||[]).includes(nm) ? ' selected' : ''); ch.textContent = nm;
     ch.onclick = ()=>ch.classList.toggle('selected'); profBox.appendChild(ch);
   });
+  chipBuscaIniciar('cons-prof');
   const modBox = document.getElementById('cons-mod'); modBox.innerHTML = '';
   MODALIDADES.forEach(m=>{
     const ch = document.createElement('div'); ch.className = 'chip-opt' + ((p.mods||[]).includes(m) ? ' selected' : ''); ch.textContent = m;
