@@ -1250,6 +1250,11 @@ main{padding-bottom:28px;}
 br.br-cel{display:none;}
 @media (max-width:760px){ header.topbar br.br-cel{display:inline;} header.topbar .logo-sub{white-space:nowrap;} }
 @media (max-width:760px){ footer.site-footer br.br-cel{display:inline;} }
+/* ===== Celular (até 760px): "Radar em números" com a mesma entrelinha dos demais textos; descrições de Como funciona, Sobre o Radar e Planos alinhadas à esquerda ===== */
+@media (max-width:760px){
+  #home-painel > .section-sub{line-height:1.6;}
+  .how-head .how-intro, #view-sobre .sobre-texto > p, #view-planos .pl-head p{text-align:left; text-justify:auto; hyphens:none; -webkit-hyphens:none;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
