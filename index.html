@@ -4347,6 +4347,50 @@ function refreshCadProfChips(){
     c.onclick = ()=>c.classList.toggle('selected');
     box.appendChild(c);
   });
+  chipBuscaIniciar('cad-prof');
+}
+/* Lista de profissões enxuta: só aparecem as marcadas; para marcar outra, a pessoa digita e escolhe.
+   Todos os chips continuam no DOM (a leitura de .chip-opt.selected não muda), só ficam escondidos. */
+function chipBuscaAplicar(boxId){
+  const box = document.getElementById(boxId); if(!box) return;
+  const inp = document.getElementById(boxId + '-busca');
+  const q = normTxt(inp ? inp.value : '');
+  let marcadas = 0, achadas = 0;
+  box.querySelectorAll('.chip-opt').forEach(c=>{
+    const sel = c.classList.contains('selected');
+    const bate = q && normTxt(c.textContent).includes(q);
+    if(sel) marcadas++;
+    if(bate) achadas++;
+    c.style.display = (sel || bate) ? '' : 'none';
+  });
+  const dica = document.getElementById(boxId + '-dica');
+  if(dica) dica.textContent = q ? (achadas ? '' : 'Nenhuma profissão encontrada. Use o campo abaixo para sugerir a sua.')
+                                : (marcadas ? '' : 'Digite acima para buscar e marcar sua profissão.');
+}
+function chipBuscaIniciar(boxId){
+  const box = document.getElementById(boxId); if(!box) return;
+  if(!document.getElementById(boxId + '-busca')){
+    const inp = document.createElement('input');
+    inp.type = 'search'; inp.id = boxId + '-busca'; inp.autocomplete = 'off';
+    inp.placeholder = '🔍 Digite para buscar a profissão...';
+    inp.style.marginBottom = '8px';
+    inp.oninput = ()=>chipBuscaAplicar(boxId);
+    const dica = document.createElement('div');
+    dica.id = boxId + '-dica'; dica.style.cssText = 'font-size:12px; color:var(--ink-dim); margin:-2px 0 8px;';
+    box.parentNode.insertBefore(inp, box);
+    box.parentNode.insertBefore(dica, box);
+  }
+  box.querySelectorAll('.chip-opt').forEach(c=>{
+    const antes = c.onclick;
+    c.onclick = (e)=>{
+      antes && antes.call(c, e);
+      const inp = document.getElementById(boxId + '-busca');
+      if(inp && inp.value && c.classList.contains('selected')) inp.value = '';   // marcou pela busca: limpa para mostrar só as marcadas
+      chipBuscaAplicar(boxId);
+    };
+  });
+  const inp = document.getElementById(boxId + '-busca'); if(inp) inp.value = '';
+  chipBuscaAplicar(boxId);
 }
 function populateSelects(){
   refreshProfFilterSelect();
@@ -5942,6 +5986,7 @@ async function userSignup(){
   empresaForm.cad = null; chipsAtuacaoPerfil('cad', []); renderEmpresaBox('cad');
   document.getElementById('cad-aceite').checked = false;
   document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected, #cad-abr .chip-opt.selected, #cad-esp .chip-opt.selected, #cad-formato .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
+  { const b = document.getElementById('cad-prof-busca'); if(b) b.value = ''; if(typeof chipBuscaAplicar==='function') chipBuscaAplicar('cad-prof'); }
   msg.textContent = '';
   cadastroVoltar();
   updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
@@ -6035,6 +6080,7 @@ function renderPerfil(){
     ch.onclick = ()=>ch.classList.toggle('selected');
     profBox.appendChild(ch);
   });
+  chipBuscaIniciar('perfil-prof');
   const modBox = document.getElementById('perfil-mod'); modBox.innerHTML = '';
   MODALIDADES.forEach(m=>{
     const ch = document.createElement('div');
