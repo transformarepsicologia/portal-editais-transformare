@@ -554,6 +554,10 @@ html[data-theme="light"] .op-meta{color:var(--teal-deep);}
 .doc-check{width:16px;height:16px; border:1.5px solid var(--border); border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center;}
 .doc-check.checked{background:var(--teal); border-color:var(--teal); color:var(--bg); font-size:11px;}
 .doc-list li.checked-text{color:var(--ink-dim); text-decoration:line-through;}
+.doc-list li.doc-na{color:var(--ink-dim); opacity:.65;}
+.doc-na-tag{font-size:11px; border:1px solid var(--border); border-radius:10px; padding:1px 7px; margin-left:8px; white-space:nowrap;}
+.doc-na-btn{margin-left:auto; background:none; border:none; color:var(--ink-dim); font-size:11px; text-decoration:underline; cursor:pointer; padding:2px 4px; white-space:nowrap; font-family:inherit;}
+.doc-na-btn:hover{color:var(--ink);}
 
 .fin-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 .fin-item{background:var(--bg-elevated); border:1px solid var(--border-soft); border-radius:9px; padding:12px 14px;}
@@ -1142,22 +1146,110 @@ html[data-theme="light"] nav.main-nav button#nav-instalar-app:hover{background:#
   #view-planos .pl-head h2{text-align:center; text-wrap:balance; max-width:11em; margin-left:auto; margin-right:auto;}
   #view-planos .pl-head p{text-align:justify; hyphens:auto; -webkit-hyphens:auto;}
 }
-/* ===== Celular: correção da rolagem lateral (feixe do radar) ===== */
+/* ===== Tema claro: verde dos fundos mais presente (só tema claro; escuro intocado) ===== */
+html[data-theme="light"]{--teal-fundo:rgba(10,127,114,.15); --teal-fundo-forte:rgba(10,127,114,.22); --teal-borda:rgba(10,127,114,.45);}
+html[data-theme="light"] nav.main-nav button:not(.nav-cta):hover, html[data-theme="light"] .pw-toggle:hover, html[data-theme="light"] .pw-toggle:focus-visible{background:rgba(10,127,114,.12);}
+html[data-theme="light"] .badge.aberto, html[data-theme="light"] .plan-badge, html[data-theme="light"] .inbox-profs span, html[data-theme="light"] .pl-tag{background:var(--teal-fundo); color:var(--teal-deep);}
+html[data-theme="light"] .pl-cons-ico{background:var(--teal-fundo-forte); color:var(--teal-deep);}
+html[data-theme="light"] .pontos-box.positivo, html[data-theme="light"] .checklist-cta, html[data-theme="light"] .compare-btn{background:rgba(10,127,114,.11); border-color:var(--teal-borda);}
+html[data-theme="light"] .compare-btn:hover, html[data-theme="light"] .sobre-cta:hover, html[data-theme="light"] .pl-btn-ghost:hover{background:var(--teal-fundo);}
+html[data-theme="light"] .compare-table td.compare-highlight{background:var(--teal-fundo);}
+html[data-theme="light"] .pl-pro{background:linear-gradient(180deg, rgba(10,127,114,.14), var(--bg-card) 45%); box-shadow:0 10px 36px rgba(10,127,114,.16);}
+html[data-theme="light"] .lead-box{background:linear-gradient(135deg, rgba(10,127,114,.12), rgba(85,70,187,.07));}
+html[data-theme="light"] .eyebrow::before{box-shadow:0 0 0 4px rgba(10,127,114,.22);}
+/* Minha conta (tema claro): sem fundo verde, só a moldura */
+html[data-theme="light"] nav.main-nav button.nav-cta, html[data-theme="light"] .nav-cta{background:transparent !important; color:var(--ink) !important; box-shadow:inset 0 0 0 1.5px var(--teal);}
+html[data-theme="light"] nav.main-nav button.nav-cta:hover, html[data-theme="light"] .nav-cta:hover{background:rgba(10,127,114,.12) !important; color:var(--ink) !important; box-shadow:inset 0 0 0 1.5px var(--teal);}
+html[data-theme="light"] nav.main-nav button.nav-cta.active{color:var(--teal-deep) !important;}
+/* Tema claro: item ativo do menu sem fundo verde (só no hover); Instalar app com hover dourado leve */
+html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):not(:hover){background:none;}
+html[data-theme="light"] nav.main-nav button#nav-instalar-app:hover{background:rgba(212,175,55,.2); color:var(--ink) !important; box-shadow:inset 0 0 0 1px #B8922A;}
+/* Tema claro: item ativo do menu na cor dos demais; verde só no hover */
+html[data-theme="light"] nav.main-nav button.active:not(.nav-cta){color:var(--ink);}
+html[data-theme="light"] nav.main-nav button.active:not(.nav-cta):hover{color:var(--teal) !important;}
+/* Início: frase "Radar Transformare · Monitoramento contínuo" em negrito */
+#view-home .hero .eyebrow{font-weight:700;}
+/* Tablet e celular: mapa do Sobre o Radar abaixo de todos os textos */
+@media (max-width:900px){ #view-sobre #mp-wrap{order:4;} }
+/* Sobre o Radar (tablet): espaço menor entre títulos e textos */
+@media (min-width:761px) and (max-width:900px){
+  #view-sobre .sobre-texto > h3{margin:14px 0 -6px !important; line-height:1.3;}
+}
+/* Como funciona: espaço entre o texto e os cards igual ao de "O Radar em números" */
+.how-it-works .how-head{margin-bottom:18px;}
+/* Sobre o Radar: menos espaço entre títulos e textos */
+#view-sobre .sobre-texto > h3{margin-bottom:0 !important;}
+@media (max-width:900px){
+  #view-sobre .sobre-texto > h3{margin:14px 0 -12px !important;}
+}
+@media (min-width:901px){ #view-sobre .sobre-texto > h3 + p, #view-sobre .sobre-texto > .page-head + p{margin-top:6px;} }
+@media (max-width:900px){ #view-sobre .sobre-texto > .page-head{margin-bottom:-8px;} }
+@media (max-width:760px){ #view-sobre .sobre-texto > h3{margin:14px 0 -10px !important;} }
+/* Mapa: botões de zoom (+, −, restaurar) */
+.mp-zoom{position:absolute; right:8px; top:8px; z-index:2; display:flex; flex-direction:column; gap:8px;}
+.mp-zoom button{width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:10px; border:1px solid var(--border); background:var(--bg-card); color:var(--ink); font-size:22px; line-height:1; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.18); transition:background .15s, border-color .15s;}
+.mp-zoom button:hover{background:var(--bg-card-hover); border-color:var(--teal);}
+.mp-zoom button svg{width:18px; height:18px; display:block;}
+#mp-svg.zoomed{cursor:grab;}
+#mp-svg.arrastando{cursor:grabbing;}
+/* Editais: título do edital aberto com o favorito sempre ao lado, e respiro entre etiquetas */
+.detail-head-top > div:first-child{flex:1 1 320px; min-width:0;}
+.detail-head-top > div:last-child{flex-shrink:0;}
+.detail-head .op-tags{margin-top:16px !important;}
+.op-card .op-tags{margin-top:4px;}
+/* Escala tipográfica: títulos de página 28px (24px no celular), subtítulos 20px (18px no celular) */
 @media (max-width:760px){
-  #view-home .radar-wrap{overflow:hidden;}
-  html, body{overflow-x:clip; max-width:100%;}
+  .section-title, .page-head h2, #view-planos .pl-head h2{font-size:24px;}
+  .promo-band h3, .cta-band h3, #view-sobre .sobre-texto h3, .pl-cons h3{font-size:18px !important;}
 }
-/* Celular: margem lateral da página 17px (era 16px); o restante igual ao site anterior */
-@media (max-width:640px){
-  main{padding-left:17px; padding-right:17px;}
-  .topbar-inner{padding-left:17px; padding-right:17px;}
-  header.topbar nav.main-nav{right:17px;}
-  footer.site-footer{padding-left:17px; padding-right:17px;}
+
+/* CTA da home: respiro entre título e textos */
+.cta-band h3{margin:0 0 10px; line-height:1.35;}
+.cta-band p{line-height:1.6;}
+.cta-band p + p{margin-top:10px !important;}
+
+/* ===== Escuro: rótulos do radar padronizados e protegidos do feixe ===== */
+html:not([data-theme="light"]) .blip .blip-label{font-size:11px; font-weight:500; color:#E8EEF6; text-shadow:0 0 3px #0E1A2B, 0 0 7px #0E1A2B, 0 0 10px #0E1A2B;}
+html:not([data-theme="light"]) .blip .blip-label.ambient{opacity:.75;}
+html:not([data-theme="light"]) #home-painel .blip .blip-label{font-size:9.5px;}
+/* ===== Escuro: campos de filtro e busca um tom abaixo do card, com borda visível ===== */
+html:not([data-theme="light"]) .filter-field select,
+html:not([data-theme="light"]) .search-box input{background:#0F2036; border-color:#2E5078;}
+/* ===== Escuro: regra única das eyebrows (verde só no status ao vivo da Home; títulos de seção em dourado) ===== */
+html:not([data-theme="light"]) #view-admin .eyebrow{color:var(--amber);}
+html:not([data-theme="light"]) #view-admin .eyebrow::before{background:var(--amber); box-shadow:0 0 0 4px rgba(245,169,62,.18);}
+
+/* ===== Claro: faixa de aviso clara (âmbar suave) ===== */
+html[data-theme="light"] #aviso-cache-editais{background:#FBF1D3 !important; color:#4A3600 !important; border-bottom:1px solid #E6D193 !important;}
+/* ===== Claro: eyebrows em dourado intermediário (contraste ≥ 4,5:1) ===== */
+html[data-theme="light"] .page-head .eyebrow, html[data-theme="light"] .how-head .eyebrow{color:#8A6100 !important;}
+html[data-theme="light"] .page-head .eyebrow::before, html[data-theme="light"] .how-head .eyebrow::before{background:#B8922A !important; box-shadow:0 0 0 4px rgba(184,146,42,.22) !important;}
+/* ===== Claro: rótulos do radar padronizados e protegidos ===== */
+html[data-theme="light"] .blip .blip-label{font-size:12px; font-weight:600; color:#111111; text-shadow:0 0 3px #F4F2EE, 0 0 7px #F4F2EE, 0 0 10px #F4F2EE;}
+html[data-theme="light"] .blip .blip-label.ambient{opacity:.9;}
+html[data-theme="light"] #home-painel .blip .blip-label{font-size:9.5px;}
+@media(max-width:600px){ html[data-theme="light"] .blip .blip-label{font-size:11px;} }
+/* ===== Claro (computador): radar sem moldura, igual ao tema escuro ===== */
+@media (min-width:901px){
+  html[data-theme="light"] .radar-wrap{border:none; padding:0; border-radius:0; zoom:1;}
 }
-/* Celular: parágrafos alinhados à esquerda, sem hifenização (leitura mais confortável) */
+/* ===== Claro: borda dos campos de filtro e busca mais marcada ===== */
+html[data-theme="light"] .filter-field select,
+html[data-theme="light"] .search-box input{border-color:#BDB8AD;}
+html[data-theme="light"] .search-box, html[data-theme="light"] .filter-panel{border-color:#CFCAC0;}
+/* Claro (tablet e celular): moldura do radar com a mesma largura do tema escuro */
+@media (max-width:900px){ html[data-theme="light"] .radar-wrap{justify-self:stretch; align-self:stretch;} }
+/* Celular: botões Anterior/Próxima na 1ª linha, "Página X de Y · N itens" na linha de baixo */
 @media (max-width:760px){
-  .how-head .how-intro, #view-sobre .sobre-texto > p, #view-planos .pl-head p, #view-home .hero .lead{text-align:left !important; text-justify:auto; hyphens:none !important; -webkit-hyphens:none !important;}
+  .pag-barra .btn-ghost{order:1; flex:0 1 auto;}
+  .pag-barra .pag-info{order:2; flex:1 1 100%; text-align:center;}
 }
+/* Rodapé mais próximo do conteúdo (menos espaço vazio acima do logo) */
+main{padding-bottom:28px;}
+@media (max-width:760px){ main{padding-bottom:20px;} }
+br.br-cel{display:none;}
+@media (max-width:760px){ header.topbar br.br-cel{display:inline;} header.topbar .logo-sub{white-space:nowrap;} }
+@media (max-width:760px){ footer.site-footer br.br-cel{display:inline;} }
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -4088,7 +4180,7 @@ function renderMinhaConta(){
     if(situacaoExibida(o)==='Encerrado' || favoritos.has(o.id)) return false;
     return alertaCombinaProfissao(o) && alertaCombinaUf(o);
   }).slice(0,4);
-  const historico = oportunidades.filter(o=>docChecks[o.id] && Object.values(docChecks[o.id]).some(v=>v));
+  const historico = oportunidades.filter(o=>docChecks[o.id] && Object.values(docChecks[o.id]).some(v=>v===true));
   const todasAderencias = oportunidades
     .filter(o=>situacaoExibida(o) !== 'Encerrado')
     .map(o=>({ o, ad: calcularAderencia(o, u) }))
@@ -4259,6 +4351,50 @@ function refreshCadProfChips(){
     c.onclick = ()=>c.classList.toggle('selected');
     box.appendChild(c);
   });
+  chipBuscaIniciar('cad-prof');
+}
+/* Lista de profissões enxuta: só aparecem as marcadas; para marcar outra, a pessoa digita e escolhe.
+   Todos os chips continuam no DOM (a leitura de .chip-opt.selected não muda), só ficam escondidos. */
+function chipBuscaAplicar(boxId){
+  const box = document.getElementById(boxId); if(!box) return;
+  const inp = document.getElementById(boxId + '-busca');
+  const q = normTxt(inp ? inp.value : '');
+  let marcadas = 0, achadas = 0;
+  box.querySelectorAll('.chip-opt').forEach(c=>{
+    const sel = c.classList.contains('selected');
+    const bate = q && normTxt(c.textContent).includes(q);
+    if(sel) marcadas++;
+    if(bate) achadas++;
+    c.style.display = (sel || bate) ? '' : 'none';
+  });
+  const dica = document.getElementById(boxId + '-dica');
+  if(dica) dica.textContent = q ? (achadas ? '' : 'Nenhuma profissão encontrada. Use o campo abaixo para sugerir a sua.')
+                                : (marcadas ? '' : 'Digite acima para buscar e marcar sua profissão.');
+}
+function chipBuscaIniciar(boxId){
+  const box = document.getElementById(boxId); if(!box) return;
+  if(!document.getElementById(boxId + '-busca')){
+    const inp = document.createElement('input');
+    inp.type = 'search'; inp.id = boxId + '-busca'; inp.autocomplete = 'off';
+    inp.placeholder = '🔍 Digite para buscar a profissão...';
+    inp.style.marginBottom = '8px';
+    inp.oninput = ()=>chipBuscaAplicar(boxId);
+    const dica = document.createElement('div');
+    dica.id = boxId + '-dica'; dica.style.cssText = 'font-size:12px; color:var(--ink-dim); margin:-2px 0 8px;';
+    box.parentNode.insertBefore(inp, box);
+    box.parentNode.insertBefore(dica, box);
+  }
+  box.querySelectorAll('.chip-opt').forEach(c=>{
+    const antes = c.onclick;
+    c.onclick = (e)=>{
+      antes && antes.call(c, e);
+      const inp = document.getElementById(boxId + '-busca');
+      if(inp && inp.value && c.classList.contains('selected')) inp.value = '';   // marcou pela busca: limpa para mostrar só as marcadas
+      chipBuscaAplicar(boxId);
+    };
+  });
+  const inp = document.getElementById(boxId + '-busca'); if(inp) inp.value = '';
+  chipBuscaAplicar(boxId);
 }
 function populateSelects(){
   refreshProfFilterSelect();
@@ -4713,13 +4849,12 @@ function openDetalhe(id){
 
         <div class="panel">
           <h4><span class="dot"></span>Documentação necessária</h4>
+          ${(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="pasta-edital-' + o.id + '"></div>' : ''}
           ${(()=>{ const docsVisiveis = docsPreview(o.documentos); const ocultos = o.documentos.length - docsVisiveis.length; return `
           <div id="doc-progress-${o.id}">${docProgressHTML(o.id, docsVisiveis, checks)}</div>
           <ul class="doc-list" id="doc-list-${o.id}">
             ${docsVisiveis.map((d,i)=>`
-              <li onclick="toggleDoc(${o.id},${i})" class="${checks[i]?'checked-text':''}" id="doc-item-${o.id}-${i}">
-                <span class="doc-check ${checks[i]?'checked':''}" id="doc-check-${o.id}-${i}">${checks[i]?'✓':''}</span>${d}<span id="doc-link-${o.id}-${i}">${linkEmitirDocHTML(d, o, i)}</span>
-              </li>`).join('')}
+              <li onclick="toggleDoc(${o.id},${i})" class="${checks[i]==='na'?'doc-na':(checks[i]?'checked-text':'')}" id="doc-item-${o.id}-${i}">${docItemInner(o, d, i, checks[i])}</li>`).join('')}
           </ul>
           ${o.documentosPadrao ? `<p style="font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5;">Lista padrão: este edital ainda não teve os documentos detalhados pela Transformare. Confira a lista oficial no edital.</p>` : ''}
           ${(ocultos>0 && !o.documentosPadrao) ? `
@@ -4770,6 +4905,7 @@ function openDetalhe(id){
     ${ehPro() ? '' : '<div class="detail-grid" style="margin-top:0;"><div>' + ctaProximoPasso + '</div></div>'}
   `;
   renderOutrosEditais(id, el);
+  if(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) carregarPastaEdital(o.id);   // ADM: link da pasta do Drive deste edital
   nav('detalhe');
 }
 function brl(v){ return Number(v).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
@@ -5053,7 +5189,81 @@ async function editarItemChecklist(oppId, i){
   openDetalhe(oppId);
   toast('Item do checklist salvo');
 }
+/* Seletor de links salvos: o botão "✎ link" abre a lista dos links já cadastrados (tabela links_documentos),
+   com busca e os mais parecidos com o item no topo. Assim dá para vincular um deles a este item mesmo quando
+   o nome do documento no edital é diferente do nome/palavras do link salvo. */
+let _selLink = null;
+function _normBusca(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+function _pontuaLinkSalvo(texto, l){
+  const toks = _normBusca(texto).split(/[^a-z0-9]+/).filter(w=>w.length > 3);
+  if(!toks.length) return 0;
+  const alvo = _normBusca((l.nome || '') + ' ' + (l.palavras || []).join(' '));
+  return toks.filter(w=>alvo.includes(w)).length;
+}
 async function editarLinkChecklist(oppId, i){
+  const o = oportunidades.find(x=>x.id===oppId); if(!o || !_sb || oppId < 900000) return;
+  const texto = docsPreview(o.documentos)[i]; if(texto == null) return;
+  if(!PORTAIS_DOCS.length) return editarLinkChecklistManual(oppId, i);
+  _selLink = { oppId, i, texto };
+  const velho = document.getElementById('seletor-link-doc'); if(velho) velho.remove();
+  const atual = (o.linksDocs && o.linksDocs[_chaveDoc(texto)] !== undefined) ? o.linksDocs[_chaveDoc(texto)] : null;
+  const estado = atual === null ? 'Neste edital: automático' : (atual === '' ? 'Neste edital: sem botão' : 'Neste edital: ' + atual);
+  const ov = document.createElement('div');
+  ov.id = 'seletor-link-doc';
+  ov.style.cssText = 'position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.6); display:flex; align-items:flex-end; justify-content:center;';
+  ov.addEventListener('click', e=>{ if(e.target === ov) ov.remove(); });
+  ov.innerHTML = '<div style="background:var(--bg-elevated, #10233f); width:100%; max-width:560px; max-height:88vh; display:flex; flex-direction:column; border:1px solid var(--border); border-radius:16px 16px 0 0; padding:16px;">' +
+    '<div style="font-family:var(--font-display); font-weight:700; margin-bottom:4px;">Escolher um link salvo</div>' +
+    '<div style="font-size:12.5px; color:var(--ink-muted); line-height:1.45;">Para o item: <strong>' + esc(texto) + '</strong></div>' +
+    '<div style="font-size:11.5px; color:var(--ink-dim); margin:2px 0 10px; word-break:break-all;">' + esc(estado) + '</div>' +
+    '<input type="search" id="sel-link-busca" placeholder="Buscar pelo nome ou endereço" oninput="renderSeletorLinks()" style="width:100%; box-sizing:border-box; margin-bottom:8px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:inherit; font-size:14px;">' +
+    '<div id="sel-link-lista" style="overflow:auto; flex:1; min-height:120px; -webkit-overflow-scrolling:touch;"></div>' +
+    '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;">' +
+      '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="seletorLinkOutro()">Digitar outro endereço</button>' +
+      '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="seletorLinkAplicar(\'\')">Voltar ao automático</button>' +
+      '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="seletorLinkAplicar(\'-\')">Sem botão</button>' +
+      '<button type="button" class="btn-ghost" style="font-size:12px; margin-left:auto;" onclick="seletorLinkFechar()">Fechar</button>' +
+    '</div></div>';
+  document.body.appendChild(ov);
+  renderSeletorLinks();
+}
+function seletorLinkFechar(){ const e = document.getElementById('seletor-link-doc'); if(e) e.remove(); }
+function renderSeletorLinks(){
+  const s = _selLink, box = document.getElementById('sel-link-lista'); if(!s || !box) return;
+  const campo = document.getElementById('sel-link-busca');
+  const q = _normBusca(campo ? campo.value : '').trim();
+  let itens = PORTAIS_DOCS.map((l, idx)=>({ l, idx, pts: _pontuaLinkSalvo(s.texto, l) }));
+  if(q) itens = itens.filter(x=>_normBusca(x.l.nome + ' ' + x.l.url + ' ' + (x.l.palavras || []).join(' ')).includes(q));
+  itens.sort((a, b)=>b.pts - a.pts || a.idx - b.idx);
+  if(!itens.length){ box.innerHTML = '<div style="font-size:12.5px; color:var(--ink-muted); padding:10px 2px;">Nenhum link salvo com esse texto.</div>'; return; }
+  box.innerHTML = itens.map(x=>'<div role="button" tabindex="0" onclick="seletorLinkEscolher(' + x.idx + ')" onkeydown="if(event.key===\'Enter\')this.click()" style="padding:10px 6px; border-bottom:1px solid var(--border-soft); cursor:pointer;">' +
+    '<div style="font-size:13.5px; font-weight:600;">' + esc(x.l.nome) + ((!q && x.pts > 0) ? ' <span class="plan-badge" style="background:var(--teal); color:#000;">parecido</span>' : '') + '</div>' +
+    '<div style="font-size:11.5px; color:var(--ink-dim); word-break:break-all;">' + esc(x.l.url) + '</div></div>').join('');
+}
+// valor: '' = volta ao automático · '-' = sem botão neste edital · ou o endereço do link
+async function _salvarLinkItem(valor){
+  const s = _selLink; if(!s) return false;
+  const o = oportunidades.find(x=>x.id===s.oppId); if(!o) return false;
+  const chave = _chaveDoc(s.texto);
+  const novo = { ...(o.linksDocs || {}) };
+  if(valor === '') delete novo[chave]; else if(valor === '-') novo[chave] = ''; else novo[chave] = valor;
+  if(!(await _gravarLinksDocs(o, s.oppId, novo))) return false;
+  const alvo = document.getElementById('doc-link-' + s.oppId + '-' + s.i);
+  if(alvo) alvo.innerHTML = linkEmitirDocHTML(s.texto, o, s.i);
+  return true;
+}
+async function seletorLinkEscolher(idx){
+  const l = PORTAIS_DOCS[idx]; if(!l) return;
+  if(await _salvarLinkItem(l.url)){ seletorLinkFechar(); toast('Link "' + l.nome + '" vinculado a este item'); }
+}
+async function seletorLinkAplicar(v){
+  if(await _salvarLinkItem(v)){ seletorLinkFechar(); toast(v === '' ? 'Voltou ao automático' : 'Botão removido deste item'); }
+}
+function seletorLinkOutro(){
+  const s = _selLink; seletorLinkFechar();
+  if(s) editarLinkChecklistManual(s.oppId, s.i);
+}
+async function editarLinkChecklistManual(oppId, i){
   const o = oportunidades.find(x=>x.id===oppId); if(!o || !_sb || oppId < 900000) return;
   const docs = docsPreview(o.documentos); const texto = docs[i]; if(texto == null) return;
   const chave = _chaveDoc(texto);
@@ -5125,11 +5335,16 @@ function docsPreview(documentos){
   return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
 }
 function docProgressHTML(oid, documentos, checks){
-  const total = documentos.length;
-  if(total===0){
+  if(documentos.length===0){
     return `<div class="af-item-empty">Nenhum documento cadastrado para esta oportunidade.</div>`;
   }
-  const done = Object.values(checks).filter(Boolean).length;
+  // itens marcados "não se aplica" ficam fora da conta
+  const naQtd = documentos.filter((_,i)=>checks[i]==='na').length;
+  const total = documentos.length - naQtd;
+  if(total===0){
+    return `<div class="doc-progress-text"><span>Nenhum documento se aplica a você neste edital</span><span>${naQtd} não se aplica</span></div>`;
+  }
+  const done = documentos.filter((_,i)=>checks[i]===true).length;
   const pct = total>0 ? Math.round((done/total)*100) : 0;
   if(done>0 && done===total){
     return `<div class="doc-progress-text"><span class="doc-progress-done">✓ Documentação organizada</span><span>${done}/${total}</span></div>
@@ -5139,7 +5354,7 @@ function docProgressHTML(oid, documentos, checks){
         <button class="btn-primary" style="width:100%;" onclick="openLeadModal(${oid},'checklist','Quero verificar minha documentação')">Quero revisar minha documentação</button>
       </div>`;
   }
-  return `<div class="doc-progress-text"><span>${done} de ${total} documentos concluídos</span><span>${pct}%</span></div>
+  return `<div class="doc-progress-text"><span>${done} de ${total} documentos concluídos${naQtd?` · ${naQtd} não se aplica`:''}</span><span>${pct}%</span></div>
     <div class="doc-progress-bar"><div class="doc-progress-fill" style="width:${pct}%;"></div></div>`;
 }
 // O checklist fica salvo na conta (tabela checklist_docs), então não se perde ao trocar de aparelho ou limpar o navegador.
@@ -5167,18 +5382,38 @@ async function sincronizarChecklist(){
     else if(typeof renderMinhaConta === 'function' && document.getElementById('view-minha-conta').classList.contains('active')) renderMinhaConta();
   }catch(e){}
 }
+function docItemInner(o, d, i, estado){
+  const na = estado === 'na';
+  const on = estado === true;
+  const box = na ? `<span class="doc-check" id="doc-check-${o.id}-${i}">–</span>` : `<span class="doc-check ${on?'checked':''}" id="doc-check-${o.id}-${i}">${on?'✓':''}</span>`;
+  const btn = `<button type="button" class="doc-na-btn" onclick="event.stopPropagation();docNaoSeAplica(${o.id},${i})" title="${na?'Voltar este documento para o checklist':'Este documento não se aplica a mim'}">${na?'desfazer':'não se aplica'}</button>`;
+  return `${box}${d}${na ? '' : `<span id="doc-link-${o.id}-${i}">${linkEmitirDocHTML(d, o, i)}</span>`}${na ? '<span class="doc-na-tag">não se aplica</span>' : ''}${btn}`;
+}
+function docRefresh(oid, idx){
+  const o = oportunidades.find(x=>x.id===oid);
+  const item = document.getElementById(`doc-item-${oid}-${idx}`);
+  const estado = (docChecks[oid] || {})[idx];
+  if(o && item){
+    const d = docsPreview(o.documentos)[idx];
+    item.className = estado==='na' ? 'doc-na' : (estado===true ? 'checked-text' : '');
+    item.innerHTML = docItemInner(o, d, idx, estado);
+  }
+  const progressEl = document.getElementById(`doc-progress-${oid}`);
+  if(progressEl && o) progressEl.innerHTML = docProgressHTML(oid, docsPreview(o.documentos), docChecks[oid] || {});
+}
 async function toggleDoc(oid, idx){
   docChecks[oid] = docChecks[oid] || {};
+  if(docChecks[oid][idx] === 'na') return;   // item "não se aplica" não é marcado
   docChecks[oid][idx] = !docChecks[oid][idx];
-  const check = document.getElementById(`doc-check-${oid}-${idx}`);
-  const item = document.getElementById(`doc-item-${oid}-${idx}`);
-  const on = docChecks[oid][idx];
-  check.classList.toggle('checked', on);
-  check.textContent = on ? '✓' : '';
-  item.classList.toggle('checked-text', on);
-  const o = oportunidades.find(x=>x.id===oid);
-  const progressEl = document.getElementById(`doc-progress-${oid}`);
-  if(progressEl && o) progressEl.innerHTML = docProgressHTML(oid, docsPreview(o.documentos), docChecks[oid]);
+  docRefresh(oid, idx);
+  await storeSet(ukey('docChecks'), docChecks);
+  salvarChecklistNaConta(oid);
+}
+async function docNaoSeAplica(oid, idx){
+  docChecks[oid] = docChecks[oid] || {};
+  if(docChecks[oid][idx] === 'na') delete docChecks[oid][idx];
+  else docChecks[oid][idx] = 'na';
+  docRefresh(oid, idx);
   await storeSet(ukey('docChecks'), docChecks);
   salvarChecklistNaConta(oid);
 }
@@ -5778,6 +6013,7 @@ async function userSignup(){
   empresaForm.cad = null; chipsAtuacaoPerfil('cad', []); renderEmpresaBox('cad');
   document.getElementById('cad-aceite').checked = false;
   document.querySelectorAll('#cad-prof .chip-opt.selected, #cad-mod .chip-opt.selected, #cad-abr .chip-opt.selected, #cad-esp .chip-opt.selected, #cad-formato .chip-opt.selected').forEach(x=>x.classList.remove('selected'));
+  { const b = document.getElementById('cad-prof-busca'); if(b) b.value = ''; if(typeof chipBuscaAplicar==='function') chipBuscaAplicar('cad-prof'); }
   msg.textContent = '';
   cadastroVoltar();
   updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
@@ -5871,6 +6107,7 @@ function renderPerfil(){
     ch.onclick = ()=>ch.classList.toggle('selected');
     profBox.appendChild(ch);
   });
+  chipBuscaIniciar('perfil-prof');
   const modBox = document.getElementById('perfil-mod'); modBox.innerHTML = '';
   MODALIDADES.forEach(m=>{
     const ch = document.createElement('div');
@@ -8867,6 +9104,7 @@ function consPerfilPreencher(c){
     const ch = document.createElement('div'); ch.className = 'chip-opt' + ((p.profs||[]).includes(nm) ? ' selected' : ''); ch.textContent = nm;
     ch.onclick = ()=>ch.classList.toggle('selected'); profBox.appendChild(ch);
   });
+  chipBuscaIniciar('cons-prof');
   const modBox = document.getElementById('cons-mod'); modBox.innerHTML = '';
   MODALIDADES.forEach(m=>{
     const ch = document.createElement('div'); ch.className = 'chip-opt' + ((p.mods||[]).includes(m) ? ' selected' : ''); ch.textContent = m;
@@ -11881,6 +12119,62 @@ async function voltarParaGratis(id){
   if(e2){ toast('Erro ao mudar o plano: ' + e2.message); return; }
   toast('Voltou para o plano Grátis.');
   _usrAdmDados = null; renderUsuariosAdmin(); carregarContagensHoje();
+}
+
+/* ---- ADM: "Pasta do edital" — link da pasta do Google Drive com os documentos, acima do checklist — USO INTERNO ----
+   O site só GUARDA o link que o ADM cola (a pasta é criada e compartilhada no próprio Google Drive).
+   Fica na tabela pastas_edital, que só o ADM lê e altera: o cliente não vê. */
+let _pastaEdital = {};   // id do edital (oppId) -> { url, atualizado_em } ou null
+async function carregarPastaEdital(oppId){
+  const box = document.getElementById('pasta-edital-' + oppId); if(!box) return;
+  if(!_sb || oppId < 900000){ box.innerHTML = ''; return; }
+  box.innerHTML = '<div style="font-size:12px; color:var(--ink-muted); margin:0 0 12px;">Carregando a pasta do edital…</div>';
+  const { data, error } = await _sb.from('pastas_edital').select('url,atualizado_em').eq('edital_id', oppId - 900000).maybeSingle();
+  if(error){ box.innerHTML = '<div style="font-size:12px; color:var(--coral); margin:0 0 12px;">Não foi possível carregar a pasta do edital: ' + esc(error.message) + '. Confira se o SQL <code>supabase/pasta_do_edital.sql</code> foi rodado.</div>'; return; }
+  _pastaEdital[oppId] = data || null;
+  renderPastaEdital(oppId, false);
+}
+function renderPastaEdital(oppId, editando){
+  const box = document.getElementById('pasta-edital-' + oppId); if(!box) return;
+  const d = _pastaEdital[oppId];
+  const caixa = 'margin:0 0 14px; padding:10px 12px; border:1px dashed var(--border); border-radius:10px;';
+  const titulo = '<div style="font-weight:700; font-size:14px; margin-bottom:6px;">📁 Pasta do edital <span style="font-weight:400; font-size:11.5px; color:var(--ink-muted);">· só o ADM vê</span></div>';
+  if(d && !editando){
+    box.innerHTML = '<div style="' + caixa + '">' + titulo +
+      '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">' +
+        '<a class="doc-emitir" href="' + esc(d.url) + '" target="_blank" rel="noopener noreferrer">↗ Abrir pasta</a>' +
+        '<button type="button" class="doc-edit-link" onclick="pastaEditalCopiar(' + oppId + ')">Copiar link</button>' +
+        '<button type="button" class="doc-edit-link" onclick="renderPastaEdital(' + oppId + ', true)">✎ link</button>' +
+        '<button type="button" class="doc-edit-link" onclick="pastaEditalRemover(' + oppId + ')">🗑 link</button></div></div>';
+    return;
+  }
+  box.innerHTML = '<div style="' + caixa + '">' + titulo +
+    '<input type="url" id="pasta-edital-url-' + oppId + '" placeholder="Cole aqui o link da pasta do Google Drive" value="' + esc(d ? d.url : '') + '" style="width:100%; box-sizing:border-box; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:inherit; font-size:14px; margin-bottom:8px;">' +
+    '<div style="display:flex; gap:6px; flex-wrap:wrap;"><button type="button" class="btn-primary" style="font-size:12px; padding:5px 14px;" onclick="pastaEditalSalvar(' + oppId + ')">Salvar</button>' +
+    (d ? '<button type="button" class="btn-ghost" style="font-size:12px;" onclick="renderPastaEdital(' + oppId + ', false)">Cancelar</button>' : '') + '</div></div>';
+}
+async function pastaEditalSalvar(oppId){
+  if(!_sb || oppId < 900000) return;
+  let url = (document.getElementById('pasta-edital-url-' + oppId).value || '').trim().replace(/^http:\/\//i, 'https://');
+  if(url && !/^https:\/\//i.test(url)) url = 'https://' + url;
+  if(!/^https:\/\/(drive|docs)\.google\.com\/\S+$/i.test(url)){ toast('Cole o link da pasta do Google Drive (começa com https://drive.google.com/...)'); return; }
+  const { error } = await _sb.from('pastas_edital').upsert({ edital_id: oppId - 900000, url, atualizado_em: new Date().toISOString() }, { onConflict: 'edital_id' });
+  if(error){ toast('Não foi possível salvar: ' + error.message); return; }
+  toast('Pasta do edital salva.');
+  carregarPastaEdital(oppId);
+}
+async function pastaEditalRemover(oppId){
+  if(!_sb || oppId < 900000) return;
+  if(!confirm('Remover o link da pasta deste edital? A pasta no Google Drive não é apagada, só o registro no site.')) return;
+  const { error } = await _sb.from('pastas_edital').delete().eq('edital_id', oppId - 900000);
+  if(error){ toast('Não foi possível remover: ' + error.message); return; }
+  toast('Link removido.');
+  carregarPastaEdital(oppId);
+}
+function pastaEditalCopiar(oppId){
+  const d = _pastaEdital[oppId]; if(!d) return;
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(d.url).then(()=>toast('Link copiado.'), ()=>toast('Não foi possível copiar.'));
+  else toast('Não foi possível copiar neste navegador.');
 }
 
 /* ---- Admin: códigos de acesso (isenção) ---- */
