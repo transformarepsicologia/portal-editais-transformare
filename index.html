@@ -1265,6 +1265,19 @@ br.br-cel{display:none;}
   footer.site-footer > *{line-height:normal;}
   footer.site-footer > div:first-child{margin-bottom:18px !important;}
 }
+/* ===== Computador (a partir de 901px): margem direita igual à esquerda — o Radar encosta na borda direita do conteúdo (a mesma do cabeçalho) ===== */
+@media (min-width:901px){
+  #view-home .hero .radar-wrap{justify-self:end; width:max-content; overflow:clip; overflow-clip-margin:24px;}
+}
+@media (min-width:901px){
+  #view-home .hero .lead:not(:last-of-type){margin-bottom:16px;}
+}
+@media (min-width:1200px){
+  #view-home .hero .radar-wrap > div[style*="margin-top:22px"]{transform:translateY(-6px);}
+  #view-home .hero{grid-template-columns:minmax(0,1fr) 415px;}
+  #view-home .hero .lead{max-width:690px; text-wrap:pretty;}
+  #view-home .hero .search-box{max-width:690px;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
