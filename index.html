@@ -2230,8 +2230,18 @@ html[data-theme="light"] .selo-transformare .selo-ico{fill:#A47C24;}
 
   <div class="admin-tabpanel" id="admin-tab-deh">
     <div class="section-title" style="font-size:17px; margin-top:8px;">Diagnóstico Estratégico de Habilitação (DEH 2.0)</div>
-    <p class="section-sub">Preencha os dados da cliente e gere o diagnóstico no formato padrão da Transformare, com download em PDF e Word. O sistema só organiza e calcula o que você informar; campos em branco saem marcados em amarelo para completar no Word. Nada é salvo no banco de dados.</p>
-    <div id="deh-form"></div>
+    <p class="section-sub">Cole a análise da IA ou preencha o formulário e gere o diagnóstico no formato padrão da Transformare, com download em PDF e Word. Nada é salvo no banco de dados.</p>
+    <div style="border:1px solid var(--border,#2a3a52); border-radius:12px; padding:14px; margin-bottom:16px;">
+      <div class="section-title" style="font-size:16px; margin:0 0 4px;">Gerar a partir da análise da IA</div>
+      <p class="section-sub" style="margin-top:0;">Cole a análise pronta (do Claude, ChatGPT ou Gemini) e gere o DEH 2.0 no formato padrão da Transformare, com download em Word e PDF. O sistema não analisa nada: só formata.</p>
+      <label class="form-label">Nome da cliente</label>
+      <input class="form-input" id="deh-cola-nome" placeholder="Ex.: A Gabi TEAjuda">
+      <label class="form-label" style="margin-top:8px;">Análise da IA (colar aqui)</label>
+      <textarea class="form-input" id="deh-cola-texto" rows="12" placeholder="Cole aqui o texto completo do diagnóstico"></textarea>
+      <button class="btn-primary" style="margin-top:8px;" onclick="dehDocColado()">Gerar DEH 2.0 (PDF / Word)</button>
+      <button class="btn-ghost" style="margin-top:8px;" onclick="dehCopiarPrompt()">Copiar instruções de formato para a IA</button>
+    </div>
+    <details><summary style="cursor:pointer; font-weight:600;">Ou preencher por formulário (opcional)</summary><div id="deh-form" style="margin-top:8px;"></div></details>
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-config">
@@ -8511,7 +8521,88 @@ function dehRender(){
     + T('cond','Condicionantes obrigatórias (uma por linha: Título | descrição)','Saneamento fiscal e tributário | Emissão e validade de todas as certidões\nHabilitação em sistemas eletrônicos | SICAF, SEI…',5)
     + `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;"><button class="btn-primary" onclick="dehGerar()">Gerar DEH 2.0 (PDF / Word)</button><button class="btn-ghost" onclick="dehLimpar()">Limpar formulário</button></div>`;
 }
+/* ---- DEH a partir da análise colada (Claude, ChatGPT, Gemini…): o sistema NÃO analisa, só formata no padrão ---- */
+function dehLimpaTexto(t){
+  return String(t||'').replace(/\r/g,'')
+    .replace(/\$\s*([^$\n]*?)\s*\$/g,(m,x)=>x.replace(/\\times/g,'×').replace(/\\cdot/g,'·').replace(/\\approx/g,'≈').replace(/\\%/g,'%').replace(/\\,/g,' ').replace(/[{}]/g,'').replace(/\\text/g,''))
+    .replace(/ /g,' ');
+}
+function dehTextoParaHtml(txt){
+  const inl = x=>esc(x).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,;:]|$)/g,'$1<i>$2</i>');
+  let linhas = dehLimpaTexto(txt).split('\n').map(l=>l.replace(/\s+$/,''));
+  // tira "desenhos" feitos com caracteres (+----+, setas soltas)
+  linhas = linhas.filter(l=>!/^\s*\+[-=+]{6,}\+?\s*$/.test(l) && !/^\s*[|│][^|│]+[|│]\s*$/.test(l) && !/^\s*[v↓▼]\s*$/.test(l));
+  let out='', lista=false, tab=[], primeira=true;
+  const fl=()=>{ if(lista){ out+='</ul>'; lista=false; } };
+  const ft=()=>{ if(tab.length){
+    const lin = tab.filter(r=>!/^[\s|:\-–—]+$/.test(r));
+    out+='<table>'+lin.map((r,n)=>{
+      const c = (r.includes('|') ? r.replace(/^\s*\||\|\s*$/g,'').split('|') : r.split('\t')).map(x=>x.trim());
+      return '<tr>'+c.map(x=>n===0?'<th>'+inl(x)+'</th>':'<td>'+inl(x)+'</td>').join('')+'</tr>';
+    }).join('')+'</table>'; tab=[]; } };
+  for(const bruta of linhas){
+    const l = bruta.trim();
+    if(!l || /^[-_*]{3,}$/.test(l)){ fl(); ft(); continue; }
+    if(primeira){ primeira=false; if(/^[#*\s]*diagn[oó]stico estrat[eé]gico/i.test(l)) continue; }
+    if(((l.match(/\|/g)||[]).length>=2) || ((l.match(/\t/g)||[]).length>=1 && !/^[-•*]/.test(l))){ fl(); tab.push(l); continue; }
+    ft();
+    const semMd = l.replace(/^#{1,6}\s*/,'').replace(/\*\*/g,'').trim();
+    if(/^(🟢|🟡|🔴|🟠|✅|⚠️|❌)/u.test(semMd) && semMd.length<120){ fl(); out+='<div class="veredito"><div class="v">'+inl(semMd)+'</div></div>'; continue; }
+    const mdH = l.match(/^(#{1,6})\s+(.*)$/);
+    const n1 = semMd.match(/^(\d{1,2})[.)]\s+(\S.{2,100})$/), n2 = semMd.match(/^(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)[.)]?\s+(\S.{2,100})$/);
+    const negrito = l.match(/^\*\*([^*]{3,100})\*\*:?$/);
+    if(/^[-•*]\s+/.test(l)){ if(!lista){ out+='<ul>'; lista=true; } out+='<li>'+inl(l.replace(/^[-•*]\s+/,''))+'</li>'; continue; }
+    fl();
+    if(n2 && !/[.]$/.test(n2[2])){ out+='<h3>'+inl(n2[1]+' '+n2[2])+'</h3>'; continue; }
+    if(mdH){ out+= mdH[1].length<=2 ? '<h2>'+inl(mdH[2].replace(/\*\*/g,''))+'</h2>' : '<h3>'+inl(mdH[2].replace(/\*\*/g,''))+'</h3>'; continue; }
+    if(n1 && !/[.]$/.test(n1[2]) && n1[2].length<90){ out+='<h2>'+inl(n1[1]+'. '+n1[2])+'</h2>'; continue; }
+    if(negrito){ out+='<h3>'+inl(negrito[1])+'</h3>'; continue; }
+    out+='<p>'+inl(l)+'</p>';
+  }
+  fl(); ft();
+  return out;
+}
+function dehDocColado(){
+  const nome = document.getElementById('deh-cola-nome').value.trim();
+  const txt = document.getElementById('deh-cola-texto').value;
+  if(!txt.trim()){ toast('Cole primeiro a análise'); return; }
+  dehAbrir(nome||'Cliente', `<h1>DIAGNÓSTICO ESTRATÉGICO DE HABILITAÇÃO (DEH 2.0)</h1>${nome?`<p class="cli">${esc(nome)}</p>`:''}${dehTextoParaHtml(txt)}`);
+}
+const DEH_PROMPT = `Monte o Diagnóstico Estratégico de Habilitação (DEH 2.0) da cliente a partir dos dados e documentos que estou enviando. Use exatamente esta estrutura, com títulos numerados e tabelas em formato markdown (com |):
+
+1. RESUMO EXECUTIVO E IDENTIFICAÇÃO CADASTRAL
+1.1 Quadro de Identificação Institucional (tabela: Campo | Dados)
+1.2 Perfil Operacional e Escopo de Atuação
+1.3 Modalidades de Atendimento e Alcance Geográfico
+2. SCORE CONSOLIDADO E INDICADORES RADAR TRANSFORMARE
+2.1 Matriz de Índices de Prontidão (tabela: Indicador | Pontuação | Status) com IPT, IPO, ICA, MTCC e nível de confiabilidade, seguida da análise crítica de cada um
+2.2 Matriz de Aderência a Editais Prioritários (aderência em % e justificativa de cada edital)
+3. MAPA DE EVIDÊNCIAS E DIAGNÓSTICO DOCUMENTAL
+3.1 Inventário de Documentação Regular (tabela: Item | Status | Observação)
+3.2 Diagnóstico de Gargalos Fiscais e Cadastrais
+3.3 Mapeamento de Pendências Operacionais e Minutas
+4. ANÁLISE DE IMPACTO NOS EDITAIS PRIORITÁRIOS (um subtítulo 4.1, 4.2… por edital, com requisitos, valores, regras de habilitação e plano de ação)
+5. MATRIZ FINANCEIRA MTE E SUSTENTAÇÃO
+5.1 Ciclo de pagamento e fôlego financeiro
+5.2 Ancoragem financeira e payback (cálculo em texto simples, sem fórmulas LaTeX e sem desenhos feitos com caracteres)
+6. PLANO ESTRATÉGICO DE REGULARIZAÇÃO (PER) E VEREDITO
+6.1 Estrutura do PER em 4 blocos (tabela: Bloco | Prazo | Ações | Responsável | Entregável): Organizar, Regularizar, Validar, Submeter
+6.2 Veredito Transformare (uma linha começando por 🟢, 🟡 ou 🔴) e as condicionantes obrigatórias
+
+Não invente dados: onde faltar informação, escreva "A confirmar". Não escreva o título do documento nem a data.`;
+async function dehCopiarPrompt(){
+  try{ await navigator.clipboard.writeText(DEH_PROMPT); toast('Instruções copiadas — cole na IA junto com os dados da cliente'); }catch(e){ toast('Não foi possível copiar'); }
+}
 function dehLimpar(){ if(!confirm('Limpar todos os campos do DEH?')) return; const b=document.getElementById('deh-form'); b.dataset.ok=''; b.innerHTML=''; dehRender(); }
+function dehAbrir(nome, h){
+  const logo = new URL('assets/logo-transformare.webp', location.href).href;
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'numeric', month:'long', year:'numeric'});
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>DEH 2.0 — ${esc(nome)}</title><style>${AAE_DOC_CSS}</style></head><body>
+<div id="barra"><button onclick="window.print()">Salvar PDF / imprimir</button><button onclick="baixarWord()">Baixar Word (.doc)</button><span>Clique no texto para editar antes de baixar. Trechos em amarelo faltam preencher.</span></div>
+<div id="doc" contenteditable="true"><div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>${h}<div class="fim">Porto Alegre, ${esc(hoje)}<br>Transformare Projetos</div></div><script>${AAE_WORD_JS}<\/script></body></html>`;
+  const w = window.open('','_blank'); if(!w){ toast('Permita pop-ups para abrir o documento'); return; }
+  w.document.write(html); w.document.close();
+}
 function dehGerar(){
   const g = id=>{ const e=document.getElementById('deh-'+id); return e ? e.value.trim() : ''; };
   const dica = t=>`<span class="edit-hint">[preencher: ${esc(t)}]</span>`;
@@ -8562,13 +8653,7 @@ function dehGerar(){
   const cd = pares('cond');
   h += `<div class="veredito"><div class="v">${vd}</div></div><h3>Condicionantes obrigatórias de execução</h3>`
      + (cd.length ? '<ul>'+cd.map(r=>`<li><b>${esc(r[0])}:</b> ${esc(r[1])}</li>`).join('')+'</ul>' : `<p>${dica('condicionantes')}</p>`);
-  const logo = new URL('assets/logo-transformare.webp', location.href).href;
-  const hoje = new Date().toLocaleDateString('pt-BR',{day:'numeric', month:'long', year:'numeric'});
-  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>DEH 2.0 — ${esc(nome)}</title><style>${AAE_DOC_CSS}</style></head><body>
-<div id="barra"><button onclick="window.print()">Salvar PDF / imprimir</button><button onclick="baixarWord()">Baixar Word (.doc)</button><span>Clique no texto para editar antes de baixar. Trechos em amarelo faltam preencher.</span></div>
-<div id="doc" contenteditable="true"><div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>${h}<div class="fim">Porto Alegre, ${esc(hoje)}<br>Transformare Projetos</div></div><script>${AAE_WORD_JS}<\/script></body></html>`;
-  const w = window.open('','_blank'); if(!w){ toast('Permita pop-ups para abrir o documento'); return; }
-  w.document.write(html); w.document.close();
+  dehAbrir(nome, h);
 }
 
 function aaeDocRapido(){
