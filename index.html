@@ -2234,12 +2234,18 @@ html[data-theme="light"] .selo-transformare .selo-ico{fill:#A47C24;}
     <div style="border:1px solid var(--border,#2a3a52); border-radius:12px; padding:14px; margin-bottom:16px;">
       <div class="section-title" style="font-size:16px; margin:0 0 4px;">Gerar a partir da análise da IA</div>
       <p class="section-sub" style="margin-top:0;">Cole a análise pronta (do Claude, ChatGPT ou Gemini) e gere o DEH 2.0 no formato padrão da Transformare, com download em Word e PDF. O sistema não analisa nada: só formata.</p>
+      <div style="background:var(--bg-elevated,#16233a); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
+        <b>Passo 1.</b> Copie o prompt e cole na IA (Claude, ChatGPT ou Gemini) junto com o check-in, o formulário e os editais da cliente.
+        <div><button class="btn-primary" style="margin-top:8px;" onclick="dehCopiarPrompt()">Copiar o prompt do DEH</button></div>
+        <details style="margin-top:8px;" ontoggle="if(this.open){ document.getElementById('deh-prompt-txt').value = DEH_PROMPT; }"><summary style="cursor:pointer;">Ver o prompt</summary>
+          <textarea class="form-input" id="deh-prompt-txt" rows="14" readonly style="margin-top:6px; font-size:12px;"></textarea></details>
+        <div style="margin-top:8px;"><b>Passo 2.</b> Cole abaixo o texto que a IA devolver e gere o documento.</div>
+      </div>
       <label class="form-label">Nome da cliente</label>
       <input class="form-input" id="deh-cola-nome" placeholder="Ex.: A Gabi TEAjuda">
       <label class="form-label" style="margin-top:8px;">Análise da IA (colar aqui)</label>
       <textarea class="form-input" id="deh-cola-texto" rows="12" placeholder="Cole aqui o texto completo do diagnóstico"></textarea>
       <button class="btn-primary" style="margin-top:8px;" onclick="dehDocColado()">Gerar DEH 2.0 (PDF / Word)</button>
-      <button class="btn-ghost" style="margin-top:8px;" onclick="dehCopiarPrompt()">Copiar instruções de formato para a IA</button>
     </div>
     <details><summary style="cursor:pointer; font-weight:600;">Ou preencher por formulário (opcional)</summary><div id="deh-form" style="margin-top:8px;"></div></details>
   </div>
