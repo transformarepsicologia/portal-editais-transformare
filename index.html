@@ -8562,11 +8562,41 @@ function dehTextoParaHtml(txt){
   fl(); ft();
   return out;
 }
+/* Topo no padrão do modelo (cartões de % + recomendação técnica + como interpretar), montado a partir do próprio texto colado:
+   % dos editais = linhas da seção 2.2 ("— 92%"); recomendação = linha do veredito (🟢/🟡/🔴) da seção 6.2. Se não achar, não monta o bloco. */
+function dehTopoDoTexto(txt){
+  const L = dehLimpaTexto(txt).split('\n');
+  const cards = [];
+  let na22 = false;
+  for(const bruta of L){
+    const l = bruta.trim();
+    if(/^#*\s*\**2\.2[.\s]/.test(l)){ na22 = true; continue; }
+    if(na22 && (/^[-_*]{3,}$/.test(l) || /^#*\s*\**\d{1,2}[.)]\s+\S/.test(l))) break;
+    if(!na22) continue;
+    const m = l.match(/^[-•*]\s*\*\*(.+?)\s+[—–-]\s+(\d{1,3})\s*%/);
+    if(m){
+      const nome = m[1].trim(), par = nome.match(/^(.*?)\s*\((.*)\)\s*$/);
+      cards.push({ pct:+m[2], t: par ? par[1].trim() : nome, s: par ? par[2].trim() : '' });
+    }
+  }
+  const ver = L.map(x=>x.trim().replace(/^#+\s*/,'').replace(/\*\*/g,'')).find(x=>/^(🟢|🟡|🔴|🟠)/u.test(x) && x.length<140);
+  let h = '';
+  if(cards.length){
+    h += '<div class="kpis">'+cards.slice(0,4).map(c=>`<div class="kpi"><div class="kn">${c.pct}%</div><div class="kl">${esc(c.t)}${c.s?'<br>'+esc(c.s):''}</div></div>`).join('')+'</div>';
+  }
+  if(ver){
+    h += `<div class="rec"><div class="rt">RECOMENDAÇÃO TÉCNICA</div><div class="rv">${esc(ver.replace(/^(🟢|🟡|🔴|🟠)\uFE0F?\s*/u,''))}</div></div>`;
+  }
+  if(cards.length){
+    h += `<div class="junto"><b>COMO INTERPRETAR ${cards[0].pct}%</b><br>O indicador representa aderência declaratória ao conjunto de requisitos avaliados. Não equivale a percentual de habilitação garantida. As pendências identificadas devem ser regularizadas ou formalmente validadas antes do protocolo.</div>`;
+  }
+  return h;
+}
 function dehDocColado(){
   const nome = document.getElementById('deh-cola-nome').value.trim();
   const txt = document.getElementById('deh-cola-texto').value;
   if(!txt.trim()){ toast('Cole primeiro a análise'); return; }
-  dehAbrir(nome||'Cliente', `<h1>DIAGNÓSTICO ESTRATÉGICO DE HABILITAÇÃO (DEH 2.0)</h1>${nome?`<p class="cli">${esc(nome)}</p>`:''}${dehTextoParaHtml(txt)}`);
+  dehAbrir(nome||'Cliente', `<h1>DIAGNÓSTICO ESTRATÉGICO DE HABILITAÇÃO (DEH 2.0)</h1>${nome?`<p class="cli">${esc(nome)}</p>`:''}${dehTopoDoTexto(txt)}${dehTextoParaHtml(txt)}`);
 }
 const DEH_PROMPT = `Monte o Diagnóstico Estratégico de Habilitação (DEH 2.0) da cliente a partir dos dados e documentos que estou enviando. Use exatamente esta estrutura, com títulos numerados e tabelas em formato markdown (com |):
 
@@ -8794,6 +8824,7 @@ table{width:100%; border-collapse:collapse; font-size:13.5px;} th{background:#1f
 .veredito{text-align:center; margin-top:22px;} .veredito .t{color:#777; font-weight:bold; font-size:13px;} .veredito .v{color:#1f3a5f; font-weight:bold; font-size:20px;}
 .fim{text-align:center; font-weight:bold; margin-top:18px;} .aviso{font-style:italic; font-size:12px; color:#777; text-align:center; border-top:1px solid #ccc; padding-top:8px; margin-top:16px;}
 .edit-hint{background:#fff3a8; padding:0 4px;}
+.rec{text-align:center; margin:18px 0 8px;} .rec .rt{color:#1f3a5f; font-weight:bold; font-size:13px; letter-spacing:.5px;} .rec .rv{color:#1f3a5f; font-size:17px; margin-top:4px;}
 @media print{ body{background:#fff;} #barra{display:none;} #doc{margin:0; max-width:none; padding:0;} .junto,.kpi,.alerta,tr,h3{page-break-inside:avoid;} }
 `;
 function aaePanorama(){
