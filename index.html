@@ -1874,6 +1874,7 @@ html[data-theme="light"] .selo-transformare .selo-ico{fill:#A47C24;}
     <button class="admin-tab" data-tab="pca" onclick="adminTab('pca')">PCA (planejados)</button>
     <button class="admin-tab" data-tab="consultoria" onclick="adminTab('consultoria')">Consultoria</button>
     <button class="admin-tab" data-tab="aae" onclick="adminTab('aae')">Aderência (AAE)</button>
+    <button class="admin-tab" data-tab="deh" onclick="adminTab('deh')">DEH 2.0</button>
     <button class="admin-tab" data-tab="config" onclick="adminTab('config')">Configurações</button>
   </div>
 
@@ -2225,6 +2226,12 @@ html[data-theme="light"] .selo-transformare .selo-ico{fill:#A47C24;}
     <button class="btn-primary" onclick="aaeNovaCliente()">+ Nova cliente</button>
     <div id="aae-form" style="margin-top:14px;"></div>
     </details>
+  </div>
+
+  <div class="admin-tabpanel" id="admin-tab-deh">
+    <div class="section-title" style="font-size:17px; margin-top:8px;">Diagnóstico Estratégico de Habilitação (DEH 2.0)</div>
+    <p class="section-sub">Preencha os dados da cliente e gere o diagnóstico no formato padrão da Transformare, com download em PDF e Word. O sistema só organiza e calcula o que você informar; campos em branco saem marcados em amarelo para completar no Word. Nada é salvo no banco de dados.</p>
+    <div id="deh-form"></div>
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-config">
@@ -8459,6 +8466,111 @@ function aaeDocTexto(origem){
   if(!String(txt||'').trim()){ toast(origem==='final'?'Cole primeiro o texto devolvido pela IA':'A versão em texto está vazia'); return; }
   aaeAbrirDoc(f.fantasia||f.razao||aaeAtual.nome||'Cliente', txt, origem==='final'?'panorama':'tecnico');
 }
+/* ===== DEH 2.0 — Diagnóstico Estratégico de Habilitação (formulário → documento padrão, PDF / Word) ===== */
+const DEH_PER_PADRAO = [
+  'Auditoria digital completa dos arquivos da cliente no CIT.\nConferência dos dados cadastrais e das validades dos documentos.',
+  'Emissão das certidões e dos cadastros pendentes (SICAF, SEI, CNES e demais itens do mapa de pendências).',
+  'Elaboração e assinatura digital das declarações padronizadas exigidas nos anexos dos editais.\nRevisão final do dossiê pela Transformare.',
+  'Envio formal do requerimento e da documentação pelos canais oficiais de cada edital.\nMonitoramento das publicações e das respostas dos órgãos.'
+];
+function dehRender(){
+  const box = document.getElementById('deh-form'); if(!box || box.dataset.ok) return; box.dataset.ok = '1';
+  const I = (id,l,ph,w)=>`<div style="flex:1 1 ${w||220}px;"><label class="form-label">${l}</label><input class="form-input" id="deh-${id}" placeholder="${ph||''}"></div>`;
+  const T = (id,l,ph,r,val)=>`<label class="form-label" style="margin-top:8px;">${l}</label><textarea class="form-input" id="deh-${id}" rows="${r||4}" placeholder="${ph||''}">${val||''}</textarea>`;
+  const H = t=>`<div class="section-title" style="font-size:15px; margin:18px 0 4px;">${t}</div>`;
+  const R = (...c)=>`<div style="display:flex; gap:10px; flex-wrap:wrap;">${c.join('')}</div>`;
+  let ed = '';
+  for(let n=1;n<=4;n++){
+    ed += `<details style="border:1px solid var(--border,#2a3a52); border-radius:10px; padding:10px 12px; margin:8px 0;" ${n===1?'open':''}><summary style="cursor:pointer; font-weight:600;">Edital prioritário ${n}${n>1?' (opcional)':''}</summary>`
+      + R(I('e'+n+'-nome','Edital e órgão','Ex.: SEPOL RJ — Edital 001/2026 (Psicoterapia On-line)',320), I('e'+n+'-ader','Aderência (%)','92',110), I('e'+n+'-valor','Valor por sessão (R$)','173,41',140))
+      + T('e'+n+'-just','Justificativa da aderência','Por que a cliente combina com este edital',3)
+      + T('e'+n+'-req','Requisitos, valores e regras de habilitação (um por linha)','Exigência exclusiva de Pessoa Jurídica\nCadastro no SICAF\n…',4)
+      + T('e'+n+'-plano','Plano de ação específico','O que a cliente deve priorizar para este edital',3) + `</details>`;
+  }
+  box.innerHTML = H('1. Identificação')
+    + R(I('razao','Razão social'), I('fantasia','Nome fantasia'), I('cnpj','CNPJ','00.000.000/0001-00',180), I('porte','Enquadramento','Microempresa (ME)',180))
+    + R(I('rt','Responsável técnica (RT)'), I('registro','Registro profissional','CRP-RS 07/00000',180), I('sede','Sede operacional','Cidade / UF',180))
+    + T('perfil','Perfil operacional e escopo de atuação','Descreva a especialização e os eixos de atuação (um parágrafo ou uma linha por eixo)',5)
+    + T('rtcv','Formação e qualificação da RT','Graduação, pós-graduação, cursos, experiência',3)
+    + T('modal','Modalidades de atendimento e alcance geográfico (uma por linha)','Presencial no consultório (cidade/UF): …\nDomiciliar / AT: …\nTeleatendimento on-line: …',4)
+    + H('2. Índices de prontidão')
+    + R(I('ipt','IPT (0 a 100)','75',130), I('ipt-st','Status do IPT','Aprovado com ressalvas fiscais',260), I('ipo','IPO (0 a 100)','85',130), I('ipo-st','Status do IPO','Adequado com atenção estrutural',260))
+    + R(I('ica','ICA (0 a 100)','90',130), I('ica-st','Status do ICA','Altamente competitivo',260), I('mtcc','MTCC (nível)','Nível 2 — média complexidade',260), I('conf','Confiabilidade','Declaratória — requer auditoria digital no CIT',260))
+    + T('analise','Análise crítica dos indicadores','Um parágrafo para cada indicador (IPT, IPO, ICA, MTCC e confiabilidade)',6)
+    + H('3. Documentos')
+    + T('docs-ok','Documentação confirmada (uma por linha: Documento | observação)','CNPJ ativo | Empresa inscrita sob o CNPJ …\nAlvará de funcionamento | Vigente, Prefeitura de …',6)
+    + T('docs-pend','Pendências fiscais e cadastrais (uma por linha: Documento | por que é exigido)','Certidão Conjunta Federal | Regularidade fiscal e previdenciária (Art. 68 da Lei 14.133/2021)\nSICAF | Indispensável para certames federais',6)
+    + T('docs-oper','Pendências operacionais e minutas (uma por linha: Item | detalhe)','PPCI | Falta o laudo do Corpo de Bombeiros\nCadastro no SEI | Necessário para peticionar',5)
+    + H('4. Editais prioritários') + ed
+    + H('5. Financeiro')
+    + R(I('prazo','Fôlego de caixa (dias úteis)','20 a 30',160), I('cap','Atendimentos por semana','100',160), I('perc','% da capacidade para credenciamento','15',200), I('equipe','Equipe (profissionais)','8',140))
+    + T('fin-obs','Observações do ciclo de pagamento','Compatibilidade do prazo de pagamento dos editais com o caixa da cliente',3)
+    + H('6. Plano de regularização e veredito')
+    + [1,2,3,4].map(n=>T('per'+n,'Bloco '+n+' — '+['Organizar (dias 1 a 3)','Regularizar (dias 4 a 10)','Validar (dias 11 a 15)','Submeter (contínuo)'][n-1]+' — ações (uma por linha)','',3,DEH_PER_PADRAO[n-1])).join('')
+    + `<label class="form-label" style="margin-top:8px;">Veredito</label><select class="form-input" id="deh-vered"><option value="g">🟢 Avançar para credenciamento inteligente (CIT)</option><option value="y">🟡 Avançar com ressalvas</option><option value="r">🔴 Aguardar regularização antes de avançar</option></select>`
+    + T('cond','Condicionantes obrigatórias (uma por linha: Título | descrição)','Saneamento fiscal e tributário | Emissão e validade de todas as certidões\nHabilitação em sistemas eletrônicos | SICAF, SEI…',5)
+    + `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;"><button class="btn-primary" onclick="dehGerar()">Gerar DEH 2.0 (PDF / Word)</button><button class="btn-ghost" onclick="dehLimpar()">Limpar formulário</button></div>`;
+}
+function dehLimpar(){ if(!confirm('Limpar todos os campos do DEH?')) return; const b=document.getElementById('deh-form'); b.dataset.ok=''; b.innerHTML=''; dehRender(); }
+function dehGerar(){
+  const g = id=>{ const e=document.getElementById('deh-'+id); return e ? e.value.trim() : ''; };
+  const dica = t=>`<span class="edit-hint">[preencher: ${esc(t)}]</span>`;
+  const v = (id,t)=> g(id) ? esc(g(id)) : dica(t);
+  const paras = (id,t)=> g(id) ? g(id).split(/\n+/).map(l=>`<p>${esc(l)}</p>`).join('') : `<p>${dica(t)}</p>`;
+  const lista = (id,t)=> g(id) ? '<ul>'+g(id).split(/\n+/).map(l=>`<li>${esc(l.replace(/^[-•*]\s*/,''))}</li>`).join('')+'</ul>' : `<p>${dica(t)}</p>`;
+  const pares = id=> g(id).split(/\n+/).filter(Boolean).map(l=>{ const p=l.split('|'); return [p[0].trim(), (p.slice(1).join('|')||'').trim()]; });
+  const num = s=>{ const n=parseFloat(String(s).replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.')); return isNaN(n)?null:n; };
+  const brl = n=>'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+  const nome = g('fantasia')||g('razao')||'Cliente';
+  const kv = [['Razão social',v('razao','razão social')],['Nome fantasia',v('fantasia','nome fantasia')],['CNPJ',v('cnpj','CNPJ')],['Responsável técnica (RT)',v('rt','nome')+(g('registro')?' ('+esc(g('registro'))+')':'')],['Sede operacional',v('sede','cidade / UF')],['Enquadramento tributário / empresarial',v('porte','porte')]];
+  let h = `<h1>DIAGNÓSTICO ESTRATÉGICO DE HABILITAÇÃO (DEH 2.0)</h1><p class="cli">${esc(nome)}</p>`;
+  h += `<h2>1. Resumo executivo e identificação cadastral</h2><h3>1.1 Quadro de identificação institucional</h3><table><tr><th style="width:36%">Campo</th><th>Dados cadastrais e institucionais</th></tr>${kv.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</table>`;
+  h += `<h3>1.2 Perfil operacional e escopo de atuação</h3>${paras('perfil','perfil e eixos de atuação')}${g('rtcv')?paras('rtcv',''):''}`;
+  h += `<h3>1.3 Modalidades de atendimento e alcance geográfico</h3>${lista('modal','modalidades de atendimento')}`;
+  const ind = [['IPT (Prontidão técnico-documental / jurídico e fiscal)','ipt','ipt-st'],['IPO (Prontidão operacional / infraestrutura)','ipo','ipo-st'],['ICA (Competitividade curricular / qualificação)','ica','ica-st']];
+  h += `<h2>2. Score consolidado e indicadores Radar Transformare</h2><h3>2.1 Matriz de índices de prontidão</h3><table><tr><th>Indicador</th><th>Pontuação / nível</th><th>Status analítico</th></tr>`
+     + ind.map(r=>`<tr><td>${r[0]}</td><td>${g(r[1])?esc(g(r[1]))+' / 100':dica('0 a 100')}</td><td>${v(r[2],'status')}</td></tr>`).join('')
+     + `<tr><td>MTCC (Complexidade de credenciamento)</td><td colspan="2">${v('mtcc','nível')}</td></tr><tr><td>Nível de confiabilidade da análise</td><td colspan="2">${v('conf','confiabilidade')}</td></tr></table>`
+     + `<h3>Análise crítica dos indicadores</h3>${paras('analise','análise de cada indicador')}`;
+  const eds = [1,2,3,4].filter(n=>g('e'+n+'-nome'));
+  h += `<h3>2.2 Matriz de aderência a editais prioritários</h3>`;
+  h += eds.length ? eds.map(n=>`<p><b>${esc(g('e'+n+'-nome'))}: aderência ${g('e'+n+'-ader')?esc(g('e'+n+'-ader').replace(/%/g,''))+'%':dica('%')}</b></p><p>${g('e'+n+'-just')?esc(g('e'+n+'-just')):dica('justificativa')}</p>`).join('') : `<p>${dica('editais prioritários')}</p>`;
+  const ok = pares('docs-ok'), pend = pares('docs-pend'), oper = pares('docs-oper');
+  h += `<h2>3. Mapa de evidências e diagnóstico documental</h2><h3>3.1 Inventário de documentação regular (confirmada)</h3>`
+     + (ok.length ? `<table><tr><th>Item documental</th><th>Status</th><th>Observação estratégica</th></tr>${ok.map(r=>`<tr><td>${esc(r[0])}</td><td>Confirmado</td><td>${esc(r[1])}</td></tr>`).join('')}</table>` : `<p>${dica('documentos confirmados')}</p>`)
+     + `<h3>3.2 Diagnóstico de gargalos fiscais e cadastrais (declarados pendentes / auditagem)</h3>`
+     + (pend.length ? '<ul>'+pend.map(r=>`<li><b>${esc(r[0])}:</b> ${esc(r[1])}</li>`).join('')+'</ul>' : `<p>${dica('pendências fiscais e cadastrais')}</p>`)
+     + `<h3>3.3 Mapeamento de pendências operacionais e minutas de edital</h3>`
+     + (oper.length ? '<ul>'+oper.map(r=>`<li><b>${esc(r[0])}:</b> ${esc(r[1])}</li>`).join('')+'</ul>' : `<p>${dica('pendências operacionais')}</p>`);
+  h += `<h2>4. Análise de impacto nos editais prioritários</h2>`;
+  h += eds.length ? eds.map((n,i)=>`<h3>4.${i+1} ${esc(g('e'+n+'-nome'))}</h3>`
+      + `<p><b>Valor por sessão:</b> ${num(g('e'+n+'-valor'))!==null?brl(num(g('e'+n+'-valor'))):dica('valor')}</p>`
+      + `<p><b>Requisitos e regras de habilitação</b></p>${lista('e'+n+'-req','requisitos')}`
+      + `<p><b>Plano de ação específico</b></p><p>${g('e'+n+'-plano')?esc(g('e'+n+'-plano')):dica('plano de ação')}</p>`).join('') : `<p>${dica('editais prioritários')}</p>`;
+  const cap = num(g('cap')), perc = num(g('perc')), sess = (cap!==null && perc!==null) ? Math.round(cap*perc/100*4) : null;
+  h += `<h2>5. Matriz financeira MTE e sustentação</h2><h3>5.1 Análise do ciclo de pagamento e fôlego financeiro</h3><p>Fôlego financeiro declarado para ciclos de pagamento de <b>${v('prazo','dias úteis')}</b> dias úteis após o faturamento.${g('equipe')?' Equipe de '+esc(g('equipe'))+' profissionais.':''}</p>${g('fin-obs')?paras('fin-obs',''):''}`
+     + `<h3>5.2 Ancoragem financeira e payback assistencial (MTE)</h3><table><tr><th>Item</th><th>Valor</th></tr>`
+     + `<tr><td>Capacidade instalada</td><td>${cap!==null?cap+' atendimentos/semana (~'+(cap*4)+'/mês)':dica('atendimentos por semana')}</td></tr>`
+     + `<tr><td>Alocação mínima projetada para credenciamento</td><td>${sess!==null?perc+'% da capacidade (~'+sess+' sessões/mês)':dica('% da capacidade')}</td></tr>`
+     + eds.map(n=>{ const val = num(g('e'+n+'-valor')); return `<tr><td>Faturamento mensal estimado — ${esc(g('e'+n+'-nome'))}</td><td>${(val!==null && sess!==null)?sess+' × '+brl(val)+' = <b>'+brl(sess*val)+' / mês</b>':dica('valor por sessão e capacidade')}</td></tr>`; }).join('')
+     + `</table><p>Estimativas calculadas a partir dos valores informados; o faturamento real depende da demanda de cada órgão.</p>`;
+  const blocos = [['BLOCO 1: ORGANIZAR','Dias 1 a 3','Transformare','Acervo auditado'],['BLOCO 2: REGULARIZAR','Dias 4 a 10','Cliente e Transformare','Certidões e cadastros emitidos'],['BLOCO 3: VALIDAR','Dias 11 a 15','Transformare e RT','Dossiê validado e declarações assinadas'],['BLOCO 4: SUBMETER','Contínuo','Transformare','Propostas protocoladas']];
+  h += `<h2>6. Plano estratégico de regularização (PER) e veredito</h2><h3>6.1 Estrutura do PER em 4 blocos de ação</h3><table><tr><th>Bloco de ação</th><th>Prazo estimado</th><th>Ações estratégicas</th><th>Responsável</th><th>Entregável esperado</th></tr>`
+     + blocos.map((b,i)=>`<tr><td><b>${b[0]}</b></td><td>${b[1]}</td><td>${g('per'+(i+1)).split(/\n+/).filter(Boolean).map(l=>'• '+esc(l)).join('<br>')||dica('ações')}</td><td>${b[2]}</td><td>${b[3]}</td></tr>`).join('')
+     + `</table><h3>6.2 Veredito Transformare e parecer final</h3>`;
+  const vd = {g:'🟢 AVANÇAR PARA CREDENCIAMENTO INTELIGENTE (CIT)', y:'🟡 AVANÇAR COM RESSALVAS', r:'🔴 AGUARDAR REGULARIZAÇÃO ANTES DE AVANÇAR'}[g('vered')||'g'];
+  const cd = pares('cond');
+  h += `<div class="veredito"><div class="v">${vd}</div></div><h3>Condicionantes obrigatórias de execução</h3>`
+     + (cd.length ? '<ul>'+cd.map(r=>`<li><b>${esc(r[0])}:</b> ${esc(r[1])}</li>`).join('')+'</ul>' : `<p>${dica('condicionantes')}</p>`);
+  const logo = new URL('assets/logo-transformare.webp', location.href).href;
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'numeric', month:'long', year:'numeric'});
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>DEH 2.0 — ${esc(nome)}</title><style>${AAE_DOC_CSS}</style></head><body>
+<div id="barra"><button onclick="window.print()">Salvar PDF / imprimir</button><button onclick="baixarWord()">Baixar Word (.doc)</button><span>Clique no texto para editar antes de baixar. Trechos em amarelo faltam preencher.</span></div>
+<div id="doc" contenteditable="true"><div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>${h}<div class="fim">Porto Alegre, ${esc(hoje)}<br>Transformare Projetos</div></div><script>${AAE_WORD_JS}<\/script></body></html>`;
+  const w = window.open('','_blank'); if(!w){ toast('Permita pop-ups para abrir o documento'); return; }
+  w.document.write(html); w.document.close();
+}
+
 function aaeDocRapido(){
   const nome = document.getElementById('aae-rapido-nome').value.trim();
   const txt = document.getElementById('aae-rapido-texto').value;
@@ -9748,6 +9860,7 @@ async function pcaVisto(id){
 function adminTab(nome){
   adminTabAtual = nome;
   if(nome==='aae') aaeCarregar();
+  if(nome==='deh') dehRender();
   if(nome==='prospeccao'){ prospCarregar(); prospRenderCidades(); }
   if(nome==='consultoria') consCarregar();
   if(nome==='pca') pcaCarregar();
