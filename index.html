@@ -8527,15 +8527,23 @@ function dehLimpaTexto(t){
     .replace(/\$\s*([^$\n]*?)\s*\$/g,(m,x)=>x.replace(/\\times/g,'×').replace(/\\cdot/g,'·').replace(/\\approx/g,'≈').replace(/\\%/g,'%').replace(/\\,/g,' ').replace(/[{}]/g,'').replace(/\\text/g,''))
     .replace(/ /g,' ');
 }
-function dehTextoParaHtml(txt){
-  const inl = x=>esc(x).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,;:]|$)/g,'$1<i>$2</i>');
+function dehTextoParaHtml(txt, op){
+  op = op || {};
+  const pontos = x=>x.replace(/🟢\uFE0F?/gu,'<span class="dot g"></span>').replace(/(🟡|🟠)\uFE0F?/gu,'<span class="dot y"></span>').replace(/🔴\uFE0F?/gu,'<span class="dot r"></span>');
+  const inl = x=>pontos(esc(x).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,;:]|$)/g,'$1<i>$2</i>'));
+  const pagina = ()=>'<div class="rodape">Transformare Projetos | Radar Transformare</div><div class="quebra"></div>' + (op.topo||'');
   let linhas = dehLimpaTexto(txt).split('\n').map(l=>l.replace(/\s+$/,''));
   // tira "desenhos" feitos com caracteres (+----+, setas soltas)
   linhas = linhas.filter(l=>!/^\s*\+[-=+]{6,}\+?\s*$/.test(l) && !/^\s*[|│][^|│]+[|│]\s*$/.test(l) && !/^\s*[v↓▼]\s*$/.test(l));
-  let out='', lista=false, tab=[], primeira=true;
-  const fl=()=>{ if(lista){ out+='</ul>'; lista=false; } };
+  let out='', lista=false, tab=[], primeira=true, kp=false, sec=0;
+  const fl=()=>{ if(lista){ out+='</ul>'; lista=false; } if(kp){ out+='</div>'; kp=false; } };
   const ft=()=>{ if(tab.length){
     const lin = tab.filter(r=>!/^[\s|:\-–—]+$/.test(r));
+    const cel = r=>(r.includes('|') ? r.replace(/^\s*\||\|\s*$/g,'').split('|') : r.split('\t')).map(x=>x.trim());
+    if(op.modelo && lin.length>1 && /^bloco$/i.test(cel(lin[0])[0]||'') && cel(lin[0]).length>=3){
+      const bl = lin.slice(1).map(cel);   // plano de regularização em 4 colunas, como no modelo
+      out+='<table class="steps"><tr>'+bl.map((c,n)=>`<td><div class="sn">${String(n+1).padStart(2,'0')} ${inl(c[0].toUpperCase())}</div><div class="sp">${inl(c[1]||'')}</div><div class="sa">${inl(c[2]||'')}</div></td>`).join('')+'</tr></table>'; tab=[]; return;
+    }
     out+='<table>'+lin.map((r,n)=>{
       const c = (r.includes('|') ? r.replace(/^\s*\||\|\s*$/g,'').split('|') : r.split('\t')).map(x=>x.trim());
       return '<tr>'+c.map(x=>n===0?'<th>'+inl(x)+'</th>':'<td>'+inl(x)+'</td>').join('')+'</tr>';
@@ -8543,19 +8551,29 @@ function dehTextoParaHtml(txt){
   for(const bruta of linhas){
     const l = bruta.trim();
     if(!l || /^[-_*]{3,}$/.test(l)){ fl(); ft(); continue; }
+    if(op.modelo && /^>\s?/.test(l)){   // caixa de destaque: > TÍTULO: texto
+      fl(); ft();
+      const t = l.replace(/^>\s?/,'').replace(/\*\*/g,'').trim(), mm = t.match(/^([^:]{3,70}?)\s*:\s*(.+)$/);
+      out += (mm && mm[1]===mm[1].toUpperCase()) ? `<div class="caixa"><div class="ct">${inl(mm[1])}</div><p>${inl(mm[2])}</p></div>` : `<div class="caixa"><p>${inl(t)}</p></div>`;
+      continue;
+    }
     if(primeira){ primeira=false; if(/^[#*\s]*diagn[oó]stico estrat[eé]gico/i.test(l)) continue; }
     if(((l.match(/\|/g)||[]).length>=2) || ((l.match(/\t/g)||[]).length>=1 && !/^[-•*]/.test(l))){ fl(); tab.push(l); continue; }
     ft();
     const semMd = l.replace(/^#{1,6}\s*/,'').replace(/\*\*/g,'').trim();
-    if(/^(🟢|🟡|🔴|🟠|✅|⚠️|❌)/u.test(semMd) && semMd.length<120){ fl(); out+='<div class="veredito"><div class="v">'+inl(semMd)+'</div></div>'; continue; }
+    if(/^(🟢|🟡|🔴|🟠|✅|⚠️|❌)/u.test(semMd) && semMd.length<140){ fl(); out+= op.modelo ? '<div class="veredito"><div class="t">VEREDITO TRANSFORMARE</div><div class="v">'+esc(semMd.replace(/^(🟢|🟡|🔴|🟠|✅|⚠️|❌)\uFE0F?\s*/u,''))+'</div></div>' : '<div class="veredito"><div class="v">'+inl(semMd)+'</div></div>'; continue; }
+    const secM = op.modelo && semMd.match(/^(\d{1,2})[.)]\s+(\S[^:;]{2,100})$/);
+    if(secM && +secM[1]===sec+1 && !/[.]$/.test(secM[2])){ sec++; fl(); ft(); out+=pagina()+'<h2>'+inl(secM[1]+'. '+secM[2])+'</h2>'; continue; }
     const mdH = l.match(/^(#{1,6})\s+(.*)$/);
     const n1 = semMd.match(/^(\d{1,2})[.)]\s+(\S.{2,100})$/), n2 = semMd.match(/^(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)[.)]?\s+(\S.{2,100})$/);
     const negrito = l.match(/^\*\*([^*]{3,100})\*\*:?$/);
+    const kM = op.modelo && l.match(/^[-•*]\s*(\d{1,3})\s*%\s*\|\s*(.+)$/);
+    if(kM){ if(lista){ out+='</ul>'; lista=false; } if(!kp){ out+='<div class="kpis">'; kp=true; } out+=`<div class="kpi"><div class="kn">${kM[1]}%</div><div class="kl">${inl(kM[2])}</div></div>`; continue; }
     if(/^[-•*]\s+/.test(l)){ if(!lista){ out+='<ul>'; lista=true; } out+='<li>'+inl(l.replace(/^[-•*]\s+/,''))+'</li>'; continue; }
     fl();
     if(n2 && !/[.]$/.test(n2[2])){ out+='<h3>'+inl(n2[1]+' '+n2[2])+'</h3>'; continue; }
     if(mdH){ out+= mdH[1].length<=2 ? '<h2>'+inl(mdH[2].replace(/\*\*/g,''))+'</h2>' : '<h3>'+inl(mdH[2].replace(/\*\*/g,''))+'</h3>'; continue; }
-    if(n1 && !/[.]$/.test(n1[2]) && n1[2].length<90){ out+='<h2>'+inl(n1[1]+'. '+n1[2])+'</h2>'; continue; }
+    if(n1 && !op.modelo && !/[.]$/.test(n1[2]) && n1[2].length<90){ out+='<h2>'+inl(n1[1]+'. '+n1[2])+'</h2>'; continue; }
     if(negrito){ out+='<h3>'+inl(negrito[1])+'</h3>'; continue; }
     out+='<p>'+inl(l)+'</p>';
   }
@@ -8592,44 +8610,103 @@ function dehTopoDoTexto(txt){
   }
   return h;
 }
+/* DEH no modelo da Gabi (capa + 4 seções em páginas, caixas, pontos coloridos, plano em 4 colunas).
+   Texto esperado: ver DEH_PROMPT. Se o texto não tiver "Recomendação técnica:" usa o formato antigo. */
+function dehEhModelo(txt){ return /^\s*\**recomenda[cç][aã]o t[eé]cnica\**\s*:/im.test(dehLimpaTexto(txt)); }
+function dehModeloHtml(txt, nome){
+  const logo = new URL('assets/logo-transformare.webp', location.href).href;
+  const topo = `<div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>`;
+  const L = dehLimpaTexto(txt).split('\n');
+  let ini = L.findIndex(l=>/^#{0,6}\s*\**\s*1[.)]\s+[^:;]{3,100}$/.test(l.trim()) && !/[.]$/.test(l.trim()));
+  if(ini<0) ini = L.length;
+  const capa = L.slice(0, ini), corpo = L.slice(ini);
+  const ehChave = (l,k)=>new RegExp('^\\**\\s*'+k+'\\**\\s*:','i').test(l.trim());
+  const val = k=>{ const r = capa.find(l=>ehChave(l,k)); return r ? r.replace(/^[^:]*:\s*\**\s*/,'').replace(/\*\*/g,'').trim() : ''; };
+  const cliente = val('Cliente') || nome || 'Cliente', ident = val('Identifica[cç][aã]o'), tecnico = val('Corpo t[eé]cnico');
+  const ehMeta = l=>ehChave(l,'Cliente') || ehChave(l,'Identifica[cç][aã]o') || ehChave(l,'Corpo t[eé]cnico') || /^\**\s*indicadores\**\s*:?\s*$/i.test(l.trim());
+  const iRec = capa.findIndex(l=>ehChave(l,'Recomenda[cç][aã]o t[eé]cnica'));
+  const antes = (iRec<0?capa:capa.slice(0,iRec)).filter(l=>!ehMeta(l));
+  const recTxt = iRec<0 ? '' : capa[iRec].replace(/^[^:]*:\s*\**\s*/,'').replace(/\*\*/g,'').trim();
+  const depois = iRec<0 ? [] : capa.slice(iRec+1);
+  const op = { modelo:true, topo };
+  return topo + '<h1>DIAGNÓSTICO ESTRATÉGICO DE HABILITAÇÃO (DEH)</h1>' + `<p class="cli">${esc(cliente)}</p>`
+    + (ident ? `<p class="capa-id">${esc(ident)}</p>` : '') + (tecnico ? `<p class="capa-id">Corpo técnico: ${esc(tecnico)}</p>` : '')
+    + dehTextoParaHtml(antes.join('\n'), op)
+    + (recTxt ? `<div class="rec"><div class="rt">RECOMENDAÇÃO TÉCNICA</div><div class="rv">${esc(recTxt)}</div></div>` : '')
+    + dehTextoParaHtml(depois.join('\n'), op)
+    + dehTextoParaHtml(corpo.join('\n'), op);
+}
 function dehDocColado(){
   const nome = document.getElementById('deh-cola-nome').value.trim();
   const txt = document.getElementById('deh-cola-texto').value;
   if(!txt.trim()){ toast('Cole primeiro a análise'); return; }
+  if(dehEhModelo(txt)){ dehAbrir(nome||'Cliente', dehModeloHtml(txt, nome), { modelo:true }); return; }
   dehAbrir(nome||'Cliente', `<h1>DIAGNÓSTICO ESTRATÉGICO DE HABILITAÇÃO (DEH 2.0)</h1>${nome?`<p class="cli">${esc(nome)}</p>`:''}${dehTopoDoTexto(txt)}${dehTextoParaHtml(txt)}`);
 }
-const DEH_PROMPT = `Monte o Diagnóstico Estratégico de Habilitação (DEH 2.0) da cliente a partir dos dados e documentos que estou enviando. Use exatamente esta estrutura, com títulos numerados e tabelas em formato markdown (com |):
+const DEH_PROMPT = `Monte o Diagnóstico Estratégico de Habilitação (DEH) da cliente a partir dos dados e documentos que estou enviando, no modelo padrão da Transformare (o DEH da A Gabi TEAjuda). Siga exatamente o formato abaixo. Tabelas em markdown (com |). Não use emojis, exceto 🟢 🟡 🔴 onde indicado. Não escreva fórmulas LaTeX nem desenhos feitos com caracteres. Não repita o título do documento nem a data.
 
-1. RESUMO EXECUTIVO E IDENTIFICAÇÃO CADASTRAL
-1.1 Quadro de Identificação Institucional (tabela: Campo | Dados)
-1.2 Perfil Operacional e Escopo de Atuação
-1.3 Modalidades de Atendimento e Alcance Geográfico
-2. SCORE CONSOLIDADO E INDICADORES RADAR TRANSFORMARE
-2.1 Matriz de Índices de Prontidão (tabela: Indicador | Pontuação | Status) com IPT, IPO, ICA, MTCC e nível de confiabilidade, seguida da análise crítica de cada um
-2.2 Matriz de Aderência a Editais Prioritários (aderência em % e justificativa de cada edital)
-3. MAPA DE EVIDÊNCIAS E DIAGNÓSTICO DOCUMENTAL
-3.1 Inventário de Documentação Regular (tabela: Item | Status | Observação)
-3.2 Diagnóstico de Gargalos Fiscais e Cadastrais
-3.3 Mapeamento de Pendências Operacionais e Minutas
-4. ANÁLISE DE IMPACTO NOS EDITAIS PRIORITÁRIOS (um subtítulo 4.1, 4.2… por edital, com requisitos, valores, regras de habilitação e plano de ação)
-5. MATRIZ FINANCEIRA MTE E SUSTENTAÇÃO
-5.1 Ciclo de pagamento e fôlego financeiro
-5.2 Ancoragem financeira e payback (cálculo em texto simples, sem fórmulas LaTeX e sem desenhos feitos com caracteres)
-6. PLANO ESTRATÉGICO DE REGULARIZAÇÃO (PER) E VEREDITO
-6.1 Estrutura do PER em 4 blocos (tabela: Bloco | Prazo | Ações | Responsável | Entregável): Organizar, Regularizar, Validar, Submeter
-6.2 Veredito Transformare (uma linha começando por 🟢, 🟡 ou 🔴) e as condicionantes obrigatórias
+CAPA (as linhas abaixo, antes da seção 1, uma por linha, exatamente com estas palavras iniciais):
+Cliente: nome da clínica ou da profissional
+Identificação: CNPJ e sede (ex.: CNPJ 00.000.000/0001-00 (ME) | Sede: Cidade/UF)
+Corpo técnico: responsável técnica com registro no conselho e tamanho da equipe
+Indicadores:
+- 90% | Nome do edital (modalidade): aderência declaratória
+- 88% | Nome do edital (modalidade): aderência declaratória
+(de 1 a 4 editais, a aderência de cada um)
+Recomendação técnica: uma frase curta em maiúsculas, ex.: AVANÇAR COM REGULARIZAÇÃO PRÉVIA: EDITAL X E EDITAL Y
+Depois, 1 parágrafo de resumo da recomendação e 1 parágrafo começando por "Leitura executiva:" (principal oportunidade, principal fragilidade, experiência da Transformare nos editais). Termine a capa com: "Este diagnóstico orienta a tomada de decisão e não constitui garantia de habilitação, aprovação em vistoria ou futura contratação."
 
-Não invente dados: onde faltar informação, escreva "A confirmar". Não escreva o título do documento nem a data.`;
+1. Objetivo, metodologia e leitura do diagnóstico
+Um parágrafo sobre o que foi avaliado.
+### Metodologia Radar Transformare
+Tabela: Pilar | Finalidade | Resultado, com as linhas IPT, IPO, ICA, MTE e Confiabilidade da análise (cada resultado com nota e leitura curta, ex.: "75/100: aprovado com ressalvas fiscais").
+### Perfil da clínica
+Um parágrafo: atuação, modalidades, local, responsável técnica e formação.
+### Fontes consideradas
+Lista com marcadores das fontes usadas (check-in documental, formulário, editais, experiência da Transformare).
+> COMO INTERPRETAR 90%: O indicador representa aderência declaratória ao conjunto de requisitos avaliados. Não equivale a percentual de habilitação garantida. As pendências identificadas devem ser regularizadas ou formalmente validadas antes do protocolo.
+(use o maior percentual da capa no título da caixa)
+
+2. Mapa de evidências de regularidade
+Um parágrafo explicando que separa evidências declaradas, pontos a validar e itens a regularizar.
+Tabela: Elemento analisado | Situação e leitura técnica | Próxima ação. Em "Situação e leitura técnica" comece cada linha com 🟢 (regular/declarado coerente), 🟡 (declarado sem comprovação ou a validar) ou 🔴 (pendente ou irregular), seguido da leitura técnica. Cubra: CNPJ, contrato social e RT; alvará, inscrição municipal e NF-e; alvará sanitário; certificado digital e gov.br; certificados de especialização; atestados e acervo técnico; certidões federal, estadual, FGTS e CNDT; certidão de falência; SICAF; CNES e CBOs; vistoria, PPCI e áreas comuns (quando houver edital presencial).
+> PRINCÍPIO DE CONTROLE: Antes de realizar qualquer despesa ou providência adicional, confirmar sua necessidade e aplicabilidade ao credenciamento.
+
+3. Oportunidades prioritárias
+Para cada edital, um subtítulo "3.1 Órgão, Programa: prioridade imediata (on-line)", "3.2 ...", "3.3 ...: oportunidade complementar", com:
+- 1 parágrafo sobre o credenciamento e a aderência;
+- tabela: Área | Procedimento / modalidade | Valor informado;
+- só se a Transformare já atuou nesse edital: > EXPERIÊNCIA TRANSFORMARE NESTE EDITAL: texto
+- **Pontos de atenção:** exigências e riscos (SICAF, certidões, titulação, vistoria, prazos de pagamento);
+- **Oportunidades:** como a cliente pode se posicionar.
+### Ciclo de pagamento e viabilidade financeira (MTE)
+Um parágrafo com o fôlego de caixa declarado e o prazo de pagamento de cada edital, em texto simples.
+
+4. Direcionamento estratégico e plano de ação
+- 90% | Edital A: prioridade imediata
+- 88% | Edital B: prioridade imediata
+- 70% | Edital C: complementar
+### Direcionamento recomendado
+Quatro itens numerados, cada um com uma ideia e dois-pontos no início, ex.: "1. Prioridade imediata: ...", "2. Modelo recomendado: ...".
+### Plano de regularização
+Tabela: Bloco | Prazo | Ação, com 4 linhas: Organizar (Dias 1 a 3), Regularizar (Dias 4 a 10), Validar (Dias 11 a 15), Submeter (Contínuo). Ação em uma frase.
+Depois, uma linha começando por 🟢, 🟡 ou 🔴 com o veredito em maiúsculas (ex.: 🟢 AVANÇAR COM REGULARIZAÇÃO PRÉVIA (EDITAL A E EDITAL B)), sem título antes dela.
+Um parágrafo dizendo que o credenciamento é viável, mas o protocolo deve ser precedido do saneamento das pendências, sob pena de INABILITAÇÃO SUMÁRIA, e a lista de condicionantes com marcadores, cada uma começando com rótulo em negrito (**Saneamento fiscal:**, **Sistemas eletrônicos:**, **Saúde e vínculos:**, **Titulação:**, **Confirmações com os órgãos:**).
+Um parágrafo: "O diagnóstico orienta a tomada de decisão. A habilitação dependerá do atendimento integral das exigências aplicáveis e da análise e decisão do órgão credenciante."
+**Próxima etapa recomendada:** auditoria documental, plano de regularização e preparação para submissão.
+
+Regras: não invente dados; onde faltar informação escreva "A confirmar". Tudo que for apenas declarado pela cliente deve aparecer como declarado, nunca como confirmado. Confira valores e exigências no site do órgão, não só no PNCP.`;
 async function dehCopiarPrompt(){
   try{ await navigator.clipboard.writeText(DEH_PROMPT); toast('Instruções copiadas — cole na IA junto com os dados da cliente'); }catch(e){ toast('Não foi possível copiar'); }
 }
 function dehLimpar(){ if(!confirm('Limpar todos os campos do DEH?')) return; const b=document.getElementById('deh-form'); b.dataset.ok=''; b.innerHTML=''; dehRender(); }
-function dehAbrir(nome, h){
+function dehAbrir(nome, h, opt){
+  opt = opt || {};
   const logo = new URL('assets/logo-transformare.webp', location.href).href;
   const hoje = new Date().toLocaleDateString('pt-BR',{day:'numeric', month:'long', year:'numeric'});
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>DEH 2.0 — ${esc(nome)}</title><style>${AAE_DOC_CSS}</style></head><body>
 <div id="barra"><button onclick="window.print()">Salvar PDF / imprimir</button><button onclick="baixarWord()">Baixar Word (.doc)</button><span>Clique no texto para editar antes de baixar. Trechos em amarelo faltam preencher.</span></div>
-<div id="doc" contenteditable="true"><div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>${h}<div class="fim">Porto Alegre, ${esc(hoje)}<br>Transformare Projetos</div></div><script>${AAE_WORD_JS}<\/script></body></html>`;
+<div id="doc" contenteditable="true">${opt.modelo ? '' : `<div class="topo"><div class="marca">TRANSFORMARE PROJETOS<small>Estratégia e posicionamento para atuação em editais e credenciamentos</small></div><img src="${logo}" alt=""></div>`}${h}<div class="fim">Porto Alegre, ${esc(hoje)}<br>Transformare Projetos</div>${opt.modelo ? '<div class="rodape">Transformare Projetos | Radar Transformare</div>' : ''}</div><script>${AAE_WORD_JS}<\/script></body></html>`;
   const w = window.open('','_blank'); if(!w){ toast('Permita pop-ups para abrir o documento'); return; }
   w.document.write(html); w.document.close();
 }
@@ -8780,10 +8857,9 @@ const AAE_WORD_JS = `function baixarWord(){
   d.removeAttribute('contenteditable');
   d.querySelectorAll('img').forEach(function(i){i.remove();});
   var topo=d.querySelector('.topo'); if(topo){ topo.style.display='block'; }
-  var k=d.querySelector('.kpis');
-  if(k){ var t=document.createElement('table'); t.style.width='100%'; var tr=document.createElement('tr');
+  d.querySelectorAll('.kpis').forEach(function(k){ var t=document.createElement('table'); t.style.width='100%'; var tr=document.createElement('tr');
     k.querySelectorAll('.kpi').forEach(function(c){ var td=document.createElement('td'); td.style.cssText='background:#eef2f5;text-align:center;padding:10px;border:6px solid #fff;'; td.innerHTML=c.innerHTML; tr.appendChild(td); });
-    t.appendChild(tr); k.parentNode.replaceChild(t,k); }
+    t.appendChild(tr); k.parentNode.replaceChild(t,k); });
   var css=''; document.querySelectorAll('style').forEach(function(s){css+=s.textContent;});
   var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>'+document.title+'</title><style>'+css+' body{background:#fff;} #doc{max-width:none;padding:0;margin:0;}</style></head><body>'+d.outerHTML+'</body></html>';
   var b=new Blob(['\\ufeff'+html],{type:'application/msword'}); var a=document.createElement('a');
@@ -8824,6 +8900,11 @@ table{width:100%; border-collapse:collapse; font-size:13.5px;} th{background:#1f
 .veredito{text-align:center; margin-top:22px;} .veredito .t{color:#777; font-weight:bold; font-size:13px;} .veredito .v{color:#1f3a5f; font-weight:bold; font-size:20px;}
 .fim{text-align:center; font-weight:bold; margin-top:18px;} .aviso{font-style:italic; font-size:12px; color:#777; text-align:center; border-top:1px solid #ccc; padding-top:8px; margin-top:16px;}
 .edit-hint{background:#fff3a8; padding:0 4px;}
+.caixa{background:#eef2f5; padding:10px 18px; margin:14px 0; font-size:14px;} .caixa .ct{text-align:center; color:#1f3a5f; font-weight:bold; font-size:12.5px; letter-spacing:.4px; margin-bottom:4px;} .caixa p{margin:4px 0;}
+.steps{width:100%; border-collapse:collapse; margin:8px 0;} .steps td{border:0; text-align:center; padding:6px 8px; vertical-align:top; font-size:12.5px;} .steps .sn{color:#1f3a5f; font-weight:bold;} .steps .sp{color:#777; font-size:11.5px; margin-bottom:3px;}
+.dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px;} .dot.g{background:#5aa84a;} .dot.y{background:#e6b422;} .dot.r{background:#d64545;}
+.rodape{text-align:center; color:#888; font-size:11px; border-top:1px solid #eee; padding-top:6px; margin-top:26px;} .quebra{height:20px; border-bottom:2px dashed #ddd; margin:0 -44px 14px;} .capa-id{text-align:center; color:#777; font-size:12px; margin:2px 0;} .topo + h2{border-top:0; padding-top:4px;}
+@media print{ .quebra{height:0; border:0; margin:0; page-break-after:always;} .caixa,.steps{page-break-inside:avoid;} }
 .rec{text-align:center; margin:18px 0 8px;} .rec .rt{color:#1f3a5f; font-weight:bold; font-size:13px; letter-spacing:.5px;} .rec .rv{color:#1f3a5f; font-size:17px; margin-top:4px;}
 @media print{ body{background:#fff;} #barra{display:none;} #doc{margin:0; max-width:none; padding:0;} .junto,.kpi,.alerta,tr,h3{page-break-inside:avoid;} }
 `;
