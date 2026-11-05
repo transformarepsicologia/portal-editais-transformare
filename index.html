@@ -3796,19 +3796,19 @@ function linkEditalDireto(o){
 }
 function shareWhatsApp(id){
   const o = oportunidades.find(x=>x.id===id);
-  const link = o.urlEdital || o.urlOficial || o.urlPncp || 'https://pncp.gov.br/app/editais';
-  // O WhatsApp monta a pré-visualização (logo do Radar) com o PRIMEIRO link da mensagem:
-  // por isso o link do Radar vem logo no topo, antes do link do edital.
+  // Vai SÓ o link do Radar: quem recebe entra no edital por ele (?e=número abre a página do edital;
+  // editais de demonstração, sem número no banco, levam à página inicial).
+  const link = (o.id >= 900000) ? SITE_URL + '/?e=' + (o.id - 900000) : SITE_URL;
   const partes = [
     `📡 *Radar Transformare — Portal de Editais*`,
-    SITE_URL,
     '',
     `*${o.edital}*`,
     o.objeto,
     `Órgão: ${o.orgao} — ${o.uf}`,
     `Prazo: ${o.prazo}`,
     '',
-    `🔗 Edital: ${link}`,
+    `👉 Veja o edital completo no Radar:`,
+    link,
   ];
   const texto = encodeURIComponent(partes.join('\n'));
   window.open(`https://wa.me/?text=${texto}`, '_blank');
