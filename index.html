@@ -10444,6 +10444,7 @@ async function init(){
   // Link direto para a política (ex.: .../#privacidade em e-mails e mensagens do beta).
   if(location.hash === '#privacidade') nav('privacidade');
   if(location.hash === '#admin') nav('admin'); // atalho: radartransformare.com.br/#admin abre o login do administrador
+  abrirEditalRapido();   // link /?e=número: busca só esse edital e abre direto, sem esperar a lista inteira
   carregarEditaisSupabase().then(abrirLinkDeNotificacao);
   carregarStatusFontes();
   pushCarregar();
@@ -10907,12 +10908,31 @@ async function pushTestar(){
   }catch(e){ toast('Não consegui mostrar o teste neste aparelho.'); }
 }
 // Abre o edital/tela indicado no link da notificação (?e=<id do edital> ou ?v=<tela>)
+/* Link direto de um edital (/?e=número): em vez de mostrar o início e esperar a lista inteira chegar,
+   mostra "Abrindo o edital…" na hora, busca só aquele edital no banco e abre a página dele. */
+async function abrirEditalRapido(){
+  try{
+    const e = new URLSearchParams(location.search).get('e');
+    if(!e || !/^\d+$/.test(e) || !_sb) return;
+    const box = document.getElementById('detalhe-content');
+    if(box) box.innerHTML = '<p class="section-sub" style="padding:60px 0; text-align:center;">Abrindo o edital…</p>';
+    nav('detalhe');
+    const { data } = await _sb.from('editais').select('*').eq('id', Number(e)).maybeSingle();
+    if(!data){ nav('home'); return; }
+    padConstruirVocab([data.edital, data.objeto, data.requisitos, data.pontos_positivos, data.pontos_atencao]);
+    const o = mapEditalSupabase(data);
+    if(!oportunidades.some(x=>x.id===o.id)) oportunidades.unshift(o);
+    window._linkRapido = o.id;
+    openDetalhe(o.id);
+  }catch(err){ try{ nav('home'); }catch(_){} }
+}
 function abrirLinkDeNotificacao(){
   try{
     const q = new URLSearchParams(location.search);
     const e = q.get('e'), v = q.get('v');
     if(!e && !v) return;
     history.replaceState(null, '', location.pathname + location.hash);
+    if(e && window._linkRapido === 900000 + Number(e)) return;   // já aberto direto, pela busca rápida
     if(e && /^\d+$/.test(e)) openDetalhe(900000 + Number(e));
     else if(v && ['alertas','minha-conta','editais','favoritos'].includes(v)) nav(v);
   }catch(err){}
