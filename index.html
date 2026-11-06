@@ -1297,9 +1297,18 @@ html[data-theme="light"] .selo-transformare .selo-ico{fill:#A47C24;}
 .wa-flutuante:hover{transform:translateY(-2px); box-shadow:0 9px 22px rgba(0,0,0,.4);}
 .wa-flutuante svg{width:30px; height:30px; fill:#fff; flex-shrink:0;}
 .wa-flutuante span{display:none; font-size:14px; font-weight:700; letter-spacing:.1px;}
-@media (min-width:901px){ .wa-flutuante{width:auto; padding:0 20px 0 16px; right:24px; bottom:24px;} .wa-flutuante span{display:inline;} }
+.wa-flutuante .wa-t-cel{display:none !important;}
+@media (min-width:901px){ .wa-flutuante{width:auto; padding:0 20px 0 16px; right:24px; bottom:24px;} .wa-flutuante .wa-t-pc{display:inline;} }
 body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .wa-flutuante{display:none;}
-@media (max-width:760px){ body:has(#aviso-cache-editais) .wa-flutuante{bottom:112px;} }
+@media (max-width:760px){
+  .wa-flutuante{left:0; right:0; bottom:0; width:100%; height:50px; border-radius:0; box-shadow:0 -3px 12px rgba(0,0,0,.3); padding-bottom:env(safe-area-inset-bottom);}
+  .wa-flutuante svg{width:24px; height:24px;}
+  .wa-flutuante .wa-t-cel{display:inline !important; font-size:14.5px;}
+  .wa-flutuante .wa-t-pc{display:none !important;}
+  .wa-flutuante:hover{transform:none;}
+  body{padding-bottom:50px;}
+  #aviso-cache-editais{bottom:50px !important;}
+}
 @media print{ .wa-flutuante{display:none;} }
 </style>
 <!--
@@ -2889,7 +2898,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   </div>
 </div>
 
-<button class="wa-flutuante" type="button" onclick="abrirWhatsConsultoria('flutuante')" aria-label="Falar com a Transformare no WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3C9.4 3 4 8.37 4 15c0 2.12.56 4.19 1.62 6.01L4 29l8.2-1.58A12.05 12.05 0 0 0 16.04 27C22.68 27 28 21.63 28 15S22.68 3 16.04 3zm0 21.9c-1.8 0-3.56-.48-5.1-1.4l-.37-.22-4.87.94.98-4.74-.24-.39A9.86 9.86 0 0 1 6.1 15c0-5.46 4.46-9.9 9.94-9.9 5.48 0 9.94 4.44 9.94 9.9s-4.46 9.9-9.94 9.9zm5.45-7.42c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.47-.89-.79-1.49-1.76-1.66-2.06-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.7.63.71.23 1.36.2 1.87.12.57-.08 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35z"/></svg><span>Fale conosco</span></button>
+<button class="wa-flutuante" type="button" onclick="abrirWhatsConsultoria('flutuante')" aria-label="Falar com a Transformare no WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3C9.4 3 4 8.37 4 15c0 2.12.56 4.19 1.62 6.01L4 29l8.2-1.58A12.05 12.05 0 0 0 16.04 27C22.68 27 28 21.63 28 15S22.68 3 16.04 3zm0 21.9c-1.8 0-3.56-.48-5.1-1.4l-.37-.22-4.87.94.98-4.74-.24-.39A9.86 9.86 0 0 1 6.1 15c0-5.46 4.46-9.9 9.94-9.9 5.48 0 9.94 4.44 9.94 9.9s-4.46 9.9-9.94 9.9zm5.45-7.42c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.47-.89-.79-1.49-1.76-1.66-2.06-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.7.63.71.23 1.36.2 1.87.12.57-.08 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35z"/></svg><span class="wa-t-cel">Falar com a Transformare no WhatsApp</span><span class="wa-t-pc">Fale conosco</span></button>
 <div class="toast" id="toast"></div>
 
 <!-- Biblioteca do Supabase carregada aqui (e não no <head>) para a página
