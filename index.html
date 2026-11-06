@@ -1414,7 +1414,7 @@ html[data-theme="light"] .selo-transformare .selo-ico{fill:#A47C24;}
 
   <div class="promo-band consultoria">
     <div><div class="promo-tag">CONSULTORIA TRANSFORMARE</div><h3>Encontrou uma oportunidade e precisa de ajuda para participar?</h3><p>Entender as exigências de um edital e reunir a documentação necessária pode ser um desafio.</p><p style="margin-top:8px;">A Consultoria Transformare auxilia você na análise dos requisitos, na organização dos documentos e na preparação dos próximos passos para o credenciamento.</p></div>
-    <button class="btn-primary" onclick="openLeadModal(null,'home')">Quero conhecer a consultoria</button>
+    <button class="btn-primary" onclick="abrirWhatsConsultoria('home')">Quero conhecer a consultoria</button>
   </div>
 </section>
 
@@ -1689,7 +1689,7 @@ html[data-theme="light"] .selo-transformare .selo-ico{fill:#A47C24;}
       <div class="pl-cons-lado">
         <div class="pl-vant"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2.2 2.2L15.5 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Mais segurança no processo</b><span>Conte com orientação especializada para se preparar melhor para o credenciamento.</span></div></div>
         <div class="pl-vant"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c.6-3.6 3.4-5.6 7-5.6s6.4 2 7 5.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><div><b>Atendimento individualizado</b><span>Análise dos seus documentos, identificação de pendências e orientações sobre as adequações ou providências necessárias.</span></div></div>
-        <button type="button" class="pl-btn pl-btn-ghost" onclick="openLeadModal(null,'planos')">Conhecer a consultoria <span aria-hidden="true">→</span></button>
+        <button type="button" class="pl-btn pl-btn-ghost" onclick="abrirWhatsConsultoria('planos')">Conhecer a consultoria <span aria-hidden="true">→</span></button>
       </div>
     </div>
   </div>
@@ -5503,6 +5503,12 @@ const ORIGIN_LABELS = {
   minha_conta:'Minha Conta', home:'Página inicial', alerta:'Alertas', outro:'Outro'
 };
 
+/* "Conhecer a consultoria": abre direto o WhatsApp da Transformare com a mensagem já escrita. */
+const WHATS_TRANSFORMARE = '5551995026596';
+function abrirWhatsConsultoria(origem){
+  const msg = 'Olá! Vim pelo Radar Transformare e quero conhecer a consultoria para credenciamento em editais.';
+  window.open('https://wa.me/' + WHATS_TRANSFORMARE + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+}
 function openLeadModal(oppId, origin, presetTipo){
   leadOppId = oppId;
   leadOppIds = null;
