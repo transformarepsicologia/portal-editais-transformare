@@ -1321,6 +1321,37 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   #detalhe-content .doc-na-btn{white-space:normal; flex-shrink:0;}
   #detalhe-content pre, #detalhe-content table{max-width:100%; overflow-x:auto; display:block;}
 }
+
+/* Documentos: wrappers neutros no desktop */
+.doc-acoes{display:contents;}
+.cert-arq-acoes{display:inline;}
+@media(max-width:760px){
+  /* Checklist do edital: texto em cima, ações embaixo */
+  #detalhe-content .doc-list li{flex-wrap:wrap; align-items:flex-start; gap:6px 10px;}
+  #detalhe-content .doc-list li .doc-check{margin-top:3px;}
+  #detalhe-content .doc-list li .doc-txt{flex:1 1 0; min-width:0; line-height:1.4;}
+  #detalhe-content .doc-list li .doc-acoes{flex:0 0 100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; padding-left:26px; min-width:0;}
+  #detalhe-content .doc-list li .doc-link-box{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; flex:1 1 100%;}
+  #detalhe-content .doc-list li .cert-ck{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; flex:1 1 100%;}
+  #detalhe-content .doc-list li .cert-venc{flex:1 1 100%; flex-wrap:wrap; margin-left:0 !important; font-size:12px !important;}
+  #detalhe-content .doc-list li .cert-venc input{max-width:150px !important;}
+  #detalhe-content .doc-list li *{min-width:auto;}
+  #detalhe-content .doc-list li .doc-txt{min-width:0;}
+  #detalhe-content .doc-list li .doc-emitir, #detalhe-content .doc-list li .doc-edit-link{margin-left:0; white-space:nowrap; font-size:12px; padding:3px 11px;}
+  #detalhe-content .doc-list li .doc-na-btn{margin-left:auto; white-space:nowrap;}
+  #detalhe-content .doc-list li .doc-na-tag{margin-left:0;}
+  #detalhe-content .doc-list li .doc-edit-link{font-size:11px; padding:2px 8px;}
+  /* Cadastro (Minha conta): cada certidão em um cartão */
+  .cert-card{border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--bg-elevated,rgba(255,255,255,.03)); margin-bottom:10px; display:flex; flex-direction:column; gap:8px;}
+  .cert-card > div{margin-top:0 !important;}
+  .cert-card .cert-titulo{font-weight:600; font-size:14px; line-height:1.35;}
+  .cert-card input[type=date]{max-width:170px;}
+  .cert-card [id^="cert-arq-"]{flex-direction:column; align-items:flex-start !important; gap:6px !important;}
+  .cert-arq-nome{word-break:break-word; overflow-wrap:anywhere;}
+  .cert-arq-acoes{display:flex; gap:8px; align-items:center;}
+  .cert-arq-acoes .sep{display:none;}
+  .cert-arq-acoes a, .cert-arq-acoes label{border:1px solid currentColor; border-radius:20px; padding:3px 12px; font-size:12.5px; text-decoration:none;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -4138,15 +4169,15 @@ function certArqHTML(chave){
   const kb = a ? Math.max(1, Math.round((a.tamanho || 0) / 1024)) : 0;
   const entrada = `<input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" style="display:none;" onchange="anexarCertidao('${chave}', this)">`;
   if(!a) return `<label class="btn-ghost" style="display:inline-block; cursor:pointer; padding:4px 10px; font-size:12.5px;">📎 Anexar certidão${entrada}</label> <span style="font-size:11.5px; opacity:.75;">PDF, JPG ou PNG, até 500 KB</span>`;
-  return `<span style="font-size:12.5px;">📎 ${esc(a.nome || 'Certidão')} (${kb} KB)</span> · <a href="#" style="color:var(--teal);" onclick="verCertidao('${chave}'); return false;">Ver</a> · <label style="color:var(--teal); cursor:pointer;">Trocar${entrada}</label> · <a href="#" style="color:#e07b6a;" onclick="removerCertidao('${chave}'); return false;">Remover</a>`;
+  return `<span class="cert-arq-nome" style="font-size:12.5px;">📎 ${esc(a.nome || 'Certidão')} (${kb} KB)</span><span class="cert-arq-acoes"><span class="sep"> · </span><a href="#" style="color:var(--teal);" onclick="verCertidao('${chave}'); return false;">Ver</a><span class="sep"> · </span><label style="color:var(--teal); cursor:pointer;">Trocar${entrada}</label><span class="sep"> · </span><a href="#" style="color:#e07b6a;" onclick="removerCertidao('${chave}'); return false;">Remover</a></span>`;
 }
 function certLinhaHTML(c, pre){
   const logado = pre === 'perfil' && userProfile;
   const podeAnotar = logado && CERT_COM_DATA.includes(c.chave);
   const podeAnexar = logado && CERT_COM_ANEXO.includes(c.chave);
   const iso = podeAnotar ? ((userProfile.documentosRaw.certidoesVenc || {})[c.chave] || '') : '';
-  return `<div>
-    ${c.url ? `<a href="${c.url}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${esc(c.nome)} ↗</a>` : `<span>${esc(c.nome)}</span>`}
+  return `<div class="cert-card">
+    ${c.url ? `<a class="cert-titulo" href="${c.url}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${esc(c.nome)} ↗</a>` : `<span class="cert-titulo">${esc(c.nome)}</span>`}
     ${podeAnotar ? `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; font-size:12.5px;"><label for="cert-${c.chave}">Vence em</label><input type="date" id="cert-${c.chave}" value="${esc(iso)}" onchange="salvarCertidao('${c.chave}', this.value)" style="max-width:160px; color-scheme:light dark;"><span id="cert-st-${c.chave}">${certStatusHTML(c.chave, iso)}</span></div>` : ''}
     ${podeAnexar ? `<div id="cert-arq-${c.chave}" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px;">${certArqHTML(c.chave)}</div>` : ''}
   </div>`;
@@ -4217,7 +4248,7 @@ function certCkInner(chave){
   return `<a class="doc-emitir" href="#" onclick="${parar}; event.preventDefault(); verCertidao('${chave}')" title="Abre a certidão salva em Minha conta">📎 Ver minha certidão</a>`
     + ` <label class="doc-edit-link" style="cursor:pointer;" onclick="${parar}">trocar${entrada}</label>`
     + ` <a href="#" class="doc-edit-link" onclick="${parar}; event.preventDefault(); removerCertidao('${chave}')">remover</a>`
-    + `<span style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${st}</span>`;
+    + `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${st}</span>`;
 }
 function certAnexadaHTML(texto){
   const chave = chaveCertidaoDoItem(texto);
@@ -5829,7 +5860,7 @@ function docItemInner(o, d, i, estado){
   const on = estado === true;
   const box = na ? `<span class="doc-check" id="doc-check-${o.id}-${i}">–</span>` : `<span class="doc-check ${on?'checked':''}" id="doc-check-${o.id}-${i}">${on?'✓':''}</span>`;
   const btn = `<button type="button" class="doc-na-btn" onclick="event.stopPropagation();docNaoSeAplica(${o.id},${i})" title="${na?'Voltar este documento para o checklist':'Este documento não se aplica a mim'}">${na?'desfazer':'não se aplica'}</button>`;
-  return `${box}${d}${na ? '' : `<span id="doc-link-${o.id}-${i}">${linkEmitirDocHTML(d, o, i)}</span>`}${na ? '<span class="doc-na-tag">não se aplica</span>' : ''}${btn}`;
+  return `${box}<span class="doc-txt">${d}</span><span class="doc-acoes">${na ? '' : `<span class="doc-link-box" id="doc-link-${o.id}-${i}">${linkEmitirDocHTML(d, o, i)}</span>`}${na ? '<span class="doc-na-tag">não se aplica</span>' : ''}${btn}</span>`;
 }
 function docRefresh(oid, idx){
   const o = oportunidades.find(x=>x.id===oid);
