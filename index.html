@@ -9851,6 +9851,7 @@ function consAderRender(){
     inserirNotaNoCard(card, ad);
     // "Completar perfil" aqui leva ao cadastro DESTE cliente, não ao perfil do consultor
     card.querySelectorAll('a').forEach(a=>{ if(/completar perfil/i.test(a.textContent)){ a.onclick = e=>{ e.preventDefault(); e.stopPropagation(); const f = document.getElementById('cons-nome'); if(f){ f.scrollIntoView({behavior:'smooth', block:'center'}); f.focus(); } }; a.textContent = 'Completar o cadastro do cliente'; } });
+    card.insertAdjacentHTML('beforeend', `<div onclick="event.stopPropagation()" style="margin-top:8px;"><details ontoggle="consSaudeAderente('${esc(String(o.id))}', this)"><summary style="cursor:pointer; font-weight:600; font-size:12.5px;">Situação financeira do órgão</summary><div class="cons-sf" style="margin-top:6px; font-size:13px;"></div></details></div>`);
     card.insertAdjacentHTML('beforeend', ja.has(String(o.id))
       ? '<div style="margin-top:8px; font-size:12.5px; color:var(--teal);">✓ Em acompanhamento (veja no item 3)</div>'
       : `<div style="margin-top:8px;"><button class="btn-ghost" onclick="event.stopPropagation(); consAdicionarProcesso('${esc(String(o.id))}')">+ Acompanhar para este cliente</button></div>`);
@@ -10006,10 +10007,19 @@ async function dehCopiarResumo(){
   await _copiarTexto(linhas.join('\n'));
 }
 // Situação financeira (CAPAG) do órgão do edital, dentro da ficha do cliente da consultoria
-async function consSaudeCarregar(i, det){
+function consSaudeCarregar(i, det){
   if(!det.open || det.dataset.ok) return;
-  const box = det.querySelector('.cons-sf'); const cl = consCliente(); if(!box || !cl) return;
-  const p = consDados(cl).processos[i]; if(!p) return;
+  const cl = consCliente(); const p = cl && consDados(cl).processos[i]; if(!p) return;
+  return consSaudeParaEdital(p, det);
+}
+// Edital aderente (cartão): monta os dados mínimos a partir do próprio edital
+function consSaudeAderente(oid, det){
+  if(!det.open || det.dataset.ok) return;
+  const o = oportunidades.find(x=>String(x.id)===String(oid)); if(!o) return;
+  return consSaudeParaEdital({ id:o.id, orgao:o.orgao, edital:o.edital, uf:o.uf }, det);
+}
+async function consSaudeParaEdital(p, det){
+  const box = det.querySelector('.cons-sf'); if(!box) return;
   box.innerHTML = 'Consultando…';
   try{
     const o = oportunidades.find(x=>String(x.id)===String(p.id));
