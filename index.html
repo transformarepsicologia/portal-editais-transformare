@@ -4117,13 +4117,89 @@ function certStatusHTML(chave, iso){
   if(falta <= 15) return `<span style="color:var(--gold,#D4AE5C);">Vence em ${falta} dia${falta===1?'':'s'} (${quando})</span>`;
   return `<span>Vigente até ${quando}</span>`;
 }
+// Certidão anexada pelo cliente (Supabase Storage, bucket privado "certidoes", até 500 KB, PDF/JPG/PNG)
+const CERT_ARQ_MAX = 500 * 1024;
+const CERT_COM_ANEXO = ['cnd_pj','fgts','cndt','cnpj','municipal'];
+const CERT_MIME_EXT = { 'application/pdf':'pdf', 'image/jpeg':'jpg', 'image/png':'png' };
+function certArqInfo(chave){ return userProfile && ((userProfile.documentosRaw || {}).certidoesArq || {})[chave] || null; }
+function certArqHTML(chave){
+  const a = certArqInfo(chave);
+  const kb = a ? Math.max(1, Math.round((a.tamanho || 0) / 1024)) : 0;
+  const entrada = `<input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" style="display:none;" onchange="anexarCertidao('${chave}', this)">`;
+  if(!a) return `<label class="btn-ghost" style="display:inline-block; cursor:pointer; padding:4px 10px; font-size:12.5px;">📎 Anexar certidão${entrada}</label> <span style="font-size:11.5px; opacity:.75;">PDF, JPG ou PNG, até 500 KB</span>`;
+  return `<span style="font-size:12.5px;">📎 ${esc(a.nome || 'Certidão')} (${kb} KB)</span> · <a href="#" style="color:var(--teal);" onclick="verCertidao('${chave}'); return false;">Ver</a> · <label style="color:var(--teal); cursor:pointer;">Trocar${entrada}</label> · <a href="#" style="color:#e07b6a;" onclick="removerCertidao('${chave}'); return false;">Remover</a>`;
+}
 function certLinhaHTML(c, pre){
-  const podeAnotar = pre === 'perfil' && userProfile && CERT_COM_DATA.includes(c.chave);
+  const logado = pre === 'perfil' && userProfile;
+  const podeAnotar = logado && CERT_COM_DATA.includes(c.chave);
+  const podeAnexar = logado && CERT_COM_ANEXO.includes(c.chave);
   const iso = podeAnotar ? ((userProfile.documentosRaw.certidoesVenc || {})[c.chave] || '') : '';
   return `<div>
     <a href="${c.url}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${esc(c.nome)} ↗</a>
     ${podeAnotar ? `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; font-size:12.5px;"><label for="cert-${c.chave}">Vence em</label><input type="date" id="cert-${c.chave}" value="${esc(iso)}" onchange="salvarCertidao('${c.chave}', this.value)" style="max-width:160px; color-scheme:light dark;"><span id="cert-st-${c.chave}">${certStatusHTML(c.chave, iso)}</span></div>` : ''}
+    ${podeAnexar ? `<div id="cert-arq-${c.chave}" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px;">${certArqHTML(c.chave)}</div>` : ''}
   </div>`;
+}
+async function certGravarArq(mapa){
+  const novo = { ...(userProfile.documentosRaw || {}), certidoesArq: mapa };
+  const { error } = await _sb.from('usuarios_perfil').update({ documentos: novo }).eq('id', userProfile.id);
+  if(error) return false;
+  userProfile.documentosRaw = novo; return true;
+}
+function certArqAtualizarTela(chave){
+  const el = document.getElementById('cert-arq-' + chave); if(el) el.innerHTML = certArqHTML(chave);
+  try{ if(typeof currentDetailId !== 'undefined' && currentDetailId && document.getElementById('view-detalhe') && document.getElementById('view-detalhe').classList.contains('active')) openDetalhe(currentDetailId); }catch(e){}
+}
+async function anexarCertidao(chave, input){
+  const f = input.files && input.files[0]; input.value = '';
+  if(!f) return;
+  if(!userProfile || !_sb){ toast('Entre na sua conta para anexar a certidão.'); return; }
+  if(!ehPro()){ toast('Anexar certidões é um recurso do Plano Transformare Pro.'); return; }
+  const ext = CERT_MIME_EXT[f.type];
+  if(!ext){ toast('Use um arquivo PDF, JPG ou PNG.'); return; }
+  if(f.size > CERT_ARQ_MAX){ toast('O arquivo tem ' + Math.round(f.size/1024) + ' KB e o limite é 500 KB. Reduza o arquivo e tente de novo.'); return; }
+  const mapa = { ...(((userProfile.documentosRaw || {}).certidoesArq) || {}) };
+  const antigo = mapa[chave] && mapa[chave].path;
+  const path = userProfile.id + '/' + chave + '.' + ext;
+  toast('Enviando…');
+  const { error } = await _sb.storage.from('certidoes').upload(path, f, { upsert:true, contentType:f.type });
+  if(error){ toast('Não foi possível enviar o arquivo agora.'); return; }
+  if(antigo && antigo !== path) { try{ await _sb.storage.from('certidoes').remove([antigo]); }catch(e){} }
+  mapa[chave] = { path, nome: String(f.name).slice(0, 80), tamanho: f.size, em: new Date().toISOString() };
+  if(!(await certGravarArq(mapa))){ toast('O arquivo foi enviado, mas não conseguimos salvar o registro. Tente de novo.'); return; }
+  certArqAtualizarTela(chave);
+  toast('Certidão anexada.');
+}
+async function verCertidao(chave){
+  const a = certArqInfo(chave); if(!a || !_sb) return;
+  const w = window.open('', '_blank'); // abre já, para o celular não bloquear
+  const { data, error } = await _sb.storage.from('certidoes').createSignedUrl(a.path, 120);
+  if(error || !data || !data.signedUrl){ if(w) w.close(); toast('Não foi possível abrir a certidão agora.'); return; }
+  if(w) w.location = data.signedUrl; else window.location.href = data.signedUrl;
+}
+async function removerCertidao(chave){
+  const a = certArqInfo(chave); if(!a || !_sb) return;
+  if(!confirm('Remover a certidão anexada?')) return;
+  const { error } = await _sb.storage.from('certidoes').remove([a.path]);
+  if(error){ toast('Não foi possível remover agora.'); return; }
+  const mapa = { ...(((userProfile.documentosRaw || {}).certidoesArq) || {}) }; delete mapa[chave];
+  if(!(await certGravarArq(mapa))){ toast('Não foi possível atualizar o registro.'); return; }
+  certArqAtualizarTela(chave);
+  toast('Certidão removida.');
+}
+// Chave da certidão correspondente a um item do checklist do edital (para ligar ao arquivo anexado)
+function chaveCertidaoDoItem(texto){
+  const t = String(texto||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+  if(/municipal/.test(t) && /(certidao|debito|tribut)/.test(t)) return 'municipal';
+  const l = portalDoDocumento(texto);
+  return l && CERT_COM_ANEXO.includes(l.chave) ? l.chave : null;
+}
+function certAnexadaHTML(texto){
+  const chave = chaveCertidaoDoItem(texto), a = chave && certArqInfo(chave);
+  if(!a) return '';
+  const iso = ((userProfile.documentosRaw || {}).certidoesVenc || {})[chave] || '';
+  const st = iso && CERT_COM_DATA.includes(chave) ? ' · ' + certStatusHTML(chave, iso) : '';
+  return ` <a class="doc-emitir" href="#" onclick="event.stopPropagation(); event.preventDefault(); verCertidao('${chave}')" title="Abre a certidão que você anexou em Minha conta">📎 Ver minha certidão</a>${st ? `<span style="font-size:11.5px;">${st}</span>` : ''}`;
 }
 async function salvarCertidao(chave, valor){
   if(!userProfile || !_sb) return;
@@ -5488,8 +5564,9 @@ function linkEmitirDocHTML(texto, o, i){
   const ferr = adm ? bt('', 'Editar o texto deste item do checklist', 'editarItemChecklist', '✎ item')
                      + bt('', 'Cadastrar ou alterar o link deste documento neste edital', 'editarLinkChecklist', '✎ link')
                      + (url ? bt('', 'Excluir o link deste documento neste edital', 'excluirLinkChecklist', '🗑 link') : '') : '';
-  if(!url) return ferr;
-  return ` <a class="doc-emitir" href="${esc(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>${ferr}`;
+  const anexada = userProfile ? certAnexadaHTML(texto) : '';
+  if(!url) return anexada + ferr;
+  return anexada + ` <a class="doc-emitir" href="${esc(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>${ferr}`;
 }
 async function _gravarLinksDocs(o, oppId, novo){
   const { data, error } = await _sb.from('editais').update({ links_docs: novo }).eq('id', oppId - 900000).select('id');
