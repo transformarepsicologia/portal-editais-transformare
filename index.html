@@ -5210,6 +5210,7 @@ async function saudeFiscalHTML(d, consultoria){
   return caixa(corpo + links);
 }
 function painelOrgao(id){
+  if(!adminAuthed) return; // painel Sobre o órgão é só da consultoria (administrador)
   const o = oportunidades.find(x=>x.id===id);
   const head = document.querySelector('#detalhe-content .detail-head');
   if(!o || !head || document.getElementById('orgao-cnpj')) return;
