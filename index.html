@@ -1310,6 +1310,17 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   #aviso-cache-editais{bottom:50px !important;}
 }
 @media print{ .wa-flutuante{display:none;} }
+
+/* Celular: textos longos sem quebra (links, URLs) não podem alargar a página do edital */
+@media(max-width:760px){
+  #detalhe-content{max-width:100%; overflow-wrap:anywhere; word-break:break-word;}
+  #detalhe-content *{min-width:0; max-width:100%;}
+  #detalhe-content .detail-grid{grid-template-columns:minmax(0,1fr);}
+  #detalhe-content .quick-facts{grid-template-columns:repeat(2,minmax(0,1fr));}
+  #detalhe-content a{overflow-wrap:anywhere; word-break:break-all;}
+  #detalhe-content .doc-na-btn{white-space:normal; flex-shrink:0;}
+  #detalhe-content pre, #detalhe-content table{max-width:100%; overflow-x:auto; display:block;}
+}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
