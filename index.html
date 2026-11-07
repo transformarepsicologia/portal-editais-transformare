@@ -843,7 +843,7 @@ table.admin-table tr:hover td{background:var(--bg-elevated);}
 .profile-field{display:flex; justify-content:space-between; gap:10px; font-size:13px; padding:9px 0; border-top:1px solid var(--border-soft);}
 .profile-field .k{color:var(--ink-dim);}
 .profile-field .v{color:var(--ink); text-align:right;}
-.account-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:22px;}
+.account-stats{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:22px;}
 .account-stats .indicator-card .num{font-size:24px;}
 .pw-wrap{position:relative; display:block; width:100%;}
 .pw-wrap > input{padding-right:46px !important; width:100%; box-sizing:border-box;}
@@ -1070,7 +1070,7 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
   .account-grid{gap:16px;}
   .account-grid > div:last-child{order:-1;}
-  .account-stats{grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:18px;}
+  .account-stats{grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:18px;}
   .account-stats .indicator-card{padding:12px 10px;}
   .account-stats .indicator-card .num{font-size:20px;}
   .account-stats .indicator-card .label{font-size:11px; line-height:1.3;}
@@ -4678,7 +4678,6 @@ function renderMinhaConta(){
         <div class="account-stats">
           <div class="indicator-card"><div class="num">${ehPro() ? altaAderencia : (todasAderencias.length ? todasAderencias.length : ICONE_CADEADO)}</div><div class="label">${ehPro() ? 'Editais com alta aderência (70%+)' : (todasAderencias.length ? 'Editais ativos com aderência ao seu perfil' : 'Aderência ao seu perfil — Plano Pro')}</div></div>
           <div class="indicator-card"><div class="num">${ehPro() ? (melhorAderencia !== null ? melhorAderencia + '%' : '—') : ICONE_CADEADO}</div><div class="label">Maior aderência ao seu perfil${ehPro() ? '' : ' — Plano Pro'}</div></div>
-          <div class="indicator-card" style="cursor:pointer;" onclick="nav('perfil')" title="Completar perfil"><div class="num">${perfilPct}%</div><div class="label">Perfil preenchido${perfilPct < 100 ? ' — completar ›' : ''}</div></div>
         </div>
 
         ${ehPro() ? `<div class="section-title" style="font-size:17px; margin-top:32px;">Editais com alta aderência (70% ou mais)</div>
