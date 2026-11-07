@@ -4085,7 +4085,7 @@ function empresaExtrasHTML(e, pre){
   <div class="emp-card" style="margin-top:10px;">
     <div style="font-weight:700; margin-bottom:4px;">Emitir certidões negativas</div>
     ${ehPro()
-      ? '<div style="display:flex; flex-direction:column; gap:10px;">' + certs.map(c=>certLinhaHTML(c, pre)).join('') + certMunicipaisHTML(e, pre) + '</div><div style="font-size:11.5px; opacity:.75; margin-top:8px;">Os links levam aos portais oficiais; a emissão é feita lá, com o CNPJ da empresa.' + (pre === 'perfil' ? ' Marque a data de vencimento de cada certidão para ser avisado.' : '') + '</div>'
+      ? '<div style="display:flex; flex-direction:column; gap:10px;">' + certs.map(c=>certLinhaHTML(c, pre)).join('') + certMunicipaisHTML(e, pre) + certLinhaHTML({ chave:'conselho', nome:'Certidão negativa do conselho profissional', url:'' }, pre) + '</div><div style="font-size:11.5px; opacity:.75; margin-top:8px;">Os links levam aos portais oficiais; a emissão é feita lá, com o CNPJ da empresa.' + (pre === 'perfil' ? ' Marque a data de vencimento de cada certidão para ser avisado.' : '') + '</div>'
       : travaProHTML('Links para emitir as certidões: disponível no Plano Transformare Pro')}
   </div>`;
 }
@@ -4107,7 +4107,7 @@ function certMunicipalLinha(e, pre){
 }
 function certMunicipaisHTML(e, pre){ return certMunicipalLinha(e, pre); }
 // Vencimento: o cliente marca a data em que a certidão vence
-const CERT_COM_DATA = ['cnd_pj','fgts','cndt','municipal'];
+const CERT_COM_DATA = ['cnd_pj','fgts','cndt','municipal','conselho'];
 function certStatusHTML(chave, iso){
   if(!iso) return '';
   const venc = new Date(iso + 'T12:00:00');
@@ -4119,7 +4119,7 @@ function certStatusHTML(chave, iso){
 }
 // Certidão anexada pelo cliente (Supabase Storage, bucket privado "certidoes", até 500 KB, PDF/JPG/PNG)
 const CERT_ARQ_MAX = 500 * 1024;
-const CERT_COM_ANEXO = ['cnd_pj','fgts','cndt','cnpj','municipal'];
+const CERT_COM_ANEXO = ['cnd_pj','fgts','cndt','cnpj','municipal','conselho'];
 const CERT_MIME_EXT = { 'application/pdf':'pdf', 'image/jpeg':'jpg', 'image/png':'png' };
 function certArqInfo(chave){ return userProfile && ((userProfile.documentosRaw || {}).certidoesArq || {})[chave] || null; }
 function certArqHTML(chave){
@@ -4135,7 +4135,7 @@ function certLinhaHTML(c, pre){
   const podeAnexar = logado && CERT_COM_ANEXO.includes(c.chave);
   const iso = podeAnotar ? ((userProfile.documentosRaw.certidoesVenc || {})[c.chave] || '') : '';
   return `<div>
-    <a href="${c.url}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${esc(c.nome)} ↗</a>
+    ${c.url ? `<a href="${c.url}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${esc(c.nome)} ↗</a>` : `<span>${esc(c.nome)}</span>`}
     ${podeAnotar ? `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; font-size:12.5px;"><label for="cert-${c.chave}">Vence em</label><input type="date" id="cert-${c.chave}" value="${esc(iso)}" onchange="salvarCertidao('${c.chave}', this.value)" style="max-width:160px; color-scheme:light dark;"><span id="cert-st-${c.chave}">${certStatusHTML(c.chave, iso)}</span></div>` : ''}
     ${podeAnexar ? `<div id="cert-arq-${c.chave}" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px;">${certArqHTML(c.chave)}</div>` : ''}
   </div>`;
@@ -4148,7 +4148,7 @@ async function certGravarArq(mapa){
 }
 function certArqAtualizarTela(chave){
   const el = document.getElementById('cert-arq-' + chave); if(el) el.innerHTML = certArqHTML(chave);
-  try{ if(typeof currentDetailId !== 'undefined' && currentDetailId && document.getElementById('view-detalhe') && document.getElementById('view-detalhe').classList.contains('active')) openDetalhe(currentDetailId); }catch(e){}
+  certCkAtualizar(chave);
 }
 async function anexarCertidao(chave, input){
   const f = input.files && input.files[0]; input.value = '';
@@ -4190,16 +4190,31 @@ async function removerCertidao(chave){
 // Chave da certidão correspondente a um item do checklist do edital (para ligar ao arquivo anexado)
 function chaveCertidaoDoItem(texto){
   const t = String(texto||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
-  if(/municipal/.test(t) && /(certidao|debito|tribut)/.test(t)) return 'municipal';
+  if(/conselho/.test(t) && /certidao/.test(t)) return 'conselho';
+  if(/municip/.test(t) && /(certidao|debito|tribut)/.test(t)) return 'municipal';
   const l = portalDoDocumento(texto);
   return l && CERT_COM_ANEXO.includes(l.chave) ? l.chave : null;
 }
-function certAnexadaHTML(texto){
-  const chave = chaveCertidaoDoItem(texto), a = chave && certArqInfo(chave);
-  if(!a) return '';
+// Linha do checklist do edital: anexar, ver, trocar e remover a certidão (mesmo arquivo de Minha conta)
+function certCkInner(chave){
+  const a = certArqInfo(chave);
+  const parar = 'event.stopPropagation()';
+  const entrada = `<input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" style="display:none;" onclick="${parar}" onchange="${parar}; anexarCertidao('${chave}', this)">`;
+  if(!a) return `<label class="doc-emitir" style="cursor:pointer;" onclick="${parar}" title="PDF, JPG ou PNG, até 500 KB. Fica salvo em Minha conta.">📎 Anexar minha certidão${entrada}</label>`;
   const iso = ((userProfile.documentosRaw || {}).certidoesVenc || {})[chave] || '';
-  const st = iso && CERT_COM_DATA.includes(chave) ? ' · ' + certStatusHTML(chave, iso) : '';
-  return ` <a class="doc-emitir" href="#" onclick="event.stopPropagation(); event.preventDefault(); verCertidao('${chave}')" title="Abre a certidão que você anexou em Minha conta">📎 Ver minha certidão</a>${st ? `<span style="font-size:11.5px;">${st}</span>` : ''}`;
+  const st = iso ? ' ' + certStatusHTML(chave, iso) : '';
+  return `<a class="doc-emitir" href="#" onclick="${parar}; event.preventDefault(); verCertidao('${chave}')" title="Abre a certidão salva em Minha conta">📎 Ver minha certidão</a>`
+    + ` <label class="doc-edit-link" style="cursor:pointer;" onclick="${parar}">trocar${entrada}</label>`
+    + ` <a href="#" class="doc-edit-link" onclick="${parar}; event.preventDefault(); removerCertidao('${chave}')">remover</a>`
+    + `<span style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${st}</span>`;
+}
+function certAnexadaHTML(texto){
+  const chave = chaveCertidaoDoItem(texto);
+  if(!chave || !userProfile) return '';
+  return `<span class="cert-ck" data-chave="${chave}">${certCkInner(chave)}</span> `;
+}
+function certCkAtualizar(chave){
+  document.querySelectorAll('.cert-ck[data-chave="' + chave + '"]').forEach(el=>{ el.innerHTML = certCkInner(chave); });
 }
 async function salvarCertidao(chave, valor){
   if(!userProfile || !_sb) return;
@@ -4210,6 +4225,7 @@ async function salvarCertidao(chave, valor){
   if(error){ toast('Não foi possível salvar a data agora.'); return; }
   userProfile.documentosRaw = novo;
   const el = document.getElementById('cert-st-' + chave); if(el) el.innerHTML = certStatusHTML(chave, valor);
+  certCkAtualizar(chave);
   toast('Data salva.');
 }
 async function verificarCnpj(pre){
