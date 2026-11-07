@@ -5183,9 +5183,9 @@ async function saudeFiscalHTML(d){
   const nat = String(d.natureza_juridica || '');
   const esfera = /munic/i.test(nat) ? 'municipio' : (/estadual|distrito federal/i.test(nat) ? 'estado' : (/federal|uni[aã]o/i.test(nat) ? 'federal' : ''));
   if(!esfera) return '';
-  const caixa = corpo => `<div class="emp-card" style="margin-top:10px;"><div style="font-weight:700; margin-bottom:4px;">Saúde fiscal</div>${ehPro() ? corpo : travaProHTML('Nota de capacidade de pagamento do ente público: disponível no Plano Transformare Pro')}</div>`;
+  const caixa = corpo => `<div class="emp-card" style="margin-top:10px;"><div style="font-weight:700; margin-bottom:4px;">Situação financeira do órgão</div>${ehPro() ? corpo : travaProHTML('Situação financeira do órgão: disponível no Plano Transformare Pro')}</div>`;
   if(esfera === 'federal') return caixa('<div>Órgão federal: os pagamentos saem do orçamento da União, que não tem nota de capacidade de pagamento (CAPAG).</div>');
-  const cid = d.municipio ? String(d.municipio) : '', uf = String(d.uf || '').toUpperCase();
+  const cid = d.municipio ? String(d.municipio).toLowerCase().replace(/(^|\s)(\S)/g,(m,sp,ch)=>sp+ch.toUpperCase()).replace(/ (De|Da|Do|Das|Dos|E) /g,m=>m.toLowerCase()) : '', uf = String(d.uf || '').toUpperCase();
   const links = `<div style="font-size:12.5px; margin-top:6px;"><a href="https://www.tesourotransparente.gov.br/temas/estados-e-municipios/capacidade-de-pagamento-capag" target="_blank" rel="noopener" style="color:var(--teal);">CAPAG no Tesouro Transparente ↗</a> · <a href="https://siconfi.tesouro.gov.br/siconfi/pages/public/consulta_finbra/finbra_list.jsf" target="_blank" rel="noopener" style="color:var(--teal);">Contas públicas (Siconfi) ↗</a></div>`;
   const nome = esfera === 'estado' ? 'estado ' + uf : cid + '/' + uf;
   const capag = await carregarCapag();
@@ -5194,14 +5194,17 @@ async function saudeFiscalHTML(d){
   let corpo;
   if(reg){
     const nota = reg[0], bom = /^A/.test(nota), medio = /^B/.test(nota);
-    const cor = bom ? '🟢' : (medio ? '🟡' : '🔴');
-    const txt = nota === 'A+' || nota === 'A' ? 'Boa capacidade de pagamento.' : (medio ? 'Capacidade de pagamento intermediária.' : (nota === 'C' ? 'Capacidade de pagamento fraca. Vale atenção ao prazo de pagamento.' : 'Capacidade de pagamento muito fraca. Risco de atraso nos pagamentos.'));
+    const quem = esfera === 'estado' ? 'O governo do estado ' + uf : 'A prefeitura de ' + cid;
+    const tit = bom ? '🟢 Boa situação financeira' : (medio ? '🟡 Situação financeira intermediária' : '🔴 Atenção com o pagamento');
+    const txt = bom ? quem + ' tem boa folga no orçamento. O risco de atraso nos pagamentos é menor.'
+      : (medio ? quem + ' tem folga moderada no orçamento. Vale conferir o prazo de pagamento previsto no edital.'
+      : quem + ' tem pouca folga no orçamento. Vale conferir o prazo de pagamento no edital e pedir referências a quem já presta serviço lá.');
     const ind = (v,n)=> v === null || v === undefined ? '—' : String(v).replace('.',',') + '% (' + n + ')';
-    corpo = `<div style="font-size:15px; font-weight:700;">${cor} Nota CAPAG ${esc(nota)} — ${esc(nome)}</div><div>${txt}</div>`
-      + `<div style="font-size:12.5px; opacity:.85; margin-top:2px;">Endividamento: ${esc(ind(reg[1],reg[2]))} · Poupança corrente: ${esc(ind(reg[3],reg[4]))} · Liquidez: ${esc(ind(reg[5],reg[6]))}</div>`
-      + `<div style="font-size:11.5px; opacity:.75; margin-top:4px;">Fonte: Tesouro Nacional (CAPAG, ano base ${esc(String(reg[7]))}). A nota é uma referência e não garante nem impede pagamentos.</div>`;
+    corpo = `<div style="font-size:15px; font-weight:700;">${tit}</div><div>${esc(txt)}</div>`
+      + `<details style="margin-top:6px; font-size:12.5px;"><summary style="cursor:pointer; color:var(--teal);">Ver detalhes técnicos</summary><div style="margin-top:4px; opacity:.9;">Nota CAPAG: ${esc(nota)} (do melhor, A+, ao pior, D).<br>Endividamento: ${esc(ind(reg[1],reg[2]))} · Poupança corrente: ${esc(ind(reg[3],reg[4]))} · Liquidez: ${esc(ind(reg[5],reg[6]))}<br>Fonte: Tesouro Nacional (CAPAG, ano base ${esc(String(reg[7]))}).</div></details>`
+      + `<div style="font-size:11.5px; opacity:.75; margin-top:4px;">Referência do Tesouro Nacional. Não garante nem impede pagamentos.</div>`;
   } else {
-    corpo = `<div>Não encontramos nota CAPAG para ${esc(nome)} (o ente pode não ter enviado os dados ao Tesouro). Confira nas fontes oficiais abaixo.</div>`;
+    corpo = `<div>Não encontramos a avaliação financeira de ${esc(nome)} (o ente pode não ter enviado os dados ao Tesouro). Você pode conferir nas fontes oficiais abaixo.</div>`;
   }
   return caixa(corpo + links);
 }
