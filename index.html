@@ -5147,6 +5147,104 @@ function openDetalhe(id){
   if(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) carregarPastaEdital(o.id);   // ADM: link da pasta do Drive deste edital
   nav('detalhe');
 }
+// ===== Sobre o órgão (página do edital): histórico no Radar, dados do CNPJ e saúde fiscal do município =====
+function cnpjDoEdital(o){ const m = String(o && o.edital || '').match(/^(\d{14})-/); return m ? m[1] : null; }
+function fmtCnpj(c){ return c.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5'); }
+function normOrgao(t){ return String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim(); }
+function historicoOrgao(o){
+  const cnpj = cnpjDoEdital(o), nome = normOrgao(o.orgao);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const mesmos = (oportunidades||[]).filter(x=>x.id!==o.id && visivelAoCliente(x) && ((cnpj && cnpjDoEdital(x)===cnpj) || (nome && normOrgao(x.orgao)===nome)));
+  const todos = mesmos.concat([o]);
+  const abertos = todos.filter(x=>{ const d = parseDate(x.prazo); return isNaN(d.getTime()) || d >= hoje; }).length;
+  const profs = {}; todos.forEach(x=>(x.profissoes||[]).forEach(p=>{ if(p) profs[p] = (profs[p]||0) + 1; }));
+  const anos = new Set(); todos.forEach(x=>{ const d = parseDate(x.publicacao); if(!isNaN(d.getTime())) anos.add(d.getFullYear()); });
+  return { outros: mesmos, total: todos.length, abertos, profs: Object.entries(profs).sort((a,b)=>b[1]-a[1]).slice(0,5), anos: [...anos].sort() };
+}
+function historicoOrgaoHTML(o){
+  const h = historicoOrgao(o);
+  const dica = h.total === 1 ? 'Primeiro edital deste órgão que registramos no Radar.'
+    : (h.anos.length >= 2 ? `Órgão recorrente: publica credenciamentos em anos diferentes (${h.anos.join(', ')}).` : `Já registramos ${h.total} editais deste órgão.`);
+  return `<div class="emp-card" style="margin-top:6px;">
+    <div style="font-weight:700; margin-bottom:4px;">Histórico no Radar</div>
+    <div>${esc(dica)}${h.total > 1 ? ` ${h.abertos} com prazo aberto.` : ''}</div>
+    ${h.profs.length ? `<div style="margin-top:4px;">Profissões já credenciadas: ${h.profs.map(([p,n])=>esc(p) + (n>1 ? ' (' + n + ')' : '')).join(', ')}.</div>` : ''}
+    ${h.outros.length ? `<div style="margin-top:6px;">Outros editais do órgão:<ul style="margin:4px 0 0; padding-left:18px;">${h.outros.slice(0,5).map(x=>`<li><a href="#" onclick="openDetalhe(${x.id}); return false;" style="color:var(--teal);">${esc(String(x.edital||'Edital').replace(/^\d{14}-\d+-/,'').slice(0,60))}</a>${x.prazo ? ' · prazo ' + esc(x.prazo) : ''}</li>`).join('')}</ul></div>` : ''}
+    <div style="font-size:11.5px; opacity:.75; margin-top:6px;">Baseado nos editais que o Radar já acompanhou.</div>
+  </div>`;
+}
+let _capagCache;
+async function carregarCapag(){
+  if(_capagCache !== undefined) return _capagCache;
+  try{ const r = await fetch('capag-municipios.json', {cache:'no-cache'}); _capagCache = r.ok ? await r.json() : null; }catch(e){ _capagCache = null; }
+  return _capagCache;
+}
+async function saudeFiscalHTML(d){
+  const nat = String(d.natureza_juridica || '');
+  const esfera = /munic/i.test(nat) ? 'municipio' : (/estadual|distrito federal/i.test(nat) ? 'estado' : (/federal|uni[aã]o/i.test(nat) ? 'federal' : ''));
+  if(!esfera) return '';
+  const caixa = corpo => `<div class="emp-card" style="margin-top:10px;"><div style="font-weight:700; margin-bottom:4px;">Situação financeira do órgão</div>${ehPro() ? corpo : travaProHTML('Situação financeira do órgão: disponível no Plano Transformare Pro')}</div>`;
+  if(esfera === 'federal') return caixa('<div>Órgão federal: os pagamentos saem do orçamento da União, que não tem nota de capacidade de pagamento (CAPAG).</div>');
+  const cid = d.municipio ? String(d.municipio).toLowerCase().replace(/(^|\s)(\S)/g,(m,sp,ch)=>sp+ch.toUpperCase()).replace(/ (De|Da|Do|Das|Dos|E) /g,m=>m.toLowerCase()) : '', uf = String(d.uf || '').toUpperCase();
+  const links = `<div style="font-size:12.5px; margin-top:6px;"><a href="https://www.tesourotransparente.gov.br/temas/estados-e-municipios/capacidade-de-pagamento-capag" target="_blank" rel="noopener" style="color:var(--teal);">CAPAG no Tesouro Transparente ↗</a> · <a href="https://siconfi.tesouro.gov.br/siconfi/pages/public/consulta_finbra/finbra_list.jsf" target="_blank" rel="noopener" style="color:var(--teal);">Contas públicas (Siconfi) ↗</a></div>`;
+  const nome = esfera === 'estado' ? 'estado ' + uf : cid + '/' + uf;
+  const capag = await carregarCapag();
+  const chave = esfera === 'estado' ? 'estado|' + uf : normOrgao(cid) + '|' + uf;
+  const reg = capag && capag.dados && capag.dados[chave];
+  let corpo;
+  if(reg){
+    const nota = reg[0], bom = /^A/.test(nota), medio = /^B/.test(nota);
+    const quem = esfera === 'estado' ? 'O governo do estado ' + uf : 'A prefeitura de ' + cid;
+    const tit = bom ? '🟢 Boa situação financeira' : (medio ? '🟡 Situação financeira intermediária' : '🔴 Atenção com o pagamento');
+    const txt = bom ? quem + ' tem boa folga no orçamento. O risco de atraso nos pagamentos é menor.'
+      : (medio ? quem + ' tem folga moderada no orçamento. Vale conferir o prazo de pagamento previsto no edital.'
+      : quem + ' tem pouca folga no orçamento. Vale conferir o prazo de pagamento no edital e pedir referências a quem já presta serviço lá.');
+    const ind = (v,n)=> v === null || v === undefined ? '—' : String(v).replace('.',',') + '% (' + n + ')';
+    corpo = `<div style="font-size:15px; font-weight:700;">${tit}</div><div>${esc(txt)}</div>`
+      + `<details style="margin-top:6px; font-size:12.5px;"><summary style="cursor:pointer; color:var(--teal);">Ver detalhes técnicos</summary><div style="margin-top:4px; opacity:.9;">Nota CAPAG: ${esc(nota)} (do melhor, A+, ao pior, D).<br>Endividamento: ${esc(ind(reg[1],reg[2]))} · Poupança corrente: ${esc(ind(reg[3],reg[4]))} · Liquidez: ${esc(ind(reg[5],reg[6]))}<br>Fonte: Tesouro Nacional (CAPAG, ano base ${esc(String(reg[7]))}).</div></details>`
+      + `<div style="font-size:11.5px; opacity:.75; margin-top:4px;">Referência do Tesouro Nacional. Não garante nem impede pagamentos.</div>`;
+  } else {
+    corpo = `<div>Não encontramos a avaliação financeira de ${esc(nome)} (o ente pode não ter enviado os dados ao Tesouro). Você pode conferir nas fontes oficiais abaixo.</div>`;
+  }
+  return caixa(corpo + links);
+}
+function painelOrgao(id){
+  const o = oportunidades.find(x=>x.id===id);
+  const head = document.querySelector('#detalhe-content .detail-head');
+  if(!o || !head || document.getElementById('orgao-cnpj')) return;
+  const cnpj = cnpjDoEdital(o);
+  head.insertAdjacentHTML('afterend', `<div class="panel" id="orgao-cnpj" style="margin-top:16px;"><h4><span class="dot"></span>Sobre o órgão</h4>
+    ${historicoOrgaoHTML(o)}
+    <div id="orgao-res">${cnpj ? '<div style="font-size:13px; opacity:.8; margin-top:10px;">Consultando dados do CNPJ ' + fmtCnpj(cnpj) + '…</div>' : ''}</div></div>`);
+  if(cnpj) consultarOrgao(cnpj, id);
+}
+async function consultarOrgao(cnpj, id){
+  const res = document.getElementById('orgao-res'); if(!res) return;
+  try{
+    const r = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + cnpj);
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if(currentDetailId !== id || !document.getElementById('orgao-res')) return;
+    const lin = (k,v)=> v ? `<div><span style="opacity:.75;">${k}:</span> ${esc(String(v))}</div>` : '';
+    const end = [d.logradouro && (d.descricao_tipo_de_logradouro ? d.descricao_tipo_de_logradouro+' ' : '') + d.logradouro, d.numero, d.bairro].filter(Boolean).join(', ');
+    const sit = d.descricao_situacao_cadastral + (d.data_situacao_cadastral ? ' desde ' + d.data_situacao_cadastral.split('-').reverse().join('/') : '');
+    const ativa = /ativa/i.test(d.descricao_situacao_cadastral || '');
+    let html = `<div class="emp-card" style="margin-top:10px;">
+      <div style="font-weight:700; margin-bottom:4px;">Quem é o órgão</div>
+      <div>${esc(d.razao_social || '')}</div>
+      ${lin('Situação cadastral', (ativa ? '🟢 ' : '🔴 ') + sit)}${lin('Natureza jurídica', d.natureza_juridica)}${lin('Atividade principal', d.cnae_fiscal_descricao)}
+      ${lin('Endereço', end + (d.municipio ? ' — ' + d.municipio + '/' + d.uf : '') + (d.cep ? ' · CEP ' + d.cep : ''))}${lin('Início das atividades', d.data_inicio_atividade && d.data_inicio_atividade.split('-').reverse().join('/'))}
+      <div style="font-size:11.5px; opacity:.75; margin-top:4px;">CNPJ ${fmtCnpj(cnpj)}. Fonte: Receita Federal, via BrasilAPI. Informação pública.</div>
+    </div>`;
+    html += await saudeFiscalHTML(d);
+    if(currentDetailId !== id || !document.getElementById('orgao-res')) return;
+    document.getElementById('orgao-res').innerHTML = html;
+  }catch(e){
+    const el = document.getElementById('orgao-res');
+    if(el) el.innerHTML = '<div style="font-size:12.5px; opacity:.8; margin-top:10px;">Não foi possível consultar os dados do CNPJ agora.</div>';
+  }
+}
+(function(){ const orig = openDetalhe; openDetalhe = function(id){ orig(id); try{ painelOrgao(id); }catch(e){} }; })();
 function brl(v){ return Number(v).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
 async function solicitarPlanoEssencial(){
   if(!userProfile){ toast('Crie sua conta gratuita ou entre para assinar o plano Transformare Pro.'); nav('cadastro'); return; }
