@@ -4129,7 +4129,7 @@ function empresaExtrasHTML(e, pre){
   <div class="emp-card" style="margin-top:10px;">
     <div style="font-weight:700; margin-bottom:4px;">Emitir certidões negativas</div>
     ${ehPro()
-      ? '<div style="display:flex; flex-direction:column; gap:10px;">' + certs.map(c=>certLinhaHTML(c, pre)).join('') + certMunicipaisHTML(e, pre) + certLinhaHTML({ chave:'conselho', nome:'Certidão negativa do conselho profissional', url:'' }, pre) + '</div><div style="font-size:11.5px; opacity:.75; margin-top:8px;">Os links levam aos portais oficiais; a emissão é feita lá, com o CNPJ da empresa.' + (pre === 'perfil' ? ' Marque a data de vencimento de cada certidão para ser avisado.' : '') + '</div>'
+      ? '<div style="display:flex; flex-direction:column; gap:10px;">' + certs.map(c=>certLinhaHTML(c, pre)).join('') + certMunicipaisHTML(e, pre) + certLinhaHTML({ chave:'conselho', nome:'Certidão negativa do conselho profissional', url:'' }, pre) + certOutrasHTML(pre) + '</div><div style="font-size:11.5px; opacity:.75; margin-top:8px;">Os links levam aos portais oficiais; a emissão é feita lá, com o CNPJ da empresa.' + (pre === 'perfil' ? ' Marque a data de vencimento de cada certidão para ser avisado.' : '') + '</div>'
       : travaProHTML('Links para emitir as certidões: disponível no Plano Transformare Pro')}
   </div>`;
 }
@@ -4175,10 +4175,17 @@ function certArqHTML(chave){
   if(!a) return `<label class="btn-ghost" style="display:inline-block; cursor:pointer; padding:4px 10px; font-size:12.5px;">📎 Anexar certidão${entrada}</label> <span style="font-size:11.5px; opacity:.75;">PDF, JPG ou PNG, até 500 KB</span>`;
   return `<span class="cert-arq-nome" style="font-size:12.5px;">📎 ${esc(a.nome || 'Certidão')} (${kb} KB)</span><span class="cert-arq-acoes"><span class="sep"> · </span><a href="#" style="color:var(--teal);" onclick="verCertidao('${chave}'); return false;">Ver</a><span class="sep"> · </span><label style="color:var(--teal); cursor:pointer;">Trocar${entrada}</label><span class="sep"> · </span><a href="#" style="color:#e07b6a;" onclick="removerCertidao('${chave}'); return false;">Remover</a></span>`;
 }
+function certOutrasHTML(pre){
+  if(pre !== 'perfil' || !userProfile) return '';
+  const arq = (userProfile.documentosRaw || {}).certidoesArq || {};
+  const ks = Object.keys(arq).filter(k=>k.indexOf('x_') === 0 && arq[k].cadastro);
+  if(!ks.length) return '';
+  return '<div style="font-weight:700; margin-top:6px;">Outras certidões</div>' + ks.map(k=>certLinhaHTML({ chave:k, nome:arq[k].rotulo || 'Certidão', url:'' }, pre)).join('');
+}
 function certLinhaHTML(c, pre){
   const logado = pre === 'perfil' && userProfile;
-  const podeAnotar = logado && CERT_COM_DATA.includes(c.chave);
-  const podeAnexar = logado && CERT_COM_ANEXO.includes(c.chave);
+  const podeAnotar = logado && certTemData(c.chave);
+  const podeAnexar = logado && (CERT_COM_ANEXO.includes(c.chave) || String(c.chave).indexOf('x_') === 0);
   const iso = podeAnotar ? ((userProfile.documentosRaw.certidoesVenc || {})[c.chave] || '') : '';
   return `<div class="cert-card">
     ${c.url ? `<a class="cert-titulo" href="${c.url}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${esc(c.nome)} ↗</a>` : `<span class="cert-titulo">${esc(c.nome)}</span>`}
@@ -4195,6 +4202,9 @@ async function certGravarArq(mapa){
 function certArqAtualizarTela(chave){
   const el = document.getElementById('cert-arq-' + chave); if(el) el.innerHTML = certArqHTML(chave);
   certCkAtualizar(chave);
+  if(String(chave).indexOf('x_') === 0){ // item livre: refaz a linha para atualizar os botões pessoais
+    document.querySelectorAll('.cert-ck[data-chave="' + chave + '"]').forEach(e=>{ const li = e.closest('[id^="doc-item-"]'); const m = li && li.id.match(/^doc-item-(\d+)-(\d+)$/); if(m) docRefresh(+m[1], +m[2]); });
+  }
 }
 async function anexarCertidao(chave, input){
   const f = input.files && input.files[0]; input.value = '';
@@ -4211,7 +4221,13 @@ async function anexarCertidao(chave, input){
   const { error } = await _sb.storage.from('certidoes').upload(path, f, { upsert:true, contentType:f.type });
   if(error){ toast('Não foi possível enviar o arquivo agora.'); return; }
   if(antigo && antigo !== path) { try{ await _sb.storage.from('certidoes').remove([antigo]); }catch(e){} }
+  const ant = mapa[chave] || {};
   mapa[chave] = { path, nome: String(f.name).slice(0, 80), tamanho: f.size, em: new Date().toISOString() };
+  if(String(chave).indexOf('x_') === 0){
+    const rot = CERT_ROTULO_TMP[chave] || ant.rotulo || 'Certidão';
+    mapa[chave].rotulo = rot;
+    mapa[chave].cadastro = ant.cadastro !== undefined ? ant.cadastro : confirm('Deixar esta certidão salva também no seu cadastro (Minha conta)?\n\n"' + rot + '"\n\nOK = salvar no cadastro · Cancelar = manter só no checklist');
+  }
   if(!(await certGravarArq(mapa))){ toast('O arquivo foi enviado, mas não conseguimos salvar o registro. Tente de novo.'); return; }
   certArqAtualizarTela(chave);
   toast('Certidão anexada.');
@@ -4234,7 +4250,12 @@ async function removerCertidao(chave){
   toast('Certidão removida.');
 }
 // Chave da certidão correspondente a um item do checklist do edital (para ligar ao arquivo anexado)
-function chaveCertidaoDoItem(texto){
+// Itens livres: o cliente pode ligar um botão de anexo em qualquer item do checklist (chave 'x_<hash>' do texto original)
+function certChaveLivre(texto){ const t = _chaveDoc(texto); let h = 5381; for(let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return 'x_' + h.toString(36); }
+function certTemData(chave){ return CERT_COM_DATA.indexOf(chave) >= 0 || String(chave).indexOf('x_') === 0; }
+function docPessoal(o, texto){ const m = userProfile && ((userProfile.documentosRaw || {}).docsPessoais || {})[o && o.id]; return (m && m[_chaveDoc(texto)]) || {}; }
+const CERT_ROTULO_TMP = {};
+function chaveCertidaoDoItem(texto, o){
   const t = String(texto||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
   if(/conselho/.test(t) && /certidao/.test(t)) return 'conselho';
   if(/municip/.test(t) && /(certidao|debito|tribut)/.test(t)) return 'municipal';
@@ -4246,7 +4267,13 @@ function chaveCertidaoDoItem(texto){
   else if(/trabalhist|\bcndt\b/.test(t)) k = 'cndt';
   else if(/cnpj/.test(t) && /(inscricao|comprovante|cartao)/.test(t) && !/certidao negativa|regularidade/.test(t)) k = 'cnpj';
   else if(/(debitos|tributos|creditos tributarios|divida ativa).*(federa|uniao|receita|pgfn)|(federa|uniao|receita|pgfn).*(debitos|tributos|creditos tributarios|divida ativa)|\bcnd\b/.test(t) && !/pessoa fisica|\bcpf\b/.test(t)) k = 'cnd_pj';
-  return k && CERT_COM_ANEXO.includes(k) ? k : null;
+  if(k && CERT_COM_ANEXO.includes(k)) return k;
+  // item livre: anexo ligado pelo cliente neste edital, ou arquivo já salvo para este mesmo documento
+  if(userProfile){
+    const livre = certChaveLivre(texto);
+    if((o && docPessoal(o, texto).anexo) || certArqInfo(livre)) return livre;
+  }
+  return null;
 }
 // Linha do checklist do edital: anexar, ver, trocar e remover a certidão (mesmo arquivo de Minha conta)
 function certCkInner(chave){
@@ -4259,11 +4286,12 @@ function certCkInner(chave){
   return `<a class="doc-emitir" href="#" onclick="${parar}; event.preventDefault(); verCertidao('${chave}')" title="Abre a certidão salva em Minha conta">📎 Ver minha certidão</a>`
     + ` <label class="doc-edit-link" style="cursor:pointer;" onclick="${parar}">trocar${entrada}</label>`
     + ` <a href="#" class="doc-edit-link" onclick="${parar}; event.preventDefault(); removerCertidao('${chave}')">remover</a>`
-    + (CERT_COM_DATA.indexOf(chave) < 0 ? '' : `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${st}</span>`);
+    + (!certTemData(chave) ? '' : `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${st}</span>`);
 }
-function certAnexadaHTML(texto){
-  const chave = chaveCertidaoDoItem(texto);
+function certAnexadaHTML(texto, o){
+  const chave = chaveCertidaoDoItem(texto, o);
   if(!chave || !userProfile) return '';
+  if(String(chave).indexOf('x_') === 0) CERT_ROTULO_TMP[chave] = (docPessoal(o, texto).nome || texto);
   return `<span class="cert-ck" data-chave="${chave}">${certCkInner(chave)}</span> `;
 }
 function certCkAtualizar(chave){
@@ -5667,16 +5695,27 @@ function linkEmitirDocHTML(texto, o, i){
   if(!ehPro()) return '';
   const ov = o && o.linksDocs ? o.linksDocs[_chaveDoc(texto)] : undefined;
   let url = null;
-  if(ov === '') url = null;                       // admin removeu o link neste edital
+  const pesLink = userProfile ? (docPessoal(o, texto).url || '') : '';
+  if(pesLink) url = pesLink;
+  else if(ov === '') url = null;                       // admin removeu o link neste edital
   else if(ov) url = ov;                           // link definido para este edital
   else { const l = portalDoDocumento(texto); url = l ? l.url : null; }
   const bt = (cls, titulo, fn, rotulo) => ` <button type="button" class="doc-edit-link" title="${titulo}" onclick="event.stopPropagation(); ${fn}(${o.id}, ${i})">${rotulo}</button>`;
   const ferr = adm ? bt('', 'Editar o texto deste item do checklist', 'editarItemChecklist', '✎ item')
                      + bt('', 'Cadastrar ou alterar o link deste documento neste edital', 'editarLinkChecklist', '✎ link')
                      + (url ? bt('', 'Excluir o link deste documento neste edital', 'excluirLinkChecklist', '🗑 link') : '') : '';
-  const anexada = userProfile ? certAnexadaHTML(texto) : '';
-  if(!url) return anexada + ferr;
-  return anexada + ` <a class="doc-emitir" href="${esc(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>${ferr}`;
+  const anexada = userProfile ? certAnexadaHTML(texto, o) : '';
+  // botões pessoais do cliente: renomear, link próprio e botão de anexo (só valem para a conta dele)
+  const pes = docPessoal(o, texto), chaveAnexo = chaveCertidaoDoItem(texto, o);
+  const btp = (titulo, fn, rotulo) => ` <button type="button" class="doc-edit-link" title="${titulo}" onclick="event.stopPropagation(); ${fn}(${o.id}, ${i})">${rotulo}</button>`;
+  let meus = '';
+  if(userProfile){
+    if(!adm) meus += btp('Renomear este item só para você', 'pessoalNome', '✎ nome') + btp('Cadastrar ou alterar o link deste documento só para você', 'pessoalLink', '✎ link');
+    const livre = !chaveAnexo || String(chaveAnexo).indexOf('x_') === 0;
+    if(livre && !(chaveAnexo && certArqInfo(chaveAnexo))) meus += pes.anexo ? btp('Tirar o botão de anexo deste item', 'pessoalAnexo', '✕ anexo') : btp('Criar um botão para anexar este documento', 'pessoalAnexo', '📎 anexo');
+  }
+  if(!url) return anexada + ferr + meus;
+  return anexada + ` <a class="doc-emitir" href="${esc(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>${ferr}${meus}`;
 }
 async function _gravarLinksDocs(o, oppId, novo){
   const { data, error } = await _sb.from('editais').update({ links_docs: novo }).eq('id', oppId - 900000).select('id');
@@ -5907,12 +5946,55 @@ async function sincronizarChecklist(){
     else if(typeof renderMinhaConta === 'function' && document.getElementById('view-minha-conta').classList.contains('active')) renderMinhaConta();
   }catch(e){}
 }
+// Personalização do checklist pelo cliente (só na conta dele): nome, link e botão de anexo por item
+async function gravarPessoal(oppId, texto, patch){
+  if(!userProfile || !_sb) return false;
+  const raw = userProfile.documentosRaw || {};
+  const todos = { ...(raw.docsPessoais || {}) };
+  const doEdital = { ...(todos[oppId] || {}) };
+  const k = _chaveDoc(texto);
+  const novo = { ...(doEdital[k] || {}), ...patch };
+  Object.keys(novo).forEach(c=>{ if(novo[c] === '' || novo[c] === false || novo[c] == null) delete novo[c]; });
+  if(Object.keys(novo).length) doEdital[k] = novo; else delete doEdital[k];
+  if(Object.keys(doEdital).length) todos[oppId] = doEdital; else delete todos[oppId];
+  const doc = { ...raw, docsPessoais: todos };
+  const { error } = await _sb.from('usuarios_perfil').update({ documentos: doc }).eq('id', userProfile.id);
+  if(error){ toast('Não foi possível salvar agora.'); return false; }
+  userProfile.documentosRaw = doc; return true;
+}
+function _textoItem(oppId, i){ const o = oportunidades.find(x=>x.id===oppId); return o ? { o, texto: docsPreview(o.documentos)[i] } : { o:null, texto:null }; }
+async function pessoalNome(oppId, i){
+  const { o, texto } = _textoItem(oppId, i); if(!o || texto == null) return;
+  const atual = docPessoal(o, texto).nome || texto;
+  const r = prompt('Como você quer chamar este item? (só aparece para você; deixe vazio para voltar ao nome original)', atual);
+  if(r === null) return;
+  const v = r.replace(/\s+/g,' ').trim().slice(0, 160);
+  if(!(await gravarPessoal(oppId, texto, { nome: v === texto ? '' : v }))) return;
+  docRefresh(oppId, i);
+}
+async function pessoalLink(oppId, i){
+  const { o, texto } = _textoItem(oppId, i); if(!o || texto == null) return;
+  const r = prompt('Link do portal para emitir este documento (só para você; deixe vazio para remover o seu link):', docPessoal(o, texto).url || 'https://');
+  if(r === null) return;
+  let v = r.trim(); if(v === 'https://') v = '';
+  if(v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
+  if(v){ try{ new URL(v); }catch(e){ toast('Link inválido.'); return; } }
+  if(!(await gravarPessoal(oppId, texto, { url: v }))) return;
+  docRefresh(oppId, i);
+}
+async function pessoalAnexo(oppId, i){
+  const { o, texto } = _textoItem(oppId, i); if(!o || texto == null) return;
+  const ligado = !!docPessoal(o, texto).anexo;
+  if(ligado && certArqInfo(certChaveLivre(texto))){ toast('Este item já tem um arquivo anexado.'); return; }
+  if(!(await gravarPessoal(oppId, texto, { anexo: !ligado }))) return;
+  docRefresh(oppId, i);
+}
 function docItemInner(o, d, i, estado){
   const na = estado === 'na';
   const on = estado === true;
   const box = na ? `<span class="doc-check" id="doc-check-${o.id}-${i}">–</span>` : `<span class="doc-check ${on?'checked':''}" id="doc-check-${o.id}-${i}">${on?'✓':''}</span>`;
   const btn = `<button type="button" class="doc-na-btn" onclick="event.stopPropagation();docNaoSeAplica(${o.id},${i})" title="${na?'Voltar este documento para o checklist':'Este documento não se aplica a mim'}">${na?'desfazer':'não se aplica'}</button>`;
-  return `${box}<span class="doc-txt">${d}</span><span class="doc-acoes">${na ? '' : `<span class="doc-link-box" id="doc-link-${o.id}-${i}">${linkEmitirDocHTML(d, o, i)}</span>`}${na ? '<span class="doc-na-tag">não se aplica</span>' : ''}${btn}</span>`;
+  return `${box}<span class="doc-txt">${(userProfile && docPessoal(o, d).nome) ? esc(docPessoal(o, d).nome) : d}</span><span class="doc-acoes">${na ? '' : `<span class="doc-link-box" id="doc-link-${o.id}-${i}">${linkEmitirDocHTML(d, o, i)}</span>`}${na ? '<span class="doc-na-tag">não se aplica</span>' : ''}${btn}</span>`;
 }
 function docRefresh(oid, idx){
   const o = oportunidades.find(x=>x.id===oid);
