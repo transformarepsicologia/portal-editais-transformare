@@ -3907,8 +3907,8 @@ function registrarEvento(tipo, o){
 }
 async function toggleFav(id){
   if(!exigirCadastro('favoritar editais')) return;
-  if(!favoritos.has(id) && favoritos.size >= MAX_FAVORITOS){
-    toast(`Você já tem ${MAX_FAVORITOS} editais favoritados — remova um para adicionar outro`);
+  if(!ehEssencial() && !favoritos.has(id) && favoritos.size >= MAX_FAVORITOS){   // limite só no plano gratuito; Pro e admin sem limite
+    toast(`Você já tem ${MAX_FAVORITOS} editais favoritados — remova um para adicionar outro. No Plano Pro não há limite.`);
     return;
   }
   favoritos.has(id) ? favoritos.delete(id) : favoritos.add(id);
