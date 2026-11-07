@@ -3937,6 +3937,7 @@ async function enviarSugestaoProfissao(nome, usuario){
   });
 }
 const ATUACOES = [{v:'PF', label:'Pessoa Física (PF)'}, {v:'PJ', label:'Pessoa Jurídica (PJ)'}];
+const empresaExtra = { cad:null, perfil:null, cons:null }; // dados extras do CNPJ, só para exibir (não são salvos no perfil)
 const empresaForm = { cad:null, perfil:null, cons:null }; // dados do CNPJ consultado em cada formulário
 const ESPECIALIDADES = ['Infantil','Adolescentes','Adultos','Idosos','TEA / autismo','Neuropsicologia','Saúde mental','Dependência química','Avaliação psicológica','Saúde do trabalhador','Hospitalar','Reabilitação'];
 const FORMATOS_ATEND = ['Individual','Grupo','Domiciliar','Telessaúde / teleatendimento','Plantão'];
@@ -4004,6 +4005,14 @@ async function buscarCnpjPerfil(pre){
       mei: j.opcao_pelo_mei === true,
       consultadoEm: new Date().toISOString(),
     };
+    empresaExtra[pre] = {
+      natureza: j.natureza_juridica || '',
+      capital: (j.capital_social || j.capital_social === 0) ? Number(j.capital_social) : null,
+      endereco: [[j.descricao_tipo_de_logradouro, j.logradouro].filter(Boolean).join(' '), j.numero, j.complemento, j.bairro].filter(Boolean).join(', '),
+      cep: j.cep || '',
+      situacaoData: j.data_situacao_cadastral || '',
+      socios: (j.qsa || []).slice(0, 8).map(x=>({ nome: x.nome_socio || '', qual: x.qualificacao_socio || '' })).filter(x=>x.nome),
+    };
     // Aproveita o endereço da empresa se a pessoa ainda não informou UF/cidade.
     const e = empresaForm[pre];
     const ufSel = document.getElementById(pre+'-uf'), cid = document.getElementById(pre+'-cidade');
@@ -4026,7 +4035,61 @@ function empresaResumoHTML(e){
     <div>${esc([e.municipio && e.uf ? e.municipio + '/' + e.uf : '', e.porte, e.mei ? 'MEI' : '', e.abertura ? 'aberta em ' + formatarDataBR(e.abertura) : ''].filter(Boolean).join(' · '))}</div>
   </div>`;
 }
-function renderEmpresaBox(pre){ document.getElementById(pre+'-empresa').innerHTML = empresaResumoHTML(empresaForm[pre]); }
+// Profissão → CNAE de saúde que costuma acompanhá-la (só para um aviso; a empresa pode atuar sem ele)
+const CNAE_POR_PROFISSAO = [
+  [/psic[oó]log/i, ['8650003'], 'Atividades de psicologia e psicanálise (8650-0/03)'],
+  [/nutri/i, ['8650002'], 'Atividades de profissionais da nutrição (8650-0/02)'],
+  [/fonoaud/i, ['8650006'], 'Atividades de fonoaudiologia (8650-0/06)'],
+  [/fisioter/i, ['8650004'], 'Atividades de fisioterapia (8650-0/04)'],
+  [/terapia ocupacional|terapeuta ocupacional/i, ['8650005'], 'Atividades de terapia ocupacional (8650-0/05)'],
+  [/enferm/i, ['8650001'], 'Atividades de enfermagem (8650-0/01)'],
+  [/odont|dentist/i, ['8630504'], 'Atividade odontológica (8630-5/04)'],
+];
+function empresaAvisos(e, pre){
+  const av = [];
+  if(e.situacao && e.situacao.toUpperCase() !== 'ATIVA') av.push('A situação cadastral do CNPJ é <strong>' + esc(e.situacao) + '</strong>. Para se credenciar, o CNPJ precisa estar ATIVO: regularize antes de enviar documentos.');
+  const cn = [e.cnaePrincipal, ...(e.cnaesSecundarios||[])].filter(Boolean).map(c=>soDigitos(c.codigo));
+  const profs = [...document.querySelectorAll('#'+pre+'-prof .chip-opt.selected')].map(x=>x.textContent.trim());
+  if(!cn.some(c=>c.startsWith('86'))) av.push('Nenhum CNAE da área da saúde (grupo 86) foi encontrado neste CNPJ. Muitos editais pedem atividade compatível: confira com o seu contador.');
+  else profs.forEach(pf=>{
+    const r = CNAE_POR_PROFISSAO.find(x=>x[0].test(pf));
+    if(r && !cn.some(c=>r[1].includes(c))) av.push('Para <strong>' + esc(pf) + '</strong>, o CNAE costumeiro é ' + esc(r[2]) + ', que não aparece neste CNPJ. Alguns editais exigem; avalie incluí-lo.');
+  });
+  return av;
+}
+function empresaExtrasHTML(e, pre){
+  const x = empresaExtra[pre] || {};
+  const lin = (k,v)=> v ? `<div>${k}: ${esc(v)}</div>` : '';
+  const cap = x.capital !== null && x.capital !== undefined ? 'R$ ' + x.capital.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '';
+  const av = empresaAvisos(e, pre);
+  const cnpj = soDigitos(e.cnpj);
+  const certs = ['cnd_pj','fgts','cndt','cnpj'].map(k=>PORTAIS_DOCS_PADRAO.find(p=>p.chave===k)).filter(Boolean);
+  return `<div class="emp-card" style="margin-top:10px;">
+    <div style="font-weight:700; margin-bottom:4px;">Mais dados do CNPJ</div>
+    ${lin('Natureza jurídica', x.natureza)}${lin('Endereço', [x.endereco, x.cep ? 'CEP ' + String(x.cep).replace(/^(\d{5})(\d{3})$/,'$1-$2') : ''].filter(Boolean).join(' · '))}${lin('Capital social', cap)}${lin('Situação desde', x.situacaoData && formatarDataBR(x.situacaoData))}
+    ${(x.socios||[]).length ? `<div>Quadro societário: ${x.socios.map(s=>esc(s.nome + (s.qual ? ' (' + s.qual + ')' : ''))).join('; ')}</div>` : ''}
+    <div style="font-size:11.5px; opacity:.75; margin-top:4px;">Fonte: Receita Federal, via BrasilAPI. Informação pública.</div>
+  </div>
+  <div class="emp-card" style="margin-top:10px;">
+    <div style="font-weight:700; margin-bottom:4px;">${av.length ? 'Pontos de atenção' : 'Tudo certo por aqui'}</div>
+    ${av.length ? '<ul style="margin:0; padding-left:18px;">' + av.map(t=>'<li class="emp-alerta">' + t + '</li>').join('') + '</ul>' : '<div>Situação ATIVA e atividade de saúde compatível com o perfil informado.</div>'}
+  </div>
+  <div class="emp-card" style="margin-top:10px;">
+    <div style="font-weight:700; margin-bottom:4px;">Sanções (CEIS e CNEP)</div>
+    <div style="font-size:13px;">Confira se o CNPJ consta como impedido ou inidôneo nas bases da CGU. Informe o CNPJ ${esc(formatarCnpj(cnpj))} na tela que abrir.</div>
+    <a class="btn-ghost" style="display:inline-block; margin-top:8px; text-decoration:none;" href="https://portaldatransparencia.gov.br/sancoes/consulta" target="_blank" rel="noopener">Consultar no Portal da Transparência ↗</a>
+  </div>
+  <div class="emp-card" style="margin-top:10px;">
+    <div style="font-weight:700; margin-bottom:4px;">Emitir certidões negativas</div>
+    ${ehPro()
+      ? '<div style="display:flex; flex-direction:column; gap:6px;">' + certs.map(c=>`<a href="${c.url}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${esc(c.nome)} ↗</a>`).join('') + '</div><div style="font-size:11.5px; opacity:.75; margin-top:6px;">Os links levam aos portais oficiais; a emissão é feita lá, com o CNPJ da empresa.</div>'
+      : travaProHTML('Links para emitir as certidões: disponível no Plano Transformare Pro')}
+  </div>`;
+}
+function renderEmpresaBox(pre){
+  const e = empresaForm[pre];
+  document.getElementById(pre+'-empresa').innerHTML = empresaResumoHTML(e) + (e ? empresaExtrasHTML(e, pre) : '');
+}
 function lerPerfilExtraForm(pre){
   const v = parseFloat(document.getElementById(pre+'-rem-min').value);
   return {
