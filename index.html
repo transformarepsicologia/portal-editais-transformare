@@ -4239,7 +4239,14 @@ function chaveCertidaoDoItem(texto){
   if(/conselho/.test(t) && /certidao/.test(t)) return 'conselho';
   if(/municip/.test(t) && /(certidao|debito|tribut)/.test(t)) return 'municipal';
   const l = portalDoDocumento(texto);
-  return l && CERT_COM_ANEXO.includes(l.chave) ? l.chave : null;
+  if(l && CERT_COM_ANEXO.includes(l.chave)) return l.chave;
+  // Link personalizado do admin (sem chave) pode "ganhar" na busca por palavras: descobre a certidão pelo próprio texto
+  let k = null;
+  if(/\bfgts\b|\bcrf\b/.test(t)) k = 'fgts';
+  else if(/trabalhist|\bcndt\b/.test(t)) k = 'cndt';
+  else if(/cnpj/.test(t) && /(inscricao|comprovante|cartao)/.test(t) && !/certidao negativa|regularidade/.test(t)) k = 'cnpj';
+  else if(/(debitos|tributos|creditos tributarios|divida ativa).*(federa|uniao|receita|pgfn)|(federa|uniao|receita|pgfn).*(debitos|tributos|creditos tributarios|divida ativa)|\bcnd\b/.test(t) && !/pessoa fisica|\bcpf\b/.test(t)) k = 'cnd_pj';
+  return k && CERT_COM_ANEXO.includes(k) ? k : null;
 }
 // Linha do checklist do edital: anexar, ver, trocar e remover a certidão (mesmo arquivo de Minha conta)
 function certCkInner(chave){
