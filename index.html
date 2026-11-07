@@ -5179,8 +5179,8 @@ async function carregarCapag(){
   try{ const r = await fetch('capag-municipios.json', {cache:'no-cache'}); _capagCache = r.ok ? await r.json() : null; }catch(e){ _capagCache = null; }
   return _capagCache;
 }
-async function saudeFiscalHTML(d){
-  if(!adminAuthed) return ''; // análise de CAPAG é ferramenta da consultoria: não aparece para o cliente
+async function saudeFiscalHTML(d, consultoria){
+  if(!consultoria || !adminAuthed) return ''; // ferramenta da consultoria: só na ficha do cliente, nunca na página do edital
   const nat = String(d.natureza_juridica || '');
   const esfera = /munic/i.test(nat) ? 'municipio' : (/estadual|distrito federal/i.test(nat) ? 'estado' : (/federal|uni[aã]o/i.test(nat) ? 'federal' : ''));
   if(!esfera) return '';
@@ -5237,7 +5237,6 @@ async function consultarOrgao(cnpj, id){
       ${lin('Endereço', end + (d.municipio ? ' — ' + d.municipio + '/' + d.uf : '') + (d.cep ? ' · CEP ' + d.cep : ''))}${lin('Início das atividades', d.data_inicio_atividade && d.data_inicio_atividade.split('-').reverse().join('/'))}
       <div style="font-size:11.5px; opacity:.75; margin-top:4px;">CNPJ ${fmtCnpj(cnpj)}. Fonte: Receita Federal, via BrasilAPI. Informação pública.</div>
     </div>`;
-    html += await saudeFiscalHTML(d);
     if(currentDetailId !== id || !document.getElementById('orgao-res')) return;
     document.getElementById('orgao-res').innerHTML = html;
   }catch(e){
@@ -10006,6 +10005,32 @@ async function dehCopiarResumo(){
   ['risco1','risco2','risco3'].forEach((k,i)=>{ if(r[k]) linhas.push('', ['Maior preocupação','Pendência para habilitação','Pendência para execução'][i] + ': ' + r[k]); });
   await _copiarTexto(linhas.join('\n'));
 }
+// Situação financeira (CAPAG) do órgão do edital, dentro da ficha do cliente da consultoria
+async function consSaudeCarregar(i, det){
+  if(!det.open || det.dataset.ok) return;
+  const box = det.querySelector('.cons-sf'); const cl = consCliente(); if(!box || !cl) return;
+  const p = consDados(cl).processos[i]; if(!p) return;
+  box.innerHTML = 'Consultando…';
+  try{
+    const o = oportunidades.find(x=>String(x.id)===String(p.id));
+    const cnpj = cnpjDoEdital(o || p);
+    let d = null;
+    if(cnpj){
+      const r = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + cnpj);
+      if(r.ok) d = await r.json();
+    }
+    if(!d){ // sem CNPJ no número do edital: deduz o ente pelo nome do órgão
+      const org = String(p.orgao||''), uf = p.uf || '';
+      const m = org.match(/(?:munic[ií]pio|prefeitura municipal|secretaria municipal(?: de sa[uú]de)?|fundo municipal(?: de sa[uú]de)?) de ([A-Za-zÀ-ÿ' .-]+?)(?:\s*[-\/(]|$)/i);
+      if(m) d = { natureza_juridica:'Município', municipio:m[1].trim(), uf };
+      else if(/governo do estado|secretaria (?:de )?estado|secretaria estadual|estado d[eoa]/i.test(org)) d = { natureza_juridica:'Estadual', uf };
+      else if(/marinha|ex[eé]rcito|aeron[aá]utica|minist[eé]rio|universidade federal|\buni[aã]o\b|federal/i.test(org)) d = { natureza_juridica:'Federal', uf };
+    }
+    const html = d ? await saudeFiscalHTML(d, true) : '';
+    box.innerHTML = html || 'Não foi possível identificar se o órgão é município, estado ou federal. Confira em <a href="https://www.tesourotransparente.gov.br/temas/estados-e-municipios/capacidade-de-pagamento-capag" target="_blank" rel="noopener" style="color:var(--teal);">CAPAG no Tesouro Transparente ↗</a>.';
+    det.dataset.ok = '1';
+  }catch(e){ box.innerHTML = 'Não foi possível consultar agora. Feche e abra de novo para tentar outra vez.'; }
+}
 function consDetalhe(){
   const el = document.getElementById('cons-detalhe'); if(!el) return;
   const c = consCliente(); if(!c){ el.innerHTML = ''; return; }
@@ -10020,6 +10045,7 @@ function consDetalhe(){
         <select onchange="consEtapa(${i}, this.value)">${opt(CONS_ETAPAS, p.etapa)}</select>
         <button class="btn-ghost" style="color:#c0392b;" onclick="consRemoverProcesso(${i})">Remover</button>
       </div>
+      <details style="margin-top:8px;" ontoggle="consSaudeCarregar(${i}, this)"><summary style="cursor:pointer; font-weight:600;">Situação financeira do órgão</summary><div class="cons-sf" style="margin-top:6px; font-size:13px;"></div></details>
       ${docs.length ? `<details style="margin-top:8px;"><summary style="cursor:pointer; font-weight:600;">Documentos: ${feitos}/${docs.length}</summary>${docs.map((doc,k)=>`<label style="display:flex; gap:8px; align-items:flex-start; font-size:13px; padding:3px 0; cursor:pointer;"><input type="checkbox" ${ok.has(doc)?'checked':''} onchange="consDoc(${i},${k},this.checked)"> <span>${esc(doc)}</span></label>`).join('')}</details>` : '<div class="section-sub" style="margin-top:6px;">Este edital ainda não tem lista de documentos.</div>'}
       <input type="text" placeholder="Observações do processo" value="${esc(p.obs||'')}" onchange="consObsProcesso(${i}, this.value)" style="margin-top:8px; width:100%;">
     </div>`;
