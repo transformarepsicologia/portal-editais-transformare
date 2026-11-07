@@ -4158,8 +4158,10 @@ function certStatusHTML(chave, iso){
   const falta = Math.round((venc - new Date()) / 86400000);
   const quando = venc.toLocaleDateString('pt-BR');
   if(falta < 0) return `<span class="emp-alerta">Vencida em ${quando}</span>`;
-  if(falta <= 15) return `<span style="color:var(--gold,#D4AE5C);">Vence em ${falta} dia${falta===1?'':'s'} (${quando})</span>`;
-  return `<span>Vigente até ${quando}</span>`;
+  if(falta === 0) return `<span style="color:var(--gold,#D4AE5C);">Vence hoje</span>`;
+  const txt = `Falta${falta===1?'':'m'} ${falta} dia${falta===1?'':'s'}`;
+  if(falta <= 15) return `<span style="color:var(--gold,#D4AE5C);">${txt}</span>`;
+  return `<span>${txt}</span>`;
 }
 // Certidão anexada pelo cliente (Supabase Storage, bucket privado "certidoes", até 500 KB, PDF/JPG/PNG)
 const CERT_ARQ_MAX = 500 * 1024;
@@ -4250,7 +4252,7 @@ function certCkInner(chave){
   return `<a class="doc-emitir" href="#" onclick="${parar}; event.preventDefault(); verCertidao('${chave}')" title="Abre a certidão salva em Minha conta">📎 Ver minha certidão</a>`
     + ` <label class="doc-edit-link" style="cursor:pointer;" onclick="${parar}">trocar${entrada}</label>`
     + ` <a href="#" class="doc-edit-link" onclick="${parar}; event.preventDefault(); removerCertidao('${chave}')">remover</a>`
-    + `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${st}</span>`;
+    + (CERT_COM_DATA.indexOf(chave) < 0 ? '' : `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${st}</span>`);
 }
 function certAnexadaHTML(texto){
   const chave = chaveCertidaoDoItem(texto);
