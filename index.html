@@ -5180,6 +5180,7 @@ async function carregarCapag(){
   return _capagCache;
 }
 async function saudeFiscalHTML(d){
+  if(!adminAuthed) return ''; // análise de CAPAG é ferramenta da consultoria: não aparece para o cliente
   const nat = String(d.natureza_juridica || '');
   const esfera = /munic/i.test(nat) ? 'municipio' : (/estadual|distrito federal/i.test(nat) ? 'estado' : (/federal|uni[aã]o/i.test(nat) ? 'federal' : ''));
   if(!esfera) return '';
