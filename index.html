@@ -1353,7 +1353,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   .cert-arq-acoes a, .cert-arq-acoes label{border:1px solid currentColor; border-radius:20px; padding:3px 12px; font-size:12.5px; text-decoration:none;}
 }
 
-.conta-certidoes{grid-column:1 / -1;}
+.conta-certidoes{grid-column:auto;}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -4615,6 +4615,11 @@ function renderMinhaConta(){
       <button type="button" class="conta-atalho" onclick="nav('alertas')">
         <span class="ca-ico" aria-hidden="true">🔔</span>
         <span class="ca-txt"><strong>Meus Alertas</strong><small>Seus critérios de aviso</small></span>
+        <span class="ca-seta" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="conta-atalho" onclick="nav('perfil')">
+        <span class="ca-ico" aria-hidden="true">👤</span>
+        <span class="ca-txt"><strong>Meu Cadastro</strong><small>${perfilPct}% preenchido${perfilInfo.faltam.length ? ' · faltam ' + esc(perfilInfo.faltam.slice(0,3).join(', ')) + (perfilInfo.faltam.length > 3 ? '…' : '') : ' · tudo certo'}</small></span>
         <span class="ca-seta" aria-hidden="true">›</span>
       </button>
       ${certCardHTML()}
