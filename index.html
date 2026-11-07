@@ -5000,6 +5000,40 @@ function openDetalhe(id){
   if(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) carregarPastaEdital(o.id);   // ADM: link da pasta do Drive deste edital
   nav('detalhe');
 }
+/* ===== TESTE: "Sobre o órgão" na página do edital — consulta pública do CNPJ do órgão (BrasilAPI) ===== */
+function cnpjDoEdital(o){ const m = String(o && o.edital || '').match(/^(\d{14})-/); return m ? m[1] : null; }
+function fmtCnpj(c){ return c.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5'); }
+function painelOrgao(id){
+  const o = oportunidades.find(x=>x.id===id), cnpj = cnpjDoEdital(o);
+  const head = document.querySelector('#detalhe-content .detail-head');
+  if(!cnpj || !head || document.getElementById('orgao-cnpj')) return;
+  head.insertAdjacentHTML('afterend', `<div class="panel" id="orgao-cnpj" style="margin-top:16px;"><h4><span class="dot"></span>Sobre o órgão</h4>
+    <p style="font-size:13px; color:var(--ink-muted); margin:0 0 12px; line-height:1.5;">Dados públicos do CNPJ ${fmtCnpj(cnpj)}, direto dos registros oficiais.</p>
+    <button class="btn-ghost" id="orgao-btn" onclick="consultarOrgao('${cnpj}')">Consultar dados do órgão</button><div id="orgao-res"></div></div>`);
+}
+async function consultarOrgao(cnpj){
+  const btn = document.getElementById('orgao-btn'), res = document.getElementById('orgao-res');
+  btn.disabled = true; btn.textContent = 'Consultando…';
+  try{
+    const r = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + cnpj);
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const lin = (k,v)=> v ? `<div class="qf-item"><span class="qf-k">${k}</span><div class="qf-v">${esc(String(v))}</div></div>` : '';
+    const end = [d.logradouro && (d.descricao_tipo_de_logradouro ? d.descricao_tipo_de_logradouro+' ' : '') + d.logradouro, d.numero, d.bairro].filter(Boolean).join(', ');
+    const cap = (d.capital_social || d.capital_social === 0) ? 'R$ ' + Number(d.capital_social).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '';
+    res.innerHTML = `<div class="quick-facts" style="margin-top:12px;">`
+      + lin('Razão social', d.razao_social) + lin('Situação cadastral', d.descricao_situacao_cadastral + (d.data_situacao_cadastral ? ' desde ' + d.data_situacao_cadastral.split('-').reverse().join('/') : ''))
+      + lin('Natureza jurídica', d.natureza_juridica) + lin('Atividade principal', d.cnae_fiscal_descricao)
+      + lin('Endereço', end + (d.municipio ? ' — ' + d.municipio + '/' + d.uf : '') + (d.cep ? ' · CEP ' + d.cep : ''))
+      + lin('Início das atividades', d.data_inicio_atividade && d.data_inicio_atividade.split('-').reverse().join('/')) + lin('Capital social', cap)
+      + `</div><p style="font-size:11.5px; color:var(--ink-muted); margin:10px 0 0;">Fonte: Receita Federal, via BrasilAPI. Informação pública, sem análise própria.</p>`;
+    btn.style.display = 'none';
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Tentar novamente';
+    res.innerHTML = '<p style="font-size:13px; color:var(--ink-muted); margin-top:10px;">Não foi possível consultar agora. Tente novamente em instantes.</p>';
+  }
+}
+(function(){ const orig = openDetalhe; openDetalhe = function(id){ orig(id); try{ painelOrgao(id); }catch(e){} }; })();
 function brl(v){ return Number(v).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
 async function solicitarPlanoEssencial(){
   if(!userProfile){ toast('Crie sua conta gratuita ou entre para assinar o plano Transformare Pro.'); nav('cadastro'); return; }
