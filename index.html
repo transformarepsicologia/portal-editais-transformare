@@ -4103,7 +4103,7 @@ function certMunicipaisHTML(e, pre){
   if(!lista.length) return '';
   const linhas = lista.slice(0,5).map(x=>{
     const q = 'certidão negativa de débitos municipais prefeitura ' + x.cid + ' ' + x.uf + ' emitir';
-    return `<div><a href="https://www.google.com/search?q=${encodeURIComponent(q)}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">Certidão negativa municipal — ${esc(x.cid)}${x.uf ? '/' + esc(x.uf) : ''}${x.sede ? ' (sede)' : ''} ↗</a></div>`;
+    return `<div><a href="https://www.google.com/search?q=${encodeURIComponent(q)}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">Certidão negativa municipal — ${esc(x.cid)}${x.uf ? '/' + esc(x.uf) : ''}${x.sede ? ' (cidade do CNPJ)' : ' (outra cidade de atuação)'} ↗</a></div>`;
   }).join('');
   return linhas + '<div style="font-size:11.5px; opacity:.75;">Cada prefeitura tem o seu portal; o link busca a página oficial da cidade. Alguns municípios exigem a inscrição municipal.</div>';
 }
