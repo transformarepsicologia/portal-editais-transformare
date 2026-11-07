@@ -1352,6 +1352,8 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   .cert-arq-acoes .sep{display:none;}
   .cert-arq-acoes a, .cert-arq-acoes label{border:1px solid currentColor; border-radius:20px; padding:3px 12px; font-size:12.5px; text-decoration:none;}
 }
+
+.conta-certidoes{grid-column:1 / -1;}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -4540,6 +4542,42 @@ function updateNavCta(){
   btn.dataset.view = userProfile ? 'minha-conta' : 'login';
 }
 const ICONE_CADEADO = '<svg class="ico-cadeado" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
+// Card "Minhas Certidões" (Minha conta): resumo e aviso do próximo vencimento
+const CERT_ROTULOS = { cnd_pj:'CND Federal', fgts:'FGTS (CRF)', cndt:'CNDT trabalhista', cnpj:'Comprovante do CNPJ', municipal:'Certidão municipal', conselho:'Certidão do conselho' };
+function certResumo(){
+  const raw = (userProfile && userProfile.documentosRaw) || {};
+  const arq = raw.certidoesArq || {}, venc = raw.certidoesVenc || {};
+  const anexadas = CERT_COM_ANEXO.filter(k=>arq[k]).length;
+  const datas = CERT_COM_DATA.filter(k=>venc[k]).map(k=>({ k, d:new Date(venc[k] + 'T12:00:00'), iso:venc[k] }))
+    .map(x=>({ ...x, falta: Math.round((x.d - new Date()) / 86400000) })).sort((a,b)=>a.d - b.d);
+  return { anexadas, total: CERT_COM_ANEXO.length, datas, vencidas: datas.filter(x=>x.falta < 0), proxima: datas.find(x=>x.falta >= 0) || null };
+}
+function certCardHTML(){
+  if(!userProfile) return '';
+  const pro = ehPro();
+  let linha1, aviso = '', cor = '';
+  if(!pro){ linha1 = 'Anexe e acompanhe o vencimento das certidões — Plano Transformare Pro'; }
+  else if(!userProfile.cnpj){ linha1 = 'Informe o CNPJ no perfil para organizar suas certidões'; }
+  else {
+    const r = certResumo();
+    linha1 = r.anexadas + ' de ' + r.total + ' anexadas · ' + r.datas.length + ' com vencimento marcado';
+    const nome = k=>CERT_ROTULOS[k] || k;
+    const q = x=>x.d.toLocaleDateString('pt-BR');
+    if(r.vencidas.length){ aviso = '⚠ ' + (r.vencidas.length === 1 ? nome(r.vencidas[0].k) + ' venceu em ' + q(r.vencidas[0]) : r.vencidas.length + ' certidões vencidas') + (r.proxima ? ' · próxima: ' + nome(r.proxima.k) + ' em ' + q(r.proxima) : ''); cor = 'var(--danger,#e07b6a)'; }
+    else if(r.proxima && r.proxima.falta <= 30){ aviso = '⚠ ' + nome(r.proxima.k) + ' vence ' + (r.proxima.falta === 0 ? 'hoje' : 'em ' + r.proxima.falta + ' dia' + (r.proxima.falta === 1 ? '' : 's')) + ' (' + q(r.proxima) + ')'; cor = 'var(--gold,#D4AE5C)'; }
+    else if(r.proxima){ aviso = 'Próximo vencimento: ' + nome(r.proxima.k) + ' em ' + q(r.proxima); }
+    else { aviso = 'Marque a data de vencimento para ser avisado.'; }
+  }
+  return `<button type="button" class="conta-atalho conta-certidoes" onclick="abrirCertidoes()">
+    <span class="ca-ico" aria-hidden="true">📄</span>
+    <span class="ca-txt"><strong>Minhas Certidões</strong><small>${esc(linha1)}</small>${aviso ? `<small class="ca-aviso" style="${cor ? 'color:' + cor + '; font-weight:600;' : ''}">${esc(aviso)}</small>` : ''}</span>
+    <span class="ca-seta" aria-hidden="true">›</span>
+  </button>`;
+}
+function abrirCertidoes(){
+  nav('perfil');
+  setTimeout(()=>{ const el = document.querySelector('#perfil-empresa .cert-card') || document.getElementById('perfil-empresa'); if(el) el.scrollIntoView({ behavior:'smooth', block:'start' }); }, 400);
+}
 function renderMinhaConta(){
   const el = document.getElementById('minha-conta-content');
   if(!userProfile){
@@ -4579,6 +4617,7 @@ function renderMinhaConta(){
         <span class="ca-txt"><strong>Meus Alertas</strong><small>Seus critérios de aviso</small></span>
         <span class="ca-seta" aria-hidden="true">›</span>
       </button>
+      ${certCardHTML()}
     </div>
     <div class="account-grid">
       <div>
