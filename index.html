@@ -1354,6 +1354,13 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 }
 
 .conta-certidoes{grid-column:auto;}
+
+/* Checklists pessoais */
+.doc-list.ocultar-ok li.checked-text{display:none;}
+.ck-barra{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0;}
+.ck-add{display:flex; gap:8px; margin-top:10px;}
+.ck-add input{flex:1; min-width:0; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-elevated,rgba(255,255,255,.04)); color:inherit; font:inherit; font-size:14px;}
+.ck-vazio{font-size:13px; color:var(--ink-dim); margin:6px 0;}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -5310,10 +5317,12 @@ function openDetalhe(id){
           ${(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="pasta-edital-' + o.id + '"></div>' : ''}
           ${(()=>{ const docsVisiveis = docsPreview(o.documentos); const ocultos = o.documentos.length - docsVisiveis.length; return `
           <div id="doc-progress-${o.id}">${docProgressHTML(o.id, docsVisiveis, checks)}</div>
-          <ul class="doc-list" id="doc-list-${o.id}">
-            ${docsVisiveis.map((d,i)=>`
+          ${ckBarraHTML(o.id, 'oficial')}
+          <ul class="doc-list ${ckOcultando(o.id, 'oficial') ? 'ocultar-ok' : ''}" id="doc-list-${o.id}">
+            ${docsVisiveis.map((d,i)=> ckRemovido(o.id, d) ? '' : `
               <li onclick="toggleDoc(${o.id},${i})" class="${checks[i]==='na'?'doc-na':(checks[i]?'checked-text':'')}" id="doc-item-${o.id}-${i}">${docItemInner(o, d, i, checks[i])}</li>`).join('')}
           </ul>
+          <div id="doc-extras-${o.id}">${ckExtrasHTML(o.id)}</div>
           ${o.documentosPadrao ? `<p style="font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5;">Lista padrão: este edital ainda não teve os documentos detalhados pela Transformare. Confira a lista oficial no edital.</p>` : ''}
           ${(ocultos>0 && !o.documentosPadrao) ? `
           <div class="checklist-cta" style="margin-top:10px;">
@@ -5323,6 +5332,8 @@ function openDetalhe(id){
           </div>` : ''}
           `; })()}
         </div>
+
+        <div id="meu-checklist-${o.id}">${ckMeuHTML(o.id)}</div>
 
         ${o.movimentacoes.length ? `<div class="panel">
           <h4><span class="dot"></span>Histórico de movimentações</h4>
@@ -5715,6 +5726,7 @@ function linkEmitirDocHTML(texto, o, i){
   const btp = (titulo, fn, rotulo) => ` <button type="button" class="doc-edit-link" title="${titulo}" onclick="event.stopPropagation(); ${fn}(${o.id}, ${i})">${rotulo}</button>`;
   let meus = '';
   if(userProfile){
+    meus += btp('Tirar este item da sua lista (dá para restaurar)', 'ckRemoverOficial', '🗑 tirar');
     if(!adm) meus += btp('Renomear este item só para você', 'pessoalNome', '✎ nome') + btp('Cadastrar ou alterar o link deste documento só para você', 'pessoalLink', '✎ link');
     const livre = !chaveAnexo || String(chaveAnexo).indexOf('x_') === 0;
     if(livre && !(chaveAnexo && certArqInfo(chaveAnexo))) meus += pes.anexo ? btp('Tirar o botão de anexo deste item', 'pessoalAnexo', '✕ anexo') : btp('Criar um botão para anexar este documento', 'pessoalAnexo', '📎 anexo');
@@ -5904,16 +5916,18 @@ function docsPreview(documentos){
   return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
 }
 function docProgressHTML(oid, documentos, checks){
-  if(documentos.length===0){
+  const ex = ckDe(oid).extras || [];
+  const linhas = documentos.map((d,i)=>({ d, i })).filter(r=>!ckRemovido(oid, r.d));
+  if(linhas.length===0 && ex.length===0){
     return `<div class="af-item-empty">Nenhum documento cadastrado para esta oportunidade.</div>`;
   }
   // itens marcados "não se aplica" ficam fora da conta
-  const naQtd = documentos.filter((_,i)=>checks[i]==='na').length;
-  const total = documentos.length - naQtd;
+  const naQtd = linhas.filter(r=>checks[r.i]==='na').length;
+  const total = linhas.length - naQtd + ex.length;
   if(total===0){
     return `<div class="doc-progress-text"><span>Nenhum documento se aplica a você neste edital</span><span>${naQtd} não se aplica</span></div>`;
   }
-  const done = documentos.filter((_,i)=>checks[i]===true).length;
+  const done = linhas.filter(r=>checks[r.i]===true).length + ex.filter(e=>e.done).length;
   const pct = total>0 ? Math.round((done/total)*100) : 0;
   if(done>0 && done===total){
     return `<div class="doc-progress-text"><span class="doc-progress-done">✓ Documentação organizada</span><span>${done}/${total}</span></div>
@@ -5950,6 +5964,112 @@ async function sincronizarChecklist(){
     if(det && det.classList.contains('active') && currentDetailId != null) openDetalhe(currentDetailId);
     else if(typeof renderMinhaConta === 'function' && document.getElementById('view-minha-conta').classList.contains('active')) renderMinhaConta();
   }catch(e){}
+}
+/* ===== Checklists pessoais (estilo Trello): incluir/remover itens, "Meu checklist" e ocultar concluídos =====
+   Tudo fica só na conta do cliente: usuarios_perfil.documentos.checklists[<edital>] =
+   { removidos:[chave], extras:[{id,t,done}], meu:{titulo, itens:[{id,t,done}]}, ocultar:{oficial,meu} } */
+const ckDe = oid => (userProfile && ((userProfile.documentosRaw || {}).checklists || {})[oid]) || {};
+const ckPode = () => !!(userProfile && ehPro());
+const ckRemovido = (oid, texto) => (ckDe(oid).removidos || []).indexOf(_chaveDoc(texto)) >= 0;
+const ckOcultando = (oid, qual) => !!((ckDe(oid).ocultar || {})[qual]);
+async function ckGravar(oid, mutar){
+  if(!userProfile || !_sb) return false;
+  const raw = userProfile.documentosRaw || {};
+  const todos = JSON.parse(JSON.stringify(raw.checklists || {}));
+  const c = todos[oid] = todos[oid] || {};
+  mutar(c);
+  c.extras = c.extras || []; c.removidos = c.removidos || [];
+  if(!c.extras.length && !c.removidos.length && !(c.meu && (c.meu.itens || []).length) && !(c.meu && c.meu.titulo) && !Object.values(c.ocultar || {}).some(Boolean)) delete todos[oid];
+  const doc = { ...raw, checklists: todos };
+  const { error } = await _sb.from('usuarios_perfil').update({ documentos: doc }).eq('id', userProfile.id);
+  if(error){ toast('Não foi possível salvar agora.'); return false; }
+  userProfile.documentosRaw = doc; return true;
+}
+const ckId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+function ckBarraHTML(oid, qual){
+  if(!ckPode()) return '';
+  const c = ckDe(oid);
+  const ocultando = ckOcultando(oid, qual);
+  const nRem = qual === 'oficial' ? (c.removidos || []).length : 0;
+  return `<div class="ck-barra">
+    <button type="button" class="doc-edit-link" onclick="ckOcultar(${oid},'${qual}')">${ocultando ? '👁 Mostrar concluídos' : '🙈 Ocultar concluídos'}</button>
+    ${nRem ? `<button type="button" class="doc-edit-link" onclick="ckRestaurar(${oid})" title="Traz de volta os itens que você removeu da lista">↺ Restaurar ${nRem} removido${nRem>1?'s':''}</button>` : ''}
+  </div>`;
+}
+function ckAddHTML(oid, qual, ph){
+  return `<form class="ck-add" onsubmit="ckAdicionar(event,${oid},'${qual}')"><input type="text" maxlength="160" placeholder="${ph}" aria-label="${ph}"><button type="submit" class="doc-edit-link">+ Adicionar</button></form>`;
+}
+function ckItemHTML(oid, qual, it){
+  return `<li class="${it.done ? 'checked-text' : ''}" onclick="ckMarcar(${oid},'${qual}','${it.id}')"><span class="doc-check ${it.done ? 'checked' : ''}">${it.done ? '✓' : ''}</span><span class="doc-txt">${esc(it.t)}</span><button type="button" class="doc-na-btn" onclick="event.stopPropagation();ckRemover(${oid},'${qual}','${it.id}')" title="Excluir este item">excluir</button></li>`;
+}
+function ckExtrasHTML(oid){
+  if(!ckPode()) return '';
+  const ex = ckDe(oid).extras || [];
+  return `<ul class="doc-list ${ckOcultando(oid, 'oficial') ? 'ocultar-ok' : ''}" style="margin-top:9px;">${ex.map(it=>ckItemHTML(oid, 'extra', it)).join('')}</ul>${ckAddHTML(oid, 'extra', 'Incluir outro documento nesta lista')}`;
+}
+function ckMeuHTML(oid){
+  if(!ckPode()) return '';
+  const m = ckDe(oid).meu || {};
+  const itens = m.itens || [];
+  const feitos = itens.filter(x=>x.done).length;
+  return `<div class="panel">
+    <h4><span class="dot"></span><span id="meu-ck-titulo-${oid}">${esc(m.titulo || 'Meu checklist')}</span> <button type="button" class="doc-edit-link" onclick="ckTitulo(${oid})" title="Renomear este checklist">✎ nome</button></h4>
+    ${itens.length ? `<div class="doc-progress-text"><span>${feitos} de ${itens.length} concluídos</span><span>${Math.round(feitos / itens.length * 100)}%</span></div><div class="doc-progress-bar"><div class="doc-progress-fill" style="width:${Math.round(feitos / itens.length * 100)}%;"></div></div>` : '<p class="ck-vazio">Seu checklist livre para este edital: tarefas, pendências, lembretes.</p>'}
+    ${ckBarraHTML(oid, 'meu')}
+    <ul class="doc-list ${ckOcultando(oid, 'meu') ? 'ocultar-ok' : ''}">${itens.map(it=>ckItemHTML(oid, 'meu', it)).join('')}</ul>
+    ${ckAddHTML(oid, 'meu', 'Novo item')}
+  </div>`;
+}
+function ckRender(oid){
+  const o = oportunidades.find(x=>x.id===oid); if(!o) return;
+  const ex = document.getElementById('doc-extras-' + oid); if(ex) ex.innerHTML = ckExtrasHTML(oid);
+  const meu = document.getElementById('meu-checklist-' + oid); if(meu) meu.innerHTML = ckMeuHTML(oid);
+  const pr = document.getElementById('doc-progress-' + oid); if(pr) pr.innerHTML = docProgressHTML(oid, docsPreview(o.documentos), docChecks[oid] || {});
+}
+function ckLista(c, qual){ return qual === 'extra' ? (c.extras = c.extras || []) : ((c.meu = c.meu || {}).itens = (c.meu.itens || [])); }
+async function ckAdicionar(ev, oid, qual){
+  ev.preventDefault();
+  const inp = ev.target.querySelector('input'); const t = inp.value.replace(/\s+/g, ' ').trim().slice(0, 160);
+  if(!t) return;
+  if(!(await ckGravar(oid, c=>{ ckLista(c, qual).push({ id: ckId(), t, done: false }); }))) return;
+  ckRender(oid);
+  const novo = document.querySelector(qual === 'extra' ? '#doc-extras-' + oid + ' .ck-add input' : '#meu-checklist-' + oid + ' .ck-add input'); if(novo) novo.focus();
+}
+async function ckMarcar(oid, qual, id){
+  if(!(await ckGravar(oid, c=>{ const it = ckLista(c, qual).find(x=>x.id === id); if(it) it.done = !it.done; }))) return;
+  ckRender(oid);
+}
+async function ckRemover(oid, qual, id){
+  if(!(await ckGravar(oid, c=>{ const l = ckLista(c, qual); const k = l.findIndex(x=>x.id === id); if(k >= 0) l.splice(k, 1); }))) return;
+  ckRender(oid);
+}
+async function ckOcultar(oid, qual){
+  const ligar = !ckOcultando(oid, qual);
+  if(!(await ckGravar(oid, c=>{ c.ocultar = { ...(c.ocultar || {}), [qual]: ligar }; }))) return;
+  const o = oportunidades.find(x=>x.id === oid); if(!o) return;
+  if(qual === 'oficial'){ const ul = document.getElementById('doc-list-' + oid); if(ul) ul.classList.toggle('ocultar-ok', ligar);
+    const bar = ul && ul.previousElementSibling; if(bar && bar.classList.contains('ck-barra')) bar.outerHTML = ckBarraHTML(oid, 'oficial'); }
+  ckRender(oid);
+}
+async function ckTitulo(oid){
+  const atual = ckDe(oid).meu && ckDe(oid).meu.titulo || 'Meu checklist';
+  const r = prompt('Nome deste checklist:', atual); if(r === null) return;
+  const v = r.replace(/\s+/g, ' ').trim().slice(0, 60);
+  if(!(await ckGravar(oid, c=>{ c.meu = c.meu || {}; c.meu.titulo = v === 'Meu checklist' ? '' : v; }))) return;
+  ckRender(oid);
+}
+async function ckRemoverOficial(oid, i){
+  const { o, texto } = _textoItem(oid, i); if(!o || texto == null) return;
+  if(!confirm('Tirar este item da sua lista?\n\n"' + texto.slice(0, 120) + '"\n\nVocê pode restaurar depois.')) return;
+  if(!(await ckGravar(oid, c=>{ const k = _chaveDoc(texto); c.removidos = c.removidos || []; if(c.removidos.indexOf(k) < 0) c.removidos.push(k); }))) return;
+  const li = document.getElementById('doc-item-' + oid + '-' + i); if(li) li.remove();
+  const ul = document.getElementById('doc-list-' + oid); const bar = ul && ul.previousElementSibling;
+  if(bar && bar.classList.contains('ck-barra')) bar.outerHTML = ckBarraHTML(oid, 'oficial');
+  ckRender(oid);
+}
+async function ckRestaurar(oid){
+  if(!(await ckGravar(oid, c=>{ c.removidos = []; }))) return;
+  if(currentDetailId === oid) openDetalhe(oid);
 }
 // Personalização do checklist pelo cliente (só na conta dele): nome, link e botão de anexo por item
 async function gravarPessoal(oppId, texto, patch){
