@@ -3900,7 +3900,8 @@ try{
 function registrarAtividade(qtdFavoritos){
   try{
     if(!_sb || !userProfile || adminAuthed || ehTeste()) return;
-    _sb.rpc('registrar_atividade', qtdFavoritos == null ? {} : { p_favoritos: qtdFavoritos }).then(()=>{}, ()=>{});
+    const ids = [...favoritos].map(Number).filter(Number.isFinite);
+    _sb.rpc('registrar_atividade', qtdFavoritos == null ? {} : { p_favoritos: qtdFavoritos, p_favoritos_ids: ids }).then(()=>{}, ()=>{});
   }catch(e){}
 }
 function registrarEvento(tipo, o){
@@ -12983,7 +12984,7 @@ async function renderUsuariosAdmin(semRecarregar){
     if(error){ status.textContent = 'Erro ao carregar: ' + error.message; return; }
     const { data: pedidos } = await _sb.from('pedidos_plano').select('*').eq('status','pendente');
     const { data: assinaturas } = await _sb.from('assinaturas').select('*');
-    const { data: atividade } = await _sb.from('atividade_usuario').select('user_id,ultimo_acesso,acessos,favoritos');
+    const { data: atividade } = await _sb.from('atividade_usuario').select('user_id,ultimo_acesso,acessos,favoritos,favoritos_ids');
     _usrAdmDados = { lista: data || [], pedidos: pedidos || [], assinaturas: assinaturas || [], atividade: atividade || [] };
   }
   const { lista, pedidos, assinaturas } = _usrAdmDados;
@@ -13087,6 +13088,17 @@ function usrToggleCadastro(id, btn){
     box.innerHTML = usrCadastroHTML(r); box.dataset.pronto = '1';
   }
 }
+function favoritosAdminHTML(r){
+  const a = ((_usrAdmDados && _usrAdmDados.atividade) || []).find(x=>x.user_id === r.id);
+  const ids = (a && a.favoritos_ids) || [];
+  const eds = ids.map(id=>oportunidades.find(o=>o.id === Number(id))).filter(Boolean);
+  const sumidos = ids.length - eds.length;
+  const linhas = eds.map(o=>'<div role="button" tabindex="0" title="Abrir o edital" onclick="usrAbrirEdital(\''+esc(r.id)+'\','+o.id+')" onkeydown="if(event.key===\'Enter\')this.click()" style="display:flex; gap:8px; align-items:baseline; padding:6px 4px; border-bottom:1px solid var(--border-soft); font-size:12.5px; cursor:pointer; border-radius:6px;"><span style="color:#f2b84b;">★</span><span style="flex:1;">'+esc(o.orgao||'')+' · '+esc(o.edital||'')+' <span style="color:var(--ink-muted);">('+esc((o.cidade?o.cidade+'/':'')+(o.uf||''))+' · '+esc(situacaoExibida(o))+')</span></span><span style="color:var(--teal);">ver ›</span></div>').join('');
+  const vazio = (a && a.favoritos > 0 && !ids.length) ? 'O cliente tem favoritos, mas a lista só aparece depois do próximo acesso dele ao site.' : 'Nenhum edital favoritado.';
+  return '<div style="font-weight:700; font-size:13px; margin:12px 0 4px;">Editais favoritados <span style="font-weight:400; color:var(--ink-muted);">· '+ids.length+'</span></div>' +
+    (linhas || '<div style="font-size:12.5px; color:var(--ink-muted);">'+vazio+'</div>') +
+    (sumidos > 0 ? '<div style="font-size:11.5px; color:var(--ink-muted); margin-top:4px;">'+sumidos+' favorito(s) de editais que já saíram do Radar.</div>' : '');
+}
 function usrCadastroHTML(r){
   const u = perfilDeLinha(r);
   const lin = (k, v)=> (v === '' || v == null || (Array.isArray(v) && !v.length)) ? '' : '<div style="display:flex; gap:8px; padding:3px 0; font-size:12.5px;"><span style="flex:0 0 150px; color:var(--ink-muted);">'+esc(k)+'</span><span style="flex:1;">'+esc(Array.isArray(v) ? v.join(', ') : v)+'</span></div>';
@@ -13112,6 +13124,7 @@ function usrCadastroHTML(r){
     lin('Modalidades', u.mods) + lin('Abrangência', u.abrs) + lin('Instrução', u.escolaridade) + lin('Tempo de atuação', u.anosExp != null ? u.anosExp + ' ano(s)' : '') +
     lin('Atuação', u.atuacao) + lin('Especialidades', u.especialidades) + lin('Formato de atendimento', u.formatos) +
     '<div style="font-size:11.5px; color:var(--ink-muted); margin-top:6px;">Por privacidade (LGPD), o ADM não vê contato, registro profissional, CNPJ, remuneração nem documentos do usuário.</div>' +
+    favoritosAdminHTML(r) +
     '<div style="font-weight:700; font-size:13px; margin:12px 0 4px;">Editais aderentes <span style="font-weight:400; color:var(--ink-muted);">· '+altos.length+' com 70% ou mais'+(!altos.length && todos.length ? ' (mostrando os melhores)' : '')+' · não considera a remuneração mínima</span></div>' + edHTML +
     '</div>';
 }
