@@ -1361,6 +1361,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 .ck-add{display:flex; gap:8px; margin-top:10px;}
 .ck-add input{flex:1; min-width:0; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-elevated,rgba(255,255,255,.04)); color:inherit; font:inherit; font-size:14px;}
 .ck-vazio{font-size:13px; color:var(--ink-dim); margin:6px 0;}
+.pl-btn{background:none; border:0; padding:0; color:var(--teal); font:inherit; font-size:12px; font-weight:600; cursor:pointer; text-decoration:underline;}
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -3702,7 +3703,7 @@ function renderCard(o){
         <div class="op-meta">${o.edital} · ${o.orgao} — ${o.uf}</div>
         <div class="op-title">${o.objeto}</div>
         <div class="op-tags">
-          ${o.profissoes.map(p=>`<span class="tag">${p}</span>`).join('')}
+          ${profTagsResumo(o.profissoes,4)}
           <span class="tag">${o.tipo}</span>
           <span class="tag">${o.modalidade}</span>
           ${(o.aceitaContratacao||[]).map(p=>`<span class="tag">${p}</span>`).join('')}
@@ -4986,6 +4987,19 @@ function _textoBuscaEdital(o){
   const campos = [o.orgao, o.edital, o.objeto, o.profissoes, o.uf, o.cidade, o.abrangencia, o.modalidade, o.tipo, o.requisitos, o.pontosPositivos, o.pontosAtencao, o.documentos, o.escolaridadeMinima, o.aceitaContratacao, o.remuneracao, o.valorAtendimento, o.valorMensal, o.valorHora, o.numeroPncp, o.emailInscricao];
   return _normBusca(campos.map(c=> lista(c)||'').join(' \n '));
 }
+/* Editais com muitas profissões: mostra poucas e resume o resto ("+N"), para não deformar listagem e página */
+function profTagsResumo(lista, max, comEsc){
+  const f = comEsc ? esc : (x=>x);
+  const l = Array.isArray(lista) ? lista : [];
+  if(l.length <= max) return l.map(p=>`<span class="tag">${f(p)}</span>`).join('');
+  const resto = l.slice(max);
+  return l.slice(0,max).map(p=>`<span class="tag">${f(p)}</span>`).join('') + `<span class="tag" title="${esc(resto.join(', '))}" style="cursor:help;">+${resto.length} profissões</span>`;
+}
+function profListaRecolhivel(lista, max){
+  const l = Array.isArray(lista) ? lista : [];
+  if(l.length <= max) return esc(l.join(', '));
+  return `<span class="pl-inicio">${esc(l.slice(0,max).join(', '))}</span><span class="pl-resto" hidden>, ${esc(l.slice(max).join(', '))}</span> <button type="button" class="pl-btn" onclick="const w=this.parentNode, r=w.querySelector('.pl-resto'); const ab=r.hidden; r.hidden=!ab; this.textContent= ab ? 'ver menos' : 'ver todas (${l.length})';">ver todas (${l.length})</button>`;
+}
 function applyFilters(){
   atualizarOrdenarPro();
   const busca = _normBusca(document.getElementById('ed-search').value.trim());
@@ -5242,11 +5256,11 @@ function openDetalhe(id){
           <div class="op-tags" style="margin-top:14px;">
             <span class="badge ${badgeClass(situacaoExibida(o))}">${situacaoExibida(o)}</span>
             ${inscricaoProximaHTML(o)}
-            ${o.profissoes.map(p=>`<span class="tag">${p}</span>`).join('')}
+            ${profTagsResumo(o.profissoes,5)}
           </div>
 
           <div class="quick-facts">
-            <div class="qf-item"><div class="qf-icon">👤</div><span class="qf-k">Quem pode participar</span><div class="qf-v">${o.profissoes.join(', ')}</div></div>
+            <div class="qf-item"><div class="qf-icon">👤</div><span class="qf-k">Quem pode participar</span><div class="qf-v">${profListaRecolhivel(o.profissoes,6)}</div></div>
             <div class="qf-item"><div class="qf-icon">📍</div><span class="qf-k">Onde é o atendimento</span><div class="qf-v">${o.cidade ? o.cidade+' — ' : ''}${o.uf} · ${o.abrangencia}</div></div>
             <div class="qf-item"><div class="qf-icon">🏢</div><span class="qf-k">Para quem é</span><div class="qf-v">${publicoTexto(o)}</div></div>
             <div class="qf-item"><div class="qf-icon">💻</div><span class="qf-k">Modalidade</span><div class="qf-v">${o.modalidade}</div></div>
@@ -12858,7 +12872,7 @@ function renderAprovarPreview(){
           <div class="op-meta">${esc(o.edital)} · ${esc(o.orgao)} — ${esc(o.uf)}</div>
           <div class="op-title">${esc(o.objeto)}</div>
           <div class="op-tags">
-            ${o.profissoes.map(p=>`<span class="tag">${esc(p)}</span>`).join('')}
+            ${profTagsResumo(o.profissoes,4,true)}
             <span class="tag">${esc(o.tipo)}</span>
             ${o.abertura ? `<span class="tag">Início: ${esc(o.abertura)}</span>` : ''}
             <span class="tag">Prazo: ${esc(o.prazo)}</span>
