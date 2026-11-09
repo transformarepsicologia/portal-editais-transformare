@@ -4979,9 +4979,16 @@ function atualizarOrdenarPro(){
   campo.style.display = pro ? '' : 'none';
   if(!pro){ const sel = document.getElementById('f-sort'); if(sel && sel.value) sel.value = ''; }
 }
+/* Busca por palavra-chave: olha o título e também as informações internas do edital (cidades, requisitos, documentos...), sem diferenciar acentos/maiúsculas */
+function _normBusca(t){ return String(t==null?'':t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function _textoBuscaEdital(o){
+  const lista = v => Array.isArray(v) ? v.map(x=> (x && typeof x==='object') ? Object.values(x).join(' ') : x).join(' ') : (v && typeof v==='object' ? Object.values(v).join(' ') : v);
+  const campos = [o.orgao, o.edital, o.objeto, o.profissoes, o.uf, o.cidade, o.abrangencia, o.modalidade, o.tipo, o.requisitos, o.pontosPositivos, o.pontosAtencao, o.documentos, o.escolaridadeMinima, o.aceitaContratacao, o.remuneracao, o.valorAtendimento, o.valorMensal, o.valorHora, o.numeroPncp, o.emailInscricao];
+  return _normBusca(campos.map(c=> lista(c)||'').join(' \n '));
+}
 function applyFilters(){
   atualizarOrdenarPro();
-  const busca = document.getElementById('ed-search').value.trim().toLowerCase();
+  const busca = _normBusca(document.getElementById('ed-search').value.trim());
   const prof = document.getElementById('f-prof').value;
   const tipo = document.getElementById('f-tipo').value;
   const mod = document.getElementById('f-mod').value;
@@ -5010,8 +5017,7 @@ function applyFilters(){
     if(filtroRadar === 'novas7' && !eNovaAberta(o)) return false;
     if(filtroRadar === 'embreve' && !eAbreEmBreve(o)) return false;
     if(busca){
-      const alvo = `${o.orgao} ${o.edital} ${o.objeto} ${o.profissoes.join(' ')} ${o.uf}`.toLowerCase();
-      if(!alvo.includes(busca)) return false;
+      if(!_textoBuscaEdital(o).includes(busca)) return false;
     }
     return true;
   });
