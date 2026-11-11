@@ -6812,6 +6812,7 @@ async function userLogin(){
   await loadUserData();
   toast('Bem-vindo(a) de volta' + (userProfile.nome ? ', ' + userProfile.nome.split(' ')[0] : ''));
   nav('minha-conta');
+  abrirPagamentoPorLink();
 }
 
 async function userForgotPassword(){
@@ -11167,6 +11168,9 @@ async function init(){
   iniciarCicloRadarHome();
   // Link direto para a política (ex.: .../#privacidade em e-mails e mensagens do beta).
   if(location.hash === '#privacidade') nav('privacidade');
+  if(window._assinarPendente && _sb){   // #assinar sem login: leva ao login; o pagamento abre logo depois de entrar
+    _sb.auth.getSession().then(({ data })=>{ if(!(data && data.session)){ toast('Entre na sua conta para assinar o plano.'); nav('login'); } });
+  }
   if(location.hash === '#admin') nav('admin'); // atalho: radartransformare.com.br/#admin abre o login do administrador
   abrirEditalRapido();   // link /?e=número: busca só esse edital e abre direto, sem esperar a lista inteira
   carregarEditaisSupabase().then(abrirLinkDeNotificacao);
@@ -11736,6 +11740,18 @@ const _sb = (typeof window !== 'undefined' && window.supabase && !SUPABASE_URL.i
   : null;
 if(_sb) carregarLinksDocs();
 
+/* Link direto para o pagamento: radartransformare.com.br/#assinar
+   Se a pessoa não estiver logada, vai para o login e, ao entrar, abre a tela de planos (mensal / anual).
+   Vale para Pro pagante, cortesia e grátis (quem já é Pro também precisa conseguir renovar). */
+if(location.hash === '#assinar') window._assinarPendente = true;
+async function abrirPagamentoPorLink(){
+  if(!window._assinarPendente || !userProfile) return;
+  window._assinarPendente = false;
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  nav('minha-conta');
+  abrirPlanosModal();
+}
+
 /* ============ Login do admin via Supabase Auth ============ */
 if(_sb){
   // Quando a pessoa clica no link de "esqueci minha senha" recebido por e-mail,
@@ -11753,6 +11769,7 @@ if(_sb){
     await carregarPerfilUsuario(authUser);
     await loadUserData();
     updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
+    abrirPagamentoPorLink();
   });
 }
 
