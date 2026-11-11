@@ -1574,6 +1574,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 <section class="view" id="view-alertas">
   <button class="back-link" onclick="nav('minha-conta')">← Voltar à minha conta</button>
   <div class="page-head"><span class="eyebrow">Personalização</span><h2>Meus alertas</h2><p>Escolha seus critérios e acompanhe novas oportunidades compatíveis.</p></div>
+  <div id="aviso-plano-radar"></div>
   <div class="gate-cadastro center-empty" style="display:none;">
     <h3>Entre para criar seus alertas</h3>
     <p>Com uma conta gratuita você escolhe profissões e estados de interesse e vê aqui os editais compatíveis com o seu perfil.</p>
@@ -2928,6 +2929,17 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   </div>
 </div>
 
+<div class="modal-overlay" id="aviso-plano-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('aviso-plano-modal')">×</button>
+    <h3 id="aviso-plano-titulo"></h3>
+    <p id="aviso-plano-texto" style="font-size:13.5px; color:var(--ink-muted); line-height:1.6;"></p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+      <button class="btn-primary" onclick="closeModal('aviso-plano-modal'); abrirPlanosModal();">Ver planos</button>
+      <button class="btn-ghost" onclick="closeModal('aviso-plano-modal')">Fechar</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="planos-modal">
   <div class="modal-box" style="max-width:560px;">
     <button class="modal-close" onclick="closeModal('planos-modal')">×</button>
@@ -6510,7 +6522,45 @@ async function saveAlertPrefs(){
   renderBell();
   pushSincronizarCriterios();
 }
+/* Aviso de plano: aparece UMA vez para cada pessoa (janela na tela) e some depois de visto.
+   "Visto" fica guardado neste aparelho (por usuário). Para um novo aviso, troque AVISO_PLANO_VERSAO. Para desligar: AVISO_PLANO_ATIVO = false. */
+const AVISO_PLANO_ATIVO = true;
+const AVISO_PLANO_VERSAO = '1';
+async function avisoPlanoConteudo(){
+  if(ehPro()){
+    let ate = '';
+    try{
+      const { data } = await _sb.from('assinaturas').select('ativa_ate').eq('user_id', userProfile.id).not('ativa_ate','is',null).order('ativa_ate',{ascending:false}).limit(1);
+      const a = data && data[0]; if(a && a.ativa_ate < SEM_PRAZO_ISO) ate = dataBR(a.ativa_ate);
+    }catch(e){}
+    return { titulo: ate ? 'Seu plano termina em ' + ate + '.' : 'Seu plano está sendo encerrado.',
+             texto: 'Para continuar com o Radar completo, escolha o Plano Pro: mensal por R$ 39,90 ou anual por R$ 29,90 por mês.' };
+  }
+  return { titulo: 'Conheça o Plano Pro.',
+           texto: 'Lista completa de documentos de cada edital, links das certidões e comparação de oportunidades. Mensal por R$ 39,90 ou anual por R$ 29,90 por mês.' };
+}
+async function avisoPlanoJaVisto(){ return !!(await storeGet(ukey('avisoPlano' + AVISO_PLANO_VERSAO))); }
+async function mostrarAvisoPlanoUmaVez(){
+  if(window._assinarPendente) return;                    // quem veio pelo link de pagamento já vai direto para os planos
+  if(!AVISO_PLANO_ATIVO || !userProfile || adminAuthed || !_sb) return;
+  if(await avisoPlanoJaVisto()) return;
+  const c = await avisoPlanoConteudo();
+  document.getElementById('aviso-plano-titulo').textContent = c.titulo;
+  document.getElementById('aviso-plano-texto').textContent = c.texto;
+  openModal('aviso-plano-modal');
+  await storeSet(ukey('avisoPlano' + AVISO_PLANO_VERSAO), true);   // visto: não aparece de novo
+}
+async function renderAvisoPlanoRadar(){   // faixa na tela de Alertas, só enquanto a pessoa ainda não viu o aviso
+  const el = document.getElementById('aviso-plano-radar'); if(!el) return;
+  if(!AVISO_PLANO_ATIVO || !userProfile || adminAuthed || await avisoPlanoJaVisto()){ el.innerHTML = ''; return; }
+  const c = await avisoPlanoConteudo();
+  el.innerHTML = `<div style="border:1px solid var(--amber); background:rgba(245,169,62,0.08); border-radius:10px; padding:12px 14px; margin:0 0 14px;">
+    <div style="font-size:13px; font-weight:600; margin-bottom:4px;">${esc(c.titulo)}</div>
+    <div style="font-size:12.5px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${esc(c.texto)}</div>
+    <button class="btn-primary" onclick="abrirPlanosModal()">Ver planos</button></div>`;
+}
 function renderAlertas(){
+  renderAvisoPlanoRadar();
   pushRender(); pushCarregar();
   const list = document.getElementById('alert-list');
   const countEl = document.getElementById('alert-count');
@@ -6812,6 +6862,7 @@ async function userLogin(){
   await loadUserData();
   toast('Bem-vindo(a) de volta' + (userProfile.nome ? ', ' + userProfile.nome.split(' ')[0] : ''));
   nav('minha-conta');
+  mostrarAvisoPlanoUmaVez();
   abrirPagamentoPorLink();
 }
 
@@ -11769,6 +11820,7 @@ if(_sb){
     await carregarPerfilUsuario(authUser);
     await loadUserData();
     updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
+    mostrarAvisoPlanoUmaVez();
     abrirPagamentoPorLink();
   });
 }
@@ -13008,6 +13060,39 @@ function infoPlanoUsuario(u, assinaturas, pedido){
     aguardando: !pro && !!ult && ult.status === 'pendente'
   };
 }
+/* Aviso de plano por WhatsApp (envio manual, uma pessoa por vez).
+   O número NÃO vem na lista (minimização de dados): é buscado só no clique, só desta pessoa, para esta finalidade. */
+const LINK_ASSINAR = 'https://radartransformare.com.br/#assinar';
+function msgAvisoPlano(u, info){
+  const nome = ((u.nome || '').trim().split(/\s+/)[0]) || '';
+  const oi = 'Oi' + (nome ? ', ' + nome : '') + '! Aqui é da Transformare.';
+  const quando = (info.ate && !info.semPrazo) ? dataBR(info.ate) : '';
+  const planos = '• Mensal: R$ 39,90 por mês\n• Anual: R$ 29,90 por mês';
+  if(info.pro && !info.cortesia){
+    return oi + ' ' + (quando ? 'O seu plano do Radar termina em ' + quando : 'O seu plano do Radar está sendo encerrado') + ', e queremos que você continue com tudo o que já usa: Índice Transformare, aderência ao seu perfil e o checklist de documentos.\n\nEscolha a opção que preferir:\n• Mensal: R$ 39,90 por mês\n• Anual: R$ 29,90 por mês (você economiza R$ 120 no ano)\n\nPara continuar, é só assinar por aqui: ' + LINK_ASSINAR;
+  }
+  if(info.pro){
+    return oi + ' Seu acesso cortesia ao Plano Pro ' + (quando ? 'termina em ' + quando : 'está terminando') + '. Para continuar com tudo e sem perder o que você já marcou, é só assinar no cartão de crédito:\n• Mensal: R$ 39,90 por mês\n• Anual: R$ 29,90 por mês (o melhor custo)\n\nAssine rapidinho por aqui: ' + LINK_ASSINAR;
+  }
+  return oi + ' Você já usa o Radar de editais, e queremos te apresentar o Plano Pro: lista completa de documentos de cada edital, links para emitir certidões, comparação entre oportunidades e aderência ao seu perfil.\n\n' + planos + '\n\nConheça e assine por aqui: ' + LINK_ASSINAR;
+}
+async function usrAvisarPlano(id, btn){
+  const u = (_usrAdmDados && _usrAdmDados.lista || []).find(x=>x.id === id); if(!u) return;
+  const info = infoPlanoUsuario(u, _usrAdmDados.assinaturas, null);
+  const msg = msgAvisoPlano(u, info);
+  const rot = btn ? btn.textContent : ''; if(btn){ btn.disabled = true; btn.textContent = 'Abrindo…'; }
+  try{
+    const { data } = await _sb.from('usuarios_perfil').select('whatsapp').eq('id', id).maybeSingle();
+    let n = String((data && data.whatsapp) || '').replace(/\D/g,'');
+    if(n.length === 10 || n.length === 11) n = '55' + n;
+    if(n.length >= 12){ window.open('https://wa.me/' + n + '?text=' + encodeURIComponent(msg), '_blank', 'noopener'); }
+    else{
+      try{ await navigator.clipboard.writeText(msg); toast('Esta pessoa não informou WhatsApp. Mensagem copiada: envie por e-mail (' + (u.email || '') + ').'); }
+      catch(e){ prompt('Sem WhatsApp cadastrado. Copie a mensagem:', msg); }
+    }
+  }catch(e){ toast('Não foi possível abrir agora. Tente de novo.'); }
+  if(btn){ btn.disabled = false; btn.textContent = rot; }
+}
 function filtrarUsuariosAdmin(){ _pag['us'] = 1; renderUsuariosAdmin(true); }
 function setFiltroUsuarios(f){ document.getElementById('usr-filtro').value = f; filtrarUsuariosAdmin(); }
 async function renderUsuariosAdmin(semRecarregar){
@@ -13081,6 +13166,7 @@ async function renderUsuariosAdmin(semRecarregar){
         ${!ped && !info.pro ? `<button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" onclick="liberarProUsuario('${u.id}', null)">Liberar Pro…</button>` : ''}
         ${info.pro ? `<button type="button" class="btn-ghost" style="font-size:12px;" onclick="liberarProUsuario('${u.id}', null)">Prorrogar…</button><button type="button" class="btn-ghost" style="font-size:12px;" onclick="voltarParaGratis('${u.id}')">Voltar para Grátis</button>` : ''}
         <button type="button" class="btn-ghost" style="font-size:12px;" title="Usuário de teste não entra nas contagens de acesso, visualização nem nos totais" onclick="marcarUsuarioTeste('${u.id}', ${u.teste ? 'false' : 'true'})">${u.teste ? '↩ Tirar de teste' : '🧪 Marcar como teste'}</button>
+        <button type="button" class="btn-primary" style="font-size:12px; padding:5px 12px;" title="Abre o WhatsApp com a mensagem de plano pronta para esta pessoa" onclick="usrAvisarPlano('${u.id}', this)">💬 Avisar</button>
         <button type="button" class="btn-ghost" style="font-size:12px;" onclick="usrToggleCadastro('${u.id}', this)">👁 Ver cadastro</button>
         <button type="button" class="btn-ghost" style="font-size:12px;" onclick="enviarLinkRedefinicaoUsuario('${esc(u.email)}', this)">🔑 Redefinir senha</button>
       </div>
