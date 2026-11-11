@@ -2929,6 +2929,17 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   </div>
 </div>
 
+<div class="modal-overlay" id="aviso-plano-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('aviso-plano-modal')">×</button>
+    <h3 id="aviso-plano-titulo"></h3>
+    <p id="aviso-plano-texto" style="font-size:13.5px; color:var(--ink-muted); line-height:1.6;"></p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+      <button class="btn-primary" onclick="closeModal('aviso-plano-modal'); abrirPlanosModal();">Ver planos</button>
+      <button class="btn-ghost" onclick="closeModal('aviso-plano-modal')">Fechar</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="planos-modal">
   <div class="modal-box" style="max-width:560px;">
     <button class="modal-close" onclick="closeModal('planos-modal')">×</button>
@@ -6511,28 +6522,41 @@ async function saveAlertPrefs(){
   renderBell();
   pushSincronizarCriterios();
 }
-/* Aviso simples de plano na tela de Alertas. Para desligar: AVISO_PLANO_ATIVO = false. */
+/* Aviso de plano: aparece UMA vez para cada pessoa (janela na tela) e some depois de visto.
+   "Visto" fica guardado neste aparelho (por usuário). Para um novo aviso, troque AVISO_PLANO_VERSAO. Para desligar: AVISO_PLANO_ATIVO = false. */
 const AVISO_PLANO_ATIVO = true;
-async function renderAvisoPlanoRadar(){
-  const el = document.getElementById('aviso-plano-radar'); if(!el) return;
-  if(!AVISO_PLANO_ATIVO || !userProfile){ el.innerHTML = ''; return; }
-  const pro = ehPro();
-  let titulo, texto;
-  if(pro){
+const AVISO_PLANO_VERSAO = '1';
+async function avisoPlanoConteudo(){
+  if(ehPro()){
     let ate = '';
     try{
       const { data } = await _sb.from('assinaturas').select('ativa_ate').eq('user_id', userProfile.id).not('ativa_ate','is',null).order('ativa_ate',{ascending:false}).limit(1);
       const a = data && data[0]; if(a && a.ativa_ate < SEM_PRAZO_ISO) ate = dataBR(a.ativa_ate);
     }catch(e){}
-    titulo = ate ? 'Seu plano termina em ' + ate + '.' : 'Seu plano está sendo encerrado.';
-    texto = 'Para continuar com o Radar completo, escolha o Plano Pro: mensal por R$ 39,90 ou anual por R$ 29,90 por mês.';
-  } else {
-    titulo = 'Conheça o Plano Pro.';
-    texto = 'Lista completa de documentos de cada edital, links das certidões e comparação de oportunidades. Mensal por R$ 39,90 ou anual por R$ 29,90 por mês.';
+    return { titulo: ate ? 'Seu plano termina em ' + ate + '.' : 'Seu plano está sendo encerrado.',
+             texto: 'Para continuar com o Radar completo, escolha o Plano Pro: mensal por R$ 39,90 ou anual por R$ 29,90 por mês.' };
   }
+  return { titulo: 'Conheça o Plano Pro.',
+           texto: 'Lista completa de documentos de cada edital, links das certidões e comparação de oportunidades. Mensal por R$ 39,90 ou anual por R$ 29,90 por mês.' };
+}
+async function avisoPlanoJaVisto(){ return !!(await storeGet(ukey('avisoPlano' + AVISO_PLANO_VERSAO))); }
+async function mostrarAvisoPlanoUmaVez(){
+  if(window._assinarPendente) return;                    // quem veio pelo link de pagamento já vai direto para os planos
+  if(!AVISO_PLANO_ATIVO || !userProfile || adminAuthed || !_sb) return;
+  if(await avisoPlanoJaVisto()) return;
+  const c = await avisoPlanoConteudo();
+  document.getElementById('aviso-plano-titulo').textContent = c.titulo;
+  document.getElementById('aviso-plano-texto').textContent = c.texto;
+  openModal('aviso-plano-modal');
+  await storeSet(ukey('avisoPlano' + AVISO_PLANO_VERSAO), true);   // visto: não aparece de novo
+}
+async function renderAvisoPlanoRadar(){   // faixa na tela de Alertas, só enquanto a pessoa ainda não viu o aviso
+  const el = document.getElementById('aviso-plano-radar'); if(!el) return;
+  if(!AVISO_PLANO_ATIVO || !userProfile || adminAuthed || await avisoPlanoJaVisto()){ el.innerHTML = ''; return; }
+  const c = await avisoPlanoConteudo();
   el.innerHTML = `<div style="border:1px solid var(--amber); background:rgba(245,169,62,0.08); border-radius:10px; padding:12px 14px; margin:0 0 14px;">
-    <div style="font-size:13px; font-weight:600; margin-bottom:4px;">${esc(titulo)}</div>
-    <div style="font-size:12.5px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${esc(texto)}</div>
+    <div style="font-size:13px; font-weight:600; margin-bottom:4px;">${esc(c.titulo)}</div>
+    <div style="font-size:12.5px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${esc(c.texto)}</div>
     <button class="btn-primary" onclick="abrirPlanosModal()">Ver planos</button></div>`;
 }
 function renderAlertas(){
@@ -6838,6 +6862,7 @@ async function userLogin(){
   await loadUserData();
   toast('Bem-vindo(a) de volta' + (userProfile.nome ? ', ' + userProfile.nome.split(' ')[0] : ''));
   nav('minha-conta');
+  mostrarAvisoPlanoUmaVez();
   abrirPagamentoPorLink();
 }
 
@@ -11795,6 +11820,7 @@ if(_sb){
     await carregarPerfilUsuario(authUser);
     await loadUserData();
     updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
+    mostrarAvisoPlanoUmaVez();
     abrirPagamentoPorLink();
   });
 }
