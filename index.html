@@ -8325,6 +8325,103 @@ function triDataBR(trecho){
   return '';
 }
 const _DATA_RE = '(\\d{1,2}\\/\\d{1,2}\\/\\d{4}|\\d{1,2}\\s*(?:º|o)?\\s*de\\s+[A-Za-zçÇãÃ]+\\s+de\\s+\\d{4})';
+
+/* ---- Triagem: profissões, modalidade, itens e conferências (leitura por regras, sem IA) ---- */
+const _TRI_PROF_RX = {
+  'psicologia':/\bpsicolog[oa]s?\b|\bpsicologia\b|\bpsicoterapeutas?\b/, 'psiquiatria':/\bpsiquiatr(?:as?|ia)\b/,
+  'fisioterapia':/\bfisioterap(?:ia|eutas?)\b/, 'nutricao':/\bnutricionistas?\b|\bnutricao\b/,
+  'fonoaudiologia':/\bfonoaudiolog(?:ia|os?|as?)\b/, 'enfermagem':/\benfermeir[oa]s?\b|\benfermagem\b/,
+  'farmacia':/\bfarmaceutic[oa]s?\b|\bfarmacia\b/, 'medicina':/\bmedic[oa]s?\b|\bmedicina\b/,
+  'terapia ocupacional':/\bterapeutas? ocupaciona(?:l|is)\b|\bterapia ocupacional\b/, 'odontologia':/\bdentistas?\b|\bodontolog\w*|\bcirurgi(?:ao|oes|a)[- ]dentistas?\b/,
+  'biomedicina':/\bbiomedic\w*/, 'assistencia social':/\bassistentes? sociais?\b|\bservico social\b|\bassistencia social\b/,
+  'psicopedagogia':/\bpsicopedag\w*/, 'musicoterapia':/\bmusicoterap\w*/, 'educacao fisica':/\beducad(?:or|ora|ores) fisic\w*|\beducacao fisica\b/
+};
+function triProfRegex(nome){
+  const n = _fNorm(nome);
+  if(_TRI_PROF_RX[n]) return _TRI_PROF_RX[n];
+  const esc = n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return new RegExp('\\b' + esc + '(?:s|es)?\\b');
+}
+// Fortes: citadas no objeto, na informação complementar ou nos itens de serviço do PNCP (vão marcadas no formulário).
+// Possíveis: só aparecem no texto do edital (ex.: "atestado médico" não quer dizer que a vaga é de médico): ficam só como dica.
+function triSugerirProfs(textoObjeto, textoEdital){
+  const nomes = (typeof profissoesAtivasNomes === 'function' ? profissoesAtivasNomes() : []);
+  const forte = [], possivel = [];
+  const to = _fNorm(textoObjeto), te = _fNorm(textoEdital);
+  nomes.forEach(n=>{
+    const rx = triProfRegex(n);
+    if(rx.test(to)) forte.push(n);
+    else if((te.match(new RegExp(rx.source, 'g')) || []).length >= 3) possivel.push(n);
+  });
+  return { forte, possivel };
+}
+// Forma de atuação (campo Modalidade). Só sugere quando o texto é claro.
+function triSugerirModalidade(texto){
+  const t = _fNorm(texto);
+  const home = /home care|atendimento domiciliar|visita domiciliar|atendimento (em|no) domicilio|domicilio do paciente/.test(t);
+  const online = /telessaude|teleatendimento|telemedicina|teleconsulta|telepsicologia|atendimento remoto|\bonline\b|videochamada|atendimento a distancia/.test(t);
+  const presencial = /presencia|consultorio|ambulatorio|unidade (basica )?de saude|\bubs\b|\bcaps\b|dependencias d[aeo]/.test(t);
+  const incompany = /in company|nas dependencias d[aeo] (contratante|orgao|prefeitura|secretaria)|no local indicado pel/.test(t);
+  const itinerante = /itinerante/.test(t);
+  let v = '', fonte = '';
+  if(itinerante){ v = 'Itinerante'; fonte = 'o texto cita atendimento itinerante'; }
+  else if(home && !presencial && !online){ v = 'Home care'; fonte = 'o texto cita atendimento domiciliar'; }
+  else if(online && presencial){ v = 'Presencial e online'; fonte = 'o texto cita atendimento presencial e online'; }
+  else if(online){ v = 'Online'; fonte = 'o texto cita atendimento online/telessaúde'; }
+  else if(incompany){ v = 'Presencial (in company)'; fonte = 'o texto cita atendimento nas dependências do órgão'; }
+  else if(presencial){ v = 'Presencial'; fonte = 'o texto cita atendimento presencial'; }
+  return v ? { valor: v, fonte } : null;
+}
+const _brl = n => 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const _qtdBr = n => Number(n).toLocaleString('pt-BR', { maximumFractionDigits:3 });
+// Itens do PNCP viram linhas "descrição | qtd | R$ unit | R$ total", o formato que a leitura de remuneração do formulário já entende.
+function triItensParaTexto(itens){
+  if(!itens || !itens.length) return '';
+  const linhas = itens.filter(i=>i.vu != null && i.qtd != null).map(i=>{
+    const vt = i.vt != null ? i.vt : i.vu * i.qtd;
+    return '| ' + (i.descricao || ('Item ' + (i.n || ''))).replace(/\|/g,'/') + ' | ' + _qtdBr(i.qtd) + ' | ' + _brl(i.vu) + ' | ' + _brl(vt) + ' |';
+  });
+  return linhas.length ? 'ITENS DA COMPRA (PNCP)\n' + linhas.join('\n') : '';
+}
+function triParseData(br){ const m = String(br||'').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? new Date(+m[3], +m[2]-1, +m[1]) : null; }
+// Lista o que merece conferência: [{n:'alerta'|'info', t:texto}]
+function triConferir(campos, meta, itens, texto, anexos, pdfLido){
+  const out = []; const add = (n,t)=>out.push({n, t});
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const prazo = campos.prazo && campos.prazo.valor, dPrazo = triParseData(prazo);
+  if(dPrazo){
+    const dias = Math.round((dPrazo - hoje) / 86400000);
+    if(dias < 0) add('alerta', 'Prazo vencido em ' + prazo + ': edital encerrado.');
+    else if(dias < 30) add('alerta', 'Faltam ' + dias + ' dia(s) para o prazo (' + prazo + '): o cliente só vê editais com 30 dias ou mais.');
+  } else if(!(campos.indeterminado)) add('alerta', 'Prazo não encontrado — é obrigatório.');
+  if(!campos.abertura) add('alerta', 'Início das propostas não encontrado — é obrigatório.');
+  if(!campos.publicacao) add('alerta', 'Data de divulgação no PNCP não encontrada — é obrigatória.');
+  // PNCP x texto do edital (PNCP costuma estar desatualizado)
+  try{
+    const doTexto = triExtrair(texto, {});
+    [['prazo','Prazo'],['abertura','Início das propostas']].forEach(([k,rot])=>{
+      const a = campos[k] && campos[k].origem === 'pncp' ? campos[k].valor : '', b = doTexto[k] && doTexto[k].valor;
+      if(a && b && a !== b) add('alerta', rot + ' diferente: PNCP diz ' + a + ' e o texto do edital diz ' + b + '. Confirme no site do órgão.');
+    });
+  }catch(e){}
+  if(meta.situacao_pncp) add('info', 'Situação no PNCP: “' + meta.situacao_pncp + '”. Isso não diz se está aberto: vale o prazo.');
+  if(meta.atualizacao) add('info', 'Última atualização no PNCP: ' + formatarDataBR(meta.atualizacao) + '.');
+  if(meta.srp) add('info', 'É registro de preços (SRP): a demanda não é garantida.');
+  if(meta.amparo_legal) add('info', 'Amparo legal: ' + meta.amparo_legal + (meta.modo_disputa ? ' · Modo de disputa: ' + meta.modo_disputa : '') + '.');
+  if(meta.link_pncp && !pdfLido) add('alerta', 'Nenhum PDF do edital foi lido: requisitos, documentos e valores podem estar faltando. Envie o arquivo.');
+  if(anexos && anexos.length) add('info', anexos.length + ' anexo(s) no PNCP: ' + anexos.map(a=>a.titulo).filter(Boolean).slice(0,6).join(' · ') + (anexos.length > 6 ? '…' : ''));
+  if(itens && itens.length){
+    const mats = itens.filter(i=>/material/i.test(i.tipo || ''));
+    if(mats.length === itens.length) add('alerta', 'Todos os ' + itens.length + ' itens são de MATERIAL, não serviço de profissional: provavelmente não é para o Radar.');
+    else if(mats.length) add('alerta', mats.length + ' de ' + itens.length + ' itens são de material (não é serviço de profissional). Confira.');
+    if(itens.some(i=>i.sigiloso)) add('info', 'Há item com orçamento sigiloso.');
+    const soma = itens.reduce((a,i)=>a + (i.vt != null ? i.vt : (i.vu != null && i.qtd != null ? i.vu * i.qtd : 0)), 0);
+    if(meta.valor_estimado && soma && Math.abs(soma - meta.valor_estimado) > Math.max(1, meta.valor_estimado * 0.01)) add('info', 'A soma dos itens (' + _brl(soma) + ') difere do valor estimado da compra (' + _brl(meta.valor_estimado) + ').');
+    if(itens.some(i=>i.vu == null || i.vu === 0)) add('info', 'Há item sem valor unitário informado.');
+    if(itens.every(i=>/laborat|exame/i.test(i.descricao || '')) ) add('alerta', 'Os itens parecem ser só de laboratório/exames: pela regra do Radar, edital só de laboratório é retirado.');
+  } else if(meta.link_pncp) add('info', 'Nenhum item da compra foi lido do PNCP.');
+  return out;
+}
 function triExtrair(texto, meta){
   meta = meta || {};
   const t = String(texto || '').replace(/\r/g,'');
@@ -8391,7 +8488,7 @@ function triExtrair(texto, meta){
   if(m){ const l = m.find(x=>!/pncp\.gov\.br/i.test(x)); if(l) set('urlEdital', l.replace(/[.,;]+$/,''), l); }
   return campos;
 }
-const _TRI_ROTULOS = [['edital','Edital'],['orgao','Órgão'],['objeto','Objeto'],['uf','UF'],['cidade','Cidade'],['abr','Abrangência'],['tipo','Tipo'],['prazo','Prazo (fim do recebimento)'],['abertura','Início das propostas'],['publicacao','Publicação'],['indeterminado','Prazo indeterminado?'],['urlPncp','Link PNCP'],['urlEdital','Link do edital'],['email','E-mail']];
+const _TRI_ROTULOS = [['edital','Edital'],['orgao','Órgão'],['objeto','Objeto'],['uf','UF'],['cidade','Cidade'],['abr','Abrangência'],['tipo','Tipo'],['prazo','Prazo (fim do recebimento)'],['abertura','Início das propostas'],['publicacao','Publicação'],['indeterminado','Prazo indeterminado?'],['urlPncp','Link PNCP'],['urlEdital','Link do edital'],['email','E-mail'],['profs','Profissões (sugestão)'],['mod','Modalidade / forma de atuação (sugestão)']];
 function triRender(){
   const box = document.getElementById('tri-resultado'); if(!box || !_tri) return;
   const c = _tri.campos;
@@ -8401,10 +8498,13 @@ function triRender(){
     return `<tr><td style="padding:4px 10px 4px 0; color:var(--ink-dim); white-space:nowrap; vertical-align:top;">${rot}</td><td style="vertical-align:top;"><strong>${esc(x.valor)}</strong></td><td style="font-size:11px; color:var(--ink-dim); vertical-align:top;">${x.origem === 'pncp' ? 'dado oficial do PNCP' : '“' + esc(x.fonte) + '”'}</td></tr>`;
   }).join('');
   const avisos = (_tri.avisos || []).map(a=>`<div style="color:var(--coral); font-size:12.5px; margin-bottom:4px;">⚠ ${esc(a)}</div>`).join('');
+  const conf = (_tri.conferencias || []).length ? `<div style="margin:10px 0; padding:10px 12px; border:1px solid var(--border-soft); border-radius:8px;"><div style="font-weight:700; font-size:13px; margin-bottom:6px;">Conferências</div>${(_tri.conferencias).map(x=>`<div style="font-size:12.5px; margin-bottom:3px; color:${x.n === 'alerta' ? 'var(--coral)' : 'var(--ink-dim)'};">${x.n === 'alerta' ? '⚠' : 'ℹ'} ${esc(x.t)}</div>`).join('')}</div>` : '';
+  const itensHtml = (_tri.itens || []).length ? `<details style="margin:10px 0;"><summary style="cursor:pointer; font-size:13px; font-weight:700;">Itens da compra no PNCP (${_tri.itens.length})</summary><div style="overflow-x:auto;"><table style="font-size:12px; border-collapse:collapse; width:100%; margin-top:6px;"><tr style="text-align:left; color:var(--ink-dim);"><th style="padding:3px 8px 3px 0;">Nº</th><th style="padding:3px 8px 3px 0;">Descrição</th><th style="padding:3px 8px 3px 0;">Tipo</th><th style="padding:3px 8px 3px 0;">Qtd.</th><th style="padding:3px 8px 3px 0;">Unitário</th><th style="padding:3px 8px 3px 0;">Total</th></tr>${_tri.itens.slice(0,200).map(i=>`<tr style="vertical-align:top; border-top:1px solid var(--border-soft);"><td style="padding:3px 8px 3px 0;">${esc(i.n ?? '')}</td><td style="padding:3px 8px 3px 0;">${esc(i.descricao || '')}${i.info ? '<div style="color:var(--ink-dim);">' + esc(i.info.slice(0,160)) + '</div>' : ''}</td><td style="padding:3px 8px 3px 0;">${esc(i.tipo || '')}</td><td style="padding:3px 8px 3px 0;">${i.qtd != null ? esc(_qtdBr(i.qtd)) + (i.unidade ? ' ' + esc(i.unidade) : '') : '—'}</td><td style="padding:3px 8px 3px 0; white-space:nowrap;">${i.vu != null ? _brl(i.vu) : '—'}</td><td style="padding:3px 8px 3px 0; white-space:nowrap;">${i.vt != null ? _brl(i.vt) : '—'}</td></tr>`).join('')}</table></div></details>` : '';
+  const possiveis = (_tri.profsPossiveis || []).length ? `<div style="font-size:12px; margin:6px 0; color:var(--ink-dim);">Também citadas no texto do edital (não marcadas — confira): ${esc(_tri.profsPossiveis.join(', '))}.</div>` : '';
   const pdfs = (_tri.pdfsLinks || []).length ? `<div style="font-size:12px; margin:6px 0;">PDFs encontrados na página: ${(_tri.pdfsLinks).map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.split('/').pop().slice(0,50))}</a>`).join(' · ')} — baixe e envie no campo de arquivos para ler.</div>` : '';
   box.innerHTML = `${avisos}
     <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:8px;">Fontes lidas: ${esc(_tri.fontes.join(' · ') || '—')} (${Math.round(_tri.texto.length/1024)} KB de texto). Confira cada campo: a leitura é por regras e pode errar.</div>
-    <table style="font-size:13px; border-collapse:collapse; width:100%;">${linhas}</table>${pdfs}
+    ${conf}<table style="font-size:13px; border-collapse:collapse; width:100%;">${linhas}</table>${possiveis}${itensHtml}${pdfs}
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
       <button class="btn-primary" onclick="triAbrirFormulario()">Abrir no formulário para revisar e publicar</button>
       <button class="btn-ghost" onclick="triCopiarFicha()">Copiar ficha</button>
@@ -8427,7 +8527,7 @@ async function triagemAnalisar(){
   const st = document.getElementById('tri-status'), btn = document.getElementById('tri-btn');
   if(!url && !files.length){ toast('Cole um link ou envie um PDF'); return; }
   btn.disabled = true; document.getElementById('tri-resultado').innerHTML = '';
-  const fontes = [], avisos = []; let texto = '', meta = {}, pdfsLinks = [];
+  const fontes = [], avisos = []; let texto = '', meta = {}, pdfsLinks = [], itens = [], anexos = [], pdfLido = files.some(f=>/\.pdf$/i.test(f.name) || f.type === 'application/pdf');
   try{
     for(const f of files){
       st.textContent = 'Lendo ' + f.name + '…';
@@ -8444,7 +8544,9 @@ async function triagemAnalisar(){
       const { data: ses } = await _sb.auth.getSession();
       const tok = ses && ses.session && ses.session.access_token;
       if(!tok) throw new Error('Entre como administrador para analisar links');
-      const resp = await fetch(SUPABASE_URL + '/functions/v1/triagem-edital', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + tok, apikey: SUPABASE_ANON_KEY }, body: JSON.stringify({ url }) });
+      const _chamar = (fn)=>fetch(SUPABASE_URL + '/functions/v1/' + fn, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + tok, apikey: SUPABASE_ANON_KEY }, body: JSON.stringify({ url }) });
+      let resp = await _chamar('triagem-edital-v2').catch(()=>null);
+      if(!resp || resp.status === 404 || resp.status >= 500){ resp = await _chamar('triagem-edital'); avisos.push('Usei a leitura básica (a leitura completa dos itens ficou indisponível agora).'); }
       const r = await resp.json().catch(()=>({ ok:false, erro:'Resposta inválida do servidor' }));
       if(!r.ok) avisos.push('Link: ' + (r.erro || 'não consegui ler') + ' — se preferir, envie o PDF.');
       else {
@@ -8453,15 +8555,33 @@ async function triagemAnalisar(){
           st.textContent = 'Lendo o PDF do link…';
           const pr = await triTextoDePdf(triB64ParaBytes(r.pdf.base64));
           if(pr.texto.replace(/\s/g,'').length < 200) avisos.push('O PDF do link quase não tem texto (escaneado?).');
-          texto += '\n' + pr.texto; fontes.push((r.pdf.nome || 'PDF do link') + ' (' + pr.paginas + ' pág.)');
+          texto += '\n' + pr.texto; fontes.push((r.pdf.nome || 'PDF do link') + ' (' + pr.paginas + ' pág.)'); pdfLido = true;
         }
+        for(const px of (r.pdfs_extra || [])){
+          try{
+            st.textContent = 'Lendo anexo: ' + (px.nome || '') + '…';
+            const pe = await triTextoDePdf(triB64ParaBytes(px.base64));
+            texto += '\n' + pe.texto; fontes.push((px.nome || 'anexo') + ' (' + pe.paginas + ' pág.)'); pdfLido = true;
+          }catch(e){ avisos.push('Não consegui ler o anexo ' + (px.nome || '') + '.'); }
+        }
+        itens = r.itens || []; anexos = r.anexos || [];
+        if(itens.length){ texto += '\n' + triItensParaTexto(itens); fontes.push(itens.length + ' item(ns) do PNCP'); }
         if(r.texto){ texto += '\n' + r.texto; fontes.push(r.tipo === 'pncp' ? 'dados do PNCP' : 'texto da página'); }
         else if(r.tipo === 'pncp') fontes.push('dados do PNCP');
       }
     }
     texto = texto.trim();
     if(!texto && !Object.keys(meta).length){ st.textContent = ''; avisos.push('Não consegui obter nenhum texto.'); }
-    _tri = { texto, meta, fontes, avisos, pdfsLinks, campos: triExtrair(texto, meta) };
+    const campos = triExtrair(texto, meta);
+    // profissões e forma de atuação: o objeto/itens valem como "fortes"; o texto do edital só como dica
+    const baseObj = [meta.objeto, meta.informacao, (itens||[]).filter(i=>!/material/i.test(i.tipo||'')).map(i=>i.descricao).join(' '), (campos.objeto && campos.objeto.valor) || ''].join(' ');
+    const sp = triSugerirProfs(baseObj, texto);
+    const profsOk = sp.forte.length && sp.forte.length <= 8;
+    if(profsOk) campos.profs = { valor: sp.forte.join(', '), fonte: 'citadas no objeto/itens', origem: 'texto' };
+    else if(sp.forte.length > 8) avisos.push('Muitas profissões citadas (' + sp.forte.length + '): não marquei nenhuma. Confira o edital.');
+    const sm = triSugerirModalidade(baseObj + ' ' + texto);
+    if(sm) campos.mod = { valor: sm.valor, fonte: sm.fonte, origem: 'texto' };
+    _tri = { texto, meta, fontes, avisos, pdfsLinks, itens, anexos, campos, profs: profsOk ? sp.forte : [], profsPossiveis: sp.possivel.filter(x=>!sp.forte.includes(x)), conferencias: triConferir(campos, meta, itens, texto, anexos, pdfLido) };
     st.textContent = '';
     triRender();
   }catch(e){
@@ -8491,6 +8611,14 @@ function triAbrirFormulario(){
     if(_tri.texto.length <= TEXTO_MD_MAX) { ta.value = _tri.texto; afTextoStatus(); }
     else toast('Texto longo demais para gravar (' + Math.round(_tri.texto.length/1024) + ' KB): usado só para preencher, não será salvo.');
   }
+  if((_tri.profs || []).length){
+    let n = 0;
+    document.querySelectorAll('#af-profs .chip-opt').forEach(ch=>{
+      if(_tri.profs.some(p=>_fNorm(p) === _fNorm(ch.dataset.prof || ''))){ ch.classList.add('selected'); n++; }
+    });
+    if(n) toast(n + ' profissão(ões) marcada(s) pela triagem — confira');
+  }
+  setSel('af-mod', v('mod'));
   const inf = inferirDoTexto(_tri.texto || '');
   afPreencherDatasDoTexto(_tri.texto || '');
   afProfSelecionadasNoTopo(); atualizarLinksPortais();
