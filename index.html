@@ -10198,7 +10198,13 @@ function prospClassificarLinha(cel, def, ctx){
   if(!r.uf) r.uf = def.uf || '';
   return r;
 }
-let _prospPreview = [];
+let _prospPreview = [], _prospRows = [];
+function prospLinhasLista(){ return document.getElementById('pr-lista').value.split(/\n+/).map(l=>l.trim()).filter(Boolean); }
+function prospRemoverLinha(i){ const l = prospLinhasLista(); l.splice(i, 1); document.getElementById('pr-lista').value = l.join('\n'); prospOrganizar(); }
+function prospRemoverIncompletos(){
+  const l = prospLinhasLista(), ok = new Set(_prospRows.map((r,i)=>r._ok ? i : -1));
+  document.getElementById('pr-lista').value = l.filter((x,i)=>ok.has(i)).join('\n'); prospOrganizar();
+}
 function prospOrganizar(){
   const st = document.getElementById('pr-add-status'), pv = document.getElementById('pr-preview'), bt = document.getElementById('pr-confirmar');
   const linhas = document.getElementById('pr-lista').value.split(/\n+/).map(l=>l.trim()).filter(Boolean);
@@ -10208,12 +10214,15 @@ function prospOrganizar(){
   const ctx = { ufs: new Set(UFS.map(u=>u.sigla)), cidades: prospCidadesConhecidas() };
   const rows = linhas.map(l=>prospClassificarLinha(l.split(/\s*[;\t|]\s*/), def, ctx));
   const aviso = r=>[ !(r.telefone || r.email || r.instagram) ? 'sem WhatsApp, e-mail ou @' : '', !r.profissao ? 'sem profissão' : (!prospEhProfissao(r.profissao) ? 'profissão não reconhecida' : ''), !r.uf ? 'sem UF' : '' ].filter(Boolean).join(', ');
-  const ok = rows.filter(r=>(r.telefone || r.email || r.instagram) && r.profissao && r.uf);
+  rows.forEach(r=>{ r._ok = !!((r.telefone || r.email || r.instagram) && r.profissao && r.uf); });
+  _prospRows = rows;
+  const ok = rows.filter(r=>r._ok);
   _prospPreview = ok;
   const contato = r=>[r.telefone ? esc(r.telefone) : '', r.email ? '✉️ ' + esc(r.email) : '', r.instagram ? '📷 @' + esc(r.instagram) : ''].filter(Boolean).join('<br>');
-  pv.innerHTML = '<table class="admin-table"><thead><tr><th>Nome</th><th>Profissão</th><th>Cidade</th><th>UF</th><th>Contato</th><th></th></tr></thead><tbody>' +
-    rows.slice(0, 60).map(r=>{ const a = aviso(r); return `<tr><td>${esc(r.nome||'(sem nome)')}</td><td>${esc(r.profissao||'—')}</td><td>${esc(r.cidade||'—')}</td><td>${esc(r.uf||'—')}</td><td style="font-size:12px;">${contato(r) || '—'}</td><td style="font-size:12px; color:${a ? 'var(--coral)' : 'var(--teal)'};">${a ? '⚠ ' + esc(a) : '✓'}</td></tr>`; }).join('') +
+  pv.innerHTML = '<table class="admin-table"><thead><tr><th>Nome</th><th>Profissão</th><th>Cidade</th><th>UF</th><th>Contato</th><th></th><th></th></tr></thead><tbody>' +
+    rows.slice(0, 60).map((r,i)=>{ const a = aviso(r); return `<tr><td>${esc(r.nome||'(sem nome)')}</td><td>${esc(r.profissao||'—')}</td><td>${esc(r.cidade||'—')}</td><td>${esc(r.uf||'—')}</td><td style="font-size:12px;">${contato(r) || '—'}</td><td style="font-size:12px; color:${a ? 'var(--coral)' : 'var(--teal)'};">${a ? '⚠ ' + esc(a) : '✓'}</td><td><button type="button" class="btn-ghost" style="font-size:12px; color:var(--coral);" title="Tirar da lista" onclick="prospRemoverLinha(${i})">✕</button></td></tr>`; }).join('') +
     '</tbody></table>' + (rows.length > 60 ? `<div style="font-size:12px; color:var(--ink-dim);">Mostrando 60 de ${rows.length}.</div>` : '');
+  if(ok.length < rows.length) pv.insertAdjacentHTML('afterbegin', '<div style="margin-bottom:8px;"><button type="button" class="btn-ghost" style="color:var(--coral);" onclick="prospRemoverIncompletos()">🗑 Remover as ' + (rows.length - ok.length) + ' linha(s) com ⚠</button></div>');
   st.textContent = ok.length + ' de ' + rows.length + ' pronto(s) para adicionar' + (ok.length < rows.length ? ' · as linhas com ⚠ ficam de fora (complete a profissão/UF acima em "Se faltar na lista, usar" e organize de novo)' : '') + '.';
   if(ok.length) bt.style.display = '';
 }
