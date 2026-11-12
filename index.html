@@ -2245,19 +2245,11 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-prospeccao">
-    <div class="section-title" style="font-size:17px; margin-top:4px;">📋 Profissionais contatados</div>
-    <p class="section-sub">Quem já recebeu mensagem (WhatsApp, e-mail ou Instagram), quando, por qual edital e em que pé está. Para contatar alguém novo, abra o edital: o bloco "Prospectar este edital" fica logo acima do checklist (só você vê).</p>
-    <div id="pr-contatados-resumo" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"></div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-      <select id="pr-c-status" onchange="prospRenderContatados()"><option value="">Todos os status</option><option value="enviado">Enviado (sem resposta)</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
-      <input type="text" id="pr-c-busca" placeholder="Buscar nome, e-mail, telefone ou cidade" oninput="prospRenderContatados()" style="max-width:260px;">
-    </div>
-    <div style="overflow-x:auto; margin-bottom:22px;"><table class="admin-table"><thead><tr><th>Profissional</th><th>Profissão / local</th><th>Último contato</th><th>Contatos</th><th>Status</th></tr></thead><tbody id="pr-contatados-tbody"><tr><td colspan="5" style="color:var(--ink-dim);">Carregando...</td></tr></tbody></table></div>
-    <div class="section-title" style="font-size:17px; margin-top:4px;">Base de contatos (WhatsApp, e-mail e Instagram)</div>
-    <p class="section-sub">Envio manual, um contato por vez, pelo seu WhatsApp ou Instagram. O sistema lista os editais abertos que combinam com a profissão e a região de cada profissional; você marca quais entram na mensagem (1 edital = mensagem direta no edital, com convite para conhecer o site). Só envia se houver edital marcado.</p>
+    <div class="section-title" style="font-size:17px; margin-top:4px;">Prospecção</div>
+    <p class="section-sub">Veja onde há mais editais, cole a lista de contatos, clique em <strong>Enviar</strong> e a mensagem do edital sai pronta, com o link direto. Só você vê esta área.</p>
 
     <details id="pr-cidades" style="margin:0 0 14px; background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:12px 16px;" open ontoggle="if(this.open && typeof prospRenderCidades==='function') prospRenderCidades()">
-      <summary style="cursor:pointer; font-weight:600; font-size:14px;">🏙 Cidades com mais editais <span style="font-weight:400; color:var(--ink-muted); font-size:12px;">(só o ADM vê)</span></summary>
+      <summary style="cursor:pointer; font-weight:600; font-size:14px;">1. Cidades com mais editais</summary>
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:10px 0 6px; font-size:12.5px;">
         <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pr-cid-abertos" checked onchange="prospRenderCidades()"> Só editais abertos</label>
         <label style="display:flex; gap:6px; align-items:center;">UF <select id="pr-cid-uf" onchange="prospRenderCidades()" style="font-size:12.5px; padding:4px 8px;"><option value="">Todas</option></select></label>
@@ -2266,56 +2258,76 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
       <div id="pr-cidades-box" style="font-size:12.5px; color:var(--ink-muted);">Carregando...</div>
     </details>
 
-    <div class="form-row" style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px;">
-      <label>1. Adicionar contatos</label>
-      <div class="form-row"><label>Canal</label><select id="pr-canal" onchange="prospCanalMudou()"><option value="whatsapp">WhatsApp (telefone)</option><option value="instagram">Instagram (@perfil)</option></select></div>
-      <div class="two-col">
-        <div class="form-row"><label>Profissão (padrão da lista)</label><select id="pr-prof"></select></div>
-        <div class="two-col" style="gap:8px;">
-          <div class="form-row"><label>Cidade (padrão)</label><input type="text" id="pr-cidade" placeholder="Ex: Canoas"></div>
-          <div class="form-row"><label>UF (padrão)</label><select id="pr-uf"></select></div>
-        </div>
+    <div style="background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px; margin-bottom:14px;">
+      <div style="font-weight:600; font-size:14px; margin-bottom:6px;">2. Adicionar contatos</div>
+      <textarea id="pr-lista" rows="4" placeholder="Cole a lista do Excel aqui, uma linha por contato. As colunas podem estar em qualquer ordem: eu organizo em Nome, Profissão, Cidade e UF.&#10;Ex.: Dra. Ana Souza; (51) 99999-1234; Psicologia; Canoas; RS"></textarea>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:8px; font-size:12.5px; color:var(--ink-muted);">
+        <span>ou planilha (.xlsx / .csv):</span><input type="file" id="pr-arquivo" accept=".xlsx,.csv,.txt" onchange="prospLerArquivo(this)" style="font-size:12.5px;">
       </div>
-      <textarea id="pr-lista" rows="4" placeholder="Um contato por linha: Nome; telefone&#10;ou completo: Nome; telefone; profissão; cidade; UF&#10;Ex.: Dra. Ana Souza; (51) 99999-1234"></textarea>
-      <div style="margin-top:8px; font-size:12.5px; color:var(--ink-muted);">Ou importe uma planilha (.xlsx ou .csv) com colunas como <em>Nome, Telefone, Profissão, Cidade, UF</em>: <input type="file" id="pr-arquivo" accept=".xlsx,.csv,.txt" onchange="prospLerArquivo(this)" style="font-size:12.5px;"></div>
-      <button type="button" class="btn-ghost" style="margin-top:8px;" onclick="prospAdicionar()">+ Adicionar à lista</button>
-      <span id="pr-add-status" style="font-size:12px; color:var(--ink-dim); margin-left:8px;"></span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; font-size:12.5px; color:var(--ink-muted);">
+        <span>Se faltar na lista, usar:</span>
+        <select id="pr-prof" style="max-width:170px;"></select>
+        <input type="text" id="pr-cidade" placeholder="Cidade" style="max-width:140px;">
+        <select id="pr-uf" style="max-width:80px;"></select>
+      </div>
+      <div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button type="button" class="btn-primary" onclick="prospOrganizar()">Organizar lista</button>
+        <button type="button" class="btn-ghost" id="pr-confirmar" style="display:none;" onclick="prospAdicionar()">Adicionar à base</button>
+        <span id="pr-add-status" style="font-size:12px; color:var(--ink-dim);"></span>
+      </div>
+      <div id="pr-preview" style="margin-top:10px; overflow-x:auto;"></div>
     </div>
 
-    <div class="form-row" style="margin-top:14px;">
-      <label>2. Modelo da mensagem <span style="font-weight:400; color:var(--ink-dim);">— cada mensagem fala de 1 edital. Campos: {nome} {profissao} {cidade} {uf} {editais} {urgencia} {site}</span></label>
-      <textarea id="pr-modelo-um" rows="9" oninput="prospSalvarModeloUm()"></textarea>
-      <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:6px; font-size:12.5px; color:var(--ink-muted);">
-        <label style="display:flex; gap:6px; align-items:center; cursor:pointer;"><input type="checkbox" id="pr-incluir-medicina" onchange="prospRender()"> Para especialidades médicas, incluir também editais de Medicina (geral)</label>
-        <label style="display:flex; gap:6px; align-items:center;">Limite de envios por dia <input type="number" id="pr-limite" min="1" max="100" style="width:64px;" oninput="prospSalvarLimite()"></label>
-        <span id="pr-contador" style="font-weight:700; color:var(--teal);"></span>
-      </div>
+    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:6px 0 8px;">
+      <div style="font-weight:600; font-size:14px;">3. Contatos</div>
+      <span id="pr-contador" style="font-weight:700; color:var(--teal); font-size:12.5px;"></span>
     </div>
-
-    <div style="margin:14px 0 8px;"><label style="font-weight:600;">3. Contatos</label></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+      <select id="pr-edital" onchange="prospRender()" style="max-width:100%; min-width:230px; flex:1;"><option value="">Edital da mensagem: escolher depois, no Enviar</option></select>
+      <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; cursor:pointer; color:var(--ink-muted);"><input type="checkbox" id="pr-f-semedital" onchange="prospRender()"> Só quem ainda não recebeu este edital</label>
+    </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
       <select id="pr-f-status" onchange="prospRender()"><option value="">Todos os status</option><option value="novo">Novo</option><option value="enviado">Enviado</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
       <select id="pr-f-prof" onchange="prospRender()"><option value="">Todas as profissões</option></select>
       <select id="pr-f-uf" onchange="prospRender()"><option value="">Todas as UFs</option></select>
-      <input type="text" id="pr-f-busca" placeholder="Buscar nome, telefone, @ ou cidade" oninput="prospRender()" style="max-width:230px;">
-      <label style="font-size:12.5px; color:var(--ink-muted);">Adicionado de <input type="date" id="pr-f-de" onchange="prospRender()"></label>
-      <label style="font-size:12.5px; color:var(--ink-muted);">até <input type="date" id="pr-f-ate" onchange="prospRender()"></label>
-      <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; cursor:pointer;"><input type="checkbox" id="pr-f-comedital" onchange="prospRender()"> Só com edital compatível</label>
-      <button type="button" class="btn-ghost" onclick="prospLimparFiltros()">Limpar filtros</button>
-    </div>
-    <div id="pr-bloco" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:10px 12px; margin-bottom:8px; border:1px solid var(--border-soft); border-radius:10px; font-size:12.5px;">
-      <label style="display:flex; gap:6px; align-items:center; cursor:pointer;"><input type="checkbox" id="pr-sel-todos" onchange="prospMarcarTodos(this.checked)"> Selecionar todos os filtrados</label>
-      <strong id="pr-sel-qtd">0 selecionado(s)</strong>
-      <span style="color:var(--ink-dim);">Alterar em bloco:</span>
-      <select id="pr-b-status"><option value="">Status…</option><option value="novo">Novo</option><option value="enviado">Enviado</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
-      <select id="pr-b-prof"><option value="">Profissão…</option></select>
-      <input type="text" id="pr-b-cidade" placeholder="Cidade…" style="max-width:130px;">
-      <select id="pr-b-uf"><option value="">UF…</option></select>
-      <button type="button" class="btn-ghost" onclick="prospAplicarBloco()">Aplicar</button>
-      <button type="button" class="btn-ghost" style="color:var(--coral);" onclick="prospExcluirBloco()">🗑 Excluir selecionados</button>
+      <select id="pr-f-quando" onchange="prospRender()"><option value="">Qualquer contato</option><option value="nunca">Nunca contatados</option><option value="recente">Contatados há menos de 7 dias</option><option value="d7">Sem contato há +7 dias</option><option value="d15">Sem contato há +15 dias</option><option value="d30">Sem contato há +30 dias</option></select>
+      <input type="text" id="pr-f-busca" placeholder="Buscar nome, telefone, e-mail ou cidade" oninput="prospRender()" style="max-width:260px;">
+      <button type="button" class="btn-ghost" onclick="prospLimparFiltros()">Limpar</button>
     </div>
     <div id="pr-resumo" style="font-size:12.5px; color:var(--ink-dim); margin-bottom:8px;"></div>
-    <div style="overflow-x:auto;"><table class="admin-table" id="pr-tabela"><thead><tr><th></th><th>Contato / adicionado em</th><th>Profissão / local</th><th>Edital da mensagem</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div style="overflow-x:auto;"><table class="admin-table" id="pr-tabela"><thead><tr><th></th><th>Nome</th><th>Profissão</th><th>Cidade</th><th>UF</th><th>Contato</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
+
+    <details style="margin-top:14px;"><summary style="cursor:pointer; font-size:13px; font-weight:600;">Ações em bloco (alterar ou excluir vários)</summary>
+      <div id="pr-bloco" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:10px 12px; margin-top:8px; border:1px solid var(--border-soft); border-radius:10px; font-size:12.5px;">
+        <label style="display:flex; gap:6px; align-items:center; cursor:pointer;"><input type="checkbox" id="pr-sel-todos" onchange="prospMarcarTodos(this.checked)"> Selecionar todos os filtrados</label>
+        <strong id="pr-sel-qtd">0 selecionado(s)</strong>
+        <select id="pr-b-status"><option value="">Status…</option><option value="novo">Novo</option><option value="enviado">Enviado</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
+        <select id="pr-b-prof"><option value="">Profissão…</option></select>
+        <input type="text" id="pr-b-cidade" placeholder="Cidade…" style="max-width:130px;">
+        <select id="pr-b-uf"><option value="">UF…</option></select>
+        <button type="button" class="btn-ghost" onclick="prospAplicarBloco()">Aplicar</button>
+        <button type="button" class="btn-ghost" style="color:var(--coral);" onclick="prospExcluirBloco()">🗑 Excluir selecionados</button>
+      </div></details>
+
+    <details style="margin-top:10px;"><summary style="cursor:pointer; font-size:13px; font-weight:600;">Mensagem padrão e limite diário</summary>
+      <div style="margin-top:8px;">
+        <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:4px;">Campos: {nome} {profissao} {cidade} {uf} {editais} {urgencia} {link} (link direto do edital no Radar)</div>
+        <textarea id="pr-modelo-um" rows="9" oninput="prospSalvarModeloUm()"></textarea>
+        <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:6px; font-size:12.5px; color:var(--ink-muted);">
+          <button type="button" class="btn-ghost" style="font-size:12px;" onclick="prospRestaurarModelo()">Restaurar mensagem padrão</button>
+          <label style="display:flex; gap:6px; align-items:center; cursor:pointer;"><input type="checkbox" id="pr-incluir-medicina" onchange="prospRender()"> Para especialidades médicas, incluir também editais de Medicina (geral)</label>
+          <label style="display:flex; gap:6px; align-items:center;">Limite de envios por dia <input type="number" id="pr-limite" min="1" max="100" style="width:64px;" oninput="prospSalvarLimite()"></label>
+        </div>
+      </div></details>
+
+    <details style="margin-top:10px;"><summary style="cursor:pointer; font-size:13px; font-weight:600;">📋 Profissionais contatados</summary>
+      <div id="pr-contatados-resumo" style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <select id="pr-c-status" onchange="prospRenderContatados()"><option value="">Todos os status</option><option value="enviado">Enviado (sem resposta)</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
+        <input type="text" id="pr-c-busca" placeholder="Buscar nome, e-mail, telefone ou cidade" oninput="prospRenderContatados()" style="max-width:260px;">
+      </div>
+      <div style="overflow-x:auto;"><table class="admin-table"><thead><tr><th>Profissional</th><th>Profissão / local</th><th>Último contato</th><th>Contatos</th><th>Status</th></tr></thead><tbody id="pr-contatados-tbody"><tr><td colspan="5" style="color:var(--ink-dim);">Carregando...</td></tr></tbody></table></div>
+    </details>
     <p class="section-sub" style="margin-top:10px;">Boas práticas: poucos envios por dia, uma única mensagem por contato, identifique-se e respeite o pedido de "SAIR" (marque como <em>Não contatar</em>). A lista guarda a origem de cada contato (LGPD).</p>
   </div>
 
@@ -2998,6 +3010,24 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   </div>
 </div>
 
+<div class="modal-overlay" id="prosp-envio-modal">
+  <div class="modal-box" style="max-width:600px;">
+    <button class="modal-close" onclick="closeModal('prosp-envio-modal')">×</button>
+    <h3 id="pm-titulo" style="margin-bottom:2px;"></h3>
+    <div id="pm-sub" style="font-size:12.5px; color:var(--ink-dim); margin-bottom:10px;"></div>
+    <label style="font-size:12.5px; color:var(--ink-muted); display:block; margin-bottom:4px;">Edital da mensagem</label>
+    <select id="pm-edital" onchange="prospModalTrocarEdital()" style="width:100%; margin-bottom:10px;"></select>
+    <label style="font-size:12.5px; color:var(--ink-muted); display:block; margin-bottom:4px;">Mensagem <span style="color:var(--ink-dim);">(pode editar antes de enviar)</span></label>
+    <textarea id="pm-msg" rows="11" style="width:100%; font-size:13px;"></textarea>
+    <div style="font-size:12px; color:var(--ink-dim); margin:6px 0 12px;">Link direto do edital: <span id="pm-link"></span></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn-primary" id="pm-b-whatsapp" onclick="prospModalEnviar('whatsapp')">📲 WhatsApp</button>
+      <button type="button" class="btn-primary" id="pm-b-email" onclick="prospModalEnviar('email')">✉️ E-mail</button>
+      <button type="button" class="btn-primary" id="pm-b-instagram" onclick="prospModalEnviar('instagram')">📷 Instagram</button>
+      <button type="button" class="btn-ghost" onclick="prospModalCopiar()">Copiar mensagem</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="aviso-plano-modal">
   <div class="modal-box" style="max-width:460px;">
     <button class="modal-close" onclick="closeModal('aviso-plano-modal')">×</button>
@@ -10083,18 +10113,13 @@ async function prospLerArquivo(input){
     else { st.textContent = 'Formato não aceito: salve a planilha como .xlsx ou .csv.'; input.value = ''; return; }
     linhas = linhas.filter(l=>l.some(c=>String(c).trim()));
     if(!linhas.length){ st.textContent = 'A planilha está vazia.'; return; }
-    // acha as colunas pelos títulos (português ou inglês); sem títulos, assume Nome, Telefone, Profissão, Cidade, UF
-    const norm = _prospNorm;
-    const ach = re => linhas[0].findIndex(h=>re.test(norm(h)));
-    const idx = { nome: ach(/^(nome|name|titulo|title|profissional)/), tel: ach(/telefone|celular|whatsapp|fone|phone|^tel/), prof: ach(/profiss|especialidade|categoria|category/), cid: ach(/cidade|city|municipio/), uf: ach(/^uf$|^estado|^state/) };
-    const temTitulo = idx.tel >= 0;
-    const dados = temTitulo ? linhas.slice(1) : linhas;
-    if(!temTitulo){ idx.nome = 0; idx.tel = 1; idx.prof = 2; idx.cid = 3; idx.uf = 4; }
-    const g = (l,i)=> i >= 0 && l[i] !== undefined ? String(l[i]).replace(/[;\n\r\t]+/g,' ').trim() : '';
-    const txt = dados.map(l=>[g(l,idx.nome), g(l,idx.tel), g(l,idx.prof), g(l,idx.cid), g(l,idx.uf)].join('; ').replace(/(;\s*)+$/,'')).filter(x=>x.replace(/[;\s]/g,''));
+    const ehTitulo = linhas[0].filter(h=>/^(nome|name|telefone|celular|whatsapp|fone|phone|profiss|especialidade|cidade|city|municipio|uf|estado|e-?mail|instagram)/.test(_prospNorm(h))).length >= 2;
+    const dados = ehTitulo ? linhas.slice(1) : linhas;
+    const txt = dados.map(l=>l.map(c=>String(c==null?'':c).replace(/[;\n\r\t]+/g,' ').trim()).join('; ').replace(/(;\s*)+$/,'')).filter(x=>x.replace(/[;\s]/g,''));
     const ta = document.getElementById('pr-lista');
     ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + txt.join('\n');
-    st.textContent = txt.length + ' linha(s) lida(s) de "' + f.name + '" — confira o texto acima e clique em "+ Adicionar à lista". Profissão, cidade e UF em branco usam os padrões acima.';
+    st.textContent = txt.length + ' linha(s) lida(s) de "' + f.name + '".';
+    prospOrganizar();
   }catch(e){ st.textContent = 'Não consegui ler o arquivo (' + (e.message||e) + '). Salve como .csv e tente de novo.'; }
   input.value = '';
 }
@@ -10126,79 +10151,90 @@ function prospRenderCidades(){
     (o.profissoes||[]).forEach(p=>r.profs.set(p, (r.profs.get(p)||0)+1));
     m.set(k, r);
   });
-  const lista = [...m.values()].sort((a,b)=>b.n - a.n || b.abertos - a.abertos || a.nome.localeCompare(b.nome,'pt-BR')).slice(0, 20);
+  const lista = [...m.values()].sort((a,b)=>b.n - a.n || b.abertos - a.abertos || a.nome.localeCompare(b.nome,'pt-BR')).slice(0, 300);
   if(!lista.length){ box.textContent = 'Nenhum edital com cidade informada nesse filtro.' + (semCidade ? ' (' + semCidade + ' sem cidade: estaduais ou nacionais.)' : ''); return; }
-  box.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12.5px;"><thead><tr style="text-align:left; color:var(--ink-dim);"><th style="padding:4px 8px 4px 0;">#</th><th style="padding:4px 8px;">Cidade</th><th style="padding:4px 8px; text-align:right;">Editais</th><th style="padding:4px 8px; text-align:right;">Abertos</th><th style="padding:4px 8px;">Profissões mais pedidas</th><th></th></tr></thead><tbody>' +
+  box.innerHTML = '<div style="overflow:auto; max-height:370px;"><table style="width:100%; border-collapse:collapse; font-size:12.5px;"><thead><tr style="text-align:left; color:var(--ink-dim);"><th style="padding:4px 8px 4px 0;">#</th><th style="padding:4px 8px;">Cidade</th><th style="padding:4px 8px; text-align:right;">Editais</th><th style="padding:4px 8px; text-align:right;">Abertos</th><th style="padding:4px 8px;">Profissões mais pedidas</th><th></th></tr></thead><tbody>' +
     lista.map((r,i)=>{
       const top = [...r.profs.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3).map(([p,n])=>esc(p)+' ('+n+')').join(', ');
       return '<tr style="border-top:1px solid var(--border-soft);"><td style="padding:6px 8px 6px 0; color:var(--ink-dim);">'+(i+1)+'</td><td style="padding:6px 8px; font-weight:600; color:var(--ink);">'+esc(r.nome)+' <span style="font-weight:400; color:var(--ink-muted);">/ '+esc(r.uf)+'</span></td><td style="padding:6px 8px; text-align:right;">'+r.n+'</td><td style="padding:6px 8px; text-align:right;">'+r.abertos+'</td><td style="padding:6px 8px;">'+top+'</td><td style="padding:6px 0 6px 8px; text-align:right;"><button type="button" class="btn-ghost" style="font-size:11.5px; padding:3px 9px;" title="Preenche cidade e UF padrão do formulário abaixo" onclick="prospUsarCidade(\''+esc(r.nome).replace(/'/g,"\\'")+'\',\''+esc(r.uf)+'\')">Usar na prospecção</button></td></tr>';
     }).join('') + '</tbody></table></div>' +
-    '<div style="margin-top:8px; font-size:11.5px; color:var(--ink-dim);">Conta editais reais com cidade informada (sem contratações de fornecedores)' + (semCidade ? '; ' + semCidade + ' sem cidade (estaduais/nacionais) ficam de fora' : '') + '. Mostra as 20 primeiras.</div>';
+    '<div style="margin-top:8px; font-size:11.5px; color:var(--ink-dim);">Conta editais reais com cidade informada (sem contratações de fornecedores)' + (semCidade ? '; ' + semCidade + ' sem cidade (estaduais/nacionais) ficam de fora' : '') + '. Role a lista para ver as demais cidades.</div>';
 }
 function prospUsarCidade(cidade, uf){
   const c = document.getElementById('pr-cidade'), u = document.getElementById('pr-uf');
   if(c) c.value = cidade;
   if(u) u.value = uf;
-  toast('Cidade e UF preenchidas em "1. Adicionar contatos"');
+  toast('Cidade e UF preenchidas em "2. Adicionar contatos"');
   const alvo = document.getElementById('pr-lista'); if(alvo) alvo.scrollIntoView({ behavior:'smooth', block:'center' });
-}
-function prospCanalMudou(){
-  const ig = document.getElementById('pr-canal').value === 'instagram';
-  document.getElementById('pr-lista').placeholder = ig
-    ? 'Um perfil por linha: Nome; @perfil\nou completo: Nome; @perfil; profissão; cidade; UF\nEx.: Dra. Ana Souza; @dra.anasouza\n(pode colocar telefone e @ na mesma linha: Dra. Ana; (51) 99999-1234; @dra.ana)'
-    : 'Um contato por linha: Nome; telefone\nou completo: Nome; telefone; profissão; cidade; UF\nEx.: Dra. Ana Souza; (51) 99999-1234';
 }
 function prospInstagram(txt){
   const m = String(txt||'').trim().match(/(?:instagram\.com\/)?@?([A-Za-z0-9._]{1,30})\/?(?:\?.*)?$/);
   return m && !/^\d+$/.test(m[1]) ? m[1].toLowerCase() : null;
 }
+/* Organiza qualquer lista em Nome, Profissão, Cidade, UF (+ WhatsApp, e-mail, Instagram), reconhecendo as colunas pelo conteúdo. */
+function prospEhProfissao(x){ const c = _prospNorm(canonProfissao(x)); return profissoes.some(p=>_prospNorm(p.nome) === c); }
+function prospCidadesConhecidas(){
+  const st = new Set(); oportunidades.forEach(o=>{ if(o.cidade) st.add(_prospNorm(o.cidade)); }); prospectos.forEach(p=>{ if(p.cidade) st.add(_prospNorm(p.cidade)); }); return st;
+}
+function prospClassificarLinha(cel, def, ctx){
+  const r = { nome:'', profissao:'', cidade:'', uf:'', telefone:null, email:null, instagram:null };
+  const resto = [];
+  cel.map(x=>String(x==null?'':x).trim()).filter(Boolean).forEach(x=>{
+    if(!r.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)){ r.email = x.toLowerCase(); return; }
+    if(!r.telefone){ const t = prospTelefone(x); if(t){ r.telefone = t; return; } }
+    if(!r.instagram && (/^@/.test(x) || /instagram\.com\//i.test(x))){ const ig = prospInstagram(x); if(ig){ r.instagram = ig; return; } }
+    if(!r.uf && /^[A-Za-z]{2}$/.test(x) && ctx.ufs.has(x.toUpperCase())){ r.uf = x.toUpperCase(); return; }
+    if(!r.profissao && prospEhProfissao(x)){ r.profissao = canonProfissao(x); return; }
+    const m = x.match(/^(.+?)\s*[\/\-–]\s*([A-Za-z]{2})$/);
+    if(m && !r.cidade && !r.uf && ctx.ufs.has(m[2].toUpperCase())){ r.cidade = m[1].trim(); r.uf = m[2].toUpperCase(); return; }
+    resto.push(x);
+  });
+  if(!r.cidade){ const i = resto.findIndex(x=>ctx.cidades.has(_prospNorm(x))); if(i >= 0) r.cidade = resto.splice(i,1)[0]; }
+  { const i = resto.findIndex(x=>/^(dr|dra)\.?\s/i.test(x)); if(i >= 0) r.nome = resto.splice(i,1)[0]; }
+  const falta = []; if(!r.nome) falta.push('nome'); if(!r.profissao) falta.push('profissao'); if(!r.cidade) falta.push('cidade');
+  resto.forEach((x,k)=>{ const campo = falta[k]; if(campo === 'profissao') r.profissao = canonProfissao(x); else if(campo) r[campo] = x; });
+  if(!r.profissao) r.profissao = def.prof || '';
+  if(!r.cidade) r.cidade = def.cidade || '';
+  if(!r.uf) r.uf = def.uf || '';
+  return r;
+}
+let _prospPreview = [];
+function prospOrganizar(){
+  const st = document.getElementById('pr-add-status'), pv = document.getElementById('pr-preview'), bt = document.getElementById('pr-confirmar');
+  const linhas = document.getElementById('pr-lista').value.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  _prospPreview = []; bt.style.display = 'none'; pv.innerHTML = '';
+  if(!linhas.length){ st.textContent = 'Cole ao menos um contato.'; return; }
+  const def = { prof: document.getElementById('pr-prof').value, cidade: document.getElementById('pr-cidade').value.trim(), uf: document.getElementById('pr-uf').value };
+  const ctx = { ufs: new Set(UFS.map(u=>u.sigla)), cidades: prospCidadesConhecidas() };
+  const rows = linhas.map(l=>prospClassificarLinha(l.split(/\s*[;\t|]\s*/), def, ctx));
+  const aviso = r=>[ !(r.telefone || r.email || r.instagram) ? 'sem WhatsApp, e-mail ou @' : '', !r.profissao ? 'sem profissão' : (!prospEhProfissao(r.profissao) ? 'profissão não reconhecida' : ''), !r.uf ? 'sem UF' : '' ].filter(Boolean).join(', ');
+  const ok = rows.filter(r=>(r.telefone || r.email || r.instagram) && r.profissao && r.uf);
+  _prospPreview = ok;
+  const contato = r=>[r.telefone ? esc(r.telefone) : '', r.email ? '✉️ ' + esc(r.email) : '', r.instagram ? '📷 @' + esc(r.instagram) : ''].filter(Boolean).join('<br>');
+  pv.innerHTML = '<table class="admin-table"><thead><tr><th>Nome</th><th>Profissão</th><th>Cidade</th><th>UF</th><th>Contato</th><th></th></tr></thead><tbody>' +
+    rows.slice(0, 60).map(r=>{ const a = aviso(r); return `<tr><td>${esc(r.nome||'(sem nome)')}</td><td>${esc(r.profissao||'—')}</td><td>${esc(r.cidade||'—')}</td><td>${esc(r.uf||'—')}</td><td style="font-size:12px;">${contato(r) || '—'}</td><td style="font-size:12px; color:${a ? 'var(--coral)' : 'var(--teal)'};">${a ? '⚠ ' + esc(a) : '✓'}</td></tr>`; }).join('') +
+    '</tbody></table>' + (rows.length > 60 ? `<div style="font-size:12px; color:var(--ink-dim);">Mostrando 60 de ${rows.length}.</div>` : '');
+  st.textContent = ok.length + ' de ' + rows.length + ' pronto(s) para adicionar' + (ok.length < rows.length ? ' · as linhas com ⚠ ficam de fora (complete a profissão/UF acima em "Se faltar na lista, usar" e organize de novo)' : '') + '.';
+  if(ok.length) bt.style.display = '';
+}
 async function prospAdicionar(){
   const st = document.getElementById('pr-add-status');
-  const canal = document.getElementById('pr-canal').value;
-  const prof = document.getElementById('pr-prof').value, cidadeP = document.getElementById('pr-cidade').value.trim(), ufP = document.getElementById('pr-uf').value;
-  const linhas = document.getElementById('pr-lista').value.split(/\n+/).map(l=>l.trim()).filter(Boolean);
-  if(!linhas.length){ st.textContent = 'Cole ao menos um contato.'; return; }
-  // Cada linha pode trazer telefone e/ou @instagram (em qualquer posição): assim a mesma pessoa não vira dois contatos.
-  const novos = [], invalidos = [];
-  linhas.forEach(l=>{
-    const cel = l.split(/\s*[;\t|]\s*/).map(x=>x.trim());
-    let tel = null, ig = null; const resto = [];
-    let em = null;
-    cel.forEach((x,k)=>{
-      if(!em && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)){ em = x.toLowerCase(); return; }
-      const t = prospTelefone(x);
-      if(t && !tel) { tel = t; return; }
-      if(/^@|instagram\.com\//i.test(x) && !ig){ ig = prospInstagram(x); if(ig) return; }
-      resto.push({x,k});
-    });
-    if(!tel && !ig && canal === 'instagram'){ const c = cel[1] !== undefined ? 1 : 0; ig = prospInstagram(cel[c]); if(ig){ const r = resto.findIndex(o=>o.k===c); if(r>=0) resto.splice(r,1); } }
-    if(!tel && !ig && !em){ invalidos.push(l.slice(0,40)); return; }
-    const temNome = !(cel[0] && (prospTelefone(cel[0]) || /^@|instagram\.com\//i.test(cel[0])));
-    const r = resto.map(o=>o.x); const nome = temNome ? (r.shift() || '') : '';
-    const profL = r[0] ? canonProfissao(r[0]) : prof, cidadeL = r[1] || cidadeP, ufL = (r[2] || ufP || '').toUpperCase().slice(0,2);
-    if(!profL || !ufL){ invalidos.push(l.slice(0,40) + ' (falta profissão ou UF)'); return; }
-    const igual = n => (tel && n.telefone === tel) || (ig && n.instagram === ig) || (em && n.email === em);
-    const ja = novos.find(igual);
-    if(ja){ if(tel && !ja.telefone) ja.telefone = tel; if(ig && !ja.instagram) ja.instagram = ig; if(em && !ja.email) ja.email = em; if(nome && !ja.nome) ja.nome = nome; return; }
-    novos.push({ nome: nome || null, telefone: tel, instagram: ig, email: em, canal: ((canal === 'instagram' && ig) || (!tel && ig)) ? 'instagram' : (tel ? 'whatsapp' : 'email'), profissao: profL, cidade: cidadeL || null, uf: ufL, origem: canal === 'instagram' ? 'Instagram' : 'Google' });
-  });
-  if(!novos.length){ st.textContent = 'Nada válido: ' + invalidos.slice(0,3).join(' | '); return; }
-  // Procura quem já existe por telefone OU por @instagram
+  const novos = _prospPreview.map(r=>({ nome: r.nome || null, telefone: r.telefone, instagram: r.instagram, email: r.email, canal: r.telefone ? 'whatsapp' : (r.instagram ? 'instagram' : 'email'), profissao: r.profissao, cidade: r.cidade || null, uf: r.uf, origem: 'Lista' }));
+  if(!novos.length){ st.textContent = 'Nada para adicionar: organize a lista primeiro.'; return; }
   const tels = novos.map(n=>n.telefone).filter(Boolean), igs = novos.map(n=>n.instagram).filter(Boolean), ems = novos.map(n=>n.email).filter(Boolean);
   const filtros = []; if(tels.length) filtros.push('telefone.in.(' + tels.join(',') + ')'); if(igs.length) filtros.push('instagram.in.(' + igs.join(',') + ')'); if(ems.length) filtros.push('email.in.(' + ems.map(e=>'"' + e + '"').join(',') + ')');
   const { data: ja, error: e0 } = await _sb.from('prospectos_whatsapp').select('id, telefone, instagram, email, nome, status').or(filtros.join(','));
-  if(e0){ st.textContent = 'Erro ao consultar a lista: ' + e0.message; return; }
+  if(e0){ st.textContent = /email/i.test(e0.message) ? 'Falta rodar o SQL supabase/prospeccao_edital.sql no Supabase.' : 'Erro ao consultar a lista: ' + e0.message; return; }
   const achar = n => (ja||[]).find(x=>(n.telefone && x.telefone === n.telefone) || (n.instagram && x.instagram === n.instagram) || (n.email && x.email === n.email));
   const repetidos = novos.filter(achar), inserir = novos.filter(n=>!achar(n));
   if(repetidos.length){
-    const lista = repetidos.slice(0,8).map(n=>{ const x = achar(n); return '• ' + (x.nome || n.nome || 'sem nome') + ' — ' + (x.telefone || '') + (x.instagram ? ' @' + x.instagram : '') + ' (' + (PROSP_ROTULO[x.status]||x.status) + ')'; }).join('\n') + (repetidos.length>8 ? '\n… e mais ' + (repetidos.length-8) : '');
-    const ok = confirm(repetidos.length + ' contato(s) desta lista já existe(m) (mesmo telefone ou @):\n\n' + lista + '\n\nOK = completar esses com os dados novos (ex.: acrescentar o @ ou o telefone que faltava) e manter status e histórico' + (inserir.length ? '; os ' + inserir.length + ' novos também serão incluídos.' : '.') + '\nCancelar = não salvar nada.');
-    if(!ok){ st.textContent = 'Nada foi salvo: ' + repetidos.length + ' contato(s) já existia(m).'; return; }
+    const lista = repetidos.slice(0,8).map(n=>{ const x = achar(n); return '• ' + (x.nome || n.nome || 'sem nome') + ' (' + (PROSP_ROTULO[x.status]||x.status) + ')'; }).join('\n');
+    if(!confirm(repetidos.length + ' contato(s) já existe(m) na base:\n\n' + lista + '\n\nOK = completar esses com os dados novos e manter status e histórico' + (inserir.length ? '; e adicionar os ' + inserir.length + ' novo(s)' : '') + '. Cancelar = não salvar nada.')){ st.textContent = 'Nada foi salvo.'; return; }
   }
   let criados = 0, atualizados = 0;
   if(inserir.length){
     const { error } = await _sb.from('prospectos_whatsapp').insert(inserir);
-    if(error){ st.textContent = 'Erro ao salvar: ' + error.message; return; }
+    if(error){ st.textContent = /email|check/i.test(error.message) ? 'Falta rodar o SQL supabase/prospeccao_edital.sql no Supabase.' : 'Erro ao salvar: ' + error.message; return; }
     criados = inserir.length;
   }
   for(const n of repetidos){
@@ -10208,8 +10244,8 @@ async function prospAdicionar(){
     const { error } = await _sb.from('prospectos_whatsapp').update(campos).eq('id', x.id);
     if(!error) atualizados++;
   }
-  st.textContent = criados + ' contato(s) novo(s)' + (atualizados ? ' · ' + atualizados + ' já existia(m) e foi(ram) completado(s)' : '') + (invalidos.length ? ' · ' + invalidos.length + ' linha(s) ignorada(s): ' + invalidos.slice(0,3).join(' | ') : '');
-  if(!invalidos.length) document.getElementById('pr-lista').value = '';
+  st.textContent = criados + ' contato(s) novo(s)' + (atualizados ? ' · ' + atualizados + ' já existia(m) e foi(ram) completado(s)' : '') + '.';
+  document.getElementById('pr-lista').value = ''; document.getElementById('pr-preview').innerHTML = ''; document.getElementById('pr-confirmar').style.display = 'none'; _prospPreview = [];
   await prospCarregar();
 }
 // Editais abertos que combinam com a profissão e a região do contato (no máximo 3, os mais próximos primeiro).
@@ -10231,7 +10267,9 @@ Aqui é o Douglas, da Transformare. Acompanho os credenciamentos públicos de sa
 {editais}
 
 {urgencia}
-No Radar Transformare ({site}) você vê requisitos e documentos desse edital e de outras oportunidades abertas para a sua área. Faça o cadastro grátis e não perca a janela.
+Veja o edital completo, requisitos e documentos no Radar Transformare:
+{link}
+Faça o cadastro grátis e não perca a janela.
 Se não quiser receber minhas mensagens, responda SAIR.`;
 function prospEditaisMarcados(p){
   const todos = prospEditaisDoContato(p, 8);
@@ -10388,7 +10426,9 @@ async function prospSalvarDoEdital(oid){
 function prospMensagem(p, eds){
   const um = true;
   const linhas = eds.map(o=>`• ${o.orgao}${o.cidade ? ' (' + o.cidade + '/' + o.uf + ')' : ' (' + o.uf + ')'}` + (um && o.objeto ? '\n  ' + String(o.objeto).replace(/\s+/g,' ').slice(0,180) + (String(o.objeto).length > 180 ? '…' : '') : '')).join('\n');
-  const m = um ? ((document.getElementById('pr-modelo-um') || {}).value || PROSP_MODELO_UM_PADRAO) : PROSP_MODELO_UM_PADRAO;
+  const m0 = um ? ((document.getElementById('pr-modelo-um') || {}).value || PROSP_MODELO_UM_PADRAO) : PROSP_MODELO_UM_PADRAO;
+  const link = eds[0] ? linkDiretoEdital(eds[0]) : SITE_URL;
+  const m = (/\{link\}/.test(m0) ? m0 : m0.replace(/\{site\}/g, link)).replace(/\{link\}/g, link);
   return m.replace(/\{nome\}/g, p.nome ? p.nome.split(/\s+/).slice(0, /^(dr|dra)\.?$/i.test(p.nome.split(/\s+/)[0]) ? 2 : 1).join(' ') : 'tudo bem')
     .replace(/\{profissao\}/g, p.profissao || '').replace(/\{cidade\}/g, p.cidade || p.uf).replace(/\{uf\}/g, p.uf)
     .replace(/\{urgencia\}/g, prospUrgencia(eds)).replace(/\{n_editais\}/g, '1').replace(/\{editais\}/g, linhas).replace(/\{site\}/g, SITE_URL);
@@ -10406,8 +10446,8 @@ function prospFiltroOpcoes(){
   const bu = document.getElementById('pr-b-uf'); if(bu && bu.options.length <= 1) bu.innerHTML = '<option value="">UF…</option>' + ufh;
 }
 function prospLimparFiltros(){
-  ['pr-f-status','pr-f-prof','pr-f-uf','pr-f-busca','pr-f-de','pr-f-ate'].forEach(i=>{ const e = document.getElementById(i); if(e) e.value = ''; });
-  document.getElementById('pr-f-comedital').checked = false; prospRender();
+  ['pr-f-status','pr-f-prof','pr-f-uf','pr-f-quando','pr-f-busca','pr-edital'].forEach(i=>{ const e = document.getElementById(i); if(e) e.value = ''; });
+  const c = document.getElementById('pr-f-semedital'); if(c) c.checked = false; prospRender();
 }
 function prospMarcarLinha(id, on){ if(on) _prospChecked.add(id); else _prospChecked.delete(id); prospAtualizarSel(); }
 function prospMarcarTodos(on){ _prospFiltrados.forEach(id=>{ if(on) _prospChecked.add(id); else _prospChecked.delete(id); }); prospRender(); }
@@ -10438,43 +10478,108 @@ async function prospExcluirBloco(){
   prospectos = prospectos.filter(p=>!_prospChecked.has(p.id)); ids.forEach(i=>delete _prospSel[i]); _prospChecked.clear();
   toast(ids.length + ' contato(s) excluído(s)'); prospRender(); prospAtualizarContador();
 }
+function prospCompativelCom(p, o){
+  const prof = _prospNorm(canonProfissao(p.profissao));
+  const profs = (o.profissoes||[]).map(x=>_prospNorm(canonProfissao(x)));
+  return profs.includes(prof) && (o.uf === p.uf || /nacional/i.test(o.abrangencia||''));
+}
+function prospRotuloEdital(o){ return (o.cidade ? o.cidade + '/' : '') + (o.uf || '') + ' — ' + String(o.orgao||'').slice(0, 55); }
+let _prospNEditaisSel = -1;
+function prospPopularEditais(){
+  const sel = document.getElementById('pr-edital'); if(!sel) return;
+  const abertos = oportunidades.filter(o=>o.origemSupabase && editalAtivo(o) && visivelAoCliente(o));
+  if(_prospNEditaisSel === abertos.length) return;
+  _prospNEditaisSel = abertos.length;
+  const atual = sel.value;
+  abertos.sort((a,b)=>String(a.cidade||'').localeCompare(String(b.cidade||''),'pt-BR') || String(a.uf||'').localeCompare(String(b.uf||'')));
+  sel.innerHTML = '<option value="">Edital da mensagem: escolher depois, no Enviar</option>' + abertos.map(o=>`<option value="${o.id}">${esc(prospRotuloEdital(o))}</option>`).join('');
+  sel.value = atual;
+}
 function prospRender(){
   const tb = document.querySelector('#pr-tabela tbody'); if(!tb) return;
-  prospFiltroOpcoes();
+  prospFiltroOpcoes(); prospPopularEditais();
   const v = i => (document.getElementById(i) || {}).value || '';
-  const fs = v('pr-f-status'), fp = v('pr-f-prof'), fu = v('pr-f-uf'), busca = _prospNorm(v('pr-f-busca')), de = v('pr-f-de'), ate = v('pr-f-ate');
-  const soEd = document.getElementById('pr-f-comedital').checked;
-  let lista = prospectos.map(p=>({ p, eds: prospEditaisDoContato(p, 8), marc: prospEditaisMarcados(p) }));
-  const total = lista.length, comEd = lista.filter(x=>x.eds.length).length;
-  if(fs) lista = lista.filter(x=>x.p.status === fs);
-  if(fp) lista = lista.filter(x=>x.p.profissao === fp);
-  if(fu) lista = lista.filter(x=>x.p.uf === fu);
-  if(busca) lista = lista.filter(x=>_prospNorm([x.p.nome, x.p.telefone, x.p.instagram, x.p.email, x.p.cidade].join(' ')).includes(busca));
-  if(de) lista = lista.filter(x=>prospDataLocal(x.p.criado_em) >= de);
-  if(ate) lista = lista.filter(x=>prospDataLocal(x.p.criado_em) <= ate);
-  if(soEd) lista = lista.filter(x=>x.eds.length);
+  const fs = v('pr-f-status'), fp = v('pr-f-prof'), fu = v('pr-f-uf'), fq = v('pr-f-quando'), busca = _prospNorm(v('pr-f-busca')), edId = v('pr-edital');
+  const oEd = edId ? oportunidades.find(x=>String(x.id) === edId) : null;
+  const dias = p => p.ultimo_envio ? Math.floor((Date.now() - new Date(p.ultimo_envio)) / 86400000) : null;
+  let lista = prospectos.slice();
+  const total = lista.length;
+  if(fs) lista = lista.filter(p=>p.status === fs);
+  if(fp) lista = lista.filter(p=>p.profissao === fp);
+  if(fu) lista = lista.filter(p=>p.uf === fu);
+  if(busca) lista = lista.filter(p=>_prospNorm([p.nome, p.telefone, p.instagram, p.email, p.cidade].join(' ')).includes(busca));
+  if(fq === 'nunca') lista = lista.filter(p=>!p.ultimo_envio);
+  else if(fq === 'recente') lista = lista.filter(p=>p.ultimo_envio && dias(p) < 7);
+  else if(/^d\d+$/.test(fq)) lista = lista.filter(p=>p.ultimo_envio && dias(p) >= parseInt(fq.slice(1), 10));
+  if(oEd){
+    lista = lista.filter(p=>prospCompativelCom(p, oEd));
+    if((document.getElementById('pr-f-semedital') || {}).checked) lista = lista.filter(p=>!_prospEnvios.some(e=>e.prospecto_id === p.id && (e.editais||[]).includes(oEd.edital)));
+  }
   lista = lista.slice(0, 300);
-  _prospFiltrados = lista.map(x=>x.p.id);
-  document.getElementById('pr-resumo').textContent = lista.length + ' na lista filtrada · ' + total + ' contato(s) no total · ' + comEd + ' com edital compatível';
+  _prospFiltrados = lista.map(p=>p.id);
+  document.getElementById('pr-resumo').textContent = lista.length + ' na lista · ' + total + ' contato(s) no total' + (oEd ? ' · só quem combina com o edital escolhido' : '');
   prospRenderContatados();
-  tb.innerHTML = lista.length ? lista.map(({p,eds,marc})=>{
-    const dias = p.ultimo_envio ? Math.floor((Date.now() - new Date(p.ultimo_envio)) / 86400000) : null;
-    let acao;
-    if(p.status === 'nao_contatar') acao = '<span style="color:var(--ink-dim);">bloqueado</span>';
-    else if(dias !== null && dias < 14) acao = `<span style="color:var(--ink-dim);">enviado há ${dias} dia(s)</span>`;
-    else if(!eds.length) acao = '<span style="color:var(--ink-dim);">sem edital compatível</span>';
-    else acao = (p.canal==='email' ? '' : `<button class="btn-ghost" onclick="prospEnviar(${p.id})">${p.canal==='instagram' ? '📷 Copiar e abrir' : '📲 Enviar'}</button>`) + (p.email ? ` <button class="btn-ghost" onclick="prospEnviar(${p.id}, 'email')">✉️ E-mail</button>` : '');
+  tb.innerHTML = lista.length ? lista.map(p=>{
+    const d = dias(p), e = prospUltimoEnvio(p.id);
     const opcoes = Object.entries(PROSP_ROTULO).map(([vv,r])=>`<option value="${vv}" ${p.status===vv?'selected':''}>${r}</option>`).join('');
-    const quando = p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '—';
-    const profs = [...new Set([...profissoesAtivasNomes(), p.profissao].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-    const escolhido = marc[0] ? marc[0].id : null;
+    const ult = d === null ? '' : `<div style="color:var(--ink-dim); font-size:11.5px; margin-top:3px;">último: ${new Date(p.ultimo_envio).toLocaleDateString('pt-BR')}${e && e.canal ? ' · ' + (PROSP_CANAL_ROTULO[e.canal]||e.canal) : ''}</div>`;
+    const acao = p.status === 'nao_contatar' ? '<span style="color:var(--ink-dim);">bloqueado</span>' : `<button type="button" class="btn-primary" style="font-size:12.5px; padding:5px 14px;" onclick="prospAbrirEnvio(${p.id})">Enviar</button>`;
     return `<tr><td><input type="checkbox" ${_prospChecked.has(p.id)?'checked':''} onchange="prospMarcarLinha(${p.id}, this.checked)"></td>
-      <td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${[p.telefone ? esc(p.telefone) : '', p.email ? '✉️ ' + esc(p.email) : '', p.instagram ? '📷 @' + esc(p.instagram) : ''].filter(Boolean).join(' · ')}</span><br><span style="color:var(--ink-dim); font-size:11.5px;">adicionado em ${quando}</span></td>
-      <td><select onchange="prospMudarProfissao(${p.id}, this.value)" style="max-width:150px;">${profs.map(n=>`<option ${n===p.profissao?'selected':''}>${esc(n)}</option>`).join('')}</select><br><span style="color:var(--ink-dim); font-size:12px;">${esc((p.cidade||'') + (p.cidade?'/':'') + p.uf)}</span></td>
-      <td style="font-size:12px; min-width:230px;">${eds.length ? eds.map(o=>`<label style="display:flex; gap:6px; align-items:flex-start; cursor:pointer; margin-bottom:3px;"><input type="radio" name="ed-${p.id}" ${o.id===escolhido?'checked':''} onchange="prospEscolherEdital(${p.id}, ${o.id})"><span>${esc(o.orgao.slice(0,38))} — ${esc(o.abertura ? 'abre ' + o.abertura : 'sem data de abertura')}</span></label>`).join('') : '—'}</td>
-      <td><select onchange="prospMudarStatus(${p.id}, this.value)">${opcoes}</select></td><td>${acao}<br><button class="btn-ghost" style="margin-top:4px; font-size:12px; color:var(--coral);" onclick="prospExcluir(${p.id})">🗑 Excluir</button></td></tr>`;
-  }).join('') : '<tr><td colspan="7" style="color:var(--ink-dim);">Nenhum contato com esses filtros.</td></tr>';
+      <td><strong>${esc(p.nome||'(sem nome)')}</strong></td><td>${esc(p.profissao||'')}</td><td>${esc(p.cidade||'')}</td><td>${esc(p.uf||'')}</td>
+      <td style="font-size:12px;">${[p.telefone ? esc(p.telefone) : '', p.email ? '✉️ ' + esc(p.email) : '', p.instagram ? '📷 @' + esc(p.instagram) : ''].filter(Boolean).join('<br>')}</td>
+      <td><select onchange="prospMudarStatus(${p.id}, this.value)">${opcoes}</select>${ult}</td>
+      <td style="white-space:nowrap;">${acao} <button type="button" class="btn-ghost" style="font-size:12px; color:var(--coral);" title="Excluir contato" onclick="prospExcluir(${p.id})">🗑</button></td></tr>`;
+  }).join('') : '<tr><td colspan="8" style="color:var(--ink-dim);">Nenhum contato com esses filtros.</td></tr>';
   prospAtualizarSel();
+}
+let _pmPid = null;
+function linkDiretoEdital(o){ return (o && o.id >= 900000) ? SITE_URL + '/?e=' + (o.id - 900000) : SITE_URL; }
+function prospAbrirEnvio(pid){
+  const p = prospectos.find(x=>x.id === pid); if(!p) return;
+  _pmPid = pid;
+  const globalId = (document.getElementById('pr-edital') || {}).value;
+  let eds = prospEditaisDoContato(p, 30);
+  const g = globalId ? oportunidades.find(x=>String(x.id) === globalId) : null;
+  if(g){ eds = [g, ...eds.filter(o=>o.id !== g.id)]; }
+  const sel = document.getElementById('pm-edital');
+  sel.innerHTML = eds.length ? eds.map(o=>`<option value="${o.id}">${esc(prospRotuloEdital(o))}</option>`).join('') : '<option value="">Nenhum edital aberto combina com este contato</option>';
+  document.getElementById('pm-titulo').textContent = p.nome || '(sem nome)';
+  const d = p.ultimo_envio ? Math.floor((Date.now() - new Date(p.ultimo_envio)) / 86400000) : null;
+  document.getElementById('pm-sub').textContent = [p.profissao, [p.cidade, p.uf].filter(Boolean).join('/'), d === null ? 'ainda não contatado' : 'último contato há ' + d + ' dia(s)' + (p.qtd_envios ? ' · ' + p.qtd_envios + ' envio(s)' : '')].filter(Boolean).join(' · ');
+  document.getElementById('pm-b-whatsapp').style.display = p.telefone ? '' : 'none';
+  document.getElementById('pm-b-email').style.display = p.email ? '' : 'none';
+  document.getElementById('pm-b-instagram').style.display = p.instagram ? '' : 'none';
+  prospModalTrocarEdital();
+  openModal('prosp-envio-modal');
+}
+function prospModalTrocarEdital(){
+  const p = prospectos.find(x=>x.id === _pmPid); if(!p) return;
+  const o = oportunidades.find(x=>String(x.id) === (document.getElementById('pm-edital') || {}).value);
+  const ta = document.getElementById('pm-msg');
+  if(!o){ ta.value = ''; document.getElementById('pm-link').textContent = '—'; return; }
+  ta.value = prospMensagem(p, [o]);
+  document.getElementById('pm-link').textContent = linkDiretoEdital(o);
+}
+async function prospModalEnviar(canal){
+  const p = prospectos.find(x=>x.id === _pmPid); if(!p) return;
+  const o = oportunidades.find(x=>String(x.id) === (document.getElementById('pm-edital') || {}).value);
+  const msg = (document.getElementById('pm-msg') || {}).value || '';
+  if(!o || !msg.trim()){ toast('Escolha um edital para montar a mensagem'); return; }
+  const n = await prospEnviosHoje(), lim = parseInt((document.getElementById('pr-limite') || {}).value, 10) || 15;
+  if(n >= lim && !confirm('Você já fez ' + n + ' envios hoje (limite ' + lim + '). Enviar mesmo assim?')) return;
+  prospAbrirCanal(p, canal, msg, o);
+  await prospRegistrarEnvio(p, canal, msg, [o.edital]);
+  closeModal('prosp-envio-modal');
+  toast((canal === 'email' ? 'Gmail aberto' : canal === 'instagram' ? 'Mensagem copiada e perfil aberto' : 'WhatsApp aberto') + ' — marcado como enviado. Se não enviou, volte o status para "Novo".');
+  prospRender(); prospAtualizarContador();
+}
+async function prospModalCopiar(){
+  const t = (document.getElementById('pm-msg') || {}).value || '';
+  try{ await navigator.clipboard.writeText(t); toast('Mensagem copiada'); }catch(e){ prompt('Copie a mensagem:', t); }
+}
+function prospRestaurarModelo(){
+  const mu = document.getElementById('pr-modelo-um'); if(!mu) return;
+  mu.value = PROSP_MODELO_UM_PADRAO; prospSalvarModeloUm(); toast('Mensagem padrão restaurada');
 }
 async function prospMudarStatus(id, status){
   const { error } = await _sb.from('prospectos_whatsapp').update({ status }).eq('id', id);
