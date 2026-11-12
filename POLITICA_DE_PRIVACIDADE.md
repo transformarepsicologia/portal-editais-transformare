@@ -67,7 +67,7 @@ Você mesmo pode **corrigir seu perfil** em "Minha Conta → Editar perfil" e **
 
 ## 9. Cookies e armazenamento local
 
-O Portal não usa cookies de publicidade nem ferramentas de rastreamento de terceiros. Usamos o armazenamento local do navegador apenas para manter sua sessão de login e suas preferências (favoritos e alertas). Você pode apagar esses dados nas configurações do seu navegador.
+O Portal não usa cookies de publicidade. Usamos o armazenamento local do navegador para manter sua sessão de login e suas preferências (favoritos e alertas). Com o seu consentimento, usamos também o **Google Analytics 4**, que grava cookies para medir, de forma agregada, como o site é usado (páginas visitadas, origem do acesso, tipo de aparelho e ações como criar conta ou falar no WhatsApp). Não enviamos ao Google seu nome, e-mail, telefone nem quais editais você favorita, e o IP é anonimizado. Você escolhe ao entrar no site e pode mudar de ideia a qualquer momento em "Preferências de cookies", no rodapé. Também pode apagar esses dados nas configurações do seu navegador.
 
 ## 10. Público
 
