@@ -2245,7 +2245,15 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-prospeccao">
-    <div class="section-title" style="font-size:17px; margin-top:4px;">Prospecção (WhatsApp e Instagram)</div>
+    <div class="section-title" style="font-size:17px; margin-top:4px;">📋 Profissionais contatados</div>
+    <p class="section-sub">Quem já recebeu mensagem (WhatsApp, e-mail ou Instagram), quando, por qual edital e em que pé está. Para contatar alguém novo, abra o edital: o bloco "Prospectar este edital" fica logo acima do checklist (só você vê).</p>
+    <div id="pr-contatados-resumo" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+      <select id="pr-c-status" onchange="prospRenderContatados()"><option value="">Todos os status</option><option value="enviado">Enviado (sem resposta)</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
+      <input type="text" id="pr-c-busca" placeholder="Buscar nome, e-mail, telefone ou cidade" oninput="prospRenderContatados()" style="max-width:260px;">
+    </div>
+    <div style="overflow-x:auto; margin-bottom:22px;"><table class="admin-table"><thead><tr><th>Profissional</th><th>Profissão / local</th><th>Último contato</th><th>Contatos</th><th>Status</th></tr></thead><tbody id="pr-contatados-tbody"><tr><td colspan="5" style="color:var(--ink-dim);">Carregando...</td></tr></tbody></table></div>
+    <div class="section-title" style="font-size:17px; margin-top:4px;">Base de contatos (WhatsApp, e-mail e Instagram)</div>
     <p class="section-sub">Envio manual, um contato por vez, pelo seu WhatsApp ou Instagram. O sistema lista os editais abertos que combinam com a profissão e a região de cada profissional; você marca quais entram na mensagem (1 edital = mensagem direta no edital, com convite para conhecer o site). Só envia se houver edital marcado.</p>
 
     <details id="pr-cidades" style="margin:0 0 14px; background:var(--bg-soft, rgba(255,255,255,.02)); border:1px solid var(--border-soft); border-radius:12px; padding:12px 16px;" open ontoggle="if(this.open && typeof prospRenderCidades==='function') prospRenderCidades()">
@@ -5410,6 +5418,7 @@ function openDetalhe(id){
 
         <div class="panel">
           <h4><span class="dot"></span>Documentação necessária</h4>
+          ${(typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="prosp-edital-' + o.id + '"></div>' : ''}
           ${(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="pasta-edital-' + o.id + '"></div>' : ''}
           ${(()=>{ const docsVisiveis = docsPreview(o.documentos); const ocultos = o.documentos.length - docsVisiveis.length; return `
           <div id="doc-progress-${o.id}">${docProgressHTML(o.id, docsVisiveis, checks)}</div>
@@ -5470,6 +5479,7 @@ function openDetalhe(id){
     ${ehPro() ? '' : '<div class="detail-grid" style="margin-top:0;"><div>' + ctaProximoPasso + '</div></div>'}
   `;
   renderOutrosEditais(id, el);
+  if(typeof adminAuthed !== 'undefined' && adminAuthed) carregarProspEdital(o.id);   // ADM: prospectar profissionais a partir deste edital
   if(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) carregarPastaEdital(o.id);   // ADM: link da pasta do Drive deste edital
   nav('detalhe');
 }
@@ -9990,6 +10000,8 @@ async function prospCarregar(){
   const { data, error } = await _sb.from('prospectos_whatsapp').select('*').order('criado_em', { ascending:false }).limit(1000);
   if(error){ toast('Não consegui carregar os contatos'); return; }
   prospectos = data || [];
+  const rEnv = await _sb.from('prospectos_envios').select('*').order('enviado_em', { ascending:false }).limit(2000);
+  _prospEnvios = rEnv.data || []; _prospCarregado = true;
   prospRender();
   prospAtualizarContador();
 }
@@ -10151,30 +10163,32 @@ async function prospAdicionar(){
   linhas.forEach(l=>{
     const cel = l.split(/\s*[;\t|]\s*/).map(x=>x.trim());
     let tel = null, ig = null; const resto = [];
+    let em = null;
     cel.forEach((x,k)=>{
+      if(!em && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)){ em = x.toLowerCase(); return; }
       const t = prospTelefone(x);
       if(t && !tel) { tel = t; return; }
       if(/^@|instagram\.com\//i.test(x) && !ig){ ig = prospInstagram(x); if(ig) return; }
       resto.push({x,k});
     });
     if(!tel && !ig && canal === 'instagram'){ const c = cel[1] !== undefined ? 1 : 0; ig = prospInstagram(cel[c]); if(ig){ const r = resto.findIndex(o=>o.k===c); if(r>=0) resto.splice(r,1); } }
-    if(!tel && !ig){ invalidos.push(l.slice(0,40)); return; }
+    if(!tel && !ig && !em){ invalidos.push(l.slice(0,40)); return; }
     const temNome = !(cel[0] && (prospTelefone(cel[0]) || /^@|instagram\.com\//i.test(cel[0])));
     const r = resto.map(o=>o.x); const nome = temNome ? (r.shift() || '') : '';
     const profL = r[0] ? canonProfissao(r[0]) : prof, cidadeL = r[1] || cidadeP, ufL = (r[2] || ufP || '').toUpperCase().slice(0,2);
     if(!profL || !ufL){ invalidos.push(l.slice(0,40) + ' (falta profissão ou UF)'); return; }
-    const igual = n => (tel && n.telefone === tel) || (ig && n.instagram === ig);
+    const igual = n => (tel && n.telefone === tel) || (ig && n.instagram === ig) || (em && n.email === em);
     const ja = novos.find(igual);
-    if(ja){ if(tel && !ja.telefone) ja.telefone = tel; if(ig && !ja.instagram) ja.instagram = ig; if(nome && !ja.nome) ja.nome = nome; return; }
-    novos.push({ nome: nome || null, telefone: tel, instagram: ig, canal: (canal === 'instagram' && ig) || !tel ? 'instagram' : 'whatsapp', profissao: profL, cidade: cidadeL || null, uf: ufL, origem: canal === 'instagram' ? 'Instagram' : 'Google' });
+    if(ja){ if(tel && !ja.telefone) ja.telefone = tel; if(ig && !ja.instagram) ja.instagram = ig; if(em && !ja.email) ja.email = em; if(nome && !ja.nome) ja.nome = nome; return; }
+    novos.push({ nome: nome || null, telefone: tel, instagram: ig, email: em, canal: ((canal === 'instagram' && ig) || (!tel && ig)) ? 'instagram' : (tel ? 'whatsapp' : 'email'), profissao: profL, cidade: cidadeL || null, uf: ufL, origem: canal === 'instagram' ? 'Instagram' : 'Google' });
   });
   if(!novos.length){ st.textContent = 'Nada válido: ' + invalidos.slice(0,3).join(' | '); return; }
   // Procura quem já existe por telefone OU por @instagram
-  const tels = novos.map(n=>n.telefone).filter(Boolean), igs = novos.map(n=>n.instagram).filter(Boolean);
-  const filtros = []; if(tels.length) filtros.push('telefone.in.(' + tels.join(',') + ')'); if(igs.length) filtros.push('instagram.in.(' + igs.join(',') + ')');
-  const { data: ja, error: e0 } = await _sb.from('prospectos_whatsapp').select('id, telefone, instagram, nome, status').or(filtros.join(','));
+  const tels = novos.map(n=>n.telefone).filter(Boolean), igs = novos.map(n=>n.instagram).filter(Boolean), ems = novos.map(n=>n.email).filter(Boolean);
+  const filtros = []; if(tels.length) filtros.push('telefone.in.(' + tels.join(',') + ')'); if(igs.length) filtros.push('instagram.in.(' + igs.join(',') + ')'); if(ems.length) filtros.push('email.in.(' + ems.map(e=>'"' + e + '"').join(',') + ')');
+  const { data: ja, error: e0 } = await _sb.from('prospectos_whatsapp').select('id, telefone, instagram, email, nome, status').or(filtros.join(','));
   if(e0){ st.textContent = 'Erro ao consultar a lista: ' + e0.message; return; }
-  const achar = n => (ja||[]).find(x=>(n.telefone && x.telefone === n.telefone) || (n.instagram && x.instagram === n.instagram));
+  const achar = n => (ja||[]).find(x=>(n.telefone && x.telefone === n.telefone) || (n.instagram && x.instagram === n.instagram) || (n.email && x.email === n.email));
   const repetidos = novos.filter(achar), inserir = novos.filter(n=>!achar(n));
   if(repetidos.length){
     const lista = repetidos.slice(0,8).map(n=>{ const x = achar(n); return '• ' + (x.nome || n.nome || 'sem nome') + ' — ' + (x.telefone || '') + (x.instagram ? ' @' + x.instagram : '') + ' (' + (PROSP_ROTULO[x.status]||x.status) + ')'; }).join('\n') + (repetidos.length>8 ? '\n… e mais ' + (repetidos.length-8) : '');
@@ -10190,7 +10204,7 @@ async function prospAdicionar(){
   for(const n of repetidos){
     const x = achar(n), campos = { profissao: n.profissao, uf: n.uf };
     if(n.nome && !x.nome) campos.nome = n.nome; if(n.cidade) campos.cidade = n.cidade;
-    if(n.telefone && !x.telefone) campos.telefone = n.telefone; if(n.instagram && !x.instagram) campos.instagram = n.instagram;
+    if(n.telefone && !x.telefone) campos.telefone = n.telefone; if(n.instagram && !x.instagram) campos.instagram = n.instagram; if(n.email && !x.email) campos.email = n.email;
     const { error } = await _sb.from('prospectos_whatsapp').update(campos).eq('id', x.id);
     if(!error) atualizados++;
   }
@@ -10254,6 +10268,123 @@ function prospUrgencia(eds){
   if(ab && ab <= hoje && dif(hoje) - dif(ab) <= 7 && (!pz || pz >= hoje)) return '🆕 As inscrições abriram em ' + o.abertura + ' e já estão recebendo propostas. Quanto antes você se cadastra e organiza a documentação, melhor.';
   return 'As inscrições estão abertas: quem já deixa a documentação em dia se credencia mais rápido.';
 }
+/* ---- Painel "Profissionais contatados" (aba Prospecção) ---- */
+const PROSP_CANAL_ROTULO = { whatsapp:'📲 WhatsApp', email:'✉️ E-mail', instagram:'📷 Instagram' };
+function prospUltimoEnvio(pid){ return _prospEnvios.find(e=>e.prospecto_id === pid); }
+function prospRenderContatados(){
+  const tb = document.getElementById('pr-contatados-tbody'); if(!tb) return;
+  const base = prospectos.filter(p=>(p.qtd_envios||0) > 0 || ['enviado','respondeu','assinou'].includes(p.status));
+  const cont = st => base.filter(p=>p.status === st).length;
+  const semResp = base.filter(p=>p.status === 'enviado' && p.ultimo_envio && (Date.now() - new Date(p.ultimo_envio)) > 7*86400000).length;
+  const chip = (r, n)=>`<span class="plan-badge" style="font-size:12px; padding:4px 10px;">${r} <strong>${n}</strong></span>`;
+  document.getElementById('pr-contatados-resumo').innerHTML = chip('Contatados', base.length) + chip('Responderam', cont('respondeu')) + chip('Assinaram ✅', cont('assinou')) + chip('Sem resposta há +7 dias', semResp);
+  const fs = (document.getElementById('pr-c-status') || {}).value || '', q = _prospNorm((document.getElementById('pr-c-busca') || {}).value || '');
+  let lista = base.filter(p=>(!fs || p.status === fs) && (!q || _prospNorm([p.nome, p.email, p.telefone, p.instagram, p.cidade].join(' ')).includes(q)));
+  lista.sort((a,b)=>new Date(b.ultimo_envio || 0) - new Date(a.ultimo_envio || 0));
+  tb.innerHTML = lista.length ? lista.slice(0, 200).map(p=>{
+    const e = prospUltimoEnvio(p.id);
+    const quando = p.ultimo_envio ? new Date(p.ultimo_envio).toLocaleDateString('pt-BR') : '—';
+    const eds = e && (e.editais||[]).length ? ' · ' + esc(String(e.editais[0]).slice(0, 60)) : '';
+    const opcoes = Object.entries(PROSP_ROTULO).map(([vv,r])=>`<option value="${vv}" ${p.status===vv?'selected':''}>${r}</option>`).join('');
+    return `<tr><td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${[p.telefone ? esc(p.telefone) : '', p.email ? '✉️ ' + esc(p.email) : '', p.instagram ? '📷 @' + esc(p.instagram) : ''].filter(Boolean).join(' · ')}</span></td>
+      <td>${esc(p.profissao||'')}<br><span style="color:var(--ink-dim); font-size:12px;">${esc((p.cidade||'') + (p.cidade?'/':'') + (p.uf||''))}</span></td>
+      <td style="font-size:12.5px;">${quando}${e && e.canal ? ' · ' + (PROSP_CANAL_ROTULO[e.canal]||e.canal) : ''}<br><span style="color:var(--ink-dim); font-size:12px;">${eds.replace(/^ · /,'') || '—'}</span></td>
+      <td style="text-align:center;">${p.qtd_envios||0}</td>
+      <td><select onchange="prospMudarStatus(${p.id}, this.value)">${opcoes}</select></td></tr>`;
+  }).join('') : '<tr><td colspan="5" style="color:var(--ink-dim);">Ninguém contatado com esses filtros ainda.</td></tr>';
+}
+
+/* ---- Bloco "Prospectar este edital" (só ADM, dentro do edital) ---- */
+async function prospGarantirDados(){
+  if(_prospCarregado || !_sb) return;
+  const { data } = await _sb.from('prospectos_whatsapp').select('*').order('criado_em', { ascending:false }).limit(1000);
+  prospectos = data || [];
+  const r = await _sb.from('prospectos_envios').select('*').order('enviado_em', { ascending:false }).limit(2000);
+  _prospEnvios = r.data || []; _prospCarregado = true;
+}
+function prospCandidatosDoEdital(o){
+  const profsEd = (o.profissoes||[]).map(x=>_prospNorm(canonProfissao(x)));
+  const nacional = /nacional/i.test(o.abrangencia||'');
+  const cid = x=>(x.cidade && o.cidade && _prospNorm(x.cidade) === _prospNorm(o.cidade)) ? 0 : 1;
+  return prospectos.filter(p=>p.status !== 'nao_contatar' && profsEd.includes(_prospNorm(canonProfissao(p.profissao))) && (p.uf === o.uf || nacional))
+    .sort((a,b)=>cid(a) - cid(b) || (a.status === 'novo' ? 0 : 1) - (b.status === 'novo' ? 0 : 1));
+}
+function prospEditalHTML(o){
+  const profs = [...new Set((o.profissoes||[]).map(x=>canonProfissao(x)).filter(Boolean))];
+  const local = (o.cidade ? o.cidade + '/' : '') + (o.uf || '');
+  const cands = prospCandidatosDoEdital(o);
+  const envDoEdital = {}; _prospEnvios.forEach(e=>{ if((e.editais||[]).includes(o.edital) && !envDoEdital[e.prospecto_id]) envDoEdital[e.prospecto_id] = e; });
+  const id = o.id, opts = profs.map(n=>`<option>${esc(n)}</option>`).join('');
+  const linhas = cands.slice(0, 25).map(p=>{
+    const e = envDoEdital[p.id];
+    const marca = e ? `<span style="color:var(--teal); font-size:12px;">✓ contatado em ${new Date(e.enviado_em).toLocaleDateString('pt-BR')}${e.canal ? ' (' + (PROSP_CANAL_ROTULO[e.canal]||e.canal) + ')' : ''}</span>` : `<span style="color:var(--ink-dim); font-size:12px;">${esc(PROSP_ROTULO[p.status]||p.status)}</span>`;
+    const b = (canal, rot, ok)=>ok ? `<button type="button" class="btn-ghost" style="font-size:12px; padding:4px 10px;" onclick="prospEnviarDoEdital(${p.id}, ${id}, '${canal}')">${rot}</button>` : '';
+    return `<div style="display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap; padding:8px 0; border-bottom:1px solid var(--border-soft);">
+      <div style="min-width:200px; flex:1;"><strong>${esc(p.nome||'(sem nome)')}</strong> <span style="color:var(--ink-dim); font-size:12px;">· ${esc(p.profissao||'')} · ${esc((p.cidade||'') + (p.cidade?'/':'') + (p.uf||''))}</span><br>${marca}
+        <span style="color:var(--ink-dim); font-size:11.5px;">${[p.telefone ? esc(p.telefone) : '', p.email ? '✉️ ' + esc(p.email) : '', p.instagram ? '📷 @' + esc(p.instagram) : ''].filter(Boolean).join(' · ')}</span></div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">${b('whatsapp','📲 WhatsApp', !!p.telefone)}${b('email','✉️ E-mail', !!p.email)}${b('instagram','📷 Instagram', !!p.instagram)}</div></div>`;
+  }).join('');
+  const inp = 'style="padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); font-size:13px; min-width:120px; flex:1;"';
+  return `<div style="border:1px solid var(--border-soft); border-radius:12px; padding:14px 16px; margin:0 0 16px;">
+    <div style="font-weight:700; margin-bottom:2px;">🎯 Prospectar este edital <span class="plan-badge" style="font-size:10.5px;">só ADM</span></div>
+    <div style="font-size:12.5px; color:var(--ink-muted); margin-bottom:10px;">Profissionais com perfil para este edital (${esc(profs.join(', ') || 'sem profissão definida')}${local ? ' · ' + esc(local) : ''}). A mensagem já sai com este edital.</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+      <select id="pe-prof-${id}" style="padding:7px 10px;">${opts}</select>
+      <button type="button" class="btn-ghost" style="font-size:12.5px;" onclick="prospPesquisar(${id}, 'google')">🔎 Pesquisar no Google</button>
+      <button type="button" class="btn-ghost" style="font-size:12.5px;" onclick="prospPesquisar(${id}, 'instagram')">📷 Pesquisar no Instagram</button>
+    </div>
+    <div style="font-size:12.5px; font-weight:600; margin-bottom:2px;">Contatos que já tenho para este edital (${cands.length})</div>
+    <div>${linhas || '<div style="font-size:12.5px; color:var(--ink-dim); padding:6px 0;">Nenhum contato salvo com esse perfil ainda. Use a pesquisa acima e salve o que encontrar logo abaixo.</div>'}</div>
+    ${cands.length > 25 ? `<div style="font-size:12px; color:var(--ink-dim); margin-top:4px;">Mostrando 25 de ${cands.length}. Veja todos na aba Prospecção.</div>` : ''}
+    <details style="margin-top:12px;"><summary style="cursor:pointer; font-size:12.5px; font-weight:600;">➕ Salvar um profissional encontrado</summary>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <input id="pe-nome-${id}" placeholder="Nome" ${inp}><input id="pe-tel-${id}" placeholder="WhatsApp (com DDD)" inputmode="tel" ${inp}>
+        <input id="pe-email-${id}" placeholder="E-mail" inputmode="email" ${inp}><input id="pe-ig-${id}" placeholder="@instagram" ${inp}>
+        <input id="pe-cid-${id}" placeholder="Cidade" value="${esc(o.cidade||'')}" ${inp}><input id="pe-uf-${id}" placeholder="UF" maxlength="2" value="${esc(o.uf||'')}" style="padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--ink); font-size:13px; width:60px;">
+        <button type="button" class="btn-primary" style="font-size:12.5px;" onclick="prospSalvarDoEdital(${id})">Salvar contato</button>
+      </div></details></div>`;
+}
+async function carregarProspEdital(oid){
+  const box = document.getElementById('prosp-edital-' + oid); if(!box) return;
+  const o = oportunidades.find(x=>x.id === oid); if(!o) return;
+  await prospGarantirDados();
+  box.innerHTML = prospEditalHTML(o);
+}
+function prospPesquisar(oid, onde){
+  const o = oportunidades.find(x=>x.id === oid); if(!o) return;
+  const prof = (document.getElementById('pe-prof-' + oid) || {}).value || canonProfissao((o.profissoes||[])[0]) || '';
+  const local = [o.cidade, o.uf].filter(Boolean).join(' ');
+  const q = onde === 'instagram' ? 'site:instagram.com ' + prof + ' ' + local : prof + ' ' + local + ' contato whatsapp';
+  window.open('https://www.google.com/search?q=' + encodeURIComponent(q), '_blank', 'noopener');
+}
+async function prospEnviarDoEdital(pid, oid, canal){
+  const p = prospectos.find(x=>x.id === pid), o = oportunidades.find(x=>x.id === oid); if(!p || !o) return;
+  const n = await prospEnviosHoje(), lim = parseInt((document.getElementById('pr-limite') || {}).value, 10) || 15;
+  if(n >= lim && !confirm('Você já fez ' + n + ' envios hoje (limite ' + lim + '). Enviar mesmo assim?')) return;
+  const msg = prospMensagem(p, [o]);
+  prospAbrirCanal(p, canal, msg, o);
+  await prospRegistrarEnvio(p, canal, msg, [o.edital]);
+  toast((canal === 'email' ? 'Gmail aberto' : canal === 'instagram' ? 'Mensagem copiada e perfil aberto' : 'WhatsApp aberto') + ' — marcado como contatado.');
+  carregarProspEdital(oid); prospRenderContatados();
+}
+async function prospSalvarDoEdital(oid){
+  const o = oportunidades.find(x=>x.id === oid); if(!o) return;
+  const v = k=>((document.getElementById('pe-' + k + '-' + oid) || {}).value || '').trim();
+  const telRaw = v('tel'), tel = telRaw ? prospTelefone(telRaw) : null, em = v('email').toLowerCase(), ig = v('ig') ? prospInstagram(v('ig')) : null;
+  if(telRaw && !tel){ toast('WhatsApp inválido. Use DDD + número de celular.'); return; }
+  if(em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){ toast('E-mail inválido.'); return; }
+  if(!tel && !em && !ig){ toast('Informe WhatsApp, e-mail ou @Instagram.'); return; }
+  const prof = (document.getElementById('pe-prof-' + oid) || {}).value, uf = v('uf').toUpperCase().slice(0,2);
+  if(!prof || !uf){ toast('Falta a profissão ou a UF.'); return; }
+  const reg = { nome: v('nome') || null, telefone: tel, instagram: ig, email: em || null, canal: tel ? 'whatsapp' : (ig ? 'instagram' : 'email'), profissao: prof, cidade: v('cid') || null, uf, origem: 'Edital (ADM)' };
+  const { data, error } = await _sb.from('prospectos_whatsapp').insert(reg).select().single();
+  if(error){
+    toast(/duplicate|23505/i.test(error.message + error.code) ? 'Esse contato já está na lista.' : /email|check/i.test(error.message) ? 'Falta rodar o SQL supabase/prospeccao_edital.sql no Supabase.' : 'Erro ao salvar: ' + error.message);
+    return;
+  }
+  prospectos.unshift(data); toast('Contato salvo.');
+  carregarProspEdital(oid); prospRenderContatados();
+}
 function prospMensagem(p, eds){
   const um = true;
   const linhas = eds.map(o=>`• ${o.orgao}${o.cidade ? ' (' + o.cidade + '/' + o.uf + ')' : ' (' + o.uf + ')'}` + (um && o.objeto ? '\n  ' + String(o.objeto).replace(/\s+/g,' ').slice(0,180) + (String(o.objeto).length > 180 ? '…' : '') : '')).join('\n');
@@ -10263,7 +10394,7 @@ function prospMensagem(p, eds){
     .replace(/\{urgencia\}/g, prospUrgencia(eds)).replace(/\{n_editais\}/g, '1').replace(/\{editais\}/g, linhas).replace(/\{site\}/g, SITE_URL);
 }
 const PROSP_ROTULO = { novo:'Novo', enviado:'Enviado', respondeu:'Respondeu', assinou:'Assinou ✅', nao_contatar:'Não contatar' };
-let _prospChecked = new Set(), _prospFiltrados = [];
+let _prospChecked = new Set(), _prospFiltrados = [], _prospEnvios = [], _prospCarregado = false;
 function prospDataLocal(iso){ const d = new Date(iso); if(isNaN(d)) return ''; return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function prospFiltroOpcoes(){
   const sp = document.getElementById('pr-f-prof'), sb = document.getElementById('pr-b-prof');
@@ -10318,26 +10449,27 @@ function prospRender(){
   if(fs) lista = lista.filter(x=>x.p.status === fs);
   if(fp) lista = lista.filter(x=>x.p.profissao === fp);
   if(fu) lista = lista.filter(x=>x.p.uf === fu);
-  if(busca) lista = lista.filter(x=>_prospNorm([x.p.nome, x.p.telefone, x.p.instagram, x.p.cidade].join(' ')).includes(busca));
+  if(busca) lista = lista.filter(x=>_prospNorm([x.p.nome, x.p.telefone, x.p.instagram, x.p.email, x.p.cidade].join(' ')).includes(busca));
   if(de) lista = lista.filter(x=>prospDataLocal(x.p.criado_em) >= de);
   if(ate) lista = lista.filter(x=>prospDataLocal(x.p.criado_em) <= ate);
   if(soEd) lista = lista.filter(x=>x.eds.length);
   lista = lista.slice(0, 300);
   _prospFiltrados = lista.map(x=>x.p.id);
   document.getElementById('pr-resumo').textContent = lista.length + ' na lista filtrada · ' + total + ' contato(s) no total · ' + comEd + ' com edital compatível';
+  prospRenderContatados();
   tb.innerHTML = lista.length ? lista.map(({p,eds,marc})=>{
     const dias = p.ultimo_envio ? Math.floor((Date.now() - new Date(p.ultimo_envio)) / 86400000) : null;
     let acao;
     if(p.status === 'nao_contatar') acao = '<span style="color:var(--ink-dim);">bloqueado</span>';
     else if(dias !== null && dias < 14) acao = `<span style="color:var(--ink-dim);">enviado há ${dias} dia(s)</span>`;
     else if(!eds.length) acao = '<span style="color:var(--ink-dim);">sem edital compatível</span>';
-    else acao = `<button class="btn-ghost" onclick="prospEnviar(${p.id})">${p.canal==='instagram' ? '📷 Copiar e abrir' : '📲 Enviar'}</button>`;
+    else acao = (p.canal==='email' ? '' : `<button class="btn-ghost" onclick="prospEnviar(${p.id})">${p.canal==='instagram' ? '📷 Copiar e abrir' : '📲 Enviar'}</button>`) + (p.email ? ` <button class="btn-ghost" onclick="prospEnviar(${p.id}, 'email')">✉️ E-mail</button>` : '');
     const opcoes = Object.entries(PROSP_ROTULO).map(([vv,r])=>`<option value="${vv}" ${p.status===vv?'selected':''}>${r}</option>`).join('');
     const quando = p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '—';
     const profs = [...new Set([...profissoesAtivasNomes(), p.profissao].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     const escolhido = marc[0] ? marc[0].id : null;
     return `<tr><td><input type="checkbox" ${_prospChecked.has(p.id)?'checked':''} onchange="prospMarcarLinha(${p.id}, this.checked)"></td>
-      <td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${[p.telefone ? esc(p.telefone) : '', p.instagram ? '📷 @' + esc(p.instagram) : ''].filter(Boolean).join(' · ')}</span><br><span style="color:var(--ink-dim); font-size:11.5px;">adicionado em ${quando}</span></td>
+      <td><strong>${esc(p.nome||'(sem nome)')}</strong><br><span style="color:var(--ink-dim); font-size:12px;">${[p.telefone ? esc(p.telefone) : '', p.email ? '✉️ ' + esc(p.email) : '', p.instagram ? '📷 @' + esc(p.instagram) : ''].filter(Boolean).join(' · ')}</span><br><span style="color:var(--ink-dim); font-size:11.5px;">adicionado em ${quando}</span></td>
       <td><select onchange="prospMudarProfissao(${p.id}, this.value)" style="max-width:150px;">${profs.map(n=>`<option ${n===p.profissao?'selected':''}>${esc(n)}</option>`).join('')}</select><br><span style="color:var(--ink-dim); font-size:12px;">${esc((p.cidade||'') + (p.cidade?'/':'') + p.uf)}</span></td>
       <td style="font-size:12px; min-width:230px;">${eds.length ? eds.map(o=>`<label style="display:flex; gap:6px; align-items:flex-start; cursor:pointer; margin-bottom:3px;"><input type="radio" name="ed-${p.id}" ${o.id===escolhido?'checked':''} onchange="prospEscolherEdital(${p.id}, ${o.id})"><span>${esc(o.orgao.slice(0,38))} — ${esc(o.abertura ? 'abre ' + o.abertura : 'sem data de abertura')}</span></label>`).join('') : '—'}</td>
       <td><select onchange="prospMudarStatus(${p.id}, this.value)">${opcoes}</select></td><td>${acao}<br><button class="btn-ghost" style="margin-top:4px; font-size:12px; color:var(--coral);" onclick="prospExcluir(${p.id})">🗑 Excluir</button></td></tr>`;
@@ -10350,8 +10482,36 @@ async function prospMudarStatus(id, status){
   const p = prospectos.find(x=>x.id===id); if(p) p.status = status;
   prospRender();
 }
-async function prospEnviar(id){
+/* Abre o canal escolhido com a mensagem pronta (WhatsApp, e-mail pelo Gmail ou Instagram) e registra o contato. */
+function prospAbrirCanal(p, canal, msg, o){
+  if(canal === 'email'){
+    const assunto = 'Oportunidade de credenciamento' + (o && o.orgao ? ': ' + o.orgao.slice(0, 70) : '');
+    window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(p.email) + '&su=' + encodeURIComponent(assunto) + '&body=' + encodeURIComponent(msg), '_blank', 'noopener');
+  } else if(canal === 'instagram'){
+    try{ navigator.clipboard.writeText(msg); }catch(e){ prompt('Copie a mensagem:', msg); }
+    window.open('https://www.instagram.com/' + encodeURIComponent(p.instagram) + '/', '_blank', 'noopener');
+  } else window.open('https://wa.me/' + p.telefone + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+}
+async function prospRegistrarEnvio(p, canal, msg, nomesEditais){
+  const agora = new Date().toISOString();
+  let r = await _sb.from('prospectos_envios').insert({ prospecto_id: p.id, editais: nomesEditais, mensagem: msg, canal });
+  if(r.error){ r = await _sb.from('prospectos_envios').insert({ prospecto_id: p.id, editais: nomesEditais, mensagem: msg }); if(!r.error) toast('Envio salvo, mas sem o canal: rode o SQL supabase/prospeccao_edital.sql'); }
+  const novoStatus = p.status === 'novo' ? 'enviado' : p.status;
+  const { error } = await _sb.from('prospectos_whatsapp').update({ status: novoStatus, qtd_envios: (p.qtd_envios||0) + 1, ultimo_envio: agora }).eq('id', p.id);
+  if(!error){ p.status = novoStatus; p.qtd_envios = (p.qtd_envios||0) + 1; p.ultimo_envio = agora; }
+  _prospEnvios.unshift({ prospecto_id: p.id, enviado_em: agora, editais: nomesEditais, mensagem: msg, canal });
+}
+async function prospEnviar(id, via){
   const p = prospectos.find(x=>x.id===id); if(!p) return;
+  if(via === 'email'){
+    const eds0 = prospEditaisMarcados(p);
+    if(!eds0.length){ toast('Marque ao menos um edital para este contato'); return; }
+    const msg0 = prospMensagem(p, eds0);
+    prospAbrirCanal(p, 'email', msg0, eds0[0]);
+    await prospRegistrarEnvio(p, 'email', msg0, eds0.map(o=>o.edital));
+    toast('Gmail aberto com a mensagem — marcado como enviado. Se não enviou, volte o status para "Novo".');
+    prospRender(); prospAtualizarContador(); return;
+  }
   const eds = prospEditaisMarcados(p);
   if(!eds.length){ toast('Marque ao menos um edital para este contato'); return; }
   const n = await prospEnviosHoje(), lim = parseInt(document.getElementById('pr-limite').value,10) || 15;
