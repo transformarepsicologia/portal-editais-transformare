@@ -1370,6 +1370,52 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   integração para o passo a passo completo (criar projeto Supabase, rodar
   schema.sql, publicar a Edge Function e agendar o cron).
 -->
+<!-- Google Analytics 4 (só carrega depois do aceite de cookies; não conta ADM nem aparelho de teste) -->
+<script>
+(function(){
+  var GA_ID='G-HCFKCSM8JQ', KEY='radar_cookies_analytics';
+  window.dataLayer=window.dataLayer||[];
+  window.gtag=function(){ dataLayer.push(arguments); };
+  var carregado=false;
+  function excluido(){
+    try{
+      if(typeof adminAuthed!=='undefined' && adminAuthed) return true;
+      if(typeof ehTeste==='function' && ehTeste()) return true;
+      if(localStorage.getItem('radar_aparelho_teste')==='1') return true;
+    }catch(e){}
+    return false;
+  }
+  window.radarAnalyticsAtivar=function(){
+    if(carregado) return; carregado=true;
+    var sc=document.createElement('script'); sc.async=true;
+    sc.src='https://www.googletagmanager.com/gtag/js?id='+GA_ID;
+    document.head.appendChild(sc);
+    gtag('js',new Date());
+    gtag('config',GA_ID,{ send_page_view:false, anonymize_ip:true });
+    radarEvento('page_view',{ page_path:'/#'+(window._radarTelaAtual||'home'), page_title:document.title });
+  };
+  window.radarEvento=function(nome,params){
+    try{
+      if(!carregado || excluido()) return;
+      gtag('event',nome,params||{});
+    }catch(e){}
+  };
+  window.radarCookiesEscolher=function(ok){
+    try{ localStorage.setItem(KEY, ok?'1':'0'); }catch(e){}
+    var b=document.getElementById('radar-cookie-banner'); if(b) b.style.display='none';
+    if(ok) radarAnalyticsAtivar();
+    else if(carregado){ window['ga-disable-'+GA_ID]=true; }
+  };
+  window.radarCookiesReabrir=function(){
+    var b=document.getElementById('radar-cookie-banner'); if(b) b.style.display='flex';
+  };
+  window.radarCookiesIniciar=function(){
+    var v=null; try{ v=localStorage.getItem(KEY); }catch(e){}
+    if(v==='1') radarAnalyticsAtivar();
+    else if(v===null){ var b=document.getElementById('radar-cookie-banner'); if(b) b.style.display='flex'; }
+  };
+})();
+</script>
 </head>
 <body>
 
@@ -1678,7 +1724,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     <p>Você mesmo pode <strong>corrigir seu perfil</strong> em "Minha Conta → Editar perfil" e <strong>excluir sua conta</strong> na mesma tela. Para os demais pedidos, escreva para <a href="mailto:transformarepsicologia1@gmail.com">transformarepsicologia1@gmail.com</a> — respondemos em até 15 dias.</p>
 
     <h3>9. Cookies e armazenamento local</h3>
-    <p>O Portal não usa cookies de publicidade nem ferramentas de rastreamento de terceiros. Usamos o armazenamento local do navegador apenas para manter sua sessão de login e suas preferências (favoritos e alertas). Você pode apagar esses dados nas configurações do seu navegador.</p>
+    <p>O Portal não usa cookies de publicidade. Usamos o armazenamento local do navegador para manter sua sessão de login e suas preferências (favoritos e alertas). Com o seu consentimento, usamos também o <strong>Google Analytics 4</strong>, que grava cookies para medir, de forma agregada, como o site é usado (páginas visitadas, origem do acesso, tipo de aparelho e ações como criar conta ou falar no WhatsApp). Não enviamos ao Google seu nome, e-mail, telefone nem quais editais você favorita, e o IP é anonimizado. Você escolhe ao entrar no site e pode mudar de ideia a qualquer momento em "Preferências de cookies", no rodapé. Também pode apagar esses dados nas configurações do seu navegador.</p>
 
     <h3>10. Público</h3>
     <p>O Portal é destinado a profissionais maiores de 18 anos. Não coletamos intencionalmente dados de crianças ou adolescentes.</p>
@@ -2598,6 +2644,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   © 2026 Transformare Psicologia e Projetos.<br class="br-cel"> Todos os direitos reservados.
   <div class="footer-links">
     <a href="#privacidade" onclick="event.preventDefault(); nav('privacidade')">Política de Privacidade e Segurança</a>
+    <a href="#cookies" onclick="event.preventDefault(); radarCookiesReabrir()">Preferências de cookies</a>
     <a href="#feedback" onclick="event.preventDefault(); openFeedbackModal()">Enviar feedback</a>
     <a href="mailto:transformarepsicologia1@gmail.com">Contato</a>
   </div>
@@ -3583,6 +3630,7 @@ function nav(view){
   }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
+  try{ if(window._radarTelaAtual !== undefined && window._radarTelaAtual !== view && view !== 'admin' && view !== 'admin-login') radarEvento('page_view',{ page_path:'/#'+view, page_title:document.title }); window._radarTelaAtual = view; }catch(e){}
   document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.id === 'nav-minha-conta' ? ['minha-conta','login','cadastro','perfil','favoritos','alertas'].includes(view) : b.dataset.view === view));
   document.getElementById('mainNav').classList.remove('open');
   (function(){ const nv=document.getElementById('mainNav'), ativo=nv.querySelector('button.active'); if(ativo && nv.scrollWidth>nv.clientWidth){ nv.scrollTo({left: ativo.offsetLeft - (nv.clientWidth-ativo.offsetWidth)/2, behavior:'smooth'}); } })();
@@ -5513,6 +5561,7 @@ function brl(v){ return Number(v).toLocaleString('pt-BR', {style:'currency', cur
 async function solicitarPlanoEssencial(){
   if(!userProfile){ toast('Crie sua conta gratuita ou entre para assinar o plano Transformare Pro.'); nav('cadastro'); return; }
   if(userProfile.plano === 'essencial'){ toast('Você já está no plano Transformare Pro.'); return; }
+  radarEvento('abrir_planos_pro');
   abrirPlanosModal();
 }
 async function abrirPlanosModal(){
@@ -5654,6 +5703,7 @@ async function pedirPlanoManual(){
   if(ja && ja.length){ toast('Seu pedido já foi enviado. Aguarde a confirmação da Transformare.'); atualizarStatusPedidoPlano(); return; }
   const { error } = await _sb.from('pedidos_plano').insert({ usuario_id: userProfile.id, email: userProfile.email, nome: userProfile.nome, plano: 'essencial' });
   if(error){ toast('Não foi possível enviar o pedido: ' + error.message); return; }
+  radarEvento('solicitar_pro',{ metodo:'manual' });
   toast('Pedido enviado! A Transformare vai confirmar o seu plano Transformare Pro.');
   atualizarStatusPedidoPlano();
 }
@@ -5666,6 +5716,7 @@ async function atualizarStatusPedidoPlano(){
 }
 let credenciarOppId = null;
 function openCredenciarModal(oppId){
+  radarEvento('quero_me_credenciar');
   credenciarOppId = oppId;
   document.getElementById('credenciar-modal').classList.add('open');
 }
@@ -6198,6 +6249,7 @@ const ORIGIN_LABELS = {
 /* "Conhecer a consultoria": abre direto o WhatsApp da Transformare com a mensagem já escrita. */
 const WHATS_TRANSFORMARE = '5551995026596';
 function abrirWhatsConsultoria(origem){
+  radarEvento('clique_whatsapp',{ origem: origem || 'site' });
   const msg = 'Olá! Vim pelo Radar Transformare e quero conhecer as oportunidades de credenciamentos.';
   window.open('https://wa.me/' + WHATS_TRANSFORMARE + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
 }
@@ -6788,6 +6840,7 @@ async function userSignup(){
   if(error && _cadCaptchaWidget !== null && window.turnstile){ try{ window.turnstile.reset(_cadCaptchaWidget); }catch(e){} _cadCaptchaToken = ''; }
   if(error){ msg.textContent = traduzErroAuth(error); return; }
   if(!data.user){ msg.textContent = 'Não foi possível criar a conta. Tente novamente.'; return; }
+  radarEvento('sign_up',{ method:'email' });
   if(!data.session){
     // Confirmação de e-mail está ativada no projeto: ainda não há sessão autenticada
     // para gravar o perfil agora (a política exige auth.uid() = id). Guardamos os
@@ -13977,5 +14030,13 @@ function radarGira(){
 document.addEventListener("click",function(e){var c=e.target.closest&&e.target.closest(sel);
 document.querySelectorAll(".is-on").forEach(function(x){if(x!==c)x.classList.remove("is-on")});
 if(c)c.classList.toggle("is-on");});})();</script>
+<div id="radar-cookie-banner" role="dialog" aria-label="Aviso de cookies" style="display:none; position:fixed; left:12px; right:12px; bottom:12px; z-index:9999; max-width:560px; margin:0 auto; background:var(--bg-card, #14233a); color:var(--ink, #fff); border:1px solid var(--border-soft, rgba(255,255,255,.18)); border-radius:12px; padding:14px 16px; box-shadow:0 8px 30px rgba(0,0,0,.35); flex-direction:column; gap:10px; font-size:13px; line-height:1.45;">
+  <div>Usamos cookies de medição (Google Analytics) para entender como o Radar é usado e melhorar o site. Não coletamos seu nome nem quais editais você favorita. Veja a <a href="#privacidade" onclick="event.preventDefault(); nav('privacidade')" style="color:inherit; text-decoration:underline;">Política de Privacidade</a>.</div>
+  <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+    <button type="button" onclick="radarCookiesEscolher(false)" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border-soft, rgba(255,255,255,.3)); background:transparent; color:inherit; cursor:pointer; font:inherit;">Recusar</button>
+    <button type="button" onclick="radarCookiesEscolher(true)" style="padding:8px 14px; border-radius:8px; border:none; background:#C9A227; color:#111; font-weight:700; cursor:pointer; font:inherit; font-weight:700;">Aceitar</button>
+  </div>
+</div>
+<script>radarCookiesIniciar();</script>
 </body>
 </html>
