@@ -1382,11 +1382,14 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
       if(typeof adminAuthed!=='undefined' && adminAuthed) return true;
       if(typeof ehTeste==='function' && ehTeste()) return true;
       if(localStorage.getItem('radar_aparelho_teste')==='1') return true;
+      if(localStorage.getItem('radar_ga_excluir')==='1') return true;
     }catch(e){}
     return false;
   }
   window.radarAnalyticsAtivar=function(){
-    if(carregado) return; carregado=true;
+    if(carregado) return;
+    if(excluido()){ window['ga-disable-'+GA_ID]=true; return; }
+    carregado=true;
     var sc=document.createElement('script'); sc.async=true;
     sc.src='https://www.googletagmanager.com/gtag/js?id='+GA_ID;
     document.head.appendChild(sc);
@@ -1396,8 +1399,19 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   };
   window.radarEvento=function(nome,params){
     try{
-      if(!carregado || excluido()) return;
+      if(!carregado) return;
+      if(excluido()){ window['ga-disable-'+GA_ID]=true; return; }
       gtag('event',nome,params||{});
+    }catch(e){}
+  };
+  // Chamada depois que o login do ADM ou de um usuário de teste é reconhecido:
+  // desliga o Analytics agora e marca este aparelho para nem carregar nas próximas visitas.
+  window.radarChecarExclusao=function(){
+    try{
+      if(excluido()){
+        window['ga-disable-'+GA_ID]=true;
+        try{ localStorage.setItem('radar_ga_excluir','1'); }catch(e){}
+      }
     }catch(e){}
   };
   window.radarCookiesEscolher=function(ok){
@@ -3532,6 +3546,7 @@ async function adminLogin(){
     return;
   }
   adminAuthed = true;
+  try{ radarChecarExclusao(); }catch(e){}
   carregarEditaisSupabase();
   adminFails = 0; passInput.value = ''; setAdminMsg('');
   nav('admin');
@@ -6753,7 +6768,9 @@ async function carregarPerfilUsuario(authUser){
     plano: perfil?.plano || 'gratuito',
     criadoEm: perfil?.criado_em || null,
     documentosRaw: (perfil && perfil.documentos && typeof perfil.documentos === 'object') ? perfil.documentos : {},
+    teste: !!(perfil && perfil.teste),
   };
+  try{ radarChecarExclusao(); }catch(e){}
   try{ renderIndicators(); }catch(e){}   // atualiza o cadeado do Índice conforme o plano
   const doBanco = (perfil && (perfil.cidade || (perfil.abrangencias||[]).length || perfil.rem_min != null || perfil.escolaridade || perfil.anos_experiencia != null || (perfil.atuacao||[]).length || perfil.cnpj || (perfil.especialidades||[]).length || (perfil.formatos||[]).length || perfil.meta_mensal != null || perfil.regime))
     ? { cidade: perfil.cidade || '', abrs: perfil.abrangencias || [], remMin: perfil.rem_min != null ? Number(perfil.rem_min) : null, remTipo: perfil.rem_tipo || 'atendimento',
@@ -6911,7 +6928,7 @@ async function userLogin(){
   userFails = 0; msg.textContent = '';
   document.getElementById('login-senha').value = '';
   await carregarPerfilUsuario(data.user);
-  if((data.user.email||'').toLowerCase() && ADMIN_EMAILS.includes(data.user.email.toLowerCase())){ adminAuthed = true; carregarEditaisSupabase(); }
+  if((data.user.email||'').toLowerCase() && ADMIN_EMAILS.includes(data.user.email.toLowerCase())){ adminAuthed = true; try{ radarChecarExclusao(); }catch(e){} carregarEditaisSupabase(); }
   await loadUserData();
   toast('Bem-vindo(a) de volta' + (userProfile.nome ? ', ' + userProfile.nome.split(' ')[0] : ''));
   nav('minha-conta');
@@ -11869,7 +11886,7 @@ if(_sb){
     const authUser = data && data.session ? data.session.user : null;
     if(!authUser) return;
     const email = authUser.email;
-    if(email && ADMIN_EMAILS.includes(email.toLowerCase())){ adminAuthed = true; carregarEditaisSupabase(); }
+    if(email && ADMIN_EMAILS.includes(email.toLowerCase())){ adminAuthed = true; try{ radarChecarExclusao(); }catch(e){} carregarEditaisSupabase(); }
     await carregarPerfilUsuario(authUser);
     await loadUserData();
     updateNavCta(); renderAlertChips(); renderAlertas(); renderBell(); applyFilters();
