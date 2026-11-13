@@ -2287,7 +2287,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
       <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; cursor:pointer; color:var(--ink-muted);"><input type="checkbox" id="pr-f-semedital" onchange="prospRender()"> Só quem ainda não recebeu este edital</label>
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
-      <select id="pr-f-status" onchange="prospRender()"><option value="">Todos os status</option><option value="novo">Novo</option><option value="enviado">Enviado</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
+      <select id="pr-f-status" onchange="prospRender()"><option value="">Todos os status</option><option value="novo">Novo</option><option value="rascunho">Rascunho</option><option value="enviado">Enviado</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
       <select id="pr-f-prof" onchange="prospRender()"><option value="">Todas as profissões</option></select>
       <select id="pr-f-uf" onchange="prospRender()"><option value="">Todas as UFs</option></select>
       <select id="pr-f-quando" onchange="prospRender()"><option value="">Qualquer contato</option><option value="nunca">Nunca contatados</option><option value="recente">Contatados há menos de 7 dias</option><option value="d7">Sem contato há +7 dias</option><option value="d15">Sem contato há +15 dias</option><option value="d30">Sem contato há +30 dias</option></select>
@@ -2295,13 +2295,22 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
       <button type="button" class="btn-ghost" onclick="prospLimparFiltros()">Limpar</button>
     </div>
     <div id="pr-resumo" style="font-size:12.5px; color:var(--ink-dim); margin-bottom:8px;"></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; padding:10px 12px; border:1px dashed var(--border-soft); border-radius:10px; font-size:12.5px;">
+      <button type="button" class="btn-ghost" onclick="prospMarcarTodos(true)">Selecionar todos os filtrados</button>
+      <button type="button" class="btn-ghost" onclick="_prospChecked.clear(); prospRender()">Limpar seleção</button>
+      <label style="display:flex; gap:6px; align-items:center;">Intervalo <input type="number" id="pr-lote-seg" min="5" max="120" value="15" style="width:58px;"> s</label>
+      <button type="button" class="btn-primary" onclick="prospLoteIniciar()">📲 Preparar rascunhos no WhatsApp (<span id="pr-lote-qtd">0</span>)</button>
+      <span id="pr-lote-status" style="color:var(--ink-dim);"></span>
+      <button type="button" class="btn-primary" id="pr-lote-continuar" style="display:none;" onclick="prospLoteContinuar()">Continuar</button>
+      <button type="button" class="btn-ghost" id="pr-lote-parar" style="display:none; color:var(--coral);" onclick="prospLoteParar()">Parar</button>
+    </div>
     <div style="overflow-x:auto;"><table class="admin-table" id="pr-tabela"><thead><tr><th></th><th>Nome</th><th>Profissão</th><th>Cidade</th><th>UF</th><th>Contato</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
 
     <details style="margin-top:14px;"><summary style="cursor:pointer; font-size:13px; font-weight:600;">Ações em bloco (alterar ou excluir vários)</summary>
       <div id="pr-bloco" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:10px 12px; margin-top:8px; border:1px solid var(--border-soft); border-radius:10px; font-size:12.5px;">
         <label style="display:flex; gap:6px; align-items:center; cursor:pointer;"><input type="checkbox" id="pr-sel-todos" onchange="prospMarcarTodos(this.checked)"> Selecionar todos os filtrados</label>
         <strong id="pr-sel-qtd">0 selecionado(s)</strong>
-        <select id="pr-b-status"><option value="">Status…</option><option value="novo">Novo</option><option value="enviado">Enviado</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
+        <select id="pr-b-status"><option value="">Status…</option><option value="novo">Novo</option><option value="rascunho">Rascunho</option><option value="enviado">Enviado</option><option value="respondeu">Respondeu</option><option value="assinou">Assinou</option><option value="nao_contatar">Não contatar</option></select>
         <select id="pr-b-prof"><option value="">Profissão…</option></select>
         <input type="text" id="pr-b-cidade" placeholder="Cidade…" style="max-width:130px;">
         <select id="pr-b-uf"><option value="">UF…</option></select>
@@ -10483,7 +10492,7 @@ function prospMensagem(p, eds){
     .replace(/\{profissao\}/g, p.profissao || '').replace(/\{cidade\}/g, p.cidade || p.uf).replace(/\{uf\}/g, p.uf)
     .replace(/\{urgencia\}/g, prospUrgencia(eds)).replace(/\{n_editais\}/g, '1').replace(/\{editais\}/g, linhas).replace(/\{site\}/g, SITE_URL);
 }
-const PROSP_ROTULO = { novo:'Novo', enviado:'Enviado', respondeu:'Respondeu', assinou:'Assinou ✅', nao_contatar:'Não contatar' };
+const PROSP_ROTULO = { novo:'Novo', rascunho:'Rascunho', enviado:'Enviado', respondeu:'Respondeu', assinou:'Assinou ✅', nao_contatar:'Não contatar' };
 let _prospChecked = new Set(), _prospFiltrados = [], _prospEnvios = [], _prospCarregado = false;
 function prospDataLocal(iso){ const d = new Date(iso); if(isNaN(d)) return ''; return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function prospFiltroOpcoes(){
@@ -10503,6 +10512,7 @@ function prospMarcarLinha(id, on){ if(on) _prospChecked.add(id); else _prospChec
 function prospMarcarTodos(on){ _prospFiltrados.forEach(id=>{ if(on) _prospChecked.add(id); else _prospChecked.delete(id); }); prospRender(); }
 function prospAtualizarSel(){
   const n = _prospChecked.size, el = document.getElementById('pr-sel-qtd'); if(el) el.textContent = n + ' selecionado(s)';
+  const lq = document.getElementById('pr-lote-qtd'); if(lq) lq.textContent = n;
   const t = document.getElementById('pr-sel-todos'); if(t) t.checked = _prospFiltrados.length > 0 && _prospFiltrados.every(id=>_prospChecked.has(id));
 }
 async function prospAplicarBloco(){
@@ -10513,9 +10523,16 @@ async function prospAplicarBloco(){
   if(!Object.keys(campos).length){ toast('Escolha o que alterar (status, profissão, cidade ou UF)'); return; }
   const resumo = Object.entries(campos).map(([k,v])=>k + ' → ' + v).join(', ');
   if(!confirm('Alterar ' + ids.length + ' contato(s)?\n\n' + resumo)) return;
-  const { error } = await _sb.from('prospectos_whatsapp').update(campos).in('id', ids);
+  let restantes = ids;
+  if(campos.status === 'enviado'){   // rascunho → enviado: registra o envio no histórico de cada um
+    const rasc = ids.filter(id=>(prospectos.find(x=>x.id===id) || {}).status === 'rascunho');
+    for(const id of rasc) await prospMudarStatus(id, 'enviado');
+    restantes = ids.filter(id=>!rasc.includes(id));
+    if(!restantes.length){ _prospChecked.clear(); toast(ids.length + ' contato(s) marcado(s) como enviado'); prospRender(); return; }
+  }
+  const { error } = await _sb.from('prospectos_whatsapp').update(campos).in('id', restantes);
   if(error){ toast('Erro ao salvar: ' + error.message); return; }
-  prospectos.forEach(p=>{ if(_prospChecked.has(p.id)){ Object.assign(p, campos); if(campos.profissao || campos.uf || campos.cidade) delete _prospSel[p.id]; } });
+  prospectos.forEach(p=>{ if(restantes.includes(p.id)){ Object.assign(p, campos); if(campos.profissao || campos.uf || campos.cidade) delete _prospSel[p.id]; } });
   ['pr-b-status','pr-b-prof','pr-b-cidade','pr-b-uf'].forEach(i=>{ document.getElementById(i).value = ''; });
   toast(ids.length + ' contato(s) atualizado(s)'); prospRender();
 }
@@ -10636,10 +10653,62 @@ function prospRestaurarModelo(){
   const mu = document.getElementById('pr-modelo-um'); if(!mu) return;
   mu.value = PROSP_MODELO_UM_PADRAO; prospSalvarModeloUm(); toast('Mensagem padrão restaurada');
 }
+/* ---- Rascunhos em lote: abre o WhatsApp com a mensagem pronta, um contato a cada N segundos, SEM enviar ---- */
+let _lote = null;
+function prospRascunhos(){ try{ return JSON.parse(localStorage.getItem('pr_rascunhos') || '{}'); }catch(e){ return {}; } }
+function prospGuardarRascunho(pid, dados){ const r = prospRascunhos(); if(dados) r[pid] = dados; else delete r[pid]; try{ localStorage.setItem('pr_rascunhos', JSON.stringify(r)); }catch(e){} }
+function prospLoteStatus(t){ const e = document.getElementById('pr-lote-status'); if(e) e.textContent = t; }
+function prospLoteContinuar(){ document.getElementById('pr-lote-continuar').style.display = 'none'; prospLoteProximo(false); }
+function prospLoteParar(msg){
+  if(_lote && _lote.timer) clearTimeout(_lote.timer);
+  _lote = null; const b = document.getElementById('pr-lote-parar'); if(b) b.style.display = 'none'; const c = document.getElementById('pr-lote-continuar'); if(c) c.style.display = 'none';
+  prospLoteStatus(msg || 'Parado.'); prospRender();
+}
+function prospLoteIniciar(){
+  if(_lote){ toast('Já tem um lote em andamento'); return; }
+  const oEd = oportunidades.find(x=>String(x.id) === ((document.getElementById('pr-edital') || {}).value || ''));
+  if(!oEd){ toast('Escolha o edital da mensagem (campo acima da lista) antes de preparar os rascunhos'); return; }
+  const fila = _prospFiltrados.filter(id=>_prospChecked.has(id)).map(id=>prospectos.find(x=>x.id === id)).filter(p=>p && p.telefone && p.status !== 'nao_contatar');
+  if(!fila.length){ toast('Selecione contatos com WhatsApp na lista'); return; }
+  const seg = Math.max(5, parseInt((document.getElementById('pr-lote-seg') || {}).value, 10) || 15);
+  const lim = parseInt((document.getElementById('pr-limite') || {}).value, 10) || 15;
+  if(fila.length > lim && !confirm('São ' + fila.length + ' contatos, acima do limite diário de ' + lim + '. Preparar mesmo assim?')) return;
+  if(!confirm('Vou abrir o WhatsApp ' + fila.length + ' vez(es), uma a cada ' + seg + ' s (≈ ' + Math.ceil(fila.length * seg / 60) + ' min), com a mensagem do edital "' + oEd.orgao + '" já escrita em cada conversa. Nada é enviado: você só confere e aperta enviar depois.\n\nMantenha esta aba aberta. Continuar?')) return;
+  _lote = { fila, i: 0, seg, oEd, timer: null };
+  document.getElementById('pr-lote-parar').style.display = '';
+  prospLoteProximo(true);
+}
+function prospLoteProximo(primeiro){
+  const L = _lote; if(!L) return;
+  if(L.i >= L.fila.length){ prospLoteParar('Pronto: ' + L.fila.length + ' rascunho(s) preparado(s). Confira no WhatsApp e depois marque como Enviado.'); toast('Rascunhos prontos'); return; }
+  const p = L.fila[L.i];
+  const msg = prospMensagem(p, [L.oEd]);
+  // uma única janela nomeada, reaproveitada: assim o navegador não bloqueia as aberturas automáticas
+  const w = window.open('https://wa.me/' + p.telefone + '?text=' + encodeURIComponent(msg), 'wa_lote');
+  if(!w){
+    prospLoteStatus('O navegador bloqueou a abertura automática. Permita pop-ups para este site e clique em "Continuar".');
+    document.getElementById('pr-lote-continuar').style.display = '';
+    L.timer = null; return;
+  }
+  L.i++;
+  prospGuardarRascunho(p.id, { edital: L.oEd.edital, msg });
+  if(p.status === 'novo'){ p.status = 'rascunho'; _sb.from('prospectos_whatsapp').update({ status: 'rascunho' }).eq('id', p.id).then(()=>{}); }
+  prospLoteStatus('Rascunho ' + L.i + ' de ' + L.fila.length + ' aberto (' + (p.nome || p.telefone) + ')' + (L.i < L.fila.length ? ' · próximo em ' + L.seg + ' s' : ''));
+  L.timer = setTimeout(()=>prospLoteProximo(false), L.seg * 1000);
+}
 async function prospMudarStatus(id, status){
-  const { error } = await _sb.from('prospectos_whatsapp').update({ status }).eq('id', id);
+  const ant = (prospectos.find(x=>x.id===id) || {}).status;
+  const extra = {};
+  if(ant === 'rascunho' && status === 'enviado'){
+    const r = prospRascunhos()[id], p0 = prospectos.find(x=>x.id===id), agora = new Date().toISOString();
+    extra.ultimo_envio = agora; extra.qtd_envios = ((p0 && p0.qtd_envios) || 0) + 1;
+    await _sb.from('prospectos_envios').insert({ prospecto_id: id, editais: r ? [r.edital] : [], mensagem: r ? r.msg : '', canal: 'whatsapp' });
+    _prospEnvios.unshift({ prospecto_id: id, enviado_em: agora, editais: r ? [r.edital] : [], mensagem: r ? r.msg : '', canal: 'whatsapp' });
+    prospGuardarRascunho(id, null);
+  }
+  const { error } = await _sb.from('prospectos_whatsapp').update({ status, ...extra }).eq('id', id);
   if(error){ toast('Erro ao salvar o status'); return; }
-  const p = prospectos.find(x=>x.id===id); if(p) p.status = status;
+  const p = prospectos.find(x=>x.id===id); if(p){ p.status = status; Object.assign(p, extra); }
   prospRender();
 }
 /* Abre o canal escolhido com a mensagem pronta (WhatsApp, e-mail pelo Gmail ou Instagram) e registra o contato. */
