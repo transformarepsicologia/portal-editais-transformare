@@ -24,7 +24,7 @@ Não coletamos dados sensíveis (como saúde, religião ou origem racial) e pedi
 
 - **Criar e manter sua conta e mostrar editais aderentes ao seu perfil** — execução de contrato e de procedimentos preliminares a pedido do titular (art. 7º, V).
 - **Responder pedidos de orientação e entrar em contato por WhatsApp ou e-mail** — consentimento, dado no momento do envio (art. 7º, I), que pode ser revogado a qualquer momento.
-- **Avisar por WhatsApp sobre editais com alta aderência ao seu perfil (Plano Pro)** — consentimento, dado ao ativar o aviso em Alertas, com o número que você informar (art. 7º, I). A equipe envia as mensagens manualmente e você pode desativar a qualquer momento, em Alertas ou respondendo PARAR.
+- **Avisar por WhatsApp sobre editais que combinam com o seu perfil** — usamos o número informado no cadastro, para prestar o serviço do Radar (art. 7º, V) e no nosso legítimo interesse de divulgar o serviço a quem já é usuário (art. 7º, IX). A equipe envia as mensagens manualmente e você pode parar a qualquer momento, em Alertas ou respondendo PARAR.
 - **Melhorar o Portal, analisar feedback e manter a segurança** (prevenção a fraudes e abusos) — legítimo interesse (art. 7º, IX), sempre respeitando suas expectativas e direitos.
 - **Cumprir obrigações legais ou atender autoridades** — art. 7º, II.
 
