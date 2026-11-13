@@ -10182,6 +10182,7 @@ function prospClassificarLinha(cel, def, ctx){
   cel.map(x=>String(x==null?'':x).trim()).filter(Boolean).forEach(x=>{
     if(!r.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)){ r.email = x.toLowerCase(); return; }
     if(!r.telefone){ const t = prospTelefone(x); if(t){ r.telefone = t; return; } }
+    if(/^\+?\(?\d{2}\)?[\s.-]?\d{4}[\s.-]?\d{4}$/.test(x) || /^\d{8,13}$/.test(x.replace(/\D/g,'')) && /^[\d\s().+-]+$/.test(x)){ r.fixo = x; return; }   // telefone fixo: não serve para WhatsApp, mas não vira cidade
     if(!r.instagram && (/^@/.test(x) || /instagram\.com\//i.test(x))){ const ig = prospInstagram(x); if(ig){ r.instagram = ig; return; } }
     if(!r.uf && /^[A-Za-z]{2}$/.test(x) && ctx.ufs.has(x.toUpperCase())){ r.uf = x.toUpperCase(); return; }
     if(!r.profissao && prospEhProfissao(x)){ r.profissao = canonProfissao(x); return; }
@@ -10198,28 +10199,68 @@ function prospClassificarLinha(cel, def, ctx){
   if(!r.uf) r.uf = def.uf || '';
   return r;
 }
-let _prospPreview = [];
+let _prospRows = [];
+function prospStatusLinha(r){
+  r._ok = !!((r.telefone || r.email || r.instagram) && r.profissao && r.uf);
+  return [ !(r.telefone || r.email || r.instagram) ? (r.fixo ? 'só telefone fixo (' + r.fixo + '): sem WhatsApp' : 'sem WhatsApp, e-mail ou @') : '', !r.profissao ? 'sem profissão' : (!prospEhProfissao(r.profissao) ? 'profissão não reconhecida' : ''), !r.uf ? 'sem UF' : '' ].filter(Boolean).join(', ');
+}
+function prospContatoTexto(r){ return r.telefone || r.email || (r.instagram ? '@' + r.instagram : ''); }
 function prospOrganizar(){
-  const st = document.getElementById('pr-add-status'), pv = document.getElementById('pr-preview'), bt = document.getElementById('pr-confirmar');
+  const st = document.getElementById('pr-add-status');
   const linhas = document.getElementById('pr-lista').value.split(/\n+/).map(l=>l.trim()).filter(Boolean);
-  _prospPreview = []; bt.style.display = 'none'; pv.innerHTML = '';
-  if(!linhas.length){ st.textContent = 'Cole ao menos um contato.'; return; }
+  if(!linhas.length && !_prospRows.length){ st.textContent = 'Cole ao menos um contato.'; return; }
   const def = { prof: document.getElementById('pr-prof').value, cidade: document.getElementById('pr-cidade').value.trim(), uf: document.getElementById('pr-uf').value };
   const ctx = { ufs: new Set(UFS.map(u=>u.sigla)), cidades: prospCidadesConhecidas() };
-  const rows = linhas.map(l=>prospClassificarLinha(l.split(/\s*[;\t|]\s*/), def, ctx));
-  const aviso = r=>[ !(r.telefone || r.email || r.instagram) ? 'sem WhatsApp, e-mail ou @' : '', !r.profissao ? 'sem profissão' : (!prospEhProfissao(r.profissao) ? 'profissão não reconhecida' : ''), !r.uf ? 'sem UF' : '' ].filter(Boolean).join(', ');
-  const ok = rows.filter(r=>(r.telefone || r.email || r.instagram) && r.profissao && r.uf);
-  _prospPreview = ok;
-  const contato = r=>[r.telefone ? esc(r.telefone) : '', r.email ? '✉️ ' + esc(r.email) : '', r.instagram ? '📷 @' + esc(r.instagram) : ''].filter(Boolean).join('<br>');
-  pv.innerHTML = '<table class="admin-table"><thead><tr><th>Nome</th><th>Profissão</th><th>Cidade</th><th>UF</th><th>Contato</th><th></th></tr></thead><tbody>' +
-    rows.slice(0, 60).map(r=>{ const a = aviso(r); return `<tr><td>${esc(r.nome||'(sem nome)')}</td><td>${esc(r.profissao||'—')}</td><td>${esc(r.cidade||'—')}</td><td>${esc(r.uf||'—')}</td><td style="font-size:12px;">${contato(r) || '—'}</td><td style="font-size:12px; color:${a ? 'var(--coral)' : 'var(--teal)'};">${a ? '⚠ ' + esc(a) : '✓'}</td></tr>`; }).join('') +
-    '</tbody></table>' + (rows.length > 60 ? `<div style="font-size:12px; color:var(--ink-dim);">Mostrando 60 de ${rows.length}.</div>` : '');
-  st.textContent = ok.length + ' de ' + rows.length + ' pronto(s) para adicionar' + (ok.length < rows.length ? ' · as linhas com ⚠ ficam de fora (complete a profissão/UF acima em "Se faltar na lista, usar" e organize de novo)' : '') + '.';
-  if(ok.length) bt.style.display = '';
+  linhas.forEach(l=>{ const r = prospClassificarLinha(l.split(/\s*[;\t|]\s*/), def, ctx); r._sel = false; _prospRows.push(r); });
+  document.getElementById('pr-lista').value = '';
+  prospDesenharPreview();
 }
+function prospDesenharPreview(msgExtra){
+  const pv = document.getElementById('pr-preview'), bt = document.getElementById('pr-confirmar'), st = document.getElementById('pr-add-status');
+  if(!_prospRows.length){ pv.innerHTML = ''; bt.style.display = 'none'; if(!msgExtra) st.textContent = ''; return; }
+  const avisos = _prospRows.map(prospStatusLinha);
+  const nOk = _prospRows.filter(r=>r._ok).length, nSel = _prospRows.filter(r=>r._sel).length, nInc = _prospRows.length - nOk;
+  const ufOpts = ['<option value="">—</option>'].concat(UFS.map(u=>u.sigla)).map(x=>x.startsWith('<') ? x : `<option>${x}</option>`);
+  const inp = (i, c, v, w) => `<input type="text" value="${esc(v||'')}" style="width:${w}px; font-size:12.5px; padding:4px 6px;" onchange="prospEditarCampo(${i},'${c}',this.value)">`;
+  pv.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; font-size:12.5px;">
+      <label style="display:flex; gap:6px; align-items:center; cursor:pointer;"><input type="checkbox" ${nSel === _prospRows.length ? 'checked' : ''} onchange="prospSelTodasPreview(this.checked)"> Selecionar todos</label>
+      <button type="button" class="btn-ghost" style="color:var(--coral);" ${nSel ? '' : 'disabled'} onclick="prospRemoverSelecionados()">🗑 Excluir selecionados (${nSel})</button>
+      ${nInc ? `<button type="button" class="btn-ghost" style="color:var(--coral);" onclick="prospRemoverIncompletos()">🗑 Excluir as ${nInc} linha(s) com ⚠</button>` : ''}
+      <span style="color:var(--ink-dim);">Clique em qualquer campo para editar.</span></div>
+    <div style="overflow:auto; max-height:420px;"><table class="admin-table"><thead><tr><th></th><th>Nome</th><th>Profissão</th><th>Cidade</th><th>UF</th><th>Contato</th><th></th><th></th></tr></thead><tbody>` +
+    _prospRows.map((r,i)=>`<tr><td><input type="checkbox" ${r._sel ? 'checked' : ''} onchange="prospSelLinhaPreview(${i}, this.checked)"></td>
+      <td>${inp(i,'nome',r.nome,150)}</td><td>${inp(i,'profissao',r.profissao,140)}</td><td>${inp(i,'cidade',r.cidade,120)}</td>
+      <td><select onchange="prospEditarCampo(${i},'uf',this.value)" style="font-size:12.5px; padding:4px 4px;">${ufOpts.map(o=>o.replace('<option>' + r.uf + '</option>', '<option selected>' + r.uf + '</option>')).join('')}</select></td>
+      <td>${inp(i,'contato',prospContatoTexto(r),160)}</td>
+      <td style="font-size:12px; color:${avisos[i] ? 'var(--coral)' : 'var(--teal)'};">${avisos[i] ? '⚠ ' + esc(avisos[i]) : '✓'}</td>
+      <td><button type="button" class="btn-ghost" style="font-size:12px; color:var(--coral);" title="Tirar da lista" onclick="prospRemoverLinha(${i})">✕</button></td></tr>`).join('') + '</tbody></table></div>';
+  if(!msgExtra) st.textContent = nOk + ' de ' + _prospRows.length + ' pronto(s) para adicionar' + (nInc ? ' · as linhas com ⚠ ficam de fora até você completar ou excluir' : '') + '.';
+  bt.style.display = nOk ? '' : 'none';
+}
+function prospEditarCampo(i, campo, valor){
+  const r = _prospRows[i]; if(!r) return; valor = String(valor||'').trim();
+  if(campo === 'contato'){
+    r.telefone = null; r.email = null; r.instagram = null;
+    if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) r.email = valor.toLowerCase();
+    else if(/^@/.test(valor) || /instagram\.com\//i.test(valor)) r.instagram = prospInstagram(valor);
+    else if(valor) r.telefone = prospTelefone(valor);
+  } else if(campo === 'profissao') r.profissao = valor ? canonProfissao(valor) : '';
+  else if(campo === 'uf') r.uf = valor.toUpperCase();
+  else r[campo] = valor;
+  prospDesenharPreview();
+}
+function prospSelLinhaPreview(i, on){ if(_prospRows[i]) _prospRows[i]._sel = on; prospDesenharPreview(); }
+function prospSelTodasPreview(on){ _prospRows.forEach(r=>{ r._sel = on; }); prospDesenharPreview(); }
+function prospRemoverLinha(i){ _prospRows.splice(i, 1); prospDesenharPreview(); }
+function prospRemoverSelecionados(){
+  const n = _prospRows.filter(r=>r._sel).length; if(!n) return;
+  if(!confirm('Excluir ' + n + ' linha(s) da lista?')) return;
+  _prospRows = _prospRows.filter(r=>!r._sel); prospDesenharPreview();
+}
+function prospRemoverIncompletos(){ _prospRows.forEach(prospStatusLinha); _prospRows = _prospRows.filter(r=>r._ok); prospDesenharPreview(); }
 async function prospAdicionar(){
   const st = document.getElementById('pr-add-status');
-  const novos = _prospPreview.map(r=>({ nome: r.nome || null, telefone: r.telefone, instagram: r.instagram, email: r.email, canal: r.telefone ? 'whatsapp' : (r.instagram ? 'instagram' : 'email'), profissao: r.profissao, cidade: r.cidade || null, uf: r.uf, origem: 'Lista' }));
+  const novos = _prospRows.filter(r=>{ prospStatusLinha(r); return r._ok; }).map(r=>({ nome: r.nome || null, telefone: r.telefone, instagram: r.instagram, email: r.email, canal: r.telefone ? 'whatsapp' : (r.instagram ? 'instagram' : 'email'), profissao: r.profissao, cidade: r.cidade || null, uf: r.uf, origem: 'Lista' }));
   if(!novos.length){ st.textContent = 'Nada para adicionar: organize a lista primeiro.'; return; }
   const tels = novos.map(n=>n.telefone).filter(Boolean), igs = novos.map(n=>n.instagram).filter(Boolean), ems = novos.map(n=>n.email).filter(Boolean);
   const filtros = []; if(tels.length) filtros.push('telefone.in.(' + tels.join(',') + ')'); if(igs.length) filtros.push('instagram.in.(' + igs.join(',') + ')'); if(ems.length) filtros.push('email.in.(' + ems.map(e=>'"' + e + '"').join(',') + ')');
@@ -10245,7 +10286,7 @@ async function prospAdicionar(){
     if(!error) atualizados++;
   }
   st.textContent = criados + ' contato(s) novo(s)' + (atualizados ? ' · ' + atualizados + ' já existia(m) e foi(ram) completado(s)' : '') + '.';
-  document.getElementById('pr-lista').value = ''; document.getElementById('pr-preview').innerHTML = ''; document.getElementById('pr-confirmar').style.display = 'none'; _prospPreview = [];
+  _prospRows = _prospRows.filter(r=>!r._ok); prospDesenharPreview(true);
   await prospCarregar();
 }
 // Editais abertos que combinam com a profissão e a região do contato (no máximo 3, os mais próximos primeiro).
