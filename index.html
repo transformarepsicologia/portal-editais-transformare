@@ -10182,6 +10182,7 @@ function prospClassificarLinha(cel, def, ctx){
   cel.map(x=>String(x==null?'':x).trim()).filter(Boolean).forEach(x=>{
     if(!r.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)){ r.email = x.toLowerCase(); return; }
     if(!r.telefone){ const t = prospTelefone(x); if(t){ r.telefone = t; return; } }
+    if(/^\+?\(?\d{2}\)?[\s.-]?\d{4}[\s.-]?\d{4}$/.test(x) || /^\d{8,13}$/.test(x.replace(/\D/g,'')) && /^[\d\s().+-]+$/.test(x)){ r.fixo = x; return; }   // telefone fixo: não serve para WhatsApp, mas não vira cidade
     if(!r.instagram && (/^@/.test(x) || /instagram\.com\//i.test(x))){ const ig = prospInstagram(x); if(ig){ r.instagram = ig; return; } }
     if(!r.uf && /^[A-Za-z]{2}$/.test(x) && ctx.ufs.has(x.toUpperCase())){ r.uf = x.toUpperCase(); return; }
     if(!r.profissao && prospEhProfissao(x)){ r.profissao = canonProfissao(x); return; }
@@ -10201,7 +10202,7 @@ function prospClassificarLinha(cel, def, ctx){
 let _prospRows = [];
 function prospStatusLinha(r){
   r._ok = !!((r.telefone || r.email || r.instagram) && r.profissao && r.uf);
-  return [ !(r.telefone || r.email || r.instagram) ? 'sem WhatsApp, e-mail ou @' : '', !r.profissao ? 'sem profissão' : (!prospEhProfissao(r.profissao) ? 'profissão não reconhecida' : ''), !r.uf ? 'sem UF' : '' ].filter(Boolean).join(', ');
+  return [ !(r.telefone || r.email || r.instagram) ? (r.fixo ? 'só telefone fixo (' + r.fixo + '): sem WhatsApp' : 'sem WhatsApp, e-mail ou @') : '', !r.profissao ? 'sem profissão' : (!prospEhProfissao(r.profissao) ? 'profissão não reconhecida' : ''), !r.uf ? 'sem UF' : '' ].filter(Boolean).join(', ');
 }
 function prospContatoTexto(r){ return r.telefone || r.email || (r.instagram ? '@' + r.instagram : ''); }
 function prospOrganizar(){
