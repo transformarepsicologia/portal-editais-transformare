@@ -14102,7 +14102,7 @@ async function carregarRankingEditais(){
   if(error){ box.textContent = 'Erro ao carregar: ' + error.message; return; }
   const m = new Map();
   (data||[]).forEach(e=>{ const k = (e.edital||'') + '|' + (e.orgao||''); const r = m.get(k) || { edital:e.edital, orgao:e.orgao, abrir:0, favoritar:0 }; r[e.tipo]++; m.set(k, r); });
-  const lista = [...m.values()].sort((a,b)=>(b.favoritar*3 + b.abrir) - (a.favoritar*3 + a.abrir)).slice(0, 10);
+  const lista = [...m.values()].sort((a,b)=>b.abrir - a.abrir || b.favoritar - a.favoritar).slice(0, 10);   // mais vistos primeiro; favoritos desempatam
   if(!lista.length){ box.textContent = 'Ainda não há registros. Eles aparecem conforme as pessoas abrem e favoritam editais.'; return; }
   box.innerHTML = lista.map(r=>{
     const o = oportunidades.find(x=>x.edital === r.edital && x.orgao === r.orgao);
