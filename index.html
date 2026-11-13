@@ -1646,6 +1646,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 
   <div class="admin-flag" style="background:rgba(140,124,240,0.1); border-color:rgba(140,124,240,0.35); color:var(--violet-texto);">ℹ Os alertas aparecem aqui e na sua área Minha conta. Para ser avisado no celular, ative as notificações logo abaixo.</div>
   <div class="filter-panel" id="push-card" style="display:none;"></div>
+  <div class="filter-panel" id="wa-aviso-card" style="display:none;"></div>
 
   <div class="filter-panel">
     <div class="form-row"><label>Profissão de interesse</label><input type="text" id="alert-prof" list="alert-prof-lista" placeholder="Digite sua profissão (ex.: Psicologia, Dentista…)" autocomplete="off" oninput="onAlertProfInput(this.value)"><datalist id="alert-prof-lista"></datalist></div>
@@ -1698,6 +1699,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     <ul>
       <li><strong>Criar e manter sua conta e mostrar editais aderentes ao seu perfil</strong> — execução de contrato e de procedimentos preliminares a pedido do titular (art. 7º, V).</li>
       <li><strong>Responder pedidos de orientação e entrar em contato por WhatsApp ou e-mail</strong> — consentimento, dado no momento do envio (art. 7º, I), que pode ser revogado a qualquer momento.</li>
+      <li><strong>Avisar por WhatsApp sobre editais com alta aderência ao seu perfil (Plano Pro)</strong> — consentimento, dado ao ativar o aviso em Alertas, com o número que você informar (art. 7º, I). A equipe envia as mensagens manualmente e você pode desativar a qualquer momento, em Alertas ou respondendo PARAR.</li>
       <li><strong>Melhorar o Portal, analisar feedback e manter a segurança</strong> (prevenção a fraudes e abusos) — legítimo interesse (art. 7º, IX), sempre respeitando suas expectativas e direitos.</li>
       <li><strong>Suporte e administração do Portal</strong> — a equipe da Transformare consulta, em área restrita, apenas os dados necessários para dar suporte, administrar planos e conferir a aderência de editais (nome, e-mail, profissão, localização e critérios de atendimento). Contato, registro profissional, CNPJ, remuneração e documentos não são exibidos nessa área. Base: execução de contrato (art. 7º, V) e legítimo interesse (art. 7º, IX), com acesso limitado ao mínimo necessário (art. 6º, III).</li>
       <li><strong>Cumprir obrigações legais ou atender autoridades</strong> — art. 7º, II.</li>
@@ -2002,6 +2004,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     <button class="admin-tab" data-tab="editais" onclick="adminTab('editais')">Editais<span class="admin-tab-badge neutral" id="tabbadge-editais" style="display:none;"></span></button>
     <button class="admin-tab" data-tab="leads" onclick="adminTab('leads')">Leads e usuários<span class="admin-tab-badge" id="tabbadge-leads" style="display:none;"></span></button>
     <button class="admin-tab" data-tab="prospeccao" onclick="adminTab('prospeccao')">Prospecção</button>
+    <button class="admin-tab" data-tab="avisos" onclick="adminTab('avisos')">Avisos WhatsApp<span class="admin-tab-badge" id="tabbadge-avisos" style="display:none;"></span></button>
     <button class="admin-tab" data-tab="pca" onclick="adminTab('pca')">PCA (planejados)</button>
     <button class="admin-tab" data-tab="consultoria" onclick="adminTab('consultoria')">Consultoria</button>
     <button class="admin-tab" data-tab="aae" onclick="adminTab('aae')">Aderência (AAE)</button>
@@ -2242,6 +2245,20 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     </div>
   </div>
 
+  </div>
+
+  <div class="admin-tabpanel" id="admin-tab-avisos">
+    <div class="section-title" style="font-size:17px; margin-top:4px;">Avisos por WhatsApp</div>
+    <p class="section-sub">Quando um edital novo tem 70% ou mais de aderência ao perfil de um assinante Pró que ativou o aviso, a mensagem entra aqui pronta. Revise, clique em <strong>Enviar no WhatsApp</strong> e a conversa abre com o texto preenchido. Só você vê esta área.</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 12px;">
+      <button class="btn-primary" id="avisos-btn-gerar" onclick="avisosGerarFila(false)">Atualizar fila</button>
+      <select id="avisos-filtro" onchange="avisosFiltrar(this.value)" style="font-size:13px; padding:6px 10px;">
+        <option value="pendente">Para enviar</option><option value="enviado">Enviados</option><option value="ignorado">Ignorados</option>
+      </select>
+      <span id="avisos-resumo" style="font-size:12.5px; color:var(--ink-muted);"></span>
+    </div>
+    <div id="avisos-lista"></div>
+    <p class="caption" style="margin-top:12px;">Por privacidade, o cálculo não usa a remuneração mínima do assinante (o ADM não vê esse dado), então a aderência pode diferir um pouco do que ele vê no site. Você só vê o WhatsApp de quem ativou o aviso e aceitou receber.</p>
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-prospeccao">
@@ -4006,6 +4023,189 @@ function shareWhatsApp(id){
   ];
   const texto = encodeURIComponent(partes.join('\n'));
   window.open(`https://wa.me/?text=${texto}`, '_blank');
+}
+
+/* ================= AVISO DE EDITAIS POR WHATSAPP =================
+   O assinante Pró liga o aviso e informa o número (aceite). Para cada edital novo com aderência de 70% ou mais,
+   o ADM recebe uma mensagem pronta na aba "Avisos WhatsApp" e envia manualmente (envio nunca é automático). */
+const VERSAO_ACEITE_WA = '1.0';
+const LIMIAR_AVISO_WA = 70;
+let _waAviso = null;
+function waNormalizar(t){ let d = String(t||'').replace(/\D/g,''); if(d.length === 10 || d.length === 11) d = '55' + d; return d; }
+function waFormatar(d){
+  const s = String(d||''), n = s.startsWith('55') ? s.slice(2) : s;
+  return n.length >= 10 ? '(' + n.slice(0,2) + ') ' + n.slice(2, n.length-4) + '-' + n.slice(-4) : s;
+}
+async function waAvisoCarregar(){
+  if(!_sb || !userProfile){ waAvisoRender(); return; }
+  try{
+    const { data } = await _sb.from('alertas_whatsapp').select('*').eq('user_id', userProfile.id).maybeSingle();
+    _waAviso = data || null;
+  }catch(e){}
+  waAvisoRender();
+}
+function waAvisoRender(){
+  const el = document.getElementById('wa-aviso-card'); if(!el) return;
+  if(!userProfile || !_sb){ el.style.display = 'none'; return; }
+  el.style.display = '';
+  const titulo = '<div class="section-title" style="font-size:16px; margin:0 0 10px;">💬 Aviso por WhatsApp</div>';
+  if(!ehPro()){ el.innerHTML = titulo + '<div style="margin:10px 0;">' + travaProHTML('Aviso por WhatsApp de editais com alta aderência ao seu perfil: Plano Pro') + '</div>'; return; }
+  const ativo = !!(_waAviso && _waAviso.ativo);
+  const num = _waAviso ? _waAviso.whatsapp : waNormalizar(userProfile.whatsapp);
+  el.innerHTML = titulo +
+    '<p class="caption" style="margin:0 0 10px;">Quando surgir um edital com 70% ou mais de aderência ao seu perfil, a equipe da Transformare envia uma mensagem para o seu WhatsApp, com o link do edital. O envio é feito pela equipe, em horário comercial.</p>' +
+    (ativo ? '<div style="margin-bottom:8px;"><span class="plan-badge">Ativo</span></div>' : '') +
+    '<div class="form-row"><label for="wa-aviso-num">Seu WhatsApp (com DDD)</label><input type="tel" id="wa-aviso-num" inputmode="tel" placeholder="(51) 99999-9999" value="' + esc(num ? waFormatar(num) : '') + '"></div>' +
+    (ativo ? '' : '<label style="display:flex; gap:9px; align-items:flex-start; margin:8px 0; cursor:pointer;"><input type="checkbox" id="wa-aviso-aceite"><span class="caption">Aceito receber, neste número, avisos de editais enviados pela Transformare por WhatsApp. Posso desativar quando quiser, aqui ou respondendo PARAR.</span></label>') +
+    '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">' +
+    '<button class="btn-primary" onclick="waAvisoSalvar()">' + (ativo ? 'Salvar número' : 'Ativar avisos por WhatsApp') + '</button>' +
+    (ativo ? '<button class="btn-ghost" onclick="waAvisoDesativar()">Desativar</button>' : '') + '</div>';
+}
+async function waAvisoSalvar(){
+  if(!_sb || !userProfile) return;
+  const num = waNormalizar((document.getElementById('wa-aviso-num') || {}).value);
+  if(!/^[0-9]{12,13}$/.test(num)){ toast('Informe o WhatsApp com DDD, por exemplo (51) 99999-9999.'); return; }
+  const ativo = !!(_waAviso && _waAviso.ativo);
+  if(!ativo && !(document.getElementById('wa-aviso-aceite') || {}).checked){ toast('Marque o aceite para ativar os avisos.'); return; }
+  const agora = new Date().toISOString();
+  // ao ligar (ou religar), só valem editais publicados daqui para frente
+  const reg = ativo ? { user_id: userProfile.id, whatsapp: num, atualizado_em: agora }
+                    : { user_id: userProfile.id, ativo: true, whatsapp: num, aceite_em: agora, versao_aceite: VERSAO_ACEITE_WA, atualizado_em: agora };
+  const { data, error } = await _sb.from('alertas_whatsapp').upsert(reg, { onConflict: 'user_id' }).select().maybeSingle();
+  if(error){ toast('Não foi possível salvar agora. Tente de novo em instantes.'); return; }
+  _waAviso = data || Object.assign({}, _waAviso, reg);
+  toast(ativo ? 'Número atualizado' : 'Avisos por WhatsApp ativados');
+  waAvisoRender();
+}
+async function waAvisoDesativar(){
+  if(!_sb || !userProfile) return;
+  const { error } = await _sb.from('alertas_whatsapp').update({ ativo: false, atualizado_em: new Date().toISOString() }).eq('user_id', userProfile.id);
+  if(error){ toast('Não foi possível desativar agora.'); return; }
+  _waAviso = Object.assign({}, _waAviso, { ativo: false });
+  toast('Avisos por WhatsApp desativados');
+  waAvisoRender();
+}
+
+/* ---- ADM: fila de avisos ---- */
+let _avisos = { fila: [], perfis: {}, avisos: {}, filtro: 'pendente', gerando: false, auto: false };
+function avisosMensagem(nome, lista){
+  const pn = String(nome||'').trim().split(/\s+/)[0];
+  const L = [(pn ? 'Olá, ' + pn + '! ' : 'Olá! ') + 'Aqui é da Transformare 👋', '',
+    lista.length === 1 ? 'Surgiu no Radar um edital com ' + lista[0].ad.pct + '% de aderência ao seu perfil:' : 'Surgiram no Radar ' + lista.length + ' editais com alta aderência ao seu perfil:'];
+  lista.slice(0, 5).forEach(x=>{
+    const o = x.o;
+    L.push('', '*' + o.edital + '*', 'Órgão: ' + o.orgao + ' — ' + (o.cidade ? o.cidade + '/' : '') + o.uf,
+      'Prazo: ' + o.prazo + ' · aderência ' + x.ad.pct + '%', '👉 ' + SITE_URL + '/?e=' + (o.id - 900000));
+  });
+  if(lista.length > 5) L.push('', '…e mais ' + (lista.length - 5) + ' no Radar: ' + SITE_URL);
+  L.push('', 'Para parar de receber estes avisos, é só responder PARAR.');
+  return L.join('\n');
+}
+// Cruza os editais novos com o perfil de quem ativou o aviso; cada edital entra uma única vez na fila de cada pessoa.
+async function avisosGerarFila(silencioso){
+  if(!_sb || _avisos.gerando) return 0;
+  _avisos.gerando = true;
+  const btn = document.getElementById('avisos-btn-gerar'); if(btn) btn.disabled = true;
+  let criadas = 0;
+  try{
+    const ra = await _sb.from('alertas_whatsapp').select('*').eq('ativo', true);
+    if(ra.error) throw ra.error;
+    const avs = ra.data || [];
+    if(!avs.length || !oportunidades.length){ if(!silencioso) toast('Ninguém ativou o aviso por WhatsApp ainda.'); return 0; }
+    const ids = avs.map(a=>a.user_id);
+    const [rp, re, ri] = await Promise.all([
+      _sb.from('usuarios_perfil').select('id,nome,plano,profs,uf,cidade,mods,abrangencias,escolaridade,anos_experiencia,atuacao,especialidades,formatos').in('id', ids).eq('plano', 'essencial'),
+      _sb.from('editais').select('id,criado_em').gte('criado_em', avs.map(a=>a.aceite_em).sort()[0]).limit(5000),
+      _sb.from('fila_whatsapp_editais').select('user_id,edital_id').in('user_id', ids).limit(20000)
+    ]);
+    if(rp.error || re.error || ri.error) throw (rp.error || re.error || ri.error);
+    const criado = new Map((re.data || []).map(x=>[x.id, x.criado_em]));
+    const jaTem = new Set((ri.data || []).map(x=>x.user_id + ':' + x.edital_id));
+    const visCli = o => (!o.problemaDescricao || soPendenciaDeAuditoria(o)) && !prazoCurtoDemais(o);
+    for(const p of (rp.data || [])){
+      const a = avs.find(x=>x.user_id === p.id); if(!a) continue;
+      const u = perfilDeLinha(p); if(!(u.profs || []).length) continue;
+      const novos = oportunidades.filter(o=>o.origemSupabase && situacaoExibida(o) !== 'Encerrado' && visCli(o))
+        .filter(o=>{ const eid = o.id - 900000, c = criado.get(eid); return c && c > a.aceite_em && !jaTem.has(p.id + ':' + eid); })
+        .map(o=>({ o, ad: calcularAderencia(o, u) })).filter(x=>x.ad.pct != null && x.ad.pct >= LIMIAR_AVISO_WA)
+        .sort((x, y)=>y.ad.pct - x.ad.pct);
+      if(!novos.length) continue;
+      const ins = await _sb.from('fila_whatsapp').insert({ user_id: p.id, edital_ids: novos.map(x=>x.o.id - 900000), mensagem: avisosMensagem(p.nome, novos) }).select('id').single();
+      if(ins.error) continue;
+      const it = await _sb.from('fila_whatsapp_editais').insert(novos.map(x=>({ user_id: p.id, edital_id: x.o.id - 900000, fila_id: ins.data.id })));
+      if(it.error){ await _sb.from('fila_whatsapp').delete().eq('id', ins.data.id); continue; }   // evita aviso repetido
+      criadas++;
+    }
+    if(!silencioso) toast(criadas ? criadas + ' aviso(s) novo(s) na fila' : 'Nenhum aviso novo por enquanto');
+  }catch(e){ if(!silencioso) toast('Não consegui atualizar a fila agora.'); }
+  finally{ _avisos.gerando = false; if(btn) btn.disabled = false; }
+  if(criadas || !silencioso) await avisosCarregar();
+  return criadas;
+}
+async function avisosCarregar(){
+  if(!_sb) return;
+  const { data } = await _sb.from('fila_whatsapp').select('*').order('criado_em', { ascending: false }).limit(300);
+  _avisos.fila = data || [];
+  const ids = [...new Set(_avisos.fila.map(f=>f.user_id))];
+  if(ids.length){
+    const [rp, ra] = await Promise.all([
+      _sb.from('usuarios_perfil').select('id,nome,profs,uf').in('id', ids),
+      _sb.from('alertas_whatsapp').select('user_id,whatsapp,ativo').in('user_id', ids)
+    ]);
+    _avisos.perfis = Object.fromEntries((rp.data || []).map(p=>[p.id, p]));
+    _avisos.avisos = Object.fromEntries((ra.data || []).map(a=>[a.user_id, a]));
+  }
+  _setBadge('tabbadge-avisos', _avisos.fila.filter(f=>f.status === 'pendente').length);
+  avisosRender();
+}
+async function avisosAtualizarBadge(){
+  if(_avisos.auto || !_sb) return;
+  _avisos.auto = true;
+  const n = await avisosGerarFila(true);
+  if(!n) await avisosCarregar();
+}
+async function avisosAbrir(){ await avisosGerarFila(true); await avisosCarregar(); }
+function avisosFiltrar(v){ _avisos.filtro = v; avisosRender(); }
+function avisosRender(){
+  const box = document.getElementById('avisos-lista'); if(!box) return;
+  const c = st => _avisos.fila.filter(f=>f.status === st).length;
+  const rs = document.getElementById('avisos-resumo'); if(rs) rs.textContent = c('pendente') + ' para enviar · ' + c('enviado') + ' enviados · ' + c('ignorado') + ' ignorados';
+  const lista = _avisos.fila.filter(f=>f.status === _avisos.filtro);
+  const vazio = { pendente: 'Nenhum aviso para enviar agora. Quando um edital novo combinar com o perfil de quem ativou o aviso, ele aparece aqui.', enviado: 'Nenhum aviso enviado ainda.', ignorado: 'Nenhum aviso ignorado.' }[_avisos.filtro];
+  box.innerHTML = lista.length ? lista.map(avisosCardHTML).join('') : '<div class="empty-state">' + vazio + '</div>';
+}
+function avisosCardHTML(x){
+  const p = _avisos.perfis[x.user_id] || {}, a = _avisos.avisos[x.user_id] || {};
+  const eds = (x.edital_ids || []).map(id=>oportunidades.find(o=>o.id === 900000 + id)).filter(Boolean);
+  const quando = d => d ? new Date(d).toLocaleString('pt-BR') : '';
+  const desativado = a.ativo === false;
+  const btnSec = (txt, acao) => '<button class="btn-ghost" onclick="' + acao + '">' + txt + '</button>';
+  const acoes = x.status === 'pendente'
+    ? (desativado ? '<span style="color:var(--coral); font-size:12.5px;">Este assinante desativou o aviso.</span>'
+        : '<button class="btn-primary" onclick="avisosEnviar(' + x.id + ')">Enviar no WhatsApp</button>') + btnSec('Ignorar', 'avisosMarcar(' + x.id + ',\'ignorado\')')
+    : btnSec('Voltar para a fila', 'avisosMarcar(' + x.id + ',\'pendente\')');
+  return '<div style="background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin:0 0 12px;">' +
+    '<div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:baseline;"><strong>' + esc(p.nome || 'Assinante') + '</strong>' +
+    '<span style="font-size:12px; color:var(--ink-muted);">' + esc((p.profs || []).join(', ')) + (p.uf ? ' · ' + esc(p.uf) : '') + ' · ' + (a.whatsapp ? esc(waFormatar(a.whatsapp)) : 'sem número') + '</span></div>' +
+    '<div style="font-size:12.5px; color:var(--ink-muted); margin:6px 0;">' + eds.length + ' edital(is) · gerado em ' + quando(x.criado_em) + (x.enviado_em ? ' · enviado em ' + quando(x.enviado_em) : '') + '</div>' +
+    '<textarea id="avisos-msg-' + x.id + '" rows="9" style="width:100%; font-size:13px; line-height:1.4;"' + (x.status === 'pendente' ? '' : ' readonly') + '>' + esc(x.mensagem) + '</textarea>' +
+    '<div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:8px;">' + acoes + '</div></div>';
+}
+async function avisosEnviar(id){
+  const x = _avisos.fila.find(f=>f.id === id); if(!x) return;
+  const a = _avisos.avisos[x.user_id];
+  if(!a || !a.ativo || !a.whatsapp){ toast('Este assinante não tem aviso ativo.'); return; }
+  const ta = document.getElementById('avisos-msg-' + id);
+  const msg = (ta && ta.value.trim()) || x.mensagem;
+  window.open('https://wa.me/' + a.whatsapp + '?text=' + encodeURIComponent(msg), '_blank');
+  await avisosMarcar(id, 'enviado', msg);
+}
+async function avisosMarcar(id, status, msg){
+  const upd = { status, enviado_em: status === 'enviado' ? new Date().toISOString() : null };
+  if(msg) upd.mensagem = msg;
+  const { error } = await _sb.from('fila_whatsapp').update(upd).eq('id', id);
+  if(error){ toast('Não consegui atualizar agora.'); return; }
+  await avisosCarregar();
 }
 
 /* ================= FAVORITOS ================= */
@@ -6678,7 +6878,7 @@ async function renderAvisoPlanoRadar(){   // faixa na tela de Alertas, só enqua
 }
 function renderAlertas(){
   renderAvisoPlanoRadar();
-  pushRender(); pushCarregar();
+  pushRender(); pushCarregar(); waAvisoCarregar();
   const list = document.getElementById('alert-list');
   const countEl = document.getElementById('alert-count');
   list.innerHTML = '';
@@ -11428,6 +11628,7 @@ function adminTab(nome){
   if(nome==='aae') aaeCarregar();
   if(nome==='deh') dehRender();
   if(nome==='prospeccao'){ prospCarregar(); prospRenderCidades(); }
+  if(nome==='avisos') avisosAbrir();
   if(nome==='consultoria') consCarregar();
   if(nome==='pca') pcaCarregar();
   document.querySelectorAll('#admin-tabs .admin-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab === nome));
@@ -11590,6 +11791,7 @@ function renderHoje(){
     : '<span style="font-size:13px; color:var(--ink-dim);">Nenhum edital encerrando nos próximos 15 dias.</span>';
   _setBadge('tabbadge-triagem', (_contagensHoje.pncp||0) + (_contagensHoje.diario||0));
   _setBadge('tabbadge-leads', (_contagensHoje.leadsNovos||0) + (_contagensHoje.indicePend||0) + (_contagensHoje.pedidosPlano||0));
+  avisosAtualizarBadge();
   const be = document.getElementById('tabbadge-editais'); if(be){ be.style.display=''; be.textContent = oportunidades.length; }
 }
 async function marcarAtualizacaoVista(id){
