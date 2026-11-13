@@ -10534,16 +10534,21 @@ function prospCompativelCom(p, o){
   return profs.includes(prof) && (o.uf === p.uf || /nacional/i.test(o.abrangencia||''));
 }
 function prospRotuloEdital(o){ return (o.cidade ? o.cidade + '/' : '') + (o.uf || '') + ' — ' + String(o.orgao||'').slice(0, 55); }
-let _prospNEditaisSel = -1;
+let _prospChaveEditais = '';
 function prospPopularEditais(){
   const sel = document.getElementById('pr-edital'); if(!sel) return;
-  const abertos = oportunidades.filter(o=>o.origemSupabase && editalAtivo(o) && visivelAoCliente(o));
-  if(_prospNEditaisSel === abertos.length) return;
-  _prospNEditaisSel = abertos.length;
+  const fp = (document.getElementById('pr-f-prof') || {}).value || '', fu = (document.getElementById('pr-f-uf') || {}).value || '';
+  let abertos = oportunidades.filter(o=>o.origemSupabase && editalAtivo(o) && visivelAoCliente(o));
+  const cp = fp ? _prospNorm(canonProfissao(fp)) : '';
+  if(fp) abertos = abertos.filter(o=>(o.profissoes||[]).some(x=>_prospNorm(canonProfissao(x)) === cp));
+  if(fu) abertos = abertos.filter(o=>o.uf === fu || /nacional/i.test(o.abrangencia||''));
+  const chave = abertos.map(o=>o.id).join(',') + '|' + fp + '|' + fu;
+  if(chave === _prospChaveEditais) return;
+  _prospChaveEditais = chave;
   const atual = sel.value;
   abertos.sort((a,b)=>String(a.cidade||'').localeCompare(String(b.cidade||''),'pt-BR') || String(a.uf||'').localeCompare(String(b.uf||'')));
-  sel.innerHTML = '<option value="">Edital da mensagem: escolher depois, no Enviar</option>' + abertos.map(o=>`<option value="${o.id}">${esc(prospRotuloEdital(o))}</option>`).join('');
-  sel.value = atual;
+  sel.innerHTML = '<option value="">' + (fp || fu ? 'Edital da mensagem (' + abertos.length + ' com esse filtro): escolher depois, no Enviar' : 'Edital da mensagem: escolher depois, no Enviar') + '</option>' + abertos.map(o=>`<option value="${o.id}">${esc(prospRotuloEdital(o))}</option>`).join('');
+  sel.value = abertos.some(o=>String(o.id) === atual) ? atual : '';
 }
 function prospRender(){
   const tb = document.querySelector('#pr-tabela tbody'); if(!tb) return;
