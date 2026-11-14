@@ -1933,6 +1933,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 </section>
 
 <!-- ===================== PERFIL (editar) ===================== -->
+<button type="button" id="perfil-voltar-flut" class="btn-primary" style="display:none; position:fixed; left:12px; bottom:84px; width:auto; right:auto; padding:10px 16px; z-index:79; box-shadow:0 6px 18px rgba(0,0,0,.4); max-width:calc(100vw - 24px);" onclick="voltarDoPerfil()">← Voltar ao edital</button>
 <section class="view" id="view-perfil">
   <button class="back-link" id="perfil-voltar" onclick="voltarDoPerfil()">← Voltar à minha conta</button>
   <div class="page-head" style="padding-top:0;"><span class="eyebrow">Minha conta</span><h2>Editar perfil</h2></div>
@@ -2958,6 +2959,15 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 </div>
 
 <!-- ===================== MODAL: orientação (qualificado) ===================== -->
+<div class="modal-overlay" id="certs-modal">
+  <div class="modal-box" style="max-width:520px;">
+    <button class="modal-close" onclick="closeModal('certs-modal')">×</button>
+    <h3 style="margin-bottom:4px;">Minhas certidões</h3>
+    <p style="font-size:13px; color:var(--ink-muted); margin-bottom:10px;">Os mesmos arquivos do seu cadastro. O que você anexar aqui já aparece no checklist.</p>
+    <div id="certs-modal-lista"></div>
+    <div class="btn-row" style="margin-top:12px;"><button class="btn-ghost" id="certs-modal-cadastro" onclick="">Abrir no cadastro</button></div>
+  </div>
+</div>
 <div class="modal-overlay" id="relato-modal">
   <div class="modal-box" style="max-width:480px;">
     <button class="modal-close" onclick="closeModal('relato-modal')">×</button>
@@ -3737,6 +3747,17 @@ function irAoCadastro(oid, chave){
     if(alvo){ alvo.scrollIntoView({behavior:'smooth', block:'center'}); if(chave){ alvo.style.transition='box-shadow .3s'; alvo.style.boxShadow='0 0 0 2px var(--teal)'; setTimeout(()=>{ alvo.style.boxShadow=''; }, 2500); } }
   }, 250);
 }
+function abrirMinhasCertidoes(oid){
+  if(!userProfile){ nav('login'); return; }
+  const arq = (userProfile.documentosRaw || {}).certidoesArq || {};
+  const chaves = CERT_COM_ANEXO.slice().concat(Object.keys(arq).filter(k=>k.indexOf('x_') === 0 && arq[k].cadastro));
+  document.getElementById('certs-modal-lista').innerHTML = chaves.map(k=>{
+    const nome = CERT_ROTULOS[k] || (arq[k] && arq[k].rotulo) || 'Documento';
+    return '<div class="cert-card" style="margin-bottom:8px;"><span class="cert-titulo">' + esc(nome) + '</span><div style="margin-top:4px;"><span class="cert-ck" data-chave="' + k + '">' + certCkInner(k) + '</span></div></div>';
+  }).join('');
+  document.getElementById('certs-modal-cadastro').onclick = ()=>{ closeModal('certs-modal'); irAoCadastro(oid); };
+  openModal('certs-modal');
+}
 function irAoCadastroDoc(oid, i){
   const o = oportunidades.find(x=>x.id === oid); if(!o) return;
   const texto = docsPreview(o.documentos)[i];
@@ -3753,6 +3774,7 @@ function atualizarVoltarPerfil(){
   const b = document.getElementById('perfil-voltar'); if(!b) return;
   const o = perfilOrigem && oportunidades.find(x=>x.id === perfilOrigem.oid);
   b.textContent = o ? '← Voltar ao edital: ' + (o.orgao || o.edital || '') : '← Voltar à minha conta';
+  const f = document.getElementById('perfil-voltar-flut'); if(f) f.style.display = (o && document.getElementById('view-perfil').classList.contains('active')) ? '' : 'none';
 }
 let detalheOrigem = {view:'editais', y:null};
 function voltarDetalhe(){
@@ -3795,7 +3817,7 @@ function nav(view){
   if(view === 'minha-conta'){ renderMinhaConta(); atualizarStatusPedidoPlano(); carregarMinhaAssinatura(); carregarAvisoProEncerrado(); }
   if(view === 'sobre') renderMapaEditais();
   if(view === 'perfil'){ renderPerfil(); atualizarVoltarPerfil(); }
-  if(view !== 'perfil') perfilOrigem = null;
+  if(view !== 'perfil'){ perfilOrigem = null; const f = document.getElementById('perfil-voltar-flut'); if(f) f.style.display = 'none'; }
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
   currentView = view;
 }
@@ -4636,7 +4658,7 @@ function certLinhaHTML(c, pre){
   const iso = podeAnotar ? ((userProfile.documentosRaw.certidoesVenc || {})[c.chave] || '') : '';
   return `<div class="cert-card">
     ${c.url ? `<a class="cert-titulo" href="${c.url}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${esc(c.nome)} ↗</a>` : `<span class="cert-titulo">${esc(c.nome)}</span>`}
-    ${podeAnotar ? `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; font-size:12.5px;"><label for="cert-${c.chave}">Vence em</label><input type="date" id="cert-${c.chave}" value="${esc(iso)}" onchange="salvarCertidao('${c.chave}', this.value)" style="max-width:160px; color-scheme:light dark;"> <span style="color:var(--ink-dim);">ou em <input type="number" min="1" max="3650" placeholder="dias" onkeydown="if(event.key==='Enter') salvarCertidaoDias('${c.chave}', this.value)" onchange="salvarCertidaoDias('${c.chave}', this.value)" style="width:62px; font-size:12px;"> dias</span><span id="cert-st-${c.chave}">${certStatusHTML(c.chave, iso)}</span></div>` : ''}
+    ${podeAnotar ? `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; font-size:12.5px;"><label for="cert-${c.chave}">Vence em</label><input type="date" id="cert-${c.chave}" value="${esc(iso)}" onchange="salvarCertidao('${c.chave}', this.value)" style="max-width:160px; color-scheme:light dark;"> ${iso ? '' : ` <span class="cert-dias" style="color:var(--ink-dim);">ou em <input type="number" min="1" max="3650" placeholder="dias" onkeydown="if(event.key==='Enter') salvarCertidaoDias('${c.chave}', this.value)" onchange="salvarCertidaoDias('${c.chave}', this.value)" style="width:62px; font-size:12px;"> dias</span>`}<span id="cert-st-${c.chave}">${certStatusHTML(c.chave, iso)}</span></div>` : ''}
     ${podeAnexar ? `<div id="cert-arq-${c.chave}" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px;">${certArqHTML(c.chave)}</div>` : ''}
   </div>`;
 }
@@ -4731,7 +4753,7 @@ function certCkInner(chave){
   if(!a) return `<label class="doc-emitir" style="cursor:pointer;" onclick="${parar}" title="PDF, JPG ou PNG, até 500 KB. Fica salvo em Minha conta.">📎 Anexar ${livre ? 'documento' : 'minha certidão'}${entrada}</label>`;
   const iso = ((userProfile.documentosRaw || {}).certidoesVenc || {})[chave] || '';
   const st = iso ? ' ' + certStatusHTML(chave, iso) : '';
-  return (!certTemData(chave) ? '' : `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;"><span class="cert-dias" style="color:var(--ink-dim);">ou em <input type="number" min="1" max="3650" placeholder="dias" onclick="${parar}" onkeydown="if(event.key==='Enter'){ ${parar}; salvarCertidaoDias('${chave}', this.value); }" onchange="${parar}; salvarCertidaoDias('${chave}', this.value)" style="width:58px; font-size:11.5px;"> dias</span>${st}</span>`);
+  return (!certTemData(chave) ? '' : `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${iso ? '' : `<span class="cert-dias" style="color:var(--ink-dim);">ou em <input type="number" min="1" max="3650" placeholder="dias" onclick="${parar}" onkeydown="if(event.key==='Enter'){ ${parar}; salvarCertidaoDias('${chave}', this.value); }" onchange="${parar}; salvarCertidaoDias('${chave}', this.value)" style="width:58px; font-size:11.5px;"> dias</span>`}${st}</span>`);
 }
 function certAnexadaHTML(texto, o){
   const chave = chaveCertidaoDoItem(texto, o);
@@ -4760,6 +4782,7 @@ async function salvarCertidao(chave, valor){
   if(error){ toast('Não foi possível salvar a data agora.'); return; }
   userProfile.documentosRaw = novo;
   const el = document.getElementById('cert-st-' + chave); if(el) el.innerHTML = certStatusHTML(chave, valor);
+  if(valor){ const cp = document.getElementById('cert-' + chave); const dd = cp && cp.parentElement && cp.parentElement.querySelector('.cert-dias'); if(dd) dd.remove(); }
   certCkAtualizar(chave);
   toast('Data salva.');
 }
@@ -5786,7 +5809,7 @@ function openDetalhe(id){
 
         <div class="panel">
           <h4><span class="dot"></span>Documentação necessária</h4>
-          ${userProfile ? `<button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px; margin:0 0 10px;" onclick="irAoCadastro(${o.id})" title="Abrir seus documentos salvos no cadastro e voltar para este edital">📁 Meus documentos no cadastro</button>` : ''}
+          ${userProfile ? `<button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px; margin:0 0 10px;" onclick="abrirMinhasCertidoes(${o.id})" title="Ver, anexar ou trocar suas certidões salvas sem sair deste edital">📄 Minhas certidões</button>` : ''}
           ${(typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="prosp-edital-' + o.id + '"></div>' : ''}
           ${(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="pasta-edital-' + o.id + '"></div>' : ''}
           ${(()=>{ const docsVisiveis = docsPreview(o.documentos); const ocultos = o.documentos.length - docsVisiveis.length; return `
