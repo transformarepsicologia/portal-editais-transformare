@@ -176,6 +176,7 @@ header.topbar{
 .doc-menu-lista{position:absolute; left:0; top:calc(100% + 4px); z-index:30; width:max-content; min-width:170px; max-width:80vw; display:flex; flex-direction:column; gap:2px; padding:6px; background:var(--bg-card, #14263d); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.35);}
 .doc-menu-lista .doc-edit-link{margin:0; color:var(--ink); text-align:left; border:none; border-radius:6px; padding:6px 8px; font-size:12.5px; white-space:nowrap;}
 .doc-menu-lista .doc-edit-link:hover{background:rgba(255,255,255,.06);}
+.doc-menu-sep{font-size:10.5px; color:var(--ink-dim); padding:8px 8px 2px; margin-top:4px; border-top:1px solid var(--border); text-transform:uppercase; letter-spacing:.4px;}
 #detalhe-content ul[id^="doc-list-"] > li{-webkit-touch-callout:none; -webkit-user-select:none; user-select:none;}
 #detalhe-content ul[id^="doc-list-"] > li .doc-check{cursor:pointer;}
 .doc-list.ck-reordenando{cursor:grabbing;}
@@ -6143,19 +6144,23 @@ function linkEmitirDocHTML(texto, o, i){
   else if(ov) url = ov;                           // link definido para este edital
   else { const l = portalDoDocumento(texto); url = l ? l.url : null; }
   const bt = (cls, titulo, fn, rotulo) => ` <button type="button" class="doc-edit-link" title="${titulo}" onclick="event.stopPropagation(); ${fn}(${o.id}, ${i})">${rotulo}</button>`;
-  const ferr = adm ? bt('', 'Editar o texto deste item do checklist', 'editarItemChecklist', '✎ item')
-                     + bt('', 'Cadastrar ou alterar o link deste documento neste edital', 'editarLinkChecklist', '✎ link')
-                     + (url ? bt('', 'Excluir o link deste documento neste edital', 'excluirLinkChecklist', '🗑 link') : '') : '';
+  // ferramentas do administrador: ficam no menu ⋯ (vale para todos os usuários deste edital)
+  const ferrAdm = adm ? '<div class="doc-menu-sep">Administrador · vale para todos</div>'
+                     + bt('', 'Editar o texto deste item do checklist', 'editarItemChecklist', '✎ Editar item')
+                     + bt('', 'Cadastrar ou alterar o link deste documento neste edital', 'editarLinkChecklist', '✎ Link do edital')
+                     + (url ? bt('', 'Excluir o link deste documento neste edital', 'excluirLinkChecklist', '🗑 Excluir link do edital') : '') : '';
+  const ferr = '';
   const anexada = userProfile ? certAnexadaHTML(texto, o) : '';
   // botões pessoais do cliente: renomear, link próprio e botão de anexo (só valem para a conta dele)
   const pes = docPessoal(o, texto), chaveAnexo = chaveCertidaoDoItem(texto, o);
   const btp = (titulo, fn, rotulo) => ` <button type="button" class="doc-edit-link" title="${titulo}" onclick="event.stopPropagation(); ${fn}(${o.id}, ${i})">${rotulo}</button>`;
   let meus = '';
-  if(userProfile){
+  if(userProfile || adm){
     // menu ⋯, nesta ordem: anexar, adicionar link, renomear, excluir (renomear e excluir pedem confirmação; excluir já confirma dentro de ckRemoverOficial) e, por fim, não se aplica
     let itens = '';
     const livre = !chaveAnexo || String(chaveAnexo).indexOf('x_') === 0;
     const temArq = !!(chaveAnexo && certArqInfo(chaveAnexo));
+    if(userProfile){
     if(temArq){
       const ent = `<input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" style="display:none;" onclick="event.stopPropagation()" onchange="event.stopPropagation(); anexarCertidao('${chaveAnexo}', this)">`;
       itens += `<button type="button" class="doc-edit-link" title="Abre o arquivo salvo em Minha conta" onclick="event.stopPropagation(); verCertidao('${chaveAnexo}')">📎 Ver ${livre ? 'meu documento' : 'minha certidão'}</button>`
@@ -6163,10 +6168,13 @@ function linkEmitirDocHTML(texto, o, i){
              + `<button type="button" class="doc-edit-link" onclick="event.stopPropagation(); removerCertidao('${chaveAnexo}')">✕ Remover anexo</button>`;
     }
     if(livre && !temArq) itens += pes.anexo ? btp('Tirar o botão de anexo deste item', 'pessoalAnexo', '✕ Tirar botão de anexo') : btp('Criar um botão para anexar este documento', 'pessoalAnexo', '📎 Anexar');
-    if(!adm && !temArq) itens += btp('Cadastrar ou alterar o link deste documento só para você', 'pessoalLink', '🔗 Adicionar link');   // com o documento anexado, link para emitir não faz sentido
-    if(!adm) itens += btp('Renomear este item só para você', 'docMenuRenomear', '✎ Renomear');
+    if(!temArq) itens += btp('Cadastrar ou alterar o link deste documento só para você', 'pessoalLink', '🔗 Adicionar link');   // com o documento anexado, link para emitir não faz sentido
+    itens += btp('Renomear este item só para você', 'docMenuRenomear', '✎ Renomear');
+    itens += btp('Subir este item uma posição', 'ckSubir', '⬆ Subir') + btp('Descer este item uma posição', 'ckDescer', '⬇ Descer');
     itens += btp('Tirar este item da sua lista (dá para restaurar)', 'ckRemoverOficial', '🗑 Excluir');
     itens += btp('Este documento não se aplica a mim', 'docNaoSeAplica', '🚫 Não se aplica');
+    }
+    itens += ferrAdm;
     meus += ` <details class="doc-menu" onclick="event.stopPropagation()"><summary title="Mais opções deste item">⋯ <span class="doc-menu-dica">clique aqui</span></summary><div class="doc-menu-lista">${itens}</div></details>`;
   }
   if(!url) return anexada + ferr + meus;
@@ -6517,6 +6525,8 @@ function ckOrdenar(oid, docs){
   const peso = i => pos.has(_chaveDoc(docs[i])) ? pos.get(_chaveDoc(docs[i])) : 100000 + i;
   return idx.sort((a,b)=>peso(a) - peso(b));
 }
+function ckSubir(oid, i){ ckMover(oid, i, -1); }
+function ckDescer(oid, i){ ckMover(oid, i, 1); }
 async function ckOrdemOriginal(oid){
   if(!(await ckGravar(oid, c=>{ delete c.ordem; }))) return;
   if(currentDetailId === oid) openDetalhe(oid);
@@ -6547,6 +6557,19 @@ async function ckDragFinalizar(){
   const d = _drag; if(!d) return;
   const ativo = d.ativo, ul = d.ul; ckDragLimpar();
   if(!ativo) return;
+  await ckSalvarOrdemLista(ul);
+}
+/* Mover pelo menu ⋯ (alternativa ao arrastar): sobe ou desce o item uma posição */
+async function ckMover(oid, i, dir){
+  const li = document.getElementById('doc-item-' + oid + '-' + i); if(!li) return;
+  const alvo = dir < 0 ? li.previousElementSibling : li.nextElementSibling;
+  if(!alvo){ toast(dir < 0 ? 'Este item já é o primeiro' : 'Este item já é o último'); return; }
+  if(dir < 0) li.parentElement.insertBefore(li, alvo); else li.parentElement.insertBefore(alvo, li);
+  li.querySelector('details.doc-menu')?.removeAttribute('open');
+  li.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  await ckSalvarOrdemLista(li.parentElement);
+}
+async function ckSalvarOrdemLista(ul){
   const m = ul.id.match(/^doc-list-(\d+)$/); const o = m && oportunidades.find(x=>x.id === +m[1]); if(!o) return;
   const docs = docsPreview(o.documentos);
   const ordem = [...ul.children].map(li=>{ const mm = li.id.match(/^doc-item-\d+-(\d+)$/); return mm && docs[+mm[1]] != null ? _chaveDoc(docs[+mm[1]]) : null; }).filter(Boolean);
@@ -6561,11 +6584,11 @@ document.addEventListener('pointerdown', e=>{
   if(e.target.closest('button, a, input, label, select, textarea, summary, details, .doc-check')) return;
   ckDragLimpar();
   _drag = { li, ul: li.parentElement, x: e.clientX, y: e.clientY, id: e.pointerId, ativo: false };
-  _drag.timer = setTimeout(ckDragIniciar, 450);
+  _drag.timer = setTimeout(ckDragIniciar, 400);
 });
 document.addEventListener('pointermove', e=>{
   if(!_drag || e.pointerId !== _drag.id) return;
-  if(!_drag.ativo){ if(Math.hypot(e.clientX - _drag.x, e.clientY - _drag.y) > 8) ckDragLimpar(); return; }
+  if(!_drag.ativo){ if(Math.hypot(e.clientX - _drag.x, e.clientY - _drag.y) > 14) ckDragLimpar(); return; }
   _drag.y = e.clientY; ckDragMover(e.clientY);
 });
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t, ()=>{ if(_drag) ckDragFinalizar(); }));
