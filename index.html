@@ -4801,6 +4801,7 @@ async function salvarCertidao(chave, valor){
   const el = document.getElementById('cert-st-' + chave); if(el) el.innerHTML = certStatusHTML(chave, valor);
   if(valor){ const cp = document.getElementById('cert-' + chave); const dd = cp && cp.parentElement && cp.parentElement.querySelector('.cert-dias'); if(dd) dd.remove(); }
   certCkAtualizar(chave);
+  document.querySelectorAll('.cert-ck[data-chave="' + chave + '"]').forEach(e=>{ const li = e.closest('[id^="doc-item-"]'); const m = li && li.id.match(/^doc-item-(\d+)-(\d+)$/); if(m) docRefresh(+m[1], +m[2]); });
   toast('Data salva.');
 }
 async function verificarCnpj(pre){
@@ -5832,8 +5833,8 @@ function openDetalhe(id){
           <div id="doc-progress-${o.id}">${docProgressHTML(o.id, docsVisiveis, checks)}</div>
           ${ckBarraHTML(o.id, 'oficial')}
           <ul class="doc-list ${ckOcultando(o.id, 'oficial') ? 'ocultar-ok' : ''}" id="doc-list-${o.id}">
-            ${ckOrdenar(o.id, docsVisiveis).map(i=>{ const d = docsVisiveis[i]; return ckRemovido(o.id, d) ? '' : `
-              <li class="${checks[i]==='na'?'doc-na':(checks[i]?'checked-text':'')}" id="doc-item-${o.id}-${i}">${docItemInner(o, d, i, checks[i])}</li>`; }).join('')}
+            ${ckOrdenar(o.id, docsVisiveis).map(i=>{ const d = docsVisiveis[i]; if(ckRemovido(o.id, d)) return ''; const ef = docEstadoEf(o, d, checks[i]); return `
+              <li class="${ef==='na'?'doc-na':(ef?'checked-text':'')}" id="doc-item-${o.id}-${i}">${docItemInner(o, d, i, ef)}</li>`; }).join('')}
           </ul>
           <div id="doc-extras-${o.id}">${ckExtrasHTML(o.id)}</div>
           ${o.documentosPadrao ? `<p style="font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5;">Lista padrão: este edital ainda não teve os documentos detalhados pela Transformare. Confira a lista oficial no edital.</p>` : ''}
@@ -6511,12 +6512,13 @@ function docProgressHTML(oid, documentos, checks){
     return `<div class="af-item-empty">Nenhum documento cadastrado para esta oportunidade.</div>`;
   }
   // itens marcados "não se aplica" ficam fora da conta
-  const naQtd = linhas.filter(r=>checks[r.i]==='na').length;
+  const naQtd = linhas.filter(r=>checks[r.i]==='na').length;   // ("não se aplica" nunca é automático)
   const total = linhas.length - naQtd + ex.length;
   if(total===0){
     return `<div class="doc-progress-text"><span>Nenhum documento se aplica a você neste edital</span><span>${naQtd} não se aplica</span></div>`;
   }
-  const done = linhas.filter(r=>checks[r.i]===true).length + ex.filter(e=>e.done).length;
+  const oAuto = oportunidades.find(x=>x.id === oid);
+  const done = linhas.filter(r=>docEstadoEf(oAuto, r.d, checks[r.i])===true).length + ex.filter(e=>e.done).length;
   const pct = total>0 ? Math.round((done/total)*100) : 0;
   if(done>0 && done===total){
     return `<div class="doc-progress-text"><span class="doc-progress-done">✓ Documentação organizada</span><span>${done}/${total}</span></div>
@@ -6819,12 +6821,27 @@ function docItemInner(o, d, i, estado){
   const btnVisivel = naNoMenu ? '' : btn;
   return `${box}<span class="doc-txt">${(userProfile && docPessoal(o, d).nome) ? esc(docPessoal(o, d).nome) : d}</span><span class="doc-acoes">${na ? '' : `<span class="doc-link-box" id="doc-link-${o.id}-${i}">${linkEmitirDocHTML(d, o, i)}</span>`}${na ? '<span class="doc-na-tag">não se aplica</span>' : ''}${btnVisivel}</span>`;
 }
+/* Caixa automática: com certidão anexada e dentro da validade → marcada; vencida → desmarcada. Itens "não se aplica" não mudam. */
+function docAuto(o, texto){
+  if(!userProfile || !o) return null;
+  const chave = chaveCertidaoDoItem(texto, o);
+  if(!chave || !certArqInfo(chave)) return null;
+  const iso = ((userProfile.documentosRaw || {}).certidoesVenc || {})[chave];
+  if(iso){ const hoje = new Date(); const h = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0'); if(iso < h) return false; }
+  return true;
+}
+function docEstadoEf(o, texto, bruto){
+  if(bruto === 'na') return bruto;
+  const a = docAuto(o, texto);
+  return a === null ? bruto : a;
+}
 function docRefresh(oid, idx){
   const o = oportunidades.find(x=>x.id===oid);
   const item = document.getElementById(`doc-item-${oid}-${idx}`);
-  const estado = (docChecks[oid] || {})[idx];
+  const d0 = o ? docsPreview(o.documentos)[idx] : null;
+  const estado = o ? docEstadoEf(o, d0, (docChecks[oid] || {})[idx]) : (docChecks[oid] || {})[idx];
   if(o && item){
-    const d = docsPreview(o.documentos)[idx];
+    const d = d0;
     item.className = estado==='na' ? 'doc-na' : (estado===true ? 'checked-text' : '');
     item.innerHTML = docItemInner(o, d, idx, estado);
   }
@@ -6834,6 +6851,7 @@ function docRefresh(oid, idx){
 async function toggleDoc(oid, idx){
   docChecks[oid] = docChecks[oid] || {};
   if(docChecks[oid][idx] === 'na') return;   // item "não se aplica" não é marcado
+  { const oo = oportunidades.find(x=>x.id === oid); const dd = oo && docsPreview(oo.documentos)[idx]; if(oo && docAuto(oo, dd) !== null){ toast(docAuto(oo, dd) ? 'Marcado automaticamente: a certidão está anexada e válida.' : 'Certidão vencida: anexe a nova para marcar.'); return; } }
   docChecks[oid][idx] = !docChecks[oid][idx];
   docRefresh(oid, idx);
   await storeSet(ukey('docChecks'), docChecks);
