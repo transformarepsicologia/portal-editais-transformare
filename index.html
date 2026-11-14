@@ -1876,10 +1876,10 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
       <div style="font-family:var(--font-mono); font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--teal); margin-bottom:12px;">Etapa 1 de 2 · Acesso</div>
       <div class="form-row"><label>E-mail</label><input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
       <div class="two-col">
-        <div class="form-row"><label>Senha (mínimo 6 caracteres)</label><input type="password" id="cad-senha" autocomplete="new-password"></div>
+        <div class="form-row"><label>Senha (mín. 8, com letras e números)</label><input type="password" id="cad-senha" autocomplete="new-password"></div>
         <div class="form-row"><label>Confirmar senha</label><input type="password" id="cad-senha2" autocomplete="new-password"></div>
       </div>
-      <div id="cad-senha-dica" style="font-size:12px; color:var(--ink-dim); margin:-2px 0 8px; line-height:1.5;">Mínimo de 6 caracteres. Quanto mais longa, mais segura: <strong style="color:var(--ink-muted);">8 ou mais é o ideal</strong>, misturando letras e números.</div>
+      <div id="cad-senha-dica" style="font-size:12px; color:var(--ink-dim); margin:-2px 0 8px; line-height:1.5;">A senha precisa ter <strong style="color:var(--ink-muted);">no mínimo 8 caracteres, com letras e números</strong>. Quanto mais longa, mais segura.</div>
       <div id="cad-captcha" style="margin:4px 0 10px;"></div>
       <div id="cad-msg1" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
       <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="cadastroContinuar()">Continuar</button></div>
@@ -1982,7 +1982,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     <h4 style="font-family:var(--font-display); margin:0 0 14px;">Alterar senha</h4>
     <div class="form-row"><label>Senha atual</label><input type="password" id="perfil-senha-atual" autocomplete="current-password"></div>
     <div class="two-col">
-      <div class="form-row"><label>Nova senha (mín. 8)</label><input type="password" id="perfil-senha-nova" autocomplete="new-password"></div>
+      <div class="form-row"><label>Nova senha (mín. 8, com letras e números)</label><input type="password" id="perfil-senha-nova" autocomplete="new-password"></div>
       <div class="form-row"><label>Confirmar nova senha</label><input type="password" id="perfil-senha-nova2" autocomplete="new-password"></div>
     </div>
     <div class="form-actions"><button class="btn-ghost" onclick="changeUserPassword()">Alterar senha</button></div>
@@ -2009,7 +2009,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 <section class="view" id="view-admin-reset-senha">
   <div class="page-head"><span class="eyebrow">Área restrita</span><h2>Definir nova senha</h2></div>
   <div class="form-card">
-    <div class="form-row"><label>Nova senha (mínimo 6 caracteres)</label><input type="password" id="admin-recovery-pass" autocomplete="new-password"></div>
+    <div class="form-row"><label>Nova senha (mín. 8, com letras e números)</label><input type="password" id="admin-recovery-pass" autocomplete="new-password"></div>
     <div class="form-row"><label>Confirmar nova senha</label><input type="password" id="admin-recovery-pass2" autocomplete="new-password"></div>
     <div id="admin-recovery-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
     <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="salvarNovaSenhaAdmin()">Salvar nova senha</button></div>
@@ -2966,6 +2966,18 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 </div>
 
 <!-- ===================== MODAL: orientação (qualificado) ===================== -->
+<div class="modal-overlay" id="senha-modal">
+  <div class="modal-box" style="max-width:440px;">
+    <button class="modal-close" onclick="senhaModalFechar(false)">×</button>
+    <h3 style="margin-bottom:4px;">Crie uma senha mais segura</h3>
+    <p style="font-size:13px; color:var(--ink-muted); margin-bottom:10px;">Para guardar documentos no seu cadastro, a senha precisa ter <strong>no mínimo 8 caracteres, com letras e números</strong>. É só uma vez.</p>
+    <div class="form-row"><label>Senha atual</label><input type="password" id="senha-modal-atual" autocomplete="current-password"></div>
+    <div class="form-row"><label>Nova senha (mín. 8, com letras e números)</label><input type="password" id="senha-modal-nova" autocomplete="new-password"></div>
+    <div class="form-row"><label>Confirmar nova senha</label><input type="password" id="senha-modal-nova2" autocomplete="new-password"></div>
+    <div id="senha-modal-msg" style="font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:8px;"></div>
+    <button type="button" class="btn-primary" id="senha-modal-ok" onclick="senhaModalSalvar()">Salvar nova senha e continuar</button>
+  </div>
+</div>
 <div class="modal-overlay" id="linkpick-modal">
   <div class="modal-box" style="max-width:520px;">
     <button class="modal-close" onclick="closeModal('linkpick-modal')">×</button>
@@ -3721,7 +3733,7 @@ async function salvarNovaSenhaAdmin(){
   const n1 = document.getElementById('admin-recovery-pass').value;
   const n2 = document.getElementById('admin-recovery-pass2').value;
   const msg = document.getElementById('admin-recovery-msg');
-  if(n1.length < 6){ msg.textContent = 'A senha precisa ter pelo menos 6 caracteres'; return; }
+  if(!senhaAlfanumerica(n1)){ msg.textContent = MSG_SENHA_ALFA; return; }
   if(n1 !== n2){ msg.textContent = 'As senhas não conferem'; return; }
   if(!_sb){ msg.textContent = 'Indisponível: configure o Supabase.'; return; }
   const { error } = await _sb.auth.updateUser({ password: n1 });
@@ -4698,6 +4710,41 @@ function certArqAtualizarTela(chave){
     document.querySelectorAll('.cert-ck[data-chave="' + chave + '"]').forEach(e=>{ const li = e.closest('[id^="doc-item-"]'); const m = li && li.id.match(/^doc-item-(\d+)-(\d+)$/); if(m) docRefresh(+m[1], +m[2]); });
   }
 }
+/* Senha alfanumérica: mínimo 8 caracteres, com letras e números. Contas antigas são cobradas ao anexar documentos. */
+const MSG_SENHA_ALFA = 'A senha precisa ter no mínimo 8 caracteres, com letras e números.';
+function senhaAlfanumerica(sn){ return typeof sn === 'string' && sn.length >= 8 && /[A-Za-zÀ-ÿ]/.test(sn) && /\d/.test(sn); }
+async function gravarSenhaAlfa(){
+  if(!userProfile || !_sb) return false;
+  const novo = { ...(userProfile.documentosRaw || {}), senhaAlfa: true };
+  const { error } = await _sb.from('usuarios_perfil').update({ documentos: novo }).eq('id', userProfile.id);
+  if(error) return false;
+  userProfile.documentosRaw = novo; return true;
+}
+let _senhaResolve = null;
+function garantirSenhaAlfa(){
+  if(!userProfile) return Promise.resolve(false);
+  if((userProfile.documentosRaw || {}).senhaAlfa === true) return Promise.resolve(true);
+  ['atual','nova','nova2'].forEach(k=>{ document.getElementById('senha-modal-' + k).value = ''; });
+  document.getElementById('senha-modal-msg').textContent = '';
+  openModal('senha-modal');
+  return new Promise(res=>{ _senhaResolve = res; });
+}
+function senhaModalFechar(ok){ closeModal('senha-modal'); const r = _senhaResolve; _senhaResolve = null; if(r) r(!!ok); }
+async function senhaModalSalvar(){
+  const msg = document.getElementById('senha-modal-msg'), atual = document.getElementById('senha-modal-atual').value, n1 = document.getElementById('senha-modal-nova').value, n2 = document.getElementById('senha-modal-nova2').value;
+  if(!atual){ msg.textContent = 'Informe a senha atual.'; return; }
+  if(!senhaAlfanumerica(n1)){ msg.textContent = MSG_SENHA_ALFA; return; }
+  if(n1 !== n2){ msg.textContent = 'As senhas novas não conferem.'; return; }
+  const btn = document.getElementById('senha-modal-ok'); btn.disabled = true; msg.textContent = 'Salvando…';
+  try{
+    const { error: e1 } = await _sb.auth.signInWithPassword({ email: userProfile.email, password: atual });
+    if(e1){ msg.textContent = 'Senha atual incorreta.'; return; }
+    const { error: e2 } = await _sb.auth.updateUser({ password: n1 });
+    if(e2){ msg.textContent = 'Não foi possível alterar a senha agora: ' + e2.message; return; }
+    if(!(await gravarSenhaAlfa())){ msg.textContent = 'A senha foi alterada, mas não conseguimos registrar. Tente anexar de novo.'; return; }
+    toast('Senha atualizada.'); senhaModalFechar(true);
+  } finally { btn.disabled = false; }
+}
 async function anexarCertidao(chave, input){
   const f = input.files && input.files[0]; input.value = '';
   if(!f) return;
@@ -4706,6 +4753,7 @@ async function anexarCertidao(chave, input){
   const ext = CERT_MIME_EXT[f.type];
   if(!ext){ toast('Use um arquivo PDF, JPG ou PNG.'); return; }
   if(f.size > CERT_ARQ_MAX){ toast('O arquivo tem ' + Math.round(f.size/1024) + ' KB e o limite é 500 KB. Reduza o arquivo e tente de novo.'); return; }
+  if(!(await garantirSenhaAlfa())) return;   // contas antigas: pede uma senha com letras e números antes de guardar documentos
   const mapa = { ...(((userProfile.documentosRaw || {}).certidoesArq) || {}) };
   const antigo = mapa[chave] && mapa[chave].path;
   const path = userProfile.id + '/' + chave + '.' + ext;
@@ -7542,7 +7590,7 @@ function cadastroContinuar(){
   const email = document.getElementById('cad-email').value.trim().toLowerCase();
   const s1 = document.getElementById('cad-senha').value, s2 = document.getElementById('cad-senha2').value;
   if(!validEmail(email)){ msg.textContent = 'Informe um e-mail válido.'; return; }
-  if(s1.length < 6){ msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+  if(!senhaAlfanumerica(s1)){ msg.textContent = MSG_SENHA_ALFA; return; }
   if(s1 !== s2){ msg.textContent = 'As senhas não conferem.'; return; }
   if(TURNSTILE_SITE_KEY && !_cadCaptchaToken){ msg.textContent = 'Confirme que você não é um robô.'; return; }
   msg.textContent = '';
@@ -7580,7 +7628,7 @@ async function userSignup(){
   if(!document.getElementById('cad-aceite').checked){ msg.textContent = 'Para criar a conta, é preciso aceitar a Política de Privacidade.'; return; }
   const aceite = { aceite_privacidade_em: new Date().toISOString(), versao_privacidade: VERSAO_PRIVACIDADE };
   if(!validEmail(email)){ msg.textContent = 'Informe um e-mail válido.'; return; }
-  if(senha.length < 6){ msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+  if(!senhaAlfanumerica(senha)){ msg.textContent = MSG_SENHA_ALFA; return; }
   if(senha !== senha2){ msg.textContent = 'As senhas não conferem.'; return; }
   msg.textContent = 'Criando conta...';
 
@@ -7608,6 +7656,7 @@ async function userSignup(){
   if(erroPerfil){ msg.textContent = 'Conta criada, mas houve um erro ao salvar o perfil: ' + erroPerfil.message; }
 
   await carregarPerfilUsuario(data.user);
+  await gravarSenhaAlfa();
   Object.assign(userProfile, extra);
   if(profOutra) await enviarSugestaoProfissao(profOutra, userProfile);
   await storeSet(ukey('perfilExtra'), extra);
@@ -7789,13 +7838,14 @@ async function changeUserPassword(){
   const n1 = document.getElementById('perfil-senha-nova').value;
   const n2 = document.getElementById('perfil-senha-nova2').value;
   if(!_sb){ toast('Indisponível: configure o Supabase.'); return; }
-  if(n1.length < 6){ toast('A nova senha precisa ter pelo menos 6 caracteres'); return; }
+  if(!senhaAlfanumerica(n1)){ toast(MSG_SENHA_ALFA); return; }
   if(n1 !== n2){ toast('As senhas novas não conferem'); return; }
   const { error: erroLogin } = await _sb.auth.signInWithPassword({ email: u.email, password: atual });
   if(erroLogin){ toast('Senha atual incorreta'); return; }
   const { error } = await _sb.auth.updateUser({ password: n1 });
   if(error){ toast('Erro ao alterar senha: ' + error.message); return; }
   ['perfil-senha-atual','perfil-senha-nova','perfil-senha-nova2'].forEach(id=>document.getElementById(id).value='');
+  await gravarSenhaAlfa();
   toast('Senha alterada');
 }
 async function deleteAccount(){
