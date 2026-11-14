@@ -4592,7 +4592,7 @@ async function certGravarArq(mapa){
 function certArqAtualizarTela(chave){
   const el = document.getElementById('cert-arq-' + chave); if(el) el.innerHTML = certArqHTML(chave);
   certCkAtualizar(chave);
-  if(String(chave).indexOf('x_') === 0){ // item livre: refaz a linha para atualizar os botões pessoais
+  {   // refaz a linha do item para o menu ⋯ (ver, trocar, remover, adicionar link) acompanhar o anexo
     document.querySelectorAll('.cert-ck[data-chave="' + chave + '"]').forEach(e=>{ const li = e.closest('[id^="doc-item-"]'); const m = li && li.id.match(/^doc-item-(\d+)-(\d+)$/); if(m) docRefresh(+m[1], +m[2]); });
   }
 }
@@ -4674,10 +4674,7 @@ function certCkInner(chave){
   if(!a) return `<label class="doc-emitir" style="cursor:pointer;" onclick="${parar}" title="PDF, JPG ou PNG, até 500 KB. Fica salvo em Minha conta.">📎 Anexar ${livre ? 'documento' : 'minha certidão'}${entrada}</label>`;
   const iso = ((userProfile.documentosRaw || {}).certidoesVenc || {})[chave] || '';
   const st = iso ? ' ' + certStatusHTML(chave, iso) : '';
-  return `<a class="doc-emitir" href="#" onclick="${parar}; event.preventDefault(); verCertidao('${chave}')" title="Abre o arquivo salvo em Minha conta">📎 Ver ${livre ? 'meu documento' : 'minha certidão'}</a>`
-    + ` <label class="doc-edit-link" style="cursor:pointer;" onclick="${parar}">trocar${entrada}</label>`
-    + ` <a href="#" class="doc-edit-link" onclick="${parar}; event.preventDefault(); removerCertidao('${chave}')">remover</a>`
-    + (!certTemData(chave) ? '' : `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${st}</span>`);
+  return (!certTemData(chave) ? '' : `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${st}</span>`);
 }
 function certAnexadaHTML(texto, o){
   const chave = chaveCertidaoDoItem(texto, o);
@@ -6152,9 +6149,16 @@ function linkEmitirDocHTML(texto, o, i){
     // menu ⋯, nesta ordem: anexar, adicionar link, renomear, excluir (renomear e excluir pedem confirmação; excluir já confirma dentro de ckRemoverOficial) e, por fim, não se aplica
     let itens = '';
     const livre = !chaveAnexo || String(chaveAnexo).indexOf('x_') === 0;
-    if(livre && !(chaveAnexo && certArqInfo(chaveAnexo))) itens += pes.anexo ? btp('Tirar o botão de anexo deste item', 'pessoalAnexo', '✕ Tirar botão de anexo') : btp('Criar um botão para anexar este documento', 'pessoalAnexo', '📎 Anexar');
-    if(!adm) itens += btp('Cadastrar ou alterar o link deste documento só para você', 'pessoalLink', '🔗 Adicionar link')
-                    + btp('Renomear este item só para você', 'docMenuRenomear', '✎ Renomear');
+    const temArq = !!(chaveAnexo && certArqInfo(chaveAnexo));
+    if(temArq){
+      const ent = `<input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" style="display:none;" onclick="event.stopPropagation()" onchange="event.stopPropagation(); anexarCertidao('${chaveAnexo}', this)">`;
+      itens += `<button type="button" class="doc-edit-link" title="Abre o arquivo salvo em Minha conta" onclick="event.stopPropagation(); verCertidao('${chaveAnexo}')">📎 Ver ${livre ? 'meu documento' : 'minha certidão'}</button>`
+             + `<label class="doc-edit-link" style="cursor:pointer;" onclick="event.stopPropagation()">🔄 Trocar anexo${ent}</label>`
+             + `<button type="button" class="doc-edit-link" onclick="event.stopPropagation(); removerCertidao('${chaveAnexo}')">✕ Remover anexo</button>`;
+    }
+    if(livre && !temArq) itens += pes.anexo ? btp('Tirar o botão de anexo deste item', 'pessoalAnexo', '✕ Tirar botão de anexo') : btp('Criar um botão para anexar este documento', 'pessoalAnexo', '📎 Anexar');
+    if(!adm && !temArq) itens += btp('Cadastrar ou alterar o link deste documento só para você', 'pessoalLink', '🔗 Adicionar link');   // com o documento anexado, link para emitir não faz sentido
+    if(!adm) itens += btp('Renomear este item só para você', 'docMenuRenomear', '✎ Renomear');
     itens += btp('Tirar este item da sua lista (dá para restaurar)', 'ckRemoverOficial', '🗑 Excluir');
     itens += btp('Este documento não se aplica a mim', 'docNaoSeAplica', '🚫 Não se aplica');
     meus += ` <details class="doc-menu" onclick="event.stopPropagation()"><summary title="Mais opções deste item">⋯</summary><div class="doc-menu-lista">${itens}</div></details>`;
