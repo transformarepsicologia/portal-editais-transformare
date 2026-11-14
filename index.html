@@ -2960,6 +2960,22 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 </div>
 
 <!-- ===================== MODAL: orientação (qualificado) ===================== -->
+<div class="modal-overlay" id="linkpick-modal">
+  <div class="modal-box" style="max-width:520px;">
+    <button class="modal-close" onclick="closeModal('linkpick-modal')">×</button>
+    <h3 style="margin-bottom:4px;">Link para emitir este documento</h3>
+    <p id="linkpick-item" style="font-size:13px; color:var(--ink-muted); margin-bottom:10px;"></p>
+    <div class="form-row"><label>Buscar nos links salvos da Transformare</label>
+      <input type="search" id="linkpick-busca" placeholder="Ex.: FGTS, municipal, CRP, SICAF…" oninput="linkPickerFiltrar()" autocomplete="off"></div>
+    <div id="linkpick-lista" style="max-height:34vh; overflow:auto; border:1px solid var(--border); border-radius:10px; margin-bottom:12px;"></div>
+    <div class="form-row"><label>Ou cole outro link <span style="color:var(--ink-dim);">(só para você)</span></label>
+      <input type="url" id="linkpick-url" placeholder="https://" autocomplete="off"></div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="linkPickerSalvar(document.getElementById('linkpick-url').value)">Salvar link</button>
+      <button class="btn-ghost" id="linkpick-remover" onclick="linkPickerSalvar('')">Remover meu link</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="certs-modal">
   <div class="modal-box" style="max-width:520px;">
     <button class="modal-close" onclick="closeModal('certs-modal')">×</button>
@@ -6751,15 +6767,43 @@ async function pessoalNome(oppId, i){
   if(!(await gravarPessoal(oppId, texto, { nome: v === texto ? '' : v }))) return;
   docRefresh(oppId, i);
 }
-async function pessoalLink(oppId, i){
+let _lp = null;
+function linksSalvosTransformare(){
+  const vistos = new Set(), lista = [];
+  const add = (nome, url)=>{ url = String(url||'').trim(); if(!/^https?:\/\//i.test(url) || vistos.has(url)) return; vistos.add(url); lista.push({ nome: String(nome||url), url }); };
+  (PORTAIS_DOCS || []).forEach(x=>add(x.nome, x.url));
+  (oportunidades || []).forEach(o=>{ const m = o.linksDocs || {}; (o.documentos || []).forEach(d=>{ const u = m[_chaveDoc(d)]; if(u) add(d, u); }); });
+  return lista;
+}
+function pessoalLink(oppId, i){
   const { o, texto } = _textoItem(oppId, i); if(!o || texto == null) return;
-  const r = prompt('Link do portal para emitir este documento (só para você; deixe vazio para remover o seu link):', docPessoal(o, texto).url || 'https://');
-  if(r === null) return;
-  let v = r.trim(); if(v === 'https://') v = '';
+  _lp = { oppId, i, texto, lista: linksSalvosTransformare() };
+  const atual = docPessoal(o, texto).url || '';
+  document.getElementById('linkpick-item').textContent = texto;
+  document.getElementById('linkpick-url').value = atual;
+  document.getElementById('linkpick-remover').style.display = atual ? '' : 'none';
+  document.getElementById('linkpick-busca').value = '';
+  linkPickerFiltrar();
+  openModal('linkpick-modal');
+}
+function linkPickerFiltrar(){
+  if(!_lp) return;
+  const q = _semAcento(document.getElementById('linkpick-busca').value).trim();
+  const ach = _lp.lista.filter(x=>!q || _semAcento(x.nome + ' ' + x.url).includes(q));
+  document.getElementById('linkpick-lista').innerHTML = ach.length
+    ? ach.map(x=>'<button type="button" class="linkpick-item" data-url="' + esc(x.url) + '" onclick="linkPickerSalvar(this.dataset.url)" style="display:block; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--border); padding:9px 12px; cursor:pointer; color:inherit;"><span style="display:block; font-size:13.5px;">' + esc(x.nome) + '</span><span style="display:block; font-size:11.5px; color:var(--ink-dim); word-break:break-all;">' + esc(x.url) + '</span></button>').join('')
+    : '<div style="padding:12px; font-size:13px; color:var(--ink-dim);">Nenhum link salvo com essa busca. Cole o link no campo abaixo.</div>';
+}
+async function linkPickerSalvar(r){
+  const lp = _lp; if(!lp) return;
+  let v = String(r || '').trim(); if(v === 'https://') v = '';
   if(v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
   if(v){ try{ new URL(v); }catch(e){ toast('Link inválido.'); return; } }
-  if(!(await gravarPessoal(oppId, texto, { url: v }))) return;
-  docRefresh(oppId, i);
+  const { o } = _textoItem(lp.oppId, lp.i); if(!o) return;
+  if(!(await gravarPessoal(lp.oppId, lp.texto, { url: v }))) return;
+  closeModal('linkpick-modal'); _lp = null;
+  docRefresh(lp.oppId, lp.i);
+  toast(v ? 'Link salvo para este item.' : 'Seu link foi removido.');
 }
 async function pessoalAnexo(oppId, i){
   const { o, texto } = _textoItem(oppId, i); if(!o || texto == null) return;
