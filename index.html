@@ -536,6 +536,9 @@ html[data-theme="light"] .op-meta{color:var(--teal-deep);}
 .score-hero.baixa .score-hero-num{color:var(--coral);}
 .score-hero-num span{font-size:16px; color:var(--ink-dim); font-weight:400;}
 .score-hero-body{flex:1; min-width:200px;}
+.score-hero-check{flex-shrink:0; text-align:center; padding:10px 16px; border:1px solid var(--teal); border-radius:12px; background:rgba(45,212,191,.08); cursor:pointer;}
+.score-hero-check .pct{font-family:var(--font-display); font-size:34px; font-weight:700; color:var(--teal); line-height:1;}
+.score-hero-check .lbl{font-size:11.5px; color:var(--ink-muted); margin-top:4px; text-transform:uppercase; letter-spacing:.04em;}
 .score-hero-body .label{font-family:var(--font-display); font-size:16px; font-weight:700; margin-bottom:4px;}
 .score-hero-body .caption{font-size:12px; color:var(--ink-dim); line-height:1.5;}
 
@@ -5796,6 +5799,7 @@ function openDetalhe(id){
             <button class="btn-ghost" style="margin-top:10px;" onclick="abrirSolicitarIndiceModal(${o.id})">Solicitar avaliação do Índice</button>` : `<div class="caption">Este edital ainda não recebeu uma nota da nossa equipe. Assinantes do Plano Pro podem solicitar o Índice Transformare para a nossa equipe.</div>`}
           </div>
           `}
+          ${temIndice ? `<div class="score-hero-check" id="hero-check-${o.id}" style="display:none;" onclick="const e=document.getElementById('doc-progress-${o.id}'); if(e) e.scrollIntoView({behavior:'smooth', block:'center'});" title="Seu progresso no checklist deste edital"></div>` : ''}
         </div>
 
         <details class="panel" style="cursor:pointer; border:1px solid var(--amber); border-left:4px solid var(--amber); background:rgba(245,169,62,0.10);">
@@ -6505,6 +6509,12 @@ function docsPreview(documentos){
   if(ehEssencial()) return documentos || [];   // plano Transformare Pro: checklist completo
   return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
 }
+function heroCheck(oid, done, total, pct){
+  const el = document.getElementById('hero-check-' + oid); if(!el) return;
+  if(!userProfile || !total){ el.style.display = 'none'; return; }
+  el.innerHTML = '<div class="pct">' + pct + '%</div><div class="lbl">Checklist · ' + done + ' de ' + total + '</div>';
+  el.style.display = '';
+}
 function docProgressHTML(oid, documentos, checks){
   const ex = ckDe(oid).extras || [];
   const linhas = documentos.map((d,i)=>({ d, i })).filter(r=>!ckRemovido(oid, r.d));
@@ -6515,11 +6525,13 @@ function docProgressHTML(oid, documentos, checks){
   const naQtd = linhas.filter(r=>checks[r.i]==='na').length;   // ("não se aplica" nunca é automático)
   const total = linhas.length - naQtd + ex.length;
   if(total===0){
+    setTimeout(()=>heroCheck(oid, 0, 0, 0), 0);
     return `<div class="doc-progress-text"><span>Nenhum documento se aplica a você neste edital</span><span>${naQtd} não se aplica</span></div>`;
   }
   const oAuto = oportunidades.find(x=>x.id === oid);
   const done = linhas.filter(r=>docEstadoEf(oAuto, r.d, checks[r.i])===true).length + ex.filter(e=>e.done).length;
   const pct = total>0 ? Math.round((done/total)*100) : 0;
+  setTimeout(()=>heroCheck(oid, done, total, pct), 0);
   if(done>0 && done===total){
     return `<div class="doc-progress-text"><span class="doc-progress-done">✓ Documentação organizada</span><span>${done}/${total}</span></div>
       <div class="doc-progress-bar"><div class="doc-progress-fill" style="width:100%;"></div></div>
