@@ -4685,6 +4685,8 @@ function certAnexadaHTML(texto, o){
 }
 function certCkAtualizar(chave){
   document.querySelectorAll('.cert-ck[data-chave="' + chave + '"]').forEach(el=>{ el.innerHTML = certCkInner(chave); });
+  const tem = !!certArqInfo(chave);
+  document.querySelectorAll('a[data-emitir-chave]').forEach(a=>{ if(a.getAttribute('data-emitir-chave') === String(chave)) a.style.display = tem ? 'none' : ''; });
 }
 async function salvarCertidao(chave, valor){
   if(!userProfile || !_sb) return;
@@ -6147,7 +6149,9 @@ function linkEmitirDocHTML(texto, o, i){
     if(livre && !(chaveAnexo && certArqInfo(chaveAnexo))) meus += pes.anexo ? btp('Tirar o botão de anexo deste item', 'pessoalAnexo', '✕ anexo') : btp('Criar um botão para anexar este documento', 'pessoalAnexo', '📎 anexo');
   }
   if(!url) return anexada + ferr + meus;
-  return anexada + ` <a class="doc-emitir" href="${esc(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>${ferr}${meus}`;
+  // com o documento já anexado, o "Emitir aqui" some; ao remover o anexo (venceu), ele volta
+  const jaAnexado = !!(userProfile && chaveAnexo && certArqInfo(chaveAnexo));
+  return anexada + ` <a class="doc-emitir" data-emitir-chave="${esc(chaveAnexo || '')}"${jaAnexado ? ' style="display:none;"' : ''} href="${esc(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abre o portal onde este documento é emitido. Depois de emitir, volte e marque o item.">↗ Emitir aqui</a>${ferr}${meus}`;
 }
 async function _gravarLinksDocs(o, oppId, novo){
   const { data, error } = await _sb.from('editais').update({ links_docs: novo }).eq('id', oppId - 900000).select('id');
