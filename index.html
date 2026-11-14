@@ -536,9 +536,11 @@ html[data-theme="light"] .op-meta{color:var(--teal-deep);}
 .score-hero.baixa .score-hero-num{color:var(--coral);}
 .score-hero-num span{font-size:16px; color:var(--ink-dim); font-weight:400;}
 .score-hero-body{flex:1; min-width:200px;}
-.score-hero-check{flex-shrink:0; text-align:center; padding:10px 16px; border:1px solid var(--teal); border-radius:12px; background:rgba(45,212,191,.08); cursor:pointer;}
-.score-hero-check .pct{font-family:var(--font-display); font-size:34px; font-weight:700; color:var(--teal); line-height:1;}
-.score-hero-check .lbl{font-size:11.5px; color:var(--ink-muted); margin-top:4px; text-transform:uppercase; letter-spacing:.04em;}
+.doc-resumo{display:none; align-items:center; gap:14px; margin:0 0 14px; padding:12px 16px; border:1px solid var(--teal); border-radius:12px; background:rgba(45,212,191,.08);}
+.doc-resumo .pct{font-family:var(--font-display); font-size:34px; font-weight:700; color:var(--teal); line-height:1; flex-shrink:0;}
+.doc-resumo .txt{font-size:13px; color:var(--ink-muted); line-height:1.45;}
+.doc-resumo .txt strong{display:block; color:var(--ink); font-size:14px;}
+.aderencia-check{margin-left:auto; padding:4px 10px; border:1px solid var(--teal); border-radius:999px; background:rgba(45,212,191,.08); color:var(--teal); font-size:12px; font-weight:600; white-space:nowrap;}
 .score-hero-body .label{font-family:var(--font-display); font-size:16px; font-weight:700; margin-bottom:4px;}
 .score-hero-body .caption{font-size:12px; color:var(--ink-dim); line-height:1.5;}
 
@@ -4414,7 +4416,7 @@ function renderFavoritos(){
     return;
   }
   const pgFav = paginarLista('fav', items, 12, renderFavoritos);
-  pgFav.fatia.forEach(o=>{ const c = renderCard(o); if(ehPro() && userProfile) inserirNotaNoCard(c, calcularAderencia(o, userProfile)); list.appendChild(c); });
+  pgFav.fatia.forEach(o=>{ const c = renderCard(o); if(ehPro() && userProfile) inserirNotaNoCard(c, calcularAderencia(o, userProfile), o); list.appendChild(c); });
   list.appendChild(pgFav.barra);
 }
 async function clearFavoritos(){
@@ -5263,7 +5265,7 @@ function renderMinhaConta(){
     } else {
       altas.slice(0,20).forEach(({o, ad})=>{
         const card = renderCard(o);
-        inserirNotaNoCard(card, ad);
+        inserirNotaNoCard(card, ad, o);
         adBox.appendChild(card);
       });
       if(altas.length>20){ const m=document.getElementById('conta-aderentes-mais'); if(m) m.textContent = `Mostrando 20 de ${altas.length}.`; }
@@ -5799,7 +5801,6 @@ function openDetalhe(id){
             <button class="btn-ghost" style="margin-top:10px;" onclick="abrirSolicitarIndiceModal(${o.id})">Solicitar avaliação do Índice</button>` : `<div class="caption">Este edital ainda não recebeu uma nota da nossa equipe. Assinantes do Plano Pro podem solicitar o Índice Transformare para a nossa equipe.</div>`}
           </div>
           `}
-          ${temIndice ? `<div class="score-hero-check" id="hero-check-${o.id}" style="display:none;" onclick="const e=document.getElementById('doc-progress-${o.id}'); if(e) e.scrollIntoView({behavior:'smooth', block:'center'});" title="Seu progresso no checklist deste edital"></div>` : ''}
         </div>
 
         <details class="panel" style="cursor:pointer; border:1px solid var(--amber); border-left:4px solid var(--amber); background:rgba(245,169,62,0.10);">
@@ -5831,6 +5832,7 @@ function openDetalhe(id){
 
         <div class="panel">
           <h4><span class="dot"></span>Documentação necessária</h4>
+          <div class="doc-resumo" id="hero-check-${o.id}"></div>
           <button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px; margin:0 0 10px;" onclick="abrirMinhasCertidoes(${o.id})" title="Ver, anexar ou trocar suas certidões salvas sem sair deste edital">📄 Minhas certidões</button>
           ${(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="pasta-edital-' + o.id + '"></div>' : ''}
           ${(()=>{ const docsVisiveis = docsPreview(o.documentos); const ocultos = o.documentos.length - docsVisiveis.length; return `
@@ -6185,10 +6187,10 @@ async function carregarLinksDocs(){
 }
 /* Para cada item do checklist, acha o portal onde o documento é emitido (só Plano Pro): a pessoa clica, emite e depois marca o item. */
 /* Nota de aderência (Pro): vai logo abaixo das palavras-chave; o WhatsApp fica no rodapé do card. */
-function inserirNotaNoCard(card, ad){
+function inserirNotaNoCard(card, ad, o){
   if(!ad || ad.pct === null) return;
   const rodape = card.querySelector('.wa-btn') && card.querySelector('.wa-btn').parentElement;
-  const html = `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span></div>` + entendaNotaHTML(ad);
+  const html = `<div class="aderencia-faixa"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span>${(()=>{ const r = o ? checklistResumo(o) : null; return r ? `<span class="aderencia-check" title="Seu progresso no checklist de documentos deste edital">✓ Checklist de documentos: ${r.pct}% · ${r.done} de ${r.total}</span>` : ''; })()}</div>` + entendaNotaHTML(ad);
   if(rodape) rodape.insertAdjacentHTML('beforebegin', html); else card.insertAdjacentHTML('beforeend', html);
 }
 function entendaNotaHTML(ad){
@@ -6512,8 +6514,18 @@ function docsPreview(documentos){
 function heroCheck(oid, done, total, pct){
   const el = document.getElementById('hero-check-' + oid); if(!el) return;
   if(!userProfile || !total){ el.style.display = 'none'; return; }
-  el.innerHTML = '<div class="pct">' + pct + '%</div><div class="lbl">Checklist · ' + done + ' de ' + total + '</div>';
-  el.style.display = '';
+  el.innerHTML = '<div class="pct">' + pct + '%</div><div class="txt"><strong>do seu checklist de documentos está pronto</strong>' + done + ' de ' + total + ' documentos concluídos' + (done < total ? ' · faltam ' + (total - done) : ' · tudo organizado') + '. Marque as caixas ou anexe as certidões abaixo.</div>';
+  el.style.display = 'flex';
+}
+function checklistResumo(o){
+  if(!userProfile || !o || !Array.isArray(o.documentos)) return null;
+  const checks = docChecks[o.id] || {}, ex = ckDe(o.id).extras || [];
+  const linhas = docsPreview(o.documentos).map((d,i)=>({d,i})).filter(r=>!ckRemovido(o.id, r.d));
+  const na = linhas.filter(r=>checks[r.i]==='na').length;
+  const total = linhas.length - na + ex.length;
+  if(!total) return null;
+  const done = linhas.filter(r=>docEstadoEf(o, r.d, checks[r.i])===true).length + ex.filter(e=>e.done).length;
+  return { done, total, pct: Math.round(done / total * 100) };
 }
 function docProgressHTML(oid, documentos, checks){
   const ex = ckDe(oid).extras || [];
