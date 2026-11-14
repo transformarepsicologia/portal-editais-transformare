@@ -176,6 +176,10 @@ header.topbar{
 .doc-menu-lista{position:absolute; left:0; top:calc(100% + 4px); z-index:30; width:max-content; min-width:170px; max-width:80vw; display:flex; flex-direction:column; gap:2px; padding:6px; background:var(--bg-card, #14263d); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.35);}
 .doc-menu-lista .doc-edit-link{margin:0; color:var(--ink); text-align:left; border:none; border-radius:6px; padding:6px 8px; font-size:12.5px; white-space:nowrap;}
 .doc-menu-lista .doc-edit-link:hover{background:rgba(255,255,255,.06);}
+#detalhe-content ul[id^="doc-list-"] > li{-webkit-touch-callout:none; -webkit-user-select:none; user-select:none;}
+#detalhe-content ul[id^="doc-list-"] > li .doc-check{cursor:pointer;}
+.doc-list.ck-reordenando{cursor:grabbing;}
+.doc-list li.ck-arrastando{background:rgba(45,212,191,.12); outline:1px solid var(--teal); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.35); position:relative; z-index:5;}
 .doc-emitir:hover{background:var(--teal); color:var(--bg);}
 body.logado .so-visitante{display:none !important;}
 body.pro .so-nao-pro{display:none !important;}
@@ -5730,8 +5734,8 @@ function openDetalhe(id){
           <div id="doc-progress-${o.id}">${docProgressHTML(o.id, docsVisiveis, checks)}</div>
           ${ckBarraHTML(o.id, 'oficial')}
           <ul class="doc-list ${ckOcultando(o.id, 'oficial') ? 'ocultar-ok' : ''}" id="doc-list-${o.id}">
-            ${docsVisiveis.map((d,i)=> ckRemovido(o.id, d) ? '' : `
-              <li onclick="toggleDoc(${o.id},${i})" class="${checks[i]==='na'?'doc-na':(checks[i]?'checked-text':'')}" id="doc-item-${o.id}-${i}">${docItemInner(o, d, i, checks[i])}</li>`).join('')}
+            ${ckOrdenar(o.id, docsVisiveis).map(i=>{ const d = docsVisiveis[i]; return ckRemovido(o.id, d) ? '' : `
+              <li class="${checks[i]==='na'?'doc-na':(checks[i]?'checked-text':'')}" id="doc-item-${o.id}-${i}">${docItemInner(o, d, i, checks[i])}</li>`; }).join('')}
           </ul>
           <div id="doc-extras-${o.id}">${ckExtrasHTML(o.id)}</div>
           ${o.documentosPadrao ? `<p style="font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5;">Lista padrão: este edital ainda não teve os documentos detalhados pela Transformare. Confira a lista oficial no edital.</p>` : ''}
@@ -6415,7 +6419,7 @@ async function ckGravar(oid, mutar){
   const c = todos[oid] = todos[oid] || {};
   mutar(c);
   c.extras = c.extras || []; c.removidos = c.removidos || [];
-  if(!c.extras.length && !c.removidos.length && !(c.meu && (c.meu.itens || []).length) && !(c.meu && c.meu.titulo) && !Object.values(c.ocultar || {}).some(Boolean)) delete todos[oid];
+  if(!c.extras.length && !c.removidos.length && !(c.ordem && c.ordem.length) && !(c.meu && (c.meu.itens || []).length) && !(c.meu && c.meu.titulo) && !Object.values(c.ocultar || {}).some(Boolean)) delete todos[oid];
   const doc = { ...raw, checklists: todos };
   const { error } = await _sb.from('usuarios_perfil').update({ documentos: doc }).eq('id', userProfile.id);
   if(error){ toast('Não foi possível salvar agora.'); return false; }
@@ -6429,6 +6433,8 @@ function ckBarraHTML(oid, qual){
   const nRem = qual === 'oficial' ? (c.removidos || []).length : 0;
   return `<div class="ck-barra">
     <button type="button" class="doc-edit-link" onclick="ckOcultar(${oid},'${qual}')">${ocultando ? '👁 Mostrar concluídos' : '🙈 Ocultar concluídos'}</button>
+    ${qual === 'oficial' ? '<span style="flex:1 1 100%; font-size:11.5px; color:var(--ink-dim);">Toque na caixa para concluir · segure um item e arraste para mudar a ordem</span>' : ''}
+    ${(qual === 'oficial' && (c.ordem || []).length) ? `<button type="button" class="doc-edit-link" onclick="ckOrdemOriginal(${oid})" title="Volta os itens para a ordem do edital">↺ Ordem original</button>` : ''}
     ${nRem ? `<button type="button" class="doc-edit-link" onclick="ckRestaurar(${oid})" title="Traz de volta os itens que você removeu da lista">↺ Restaurar ${nRem} removido${nRem>1?'s':''}</button>` : ''}
   </div>`;
 }
@@ -6503,6 +6509,68 @@ async function ckRemoverOficial(oid, i){
   if(bar && bar.classList.contains('ck-barra')) bar.outerHTML = ckBarraHTML(oid, 'oficial');
   ckRender(oid);
 }
+/* ---- Ordem dos itens: segurar e arrastar ---- */
+function ckOrdemSalva(oid){ const c = userProfile && ((userProfile.documentosRaw || {}).checklists || {})[oid]; return (c && c.ordem) || []; }
+function ckOrdenar(oid, docs){
+  const idx = docs.map((d,i)=>i), ord = ckOrdemSalva(oid); if(!ord.length) return idx;
+  const pos = new Map(ord.map((k,n)=>[k,n]));
+  const peso = i => pos.has(_chaveDoc(docs[i])) ? pos.get(_chaveDoc(docs[i])) : 100000 + i;
+  return idx.sort((a,b)=>peso(a) - peso(b));
+}
+async function ckOrdemOriginal(oid){
+  if(!(await ckGravar(oid, c=>{ delete c.ordem; }))) return;
+  if(currentDetailId === oid) openDetalhe(oid);
+}
+let _drag = null;
+function ckDragLimpar(){
+  if(!_drag) return;
+  clearTimeout(_drag.timer); clearInterval(_drag.rolagem);
+  _drag.li.classList.remove('ck-arrastando'); _drag.ul.classList.remove('ck-reordenando');
+  _drag = null;
+}
+function ckDragIniciar(){
+  if(!_drag) return;
+  _drag.ativo = true; _drag.li.classList.add('ck-arrastando'); _drag.ul.classList.add('ck-reordenando');
+  try{ if(navigator.vibrate) navigator.vibrate(25); }catch(e){}
+  _drag.rolagem = setInterval(()=>{ if(!_drag) return; const y = _drag.y; if(y < 70) window.scrollBy(0, -14); else if(y > window.innerHeight - 70) window.scrollBy(0, 14); if(y < 70 || y > window.innerHeight - 70) ckDragMover(y); }, 30);
+}
+function ckDragMover(y){
+  const li = _drag.li, ul = _drag.ul;
+  for(const c of ul.children){
+    if(c === li) continue;
+    const r = c.getBoundingClientRect(); if(y < r.top || y > r.bottom) continue;
+    if(y < r.top + r.height / 2) ul.insertBefore(li, c); else ul.insertBefore(li, c.nextSibling);
+    break;
+  }
+}
+async function ckDragFinalizar(){
+  const d = _drag; if(!d) return;
+  const ativo = d.ativo, ul = d.ul; ckDragLimpar();
+  if(!ativo) return;
+  const m = ul.id.match(/^doc-list-(\d+)$/); const o = m && oportunidades.find(x=>x.id === +m[1]); if(!o) return;
+  const docs = docsPreview(o.documentos);
+  const ordem = [...ul.children].map(li=>{ const mm = li.id.match(/^doc-item-\d+-(\d+)$/); return mm && docs[+mm[1]] != null ? _chaveDoc(docs[+mm[1]]) : null; }).filter(Boolean);
+  const igual = JSON.stringify(ordem) === JSON.stringify(ckOrdenar(o.id, docs).map(i=>_chaveDoc(docs[i])).filter(k=>ordem.includes(k)));
+  if(igual) return;
+  if(await ckGravar(o.id, c=>{ c.ordem = ordem; })) toast('Ordem salva');
+}
+document.addEventListener('pointerdown', e=>{
+  if(e.pointerType === 'mouse' && e.button !== 0) return;
+  const li = e.target.closest && e.target.closest('ul.doc-list[id^="doc-list-"] > li');
+  if(!li || typeof ckPode !== 'function' || !ckPode()) return;
+  if(e.target.closest('button, a, input, label, select, textarea, summary, details, .doc-check')) return;
+  ckDragLimpar();
+  _drag = { li, ul: li.parentElement, x: e.clientX, y: e.clientY, id: e.pointerId, ativo: false };
+  _drag.timer = setTimeout(ckDragIniciar, 450);
+});
+document.addEventListener('pointermove', e=>{
+  if(!_drag || e.pointerId !== _drag.id) return;
+  if(!_drag.ativo){ if(Math.hypot(e.clientX - _drag.x, e.clientY - _drag.y) > 8) ckDragLimpar(); return; }
+  _drag.y = e.clientY; ckDragMover(e.clientY);
+});
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t, ()=>{ if(_drag) ckDragFinalizar(); }));
+document.addEventListener('touchmove', e=>{ if(_drag && _drag.ativo) e.preventDefault(); }, { passive:false });
+document.addEventListener('contextmenu', e=>{ if(_drag) e.preventDefault(); });
 async function ckRestaurar(oid){
   if(!(await ckGravar(oid, c=>{ c.removidos = []; }))) return;
   if(currentDetailId === oid) openDetalhe(oid);
@@ -6553,7 +6621,7 @@ async function pessoalAnexo(oppId, i){
 function docItemInner(o, d, i, estado){
   const na = estado === 'na';
   const on = estado === true;
-  const box = na ? `<span class="doc-check" id="doc-check-${o.id}-${i}">–</span>` : `<span class="doc-check ${on?'checked':''}" id="doc-check-${o.id}-${i}">${on?'✓':''}</span>`;
+  const box = na ? `<span class="doc-check" id="doc-check-${o.id}-${i}">–</span>` : `<span class="doc-check ${on?'checked':''}" id="doc-check-${o.id}-${i}" role="checkbox" aria-checked="${on?'true':'false'}" title="Marcar como concluído" onclick="event.stopPropagation(); toggleDoc(${o.id},${i})">${on?'✓':''}</span>`;
   const btn = `<button type="button" class="doc-na-btn" onclick="event.stopPropagation();docNaoSeAplica(${o.id},${i})" title="${na?'Voltar este documento para o checklist':'Este documento não se aplica a mim'}">${na?'desfazer':'não se aplica'}</button>`;
   const naNoMenu = !na && !!userProfile && ehPro();   // com o menu ⋯ disponível, "não se aplica" fica lá dentro
   const btnVisivel = naNoMenu ? '' : btn;
