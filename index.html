@@ -170,6 +170,8 @@ header.topbar{
 .doc-menu{display:inline-block; position:relative; margin-left:6px; vertical-align:middle;}
 .doc-menu>summary{list-style:none; cursor:pointer; font-size:13px; line-height:1; color:var(--ink-dim); border:1px dashed var(--border); border-radius:20px; padding:2px 9px; user-select:none;}
 .doc-menu>summary::-webkit-details-marker{display:none;}
+.doc-menu-dica{font-size:11px; letter-spacing:.2px;}
+.doc-menu[open] .doc-menu-dica{display:none;}
 .doc-menu>summary:hover, .doc-menu[open]>summary{color:var(--teal); border-color:var(--teal);}
 .doc-menu-lista{position:absolute; left:0; top:calc(100% + 4px); z-index:30; width:max-content; min-width:170px; max-width:80vw; display:flex; flex-direction:column; gap:2px; padding:6px; background:var(--bg-card, #14263d); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.35);}
 .doc-menu-lista .doc-edit-link{margin:0; color:var(--ink); text-align:left; border:none; border-radius:6px; padding:6px 8px; font-size:12.5px; white-space:nowrap;}
@@ -6161,7 +6163,7 @@ function linkEmitirDocHTML(texto, o, i){
     if(!adm) itens += btp('Renomear este item só para você', 'docMenuRenomear', '✎ Renomear');
     itens += btp('Tirar este item da sua lista (dá para restaurar)', 'ckRemoverOficial', '🗑 Excluir');
     itens += btp('Este documento não se aplica a mim', 'docNaoSeAplica', '🚫 Não se aplica');
-    meus += ` <details class="doc-menu" onclick="event.stopPropagation()"><summary title="Mais opções deste item">⋯</summary><div class="doc-menu-lista">${itens}</div></details>`;
+    meus += ` <details class="doc-menu" onclick="event.stopPropagation()"><summary title="Mais opções deste item">⋯ <span class="doc-menu-dica">clique aqui</span></summary><div class="doc-menu-lista">${itens}</div></details>`;
   }
   if(!url) return anexada + ferr + meus;
   // com o documento já anexado, o "Emitir aqui" some; ao remover o anexo (venceu), ele volta
