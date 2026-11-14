@@ -2725,6 +2725,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     <img class="rodape-logo rodape-logo-claro" src="assets/borboleta-clara-144.webp" srcset="assets/borboleta-clara-72.webp 1x, assets/borboleta-clara-144.webp 2x, assets/borboleta-clara-216.webp 3x" alt="Transformare Psicologia e Projetos" width="72" height="53" loading="lazy"><img class="rodape-logo rodape-logo-escuro" src="assets/borboleta-verde-144.webp" srcset="assets/borboleta-verde-72.webp 1x, assets/borboleta-verde-144.webp 2x, assets/borboleta-verde-216.webp 3x" alt="Transformare Psicologia e Projetos" width="72" height="54" loading="lazy">
   </div>
   © 2026 Transformare Psicologia e Projetos.<br class="br-cel"> Todos os direitos reservados.
+  <div style="font-size:10.5px; color:var(--ink-dim); margin-top:6px;" title="Versão do site neste aparelho">versão 2026-11-14 · r317</div>
   <div class="footer-links">
     <a href="#privacidade" onclick="event.preventDefault(); nav('privacidade')">Política de Privacidade e Segurança</a>
     <a href="#cookies" onclick="event.preventDefault(); radarCookiesReabrir()">Preferências de cookies</a>
@@ -3748,7 +3749,7 @@ function irAoCadastro(oid, chave){
   }, 250);
 }
 function abrirMinhasCertidoes(oid){
-  if(!userProfile){ nav('login'); return; }
+  if(!userProfile){ toast('Entre na sua conta de usuário para ver suas certidões.'); nav('login'); return; }
   const arq = (userProfile.documentosRaw || {}).certidoesArq || {};
   const chaves = CERT_COM_ANEXO.slice().concat(Object.keys(arq).filter(k=>k.indexOf('x_') === 0 && arq[k].cadastro));
   document.getElementById('certs-modal-lista').innerHTML = chaves.map(k=>{
@@ -5809,7 +5810,7 @@ function openDetalhe(id){
 
         <div class="panel">
           <h4><span class="dot"></span>Documentação necessária</h4>
-          ${userProfile ? `<button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px; margin:0 0 10px;" onclick="abrirMinhasCertidoes(${o.id})" title="Ver, anexar ou trocar suas certidões salvas sem sair deste edital">📄 Minhas certidões</button>` : ''}
+          <button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px; margin:0 0 10px;" onclick="abrirMinhasCertidoes(${o.id})" title="Ver, anexar ou trocar suas certidões salvas sem sair deste edital">📄 Minhas certidões</button>
           ${(typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="prosp-edital-' + o.id + '"></div>' : ''}
           ${(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="pasta-edital-' + o.id + '"></div>' : ''}
           ${(()=>{ const docsVisiveis = docsPreview(o.documentos); const ocultos = o.documentos.length - docsVisiveis.length; return `
