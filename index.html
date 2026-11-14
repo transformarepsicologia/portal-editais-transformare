@@ -6122,6 +6122,12 @@ function portalDoDocumento(texto){
   return null;
 }
 document.addEventListener('click', e=>{ document.querySelectorAll('details.doc-menu[open]').forEach(d=>{ if(!d.contains(e.target)) d.removeAttribute('open'); }); }, true);
+/* Ações do menu ⋯ que pedem confirmação antes de executar */
+function docMenuRenomear(oid, i){
+  const o = oportunidades.find(x=>x.id===oid); const t = o ? docsPreview(o.documentos)[i] : '';
+  if(!confirm('Renomear este item só para você?\n\n"' + (t || '') + '"')) return;
+  pessoalNome(oid, i);
+}
 function _chaveDoc(texto){ return String(texto||'').normalize('NFC').replace(/\s+/g,' ').trim().toLowerCase(); }
 function linkEmitirDocHTML(texto, o, i){
   const adm = (o && o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed);
@@ -6143,11 +6149,13 @@ function linkEmitirDocHTML(texto, o, i){
   const btp = (titulo, fn, rotulo) => ` <button type="button" class="doc-edit-link" title="${titulo}" onclick="event.stopPropagation(); ${fn}(${o.id}, ${i})">${rotulo}</button>`;
   let meus = '';
   if(userProfile){
-    // tirar / nome / link ficam num menu "⋯" para a linha não poluir
-    let itens = btp('Tirar este item da sua lista (dá para restaurar)', 'ckRemoverOficial', '🗑 Tirar da lista');
-    if(!adm) itens += btp('Renomear este item só para você', 'pessoalNome', '✎ Renomear') + btp('Cadastrar ou alterar o link deste documento só para você', 'pessoalLink', '✎ Link próprio');
+    // menu ⋯, nesta ordem: anexar, adicionar link, renomear, excluir (renomear e excluir pedem confirmação; excluir já confirma dentro de ckRemoverOficial) e, por fim, não se aplica
+    let itens = '';
     const livre = !chaveAnexo || String(chaveAnexo).indexOf('x_') === 0;
-    if(livre && !(chaveAnexo && certArqInfo(chaveAnexo))) itens += pes.anexo ? btp('Tirar o botão de anexo deste item', 'pessoalAnexo', '✕ Tirar botão de anexo') : btp('Criar um botão para anexar este documento', 'pessoalAnexo', '📎 Anexo');
+    if(livre && !(chaveAnexo && certArqInfo(chaveAnexo))) itens += pes.anexo ? btp('Tirar o botão de anexo deste item', 'pessoalAnexo', '✕ Tirar botão de anexo') : btp('Criar um botão para anexar este documento', 'pessoalAnexo', '📎 Anexar');
+    if(!adm) itens += btp('Cadastrar ou alterar o link deste documento só para você', 'pessoalLink', '🔗 Adicionar link')
+                    + btp('Renomear este item só para você', 'docMenuRenomear', '✎ Renomear');
+    itens += btp('Tirar este item da sua lista (dá para restaurar)', 'ckRemoverOficial', '🗑 Excluir');
     itens += btp('Este documento não se aplica a mim', 'docNaoSeAplica', '🚫 Não se aplica');
     meus += ` <details class="doc-menu" onclick="event.stopPropagation()"><summary title="Mais opções deste item">⋯</summary><div class="doc-menu-lista">${itens}</div></details>`;
   }
