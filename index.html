@@ -1934,7 +1934,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 
 <!-- ===================== PERFIL (editar) ===================== -->
 <section class="view" id="view-perfil">
-  <button class="back-link" onclick="nav('minha-conta')">← Voltar à minha conta</button>
+  <button class="back-link" id="perfil-voltar" onclick="voltarDoPerfil()">← Voltar à minha conta</button>
   <div class="page-head" style="padding-top:0;"><span class="eyebrow">Minha conta</span><h2>Editar perfil</h2></div>
   <div class="form-card" style="max-width:560px;">
     <div class="form-row"><label>E-mail (não pode ser alterado)</label><input type="email" id="perfil-email" disabled></div>
@@ -3724,6 +3724,36 @@ function exigirCadastro(acao){
   nav('cadastro');
   return false;
 }
+/* Ligação cadastro ⇄ edital: do edital vai ao cadastro (e ao documento) e volta para o mesmo edital, no mesmo ponto */
+let perfilOrigem = null;
+function irAoCadastro(oid, chave){
+  if(!userProfile){ nav('login'); return; }
+  perfilOrigem = { oid, y: window.scrollY };
+  nav('perfil');
+  setTimeout(()=>{
+    let alvo = null;
+    if(chave){ const el = document.getElementById('cert-arq-' + chave); alvo = el && el.closest('.cert-card'); }
+    if(!alvo) alvo = document.querySelector('#view-perfil .cert-card');
+    if(alvo){ alvo.scrollIntoView({behavior:'smooth', block:'center'}); if(chave){ alvo.style.transition='box-shadow .3s'; alvo.style.boxShadow='0 0 0 2px var(--teal)'; setTimeout(()=>{ alvo.style.boxShadow=''; }, 2500); } }
+  }, 250);
+}
+function irAoCadastroDoc(oid, i){
+  const o = oportunidades.find(x=>x.id === oid); if(!o) return;
+  const texto = docsPreview(o.documentos)[i];
+  irAoCadastro(oid, texto != null ? chaveCertidaoDoItem(texto, o) : null);
+}
+function voltarDoPerfil(){
+  const po = perfilOrigem; perfilOrigem = null;
+  if(po && oportunidades.some(x=>x.id === po.oid)){
+    openDetalhe(po.oid);
+    setTimeout(()=>window.scrollTo({top: po.y || 0, behavior:'auto'}), 120);
+  } else nav('minha-conta');
+}
+function atualizarVoltarPerfil(){
+  const b = document.getElementById('perfil-voltar'); if(!b) return;
+  const o = perfilOrigem && oportunidades.find(x=>x.id === perfilOrigem.oid);
+  b.textContent = o ? '← Voltar ao edital: ' + (o.orgao || o.edital || '') : '← Voltar à minha conta';
+}
 let detalheOrigem = {view:'editais', y:null};
 function voltarDetalhe(){
   const o = detalheOrigem || {view:'editais', y:null};
@@ -3764,7 +3794,8 @@ function nav(view){
   if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); adminTab(adminTabAtual||'hoje'); carregarContagensHoje(); renderUsuariosAdmin(); renderFeedbacksAdmin(); renderSugestoesProfissaoAdmin(); renderSolicitacoesIndiceAdmin(); }
   if(view === 'minha-conta'){ renderMinhaConta(); atualizarStatusPedidoPlano(); carregarMinhaAssinatura(); carregarAvisoProEncerrado(); }
   if(view === 'sobre') renderMapaEditais();
-  if(view === 'perfil') renderPerfil();
+  if(view === 'perfil'){ renderPerfil(); atualizarVoltarPerfil(); }
+  if(view !== 'perfil') perfilOrigem = null;
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
   currentView = view;
 }
@@ -4605,7 +4636,7 @@ function certLinhaHTML(c, pre){
   const iso = podeAnotar ? ((userProfile.documentosRaw.certidoesVenc || {})[c.chave] || '') : '';
   return `<div class="cert-card">
     ${c.url ? `<a class="cert-titulo" href="${c.url}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${esc(c.nome)} ↗</a>` : `<span class="cert-titulo">${esc(c.nome)}</span>`}
-    ${podeAnotar ? `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; font-size:12.5px;"><label for="cert-${c.chave}">Vence em</label><input type="date" id="cert-${c.chave}" value="${esc(iso)}" onchange="salvarCertidao('${c.chave}', this.value)" style="max-width:160px; color-scheme:light dark;"><span id="cert-st-${c.chave}">${certStatusHTML(c.chave, iso)}</span></div>` : ''}
+    ${podeAnotar ? `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; font-size:12.5px;"><label for="cert-${c.chave}">Vence em</label><input type="date" id="cert-${c.chave}" value="${esc(iso)}" onchange="salvarCertidao('${c.chave}', this.value)" style="max-width:160px; color-scheme:light dark;"> <span style="color:var(--ink-dim);">ou em <input type="number" min="1" max="3650" placeholder="dias" onkeydown="if(event.key==='Enter') salvarCertidaoDias('${c.chave}', this.value)" onchange="salvarCertidaoDias('${c.chave}', this.value)" style="width:62px; font-size:12px;"> dias</span><span id="cert-st-${c.chave}">${certStatusHTML(c.chave, iso)}</span></div>` : ''}
     ${podeAnexar ? `<div id="cert-arq-${c.chave}" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px;">${certArqHTML(c.chave)}</div>` : ''}
   </div>`;
 }
@@ -4700,7 +4731,7 @@ function certCkInner(chave){
   if(!a) return `<label class="doc-emitir" style="cursor:pointer;" onclick="${parar}" title="PDF, JPG ou PNG, até 500 KB. Fica salvo em Minha conta.">📎 Anexar ${livre ? 'documento' : 'minha certidão'}${entrada}</label>`;
   const iso = ((userProfile.documentosRaw || {}).certidoesVenc || {})[chave] || '';
   const st = iso ? ' ' + certStatusHTML(chave, iso) : '';
-  return (!certTemData(chave) ? '' : `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;">${st}</span>`);
+  return (!certTemData(chave) ? '' : `<span class="cert-venc" style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; margin-left:6px;" onclick="${parar}">vence em <input type="date" value="${esc(iso)}" onchange="${parar}; salvarCertidao('${chave}', this.value)" style="max-width:135px; font-size:11.5px; color-scheme:light dark;"><span class="cert-dias" style="color:var(--ink-dim);">ou em <input type="number" min="1" max="3650" placeholder="dias" onclick="${parar}" onkeydown="if(event.key==='Enter'){ ${parar}; salvarCertidaoDias('${chave}', this.value); }" onchange="${parar}; salvarCertidaoDias('${chave}', this.value)" style="width:58px; font-size:11.5px;"> dias</span>${st}</span>`);
 }
 function certAnexadaHTML(texto, o){
   const chave = chaveCertidaoDoItem(texto, o);
@@ -4712,6 +4743,13 @@ function certCkAtualizar(chave){
   document.querySelectorAll('.cert-ck[data-chave="' + chave + '"]').forEach(el=>{ el.innerHTML = certCkInner(chave); });
   const tem = !!certArqInfo(chave);
   document.querySelectorAll('a[data-emitir-chave]').forEach(a=>{ if(a.getAttribute('data-emitir-chave') === String(chave)) a.style.display = tem ? 'none' : ''; });
+}
+async function salvarCertidaoDias(chave, dias){
+  const n = parseInt(dias, 10); if(!n || n < 1) return;
+  const d = new Date(); d.setDate(d.getDate() + n);
+  const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const campo = document.getElementById('cert-' + chave); if(campo) campo.value = iso;
+  await salvarCertidao(chave, iso);
 }
 async function salvarCertidao(chave, valor){
   if(!userProfile || !_sb) return;
@@ -5748,6 +5786,7 @@ function openDetalhe(id){
 
         <div class="panel">
           <h4><span class="dot"></span>Documentação necessária</h4>
+          ${userProfile ? `<button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px; margin:0 0 10px;" onclick="irAoCadastro(${o.id})" title="Abrir seus documentos salvos no cadastro e voltar para este edital">📁 Meus documentos no cadastro</button>` : ''}
           ${(typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="prosp-edital-' + o.id + '"></div>' : ''}
           ${(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="pasta-edital-' + o.id + '"></div>' : ''}
           ${(()=>{ const docsVisiveis = docsPreview(o.documentos); const ocultos = o.documentos.length - docsVisiveis.length; return `
@@ -6234,6 +6273,7 @@ function linkEmitirDocHTML(texto, o, i){
     itens += btp('Subir este item uma posição', 'ckSubir', '⬆ Subir') + btp('Descer este item uma posição', 'ckDescer', '⬇ Descer');
     itens += btp('Tirar este item da sua lista (dá para restaurar)', 'ckRemoverOficial', '🗑 Excluir');
     itens += btp('Este documento não se aplica a mim', 'docNaoSeAplica', '🚫 Não se aplica');
+    if(chaveAnexo) itens += btp('Abrir este documento no meu cadastro', 'irAoCadastroDoc', '📁 Ver no meu cadastro');
     itens += btp('Avisar a Transformare que há um problema neste item ou no link', 'abrirRelatoDoc', '⚠ Relatar problema');
     }
     itens += ferrAdm;
