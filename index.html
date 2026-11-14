@@ -6165,6 +6165,7 @@ function linkEmitirDocHTML(texto, o, i){
     if(livre && !temArq) itens += pes.anexo ? btp('Tirar o botão de anexo deste item', 'pessoalAnexo', '✕ Tirar botão de anexo') : btp('Criar um botão para anexar este documento', 'pessoalAnexo', '📎 Anexar');
     if(!adm && !temArq) itens += btp('Cadastrar ou alterar o link deste documento só para você', 'pessoalLink', '🔗 Adicionar link');   // com o documento anexado, link para emitir não faz sentido
     if(!adm) itens += btp('Renomear este item só para você', 'docMenuRenomear', '✎ Renomear');
+    itens += btp('Subir este item uma posição', 'ckSubir', '⬆ Subir') + btp('Descer este item uma posição', 'ckDescer', '⬇ Descer');
     itens += btp('Tirar este item da sua lista (dá para restaurar)', 'ckRemoverOficial', '🗑 Excluir');
     itens += btp('Este documento não se aplica a mim', 'docNaoSeAplica', '🚫 Não se aplica');
     meus += ` <details class="doc-menu" onclick="event.stopPropagation()"><summary title="Mais opções deste item">⋯ <span class="doc-menu-dica">clique aqui</span></summary><div class="doc-menu-lista">${itens}</div></details>`;
@@ -6517,6 +6518,8 @@ function ckOrdenar(oid, docs){
   const peso = i => pos.has(_chaveDoc(docs[i])) ? pos.get(_chaveDoc(docs[i])) : 100000 + i;
   return idx.sort((a,b)=>peso(a) - peso(b));
 }
+function ckSubir(oid, i){ ckMover(oid, i, -1); }
+function ckDescer(oid, i){ ckMover(oid, i, 1); }
 async function ckOrdemOriginal(oid){
   if(!(await ckGravar(oid, c=>{ delete c.ordem; }))) return;
   if(currentDetailId === oid) openDetalhe(oid);
@@ -6547,6 +6550,19 @@ async function ckDragFinalizar(){
   const d = _drag; if(!d) return;
   const ativo = d.ativo, ul = d.ul; ckDragLimpar();
   if(!ativo) return;
+  await ckSalvarOrdemLista(ul);
+}
+/* Mover pelo menu ⋯ (alternativa ao arrastar): sobe ou desce o item uma posição */
+async function ckMover(oid, i, dir){
+  const li = document.getElementById('doc-item-' + oid + '-' + i); if(!li) return;
+  const alvo = dir < 0 ? li.previousElementSibling : li.nextElementSibling;
+  if(!alvo){ toast(dir < 0 ? 'Este item já é o primeiro' : 'Este item já é o último'); return; }
+  if(dir < 0) li.parentElement.insertBefore(li, alvo); else li.parentElement.insertBefore(alvo, li);
+  li.querySelector('details.doc-menu')?.removeAttribute('open');
+  li.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  await ckSalvarOrdemLista(li.parentElement);
+}
+async function ckSalvarOrdemLista(ul){
   const m = ul.id.match(/^doc-list-(\d+)$/); const o = m && oportunidades.find(x=>x.id === +m[1]); if(!o) return;
   const docs = docsPreview(o.documentos);
   const ordem = [...ul.children].map(li=>{ const mm = li.id.match(/^doc-item-\d+-(\d+)$/); return mm && docs[+mm[1]] != null ? _chaveDoc(docs[+mm[1]]) : null; }).filter(Boolean);
@@ -6561,11 +6577,11 @@ document.addEventListener('pointerdown', e=>{
   if(e.target.closest('button, a, input, label, select, textarea, summary, details, .doc-check')) return;
   ckDragLimpar();
   _drag = { li, ul: li.parentElement, x: e.clientX, y: e.clientY, id: e.pointerId, ativo: false };
-  _drag.timer = setTimeout(ckDragIniciar, 450);
+  _drag.timer = setTimeout(ckDragIniciar, 400);
 });
 document.addEventListener('pointermove', e=>{
   if(!_drag || e.pointerId !== _drag.id) return;
-  if(!_drag.ativo){ if(Math.hypot(e.clientX - _drag.x, e.clientY - _drag.y) > 8) ckDragLimpar(); return; }
+  if(!_drag.ativo){ if(Math.hypot(e.clientX - _drag.x, e.clientY - _drag.y) > 14) ckDragLimpar(); return; }
   _drag.y = e.clientY; ckDragMover(e.clientY);
 });
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t, ()=>{ if(_drag) ckDragFinalizar(); }));
