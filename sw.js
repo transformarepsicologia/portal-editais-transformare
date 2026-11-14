@@ -1,7 +1,7 @@
 // Service worker do Radar Transformare (PWA).
 // Regra: sempre tenta a internet primeiro; o cache só entra quando a pessoa está sem conexão.
 // Só mexe em arquivos do próprio site. Banco (Supabase), pagamentos e bibliotecas externas passam direto.
-const VERSAO = 'radar-v2';
+const VERSAO = 'radar-v3';
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -19,7 +19,8 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   e.respondWith(
-    fetch(req)
+    // 'no-cache': revalida com o servidor a cada abertura (o GitHub Pages guarda 10 min no cache do navegador, o que atrasava as atualizações no celular)
+    fetch(req, { cache: 'no-cache' })
       .then((resp) => {
         if (resp && resp.ok) {
           const copia = resp.clone();
