@@ -962,6 +962,7 @@ input:disabled{opacity:.6; cursor:not-allowed;}
 .lead-class.quente{color:var(--coral); background:rgba(240,101,78,0.12);}
 .lead-class.morno{color:var(--amber); background:rgba(245,169,62,0.12);}
 .lead-class.inicial{color:var(--ink-muted); background:rgba(143,166,190,0.1);}
+.lead-class.relato{color:var(--coral); background:rgba(255,107,107,0.12);}
 .lead-status-select{font-size:11.5px; padding:5px 8px; border-radius:6px;}
 .lead-detail-row{display:flex; justify-content:space-between; gap:10px; font-size:13px; padding:8px 0; border-top:1px solid var(--border-soft);}
 .lead-detail-row:first-child{border-top:none;}
@@ -2957,6 +2958,24 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 </div>
 
 <!-- ===================== MODAL: orientação (qualificado) ===================== -->
+<div class="modal-overlay" id="relato-modal">
+  <div class="modal-box" style="max-width:480px;">
+    <button class="modal-close" onclick="closeModal('relato-modal')">×</button>
+    <h3 style="margin-bottom:4px;">Relatar problema</h3>
+    <p id="relato-contexto" style="font-size:13px; color:var(--ink-muted); margin-bottom:10px;"></p>
+    <div class="form-row"><label>O que aconteceu?</label>
+      <select id="relato-tipo">
+        <option>O link está incorreto ou não abre</option>
+        <option>O link está desatualizado</option>
+        <option>O documento está errado ou faltando na lista</option>
+        <option>Outro problema</option>
+      </select></div>
+    <div class="form-row"><label>Quer explicar melhor? <span style="color:var(--ink-dim);">(opcional)</span></label>
+      <textarea id="relato-msg" rows="3" maxlength="600" placeholder="Ex.: o link abre a página inicial do órgão, o certo é…"></textarea></div>
+    <button type="button" class="btn-primary" id="relato-enviar" onclick="enviarRelatoDoc()">Enviar à Transformare</button>
+    <p style="font-size:11.5px; color:var(--ink-dim); margin-top:8px;">Seu nome e contato do cadastro seguem junto, para a Transformare poder te responder.</p>
+  </div>
+</div>
 <div class="modal-overlay" id="lead-modal">
   <div class="modal-box" style="max-width:480px;">
     <button class="modal-close" onclick="closeModal('lead-modal')">×</button>
@@ -6127,6 +6146,48 @@ function portalDoDocumento(texto){
 }
 document.addEventListener('click', e=>{ document.querySelectorAll('details.doc-menu[open]').forEach(d=>{ if(!d.contains(e.target)) d.removeAttribute('open'); }); }, true);
 /* Ações do menu ⋯ que pedem confirmação antes de executar */
+/* ---- Relatar problema (link incorreto etc.): vira um registro em "Leads recebidos" para a Transformare ---- */
+let _relato = null;
+function _urlDoItemChecklist(o, texto){
+  const pes = userProfile ? (docPessoal(o, texto).url || '') : '';
+  if(pes) return pes;
+  const ov = o && o.linksDocs ? o.linksDocs[_chaveDoc(texto)] : undefined;
+  if(ov === '') return '';
+  if(ov) return ov;
+  const l = portalDoDocumento(texto); return l ? l.url : '';
+}
+function abrirRelatoDoc(oid, i){
+  const o = oportunidades.find(x=>x.id === oid); if(!o) return;
+  const texto = docsPreview(o.documentos)[i]; if(texto == null) return;
+  if(!userProfile){ toast('Entre na sua conta para relatar um problema.'); return; }
+  _relato = { oid, i, texto, url: _urlDoItemChecklist(o, texto) };
+  document.getElementById('relato-contexto').innerHTML = '<strong>' + esc(texto) + '</strong>' + (_relato.url ? '<br><span style="word-break:break-all;">Link atual: ' + esc(_relato.url) + '</span>' : '<br>Este item não tem link.');
+  document.getElementById('relato-msg').value = '';
+  document.getElementById('relato-tipo').selectedIndex = 0;
+  openModal('relato-modal');
+}
+async function enviarRelatoDoc(){
+  const r = _relato; if(!r || !userProfile || !_sb) return;
+  const o = oportunidades.find(x=>x.id === r.oid); if(!o) return;
+  const chave = 'relato_' + r.oid + '_' + _chaveDoc(r.texto).slice(0, 40);
+  try{ const ult = +localStorage.getItem(chave) || 0; if(Date.now() - ult < 10 * 60000){ toast('Você já avisou sobre este item há pouco. Obrigado!'); closeModal('relato-modal'); return; } }catch(e){}
+  const tipo = document.getElementById('relato-tipo').value, obs = document.getElementById('relato-msg').value.trim();
+  const linkEdital = (o.id >= 900000) ? SITE_URL + '/?e=' + (o.id - 900000) : SITE_URL;
+  const mensagem = [ 'Problema relatado no checklist.', 'Item: ' + r.texto, 'Link em uso: ' + (r.url || 'nenhum'), 'Edital: ' + (o.orgao || '') + ' — ' + (o.edital || '') + ' (' + linkEdital + ')', 'Tipo: ' + tipo, obs ? 'Observação: ' + obs : '' ].filter(Boolean).join('\n');
+  const btn = document.getElementById('relato-enviar'); btn.disabled = true;
+  const agora = new Date().toLocaleString('pt-BR');
+  const { error } = await _sb.from('leads').insert({
+    usuario_id: userProfile.id, nome: userProfile.nome || 'Usuário do Radar', whatsapp: userProfile.whatsapp || null, email: userProfile.email || null,
+    profissao: (userProfile.profs && userProfile.profs[0]) || null, uf: userProfile.uf || null, oportunidade_ids: [o.id],
+    edital: o.edital || null, orgao: o.orgao || null, tipo_solicitacao: 'Relato: ' + tipo, documentacao: r.texto, urgencia: 'Normal',
+    mensagem, origem: 'Relato de problema (checklist)', classificacao: 'relato', status: 'Novo', historico: [{ data: agora, texto: 'Relato enviado pelo usuário' }],
+  });
+  btn.disabled = false;
+  if(error){ toast('Não foi possível enviar agora. Tente novamente.'); return; }
+  try{ localStorage.setItem(chave, String(Date.now())); }catch(e){}
+  closeModal('relato-modal'); _relato = null;
+  toast('Obrigado! A Transformare vai conferir e corrigir.');
+}
 function docMenuRenomear(oid, i){
   const o = oportunidades.find(x=>x.id===oid); const t = o ? docsPreview(o.documentos)[i] : '';
   if(!confirm('Renomear este item só para você?\n\n"' + (t || '') + '"')) return;
@@ -6173,6 +6234,7 @@ function linkEmitirDocHTML(texto, o, i){
     itens += btp('Subir este item uma posição', 'ckSubir', '⬆ Subir') + btp('Descer este item uma posição', 'ckDescer', '⬇ Descer');
     itens += btp('Tirar este item da sua lista (dá para restaurar)', 'ckRemoverOficial', '🗑 Excluir');
     itens += btp('Este documento não se aplica a mim', 'docNaoSeAplica', '🚫 Não se aplica');
+    itens += btp('Avisar a Transformare que há um problema neste item ou no link', 'abrirRelatoDoc', '⚠ Relatar problema');
     }
     itens += ferrAdm;
     meus += ` <details class="doc-menu" onclick="event.stopPropagation()"><summary title="Mais opções deste item">⋯ <span class="doc-menu-dica">clique aqui</span></summary><div class="doc-menu-lista">${itens}</div></details>`;
@@ -6884,7 +6946,7 @@ async function updateLeadStatus(id, novoStatus){
 }
 
 function classBadge(c){
-  const map = {quente:'🔥 Quente', morno:'🟡 Morno', inicial:'🔵 Inicial'};
+  const map = {quente:'🔥 Quente', morno:'🟡 Morno', inicial:'🔵 Inicial', relato:'⚠ Relato'};
   return `<span class="lead-class ${c}">${map[c]||c}</span>`;
 }
 
