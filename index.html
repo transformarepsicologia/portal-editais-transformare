@@ -1974,6 +1974,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     <div id="perfil-pj-box" style="display:none;">
       <div class="form-row"><label>CNPJ</label><div style="display:flex; gap:6px;"><input type="text" id="perfil-cnpj" placeholder="00.000.000/0000-00" inputmode="numeric" maxlength="18" style="flex:1; min-width:0;" oninput="cnpjDigitado('perfil')"><button type="button" class="btn-ghost" onclick="buscarCnpjPerfil('perfil')">Buscar dados</button></div></div>
       <div id="perfil-empresa" class="empresa-box"></div>
+      <div id="perfil-respostas"></div>
     </div>
     <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="saveProfile()">Salvar perfil</button></div>
   </div>
@@ -5031,6 +5032,13 @@ function calcularAderencia(o, u){
       if(u.atuacao.includes('PJ') && u.empresa && u.empresa.situacao && u.empresa.situacao.toUpperCase() !== 'ATIVA') motivos.push('⚠ CNPJ não está ativo');
     }
   }
+  // Exigências do edital (pontos de atenção): perguntas aprovadas respondidas pelo assinante. Sim mantém, Não reduz, Não sei não muda.
+  if(u.plano === 'essencial' && Array.isArray(o.perguntas)){
+    const resp = ((u.documentosRaw || {}).respostasEdital || {})[o.id] || {}, PESO = { leve: 5, media: 10, grave: 20 };
+    let pp = 0, pm = 0; const nao = [];
+    o.perguntas.filter(q=>q && q.aprovada).forEach(q=>{ const r = resp[q.id]; if(r !== 'sim' && r !== 'nao') return; const w = PESO[q.peso] || 10; pm += w; if(r === 'sim') pp += w; else nao.push(q.texto); });
+    if(pm) add('Exigências do edital', pp, pm, nao.length ? 'você não atende: ' + nao.join('; ') : 'você atende às exigências que respondeu');
+  }
   let pct = total ? Math.round(pontos / total * 100) : null;
   if(naoAtende && pct !== null) pct = Math.min(pct, 40);
   // Frases em linguagem natural para o resumo da nota (positivo e o que verificar).
@@ -5046,11 +5054,12 @@ function calcularAderencia(o, u){
       'Remuneração': ()=>'remuneração compatível',
       'Instrução': ()=>'exige nível de ' + lc(o.escolaridadeMinima),
       'Experiência': ()=>`exige ${o.experienciaMinimaAnos} anos de experiência`,
+      'Exigências do edital': ()=>'atende às exigências do edital que você respondeu',
       'Especialidades': d=>/não restringe/.test(d.nota) ? 'sem restrição de área de atuação' : 'área de atuação compatível',
       'Tipo de atendimento': d=>/não restringe/.test(d.nota) ? 'sem restrição de tipo de atendimento' : 'tipo de atendimento compatível',
       'Forma de contratação': ()=>{ const a=(o.aceitaContratacao||[]); const pf=a.includes('Pessoa Física (PF)'), pj=a.includes('Pessoa Jurídica (PJ)'); const usa = (u.atuacao||[]); return 'aceita ' + ((usa.includes('PF') && pf && usa.includes('PJ') && pj) ? 'pessoa física e jurídica' : (usa.includes('PJ') && pj) ? 'pessoa jurídica' : 'pessoa física'); }
     };
-    const AJ = {'Profissão':'a profissão do edital','Localização':'a localização','Modalidade':'a modalidade','Abrangência':'a abrangência','Remuneração':'o valor da remuneração','Instrução':'a instrução exigida','Experiência':'a experiência exigida','Especialidades':'a área de atuação','Tipo de atendimento':'o tipo de atendimento aceito','Forma de contratação':'a forma de contratação aceita'};
+    const AJ = {'Exigências do edital':'as exigências do edital (pontos de atenção)','Profissão':'a profissão do edital','Localização':'a localização','Modalidade':'a modalidade','Abrangência':'a abrangência','Remuneração':'o valor da remuneração','Instrução':'a instrução exigida','Experiência':'a experiência exigida','Especialidades':'a área de atuação','Tipo de atendimento':'o tipo de atendimento aceito','Forma de contratação':'a forma de contratação aceita'};
     d.pos = cheio && POS[d.rotulo] ? POS[d.rotulo](d) : '';
     d.aj = !cheio ? (AJ[d.rotulo] || lc(d.rotulo)) : '';
   });
@@ -5821,7 +5830,9 @@ function openDetalhe(id){
             <div class="pontos-box positivo" style="white-space:pre-line;"><span class="pb-title">✓ Ponto positivo</span>${o.pontosPositivos || 'Nenhum destaque adicional identificado.'}</div>
             <div class="pontos-box atencao" style="white-space:pre-line;"><span class="pb-title">⚠ Ponto de atenção</span>${o.pontosAtencao || 'Nenhum ponto de atenção informado.'}</div>
           </div>
-        </div>` : ''}
+        </div>
+        <div id="perg-user-${o.id}">${pergUserHTML(o)}</div>
+        ${(typeof adminAuthed !== 'undefined' && adminAuthed && o.origemSupabase) ? `<div class="panel" id="perg-adm-${o.id}">${pergAdmHTML(o)}</div>` : ''}` : ''}
 
         ${ehPro() ? ctaProximoPasso : ''}
 
@@ -6510,6 +6521,82 @@ function documentosGenericos(docs){
 function docsPreview(documentos){
   if(ehEssencial()) return documentos || [];   // plano Transformare Pro: checklist completo
   return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
+}
+/* ===== Perguntas de aderência (pontos de atenção do edital) — só assinantes ===== */
+const PERG_REGRAS = [
+  [/vedad\w*[^.\n]*pessoas? fisicas?|exclusiv\w*[^.\n]*pessoas? juridicas?|restrit\w*[^.\n]*pessoas? juridicas?|somente (via cnpj|pessoa juridica)|(pf|pessoas? fisicas?) nao (e|sao) aceit|nao (aceita|aceitam)[^.\n]*pessoas? fisicas?|vedado o credenciamento[^.\n]*pessoa fisica/, 'Você atende como pessoa jurídica (tem CNPJ ativo)?', 'grave'],
+  [/atestado[^.\n]*(capacidade tecnica|aptidao|experiencia)|experiencia (anterior|previa|minima|especifica)|comprovacao de experiencia|comprovar[^.\n]*experiencia/, 'Você consegue comprovar a experiência/atestado de capacidade técnica que o edital exige?', 'grave'],
+  [/balanco patrimonial|indices? (de )?(liquidez|contabeis)|patrimonio liquido|qualificacao economico/, 'Sua empresa consegue apresentar balanço patrimonial e os índices contábeis exigidos?', 'media'],
+  [/\brqe\b/, 'Você tem RQE (Registro de Qualificação de Especialista) na especialidade exigida?', 'grave'],
+  [/titulo de especialista|titulo de especializacao|exige[^.\n]*especializacao em/, 'Você tem o título de especialista/especialização exigido?', 'grave'],
+  [/alvara sanitario|licenca sanitaria|alvara de funcionamento|\bcnes\b/, 'Seu consultório/clínica tem alvará e cadastro no CNES (ou você consegue providenciar)?', 'media'],
+  [/\bsicaf\b/, 'Você tem cadastro ativo no SICAF?', 'leve'],
+  [/estrutura fisica|consultorio proprio|local proprio|estabelecimento localizado|unidade de atendimento fisicamente|sede[^.\n]*localizad|ate \d+ ?km|maxima de \d+ ?km/, 'Você tem consultório ou estrutura física no local/raio exigido pelo edital?', 'grave'],
+  [/vistoria/, 'Você aceita receber vistoria no local de atendimento antes da habilitação?', 'leve'],
+  [/garantia contratual/, 'Você consegue apresentar a garantia contratual exigida?', 'media'],
+  [/entrega presencial|envelope (fechado|lacrado)|protocolo presencial|presencial[^.\n]*sede|inscricao presencial/, 'Você consegue entregar a documentação presencialmente no local indicado?', 'leve'],
+  [/assinatura (eletronica|digital)|icp-brasil|certificado digital/, 'Você tem assinatura/certificado digital?', 'leve'],
+  [/servidores? (concursados?|publicos?)[^.\n]*(proibid|vedad|impedid)|(proibid|vedad|impedid)[^.\n]*servidores? (concursados?|publicos?)/, 'Você NÃO é servidor público/concursado do órgão deste edital?', 'grave'],
+  [/prontuario eletronico|sistema informatizado|\bsisreg\b|registro[^.\n]*no sistema/, 'Você consegue registrar os atendimentos no sistema exigido pelo órgão?', 'leve'],
+  [/(registro|inscricao|visto)[^.\n]*(crm|coren|cress|crp|cro|crefito|crn|conselho)/, 'Seu registro no conselho profissional está ativo e regular (com visto, se exigido)?', 'media'],
+  [/prazo (curto|exiguo)|2 dias uteis|apenas 2 dias|1 dia util|em ate 24 ?h/, 'Você consegue cumprir os prazos curtos de convocação/assinatura do edital?', 'leve'],
+  [/valor[^.\n]*(baixo|abaixo)|baixa remuneracao|defasad|teto[^.\n]*abaixo/, 'O valor pago por este edital compensa para você?', 'leve'],
+];
+function gerarPerguntasDoEdital(o){
+  const t = _semAcento([o.pontosAtencao, o.requisitos].join(' \n '));
+  const lista = [], vistos = new Set();
+  PERG_REGRAS.forEach(([re, texto, peso], i)=>{ if(re.test(t) && !vistos.has(texto)){ vistos.add(texto); lista.push({ id: 'p' + (i + 1), texto, peso, aprovada: false }); } });
+  return lista;
+}
+function pergResp(oid){ return (((userProfile && userProfile.documentosRaw) || {}).respostasEdital || {})[oid] || {}; }
+function pergUserHTML(o){
+  if(!userProfile || !ehPro()) return '';
+  const qs = (o.perguntas || []).filter(q=>q && q.aprovada); if(!qs.length) return '';
+  const r = pergResp(o.id), ad = calcularAderencia(o, userProfile);
+  const bt = (q, v, rot)=>`<button type="button" class="${r[q.id] === v ? 'btn-primary' : 'btn-ghost'}" style="padding:4px 12px; font-size:12.5px;" onclick="responderPerguntaEdital(${o.id}, '${q.id}', '${v}')">${rot}</button>`;
+  return `<div class="panel"><h4><span class="dot"></span>Ajuste sua aderência</h4>
+    <p style="font-size:13px; color:var(--ink-muted); margin:0 0 10px;">Responda com sinceridade sobre as exigências dos pontos de atenção: quem atende mantém a nota, quem não atende vê a aderência cair. “Não sei” não muda nada.${ad && ad.pct !== null ? ` <strong style="color:var(--teal);">Sua aderência a este edital: ${ad.pct}%.</strong>` : ''}</p>
+    ${qs.map(q=>`<div style="padding:9px 0; border-top:1px solid var(--border);"><div style="font-size:14px; margin-bottom:6px;">${esc(q.texto)}</div><div style="display:flex; gap:6px; flex-wrap:wrap;">${bt(q,'sim','Sim')}${bt(q,'nao','Não')}${bt(q,'nsei','Não sei')}</div></div>`).join('')}</div>`;
+}
+async function responderPerguntaEdital(oid, qid, val){
+  if(!userProfile || !_sb) return;
+  const raw = userProfile.documentosRaw || {}, todas = { ...(raw.respostasEdital || {}) };
+  todas[oid] = { ...(todas[oid] || {}), [qid]: val };
+  const novo = { ...raw, respostasEdital: todas };
+  const { error } = await _sb.from('usuarios_perfil').update({ documentos: novo }).eq('id', userProfile.id);
+  if(error){ toast('Não foi possível salvar a resposta agora.'); return; }
+  userProfile.documentosRaw = novo;
+  const o = oportunidades.find(x=>x.id === oid), box = document.getElementById('perg-user-' + oid);
+  if(o && box) box.innerHTML = pergUserHTML(o);
+}
+function pergAdmHTML(o){
+  const qs = o.perguntas || [], inp = 'style="width:100%; padding:6px 8px; font-size:13px;"';
+  return `<h4><span class="dot"></span>Perguntas de aderência <span class="badge" style="font-size:10px;">SÓ ADM</span></h4>
+    <p style="font-size:12.5px; color:var(--ink-muted); margin:0 0 10px;">Rascunhos gerados dos pontos de atenção. Só as <strong>aprovadas</strong> aparecem para os assinantes.</p>
+    ${qs.length ? qs.map((q,i)=>`<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+      <label style="font-size:12px; white-space:nowrap;"><input type="checkbox" ${q.aprovada ? 'checked' : ''} onchange="pergAdmCampo(${o.id}, ${i}, 'aprovada', this.checked)"> aprovada</label>
+      <input ${inp} value="${esc(q.texto)}" onchange="pergAdmCampo(${o.id}, ${i}, 'texto', this.value)" style="flex:1; min-width:220px; padding:6px 8px; font-size:13px;">
+      <select onchange="pergAdmCampo(${o.id}, ${i}, 'peso', this.value)" style="font-size:12.5px;">${['leve','media','grave'].map(p=>`<option value="${p}" ${q.peso === p ? 'selected' : ''}>${p === 'media' ? 'média' : p}</option>`).join('')}</select>
+      <button type="button" class="btn-ghost" style="padding:3px 9px; font-size:12px;" onclick="pergAdmRemover(${o.id}, ${i})">✕</button></div>`).join('') : '<div style="font-size:13px; color:var(--ink-dim); margin-bottom:8px;">Nenhuma pergunta ainda.</div>'}
+    <div class="btn-row" style="margin-top:8px;"><button type="button" class="btn-ghost" onclick="pergAdmGerar(${o.id})">✨ Gerar rascunhos</button><button type="button" class="btn-ghost" onclick="pergAdmAdd(${o.id})">+ Pergunta</button><button type="button" class="btn-ghost" onclick="pergAdmAprovarTodas(${o.id})">✓ Aprovar todas</button><button type="button" class="btn-primary" onclick="pergAdmSalvar(${o.id})">Salvar</button></div>`;
+}
+function _pergAdmRedesenhar(oid){ const o = oportunidades.find(x=>x.id === oid), b = document.getElementById('perg-adm-' + oid); if(o && b) b.innerHTML = pergAdmHTML(o); }
+function pergAdmCampo(oid, i, campo, v){ const o = oportunidades.find(x=>x.id === oid); if(o && o.perguntas && o.perguntas[i]) o.perguntas[i][campo] = v; }
+function pergAdmRemover(oid, i){ const o = oportunidades.find(x=>x.id === oid); if(!o) return; o.perguntas.splice(i, 1); _pergAdmRedesenhar(oid); }
+function pergAdmAdd(oid){ const o = oportunidades.find(x=>x.id === oid); if(!o) return; o.perguntas = o.perguntas || []; o.perguntas.push({ id: 'm' + Date.now().toString(36), texto: '', peso: 'media', aprovada: false }); _pergAdmRedesenhar(oid); }
+function pergAdmAprovarTodas(oid){ const o = oportunidades.find(x=>x.id === oid); if(!o) return; (o.perguntas || []).forEach(q=>{ if((q.texto || '').trim()) q.aprovada = true; }); _pergAdmRedesenhar(oid); }
+function pergAdmGerar(oid){
+  const o = oportunidades.find(x=>x.id === oid); if(!o) return;
+  const atuais = o.perguntas || [], ids = new Set(atuais.map(q=>q.id)), novas = gerarPerguntasDoEdital(o).filter(q=>!ids.has(q.id) && !atuais.some(a=>a.texto === q.texto));
+  o.perguntas = atuais.concat(novas); _pergAdmRedesenhar(oid);
+  toast(novas.length ? novas.length + ' rascunho(s) gerado(s). Revise, aprove e salve.' : 'Nenhuma pergunta nova encontrada nos pontos de atenção.');
+}
+async function pergAdmSalvar(oid){
+  const o = oportunidades.find(x=>x.id === oid); if(!o || !_sb) return;
+  const lista = (o.perguntas || []).filter(q=>(q.texto || '').trim()).map(q=>({ id: q.id, texto: q.texto.trim(), peso: q.peso || 'media', aprovada: !!q.aprovada }));
+  const { data, error } = await _sb.from('editais').update({ perguntas_aderencia: lista }).eq('id', oid - 900000).select('id');
+  if(error || !data || !data.length){ toast('Não foi possível salvar as perguntas.'); return; }
+  o.perguntas = lista; _pergAdmRedesenhar(oid); toast('Perguntas salvas.');
 }
 function heroCheck(oid, done, total, pct){
   const el = document.getElementById('hero-check-' + oid); if(!el) return;
@@ -7613,8 +7700,23 @@ function prefillLeadFromUser(){
 }
 
 /* ---- perfil ---- */
+function perfilRespostasHTML(){
+  if(!userProfile || !ehPro()) return '';
+  const todas = (userProfile.documentosRaw || {}).respostasEdital || {};
+  const linhas = Object.keys(todas).map(k=>{
+    const o = oportunidades.find(x=>String(x.id) === String(k)); if(!o) return '';
+    const qs = (o.perguntas || []).filter(q=>q && q.aprovada && todas[k][q.id]); if(!qs.length) return '';
+    const ad = calcularAderencia(o, userProfile), rot = { sim:'Sim', nao:'Não', nsei:'Não sei' };
+    return `<div style="padding:9px 0; border-top:1px solid var(--border);"><div style="font-size:13.5px; font-weight:600;">${esc(o.orgao || '')} — ${esc(o.edital || '')}${ad && ad.pct !== null ? ` <span style="color:var(--teal);">· aderência ${ad.pct}%</span>` : ''}</div>
+      <div style="font-size:12.5px; color:var(--ink-muted); margin:4px 0;">${qs.map(q=>esc(q.texto) + ' <strong>' + rot[todas[k][q.id]] + '</strong>').join('<br>')}</div>
+      <button type="button" class="btn-ghost" style="padding:3px 10px; font-size:12px;" onclick="openDetalhe(${o.id})">Abrir edital</button></div>`;
+  }).filter(Boolean);
+  if(!linhas.length) return '';
+  return `<div class="emp-card" style="margin-top:14px;"><div style="font-weight:700; margin-bottom:4px;">Minhas respostas dos editais</div><div style="font-size:12.5px; color:var(--ink-muted);">Perguntas sobre as exigências dos editais que você respondeu; elas ajustam a sua aderência. Para mudar, abra o edital.</div>${linhas.join('')}</div>`;
+}
 function renderPerfil(){
   const u = userProfile; if(!u) return;
+  { const pr = document.getElementById('perfil-respostas'); if(pr) pr.innerHTML = perfilRespostasHTML(); }
   document.getElementById('perfil-email').value = u.email;
   document.getElementById('perfil-nome').value = u.nome || '';
   document.getElementById('perfil-whats').value = u.whatsapp || '';
@@ -13282,7 +13384,8 @@ function mapEditalSupabase(row){
     numeroPncp: row.numero_pncp || '',
     urlInscricao: row.url_inscricao || row.url_pncp || 'https://pncp.gov.br/app/editais',
     movimentacoes: Array.isArray(row.movimentacoes) ? row.movimentacoes : [],
-    linksDocs: (row.links_docs && typeof row.links_docs === 'object') ? row.links_docs : {}
+    linksDocs: (row.links_docs && typeof row.links_docs === 'object') ? row.links_docs : {},
+    perguntas: Array.isArray(row.perguntas_aderencia) ? row.perguntas_aderencia : []
   };
 }
 /* Cópia salva dos editais neste aparelho: se o banco ou a internet falharem, o portal continua mostrando
