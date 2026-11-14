@@ -6297,7 +6297,8 @@ function linkEmitirDocHTML(texto, o, i){
     itens += btp('Subir este item uma posição', 'ckSubir', '⬆ Subir') + btp('Descer este item uma posição', 'ckDescer', '⬇ Descer');
     itens += btp('Tirar este item da sua lista (dá para restaurar)', 'ckRemoverOficial', '🗑 Excluir');
     itens += btp('Este documento não se aplica a mim', 'docNaoSeAplica', '🚫 Não se aplica');
-    if(chaveAnexo) itens += btp('Abrir este documento no meu cadastro', 'irAoCadastroDoc', '📁 Ver no meu cadastro');
+    itens += btp('Ver, anexar ou trocar suas certidões salvas sem sair deste edital', 'abrirMinhasCertidoes', '📄 Minhas certidões salvas');
+    itens += btp('Abrir o seu cadastro e voltar para este edital', 'irAoCadastroDoc', '📁 Ir ao meu cadastro');
     itens += btp('Avisar a Transformare que há um problema neste item ou no link', 'abrirRelatoDoc', '⚠ Relatar problema');
     }
     itens += ferrAdm;
