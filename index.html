@@ -5827,7 +5827,6 @@ function openDetalhe(id){
         <div class="panel">
           <h4><span class="dot"></span>Documentação necessária</h4>
           <button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px; margin:0 0 10px;" onclick="abrirMinhasCertidoes(${o.id})" title="Ver, anexar ou trocar suas certidões salvas sem sair deste edital">📄 Minhas certidões</button>
-          ${(typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="prosp-edital-' + o.id + '"></div>' : ''}
           ${(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) ? '<div id="pasta-edital-' + o.id + '"></div>' : ''}
           ${(()=>{ const docsVisiveis = docsPreview(o.documentos); const ocultos = o.documentos.length - docsVisiveis.length; return `
           <div id="doc-progress-${o.id}">${docProgressHTML(o.id, docsVisiveis, checks)}</div>
@@ -5888,7 +5887,6 @@ function openDetalhe(id){
     ${ehPro() ? '' : '<div class="detail-grid" style="margin-top:0;"><div>' + ctaProximoPasso + '</div></div>'}
   `;
   renderOutrosEditais(id, el);
-  if(typeof adminAuthed !== 'undefined' && adminAuthed) carregarProspEdital(o.id);   // ADM: prospectar profissionais a partir deste edital
   if(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) carregarPastaEdital(o.id);   // ADM: link da pasta do Drive deste edital
   nav('detalhe');
 }
