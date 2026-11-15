@@ -3221,8 +3221,11 @@ async function storeRemove(key){
 }
 
 /* ================= DADOS DEMONSTRATIVOS ================= */
-const PROFISSOES_SEED = ["Psicologia","Psiquiatria","Fisioterapia","Nutrição","Fonoaudiologia","Enfermagem","Farmácia","Medicina","Terapia Ocupacional","Odontologia","Biomedicina","Assistência Social"];
+const PROFISSOES_SEED = ["Psicologia","Psiquiatra","Fisioterapia","Nutrição","Fonoaudiologia","Enfermagem","Farmácia","Medicina","Terapia Ocupacional","Odontologia","Biomedicina","Assistência Social"];
 // Remove o "Ativa"/"Inativa" que veio colado no nome quando a lista foi copiada de uma tela.
+// Padrão de nomes (2026-11-14): especialidade médica usa o nome do profissional. Psiquiatria passou a Psiquiatra;
+// aceitamos os dois para não quebrar cadastros e filtros antigos.
+const profNorm = n => n === 'Psiquiatria' ? 'Psiquiatra' : n;
 const limparNomeProf = n => String(n||'').replace(/\s+(?:Ativa|Inativa)\s*$/i, '').trim();
 let profissoes = []; // [{nome, ativa}], carregado/persistido via localStorage (chave "profissoes")
 function profissoesAtivasNomes(){ return profissoes.filter(p=>p.ativa).map(p=>p.nome); }
@@ -3234,7 +3237,7 @@ function canonProfissao(nome){
   const n = sa(nome); if(!n) return nome;
   const acha = v => lista.find(x=>sa(x) === v);
   let r = acha(n); if(r) return r;
-  const FIXOS = { 'psicologo':'psicologia','psicologa':'psicologia','medico':'medicina','medica':'medicina','dentista':'odontologia','cirurgiao dentista':'odontologia','odontologo':'odontologia',
+  const FIXOS = { 'psiquiatria':'psiquiatra','psicologo':'psicologia','psicologa':'psicologia','medico':'medicina','medica':'medicina','dentista':'odontologia','cirurgiao dentista':'odontologia','odontologo':'odontologia',
     'fisioterapeuta':'fisioterapia','nutricionista':'nutricao','fonoaudiologo':'fonoaudiologia','fonoaudiologa':'fonoaudiologia','enfermeiro':'enfermagem','enfermeira':'enfermagem',
     'farmaceutico':'farmacia','farmaceutica':'farmacia','biomedico':'biomedicina','biomedica':'biomedicina','assistente social':'assistencia social','terapeuta ocupacional':'terapia ocupacional',
     'psicopedagogo':'psicopedagogia','psicopedagoga':'psicopedagogia','musicoterapeuta':'musicoterapia','clinico geral':'clinica geral','clinica medica':'clinica geral','obstetra':'obstetricia',
@@ -4960,7 +4963,8 @@ function calcularAderencia(o, u){
   if(!(u.mods||[]).length) pede('Modalidade');
   if(!(u.abrs||[]).length) pede('Abrangência');
   if((u.profs||[]).length){
-    const comuns = (o.profissoes||[]).filter(p=>u.profs.includes(p));
+    const meusProfs = u.profs.map(profNorm);
+    const comuns = (o.profissoes||[]).filter(p=>meusProfs.includes(profNorm(p)));
     if(comuns.length){ motivos.push(comuns.join('/')); add('Profissão', 35, 35, 'o edital é para a sua profissão'); }
     else add('Profissão', 0, 35, 'o edital não cita a sua profissão');
   }
@@ -5569,7 +5573,7 @@ function applyFilters(){
 
   let filtradas = oportunidades.filter(o=>{
     if(!visivelAoCliente(o)) return false;
-    if(prof && !o.profissoes.includes(prof)) return false;
+    if(prof && !o.profissoes.map(profNorm).includes(profNorm(prof))) return false;
     if(tipo && o.tipo !== tipo) return false;
     if(mod && o.modalidade !== mod) return false;
     if(abr && o.abrangencia !== abr) return false;
@@ -12517,7 +12521,7 @@ async function init(){
 
   const savedProfissoes = await storeGet('profissoes');
   if(savedProfissoes && Array.isArray(savedProfissoes) && savedProfissoes.length){
-    profissoes = savedProfissoes;
+    profissoes = savedProfissoes.map(p=>({ ...p, nome: profNorm(limparNomeProf(p.nome)) || p.nome }));
     // limpa nomes com "Ativa/Inativa" colado e junta repetidos
     const vistos = new Map();
     profissoes.forEach(p=>{
@@ -13995,7 +13999,7 @@ function notaFinanceiroSugerida(valor){
 function notaAderenciaSugerida(profissoes, objeto){
   const profs = (profissoes || []).filter(Boolean);
   const temPsicologia = profs.includes('Psicologia');
-  const correlatas = profs.filter(p => ['Psiquiatria','Terapia Ocupacional','Fonoaudiologia'].includes(p));
+  const correlatas = profs.filter(p => ['Psiquiatria','Psiquiatra','Terapia Ocupacional','Fonoaudiologia'].includes(p));
   const textoObjeto = (objeto || '').toLowerCase();
   const sinalPsico = /psicoterap|avalia[cç][aã]o psicol[oó]gica|sa[uú]de mental|acompanhamento psicol[oó]gico|atendimento psicol[oó]gico/.test(textoObjeto);
   if(temPsicologia && sinalPsico) return { nota:5, texto:'Psicologia identificada entre as profissões e o objeto descreve atividade diretamente psicológica.' };
