@@ -6661,12 +6661,20 @@ async function pergAdmSalvar(oid){
 }
 function heroCheck(oid, done, total, pct){
   const el = document.getElementById('hero-check-' + oid); if(!el) return;
-  if(!userProfile || !total){ el.style.display = 'none'; return; }
+  const oHero = oportunidades.find(x=>x.id === oid);
+  if(!userProfile || !total || (oHero && !editalDaMinhaProfissao(oHero))){ el.style.display = 'none'; return; }
   el.innerHTML = '<div class="pct">' + pct + '%</div><div class="txt"><strong>do seu checklist de documentos está pronto</strong>' + done + ' de ' + total + ' documentos concluídos' + (done < total ? ' · faltam ' + (total - done) : ' · tudo organizado') + '. Marque as caixas ou anexe as certidões abaixo.</div>';
   el.style.display = 'flex';
 }
+/* O progresso do checklist só faz sentido quando o edital é da profissão cadastrada pela pessoa. */
+function editalDaMinhaProfissao(o){
+  const meus = ((userProfile && userProfile.profs) || []).map(profNorm);
+  if(!meus.length) return true;   // sem profissão cadastrada: não dá para saber, mantém como está
+  return (o.profissoes || []).some(p=>meus.includes(profNorm(p)));
+}
 function checklistResumo(o){
   if(!userProfile || !o || !Array.isArray(o.documentos)) return null;
+  if(!editalDaMinhaProfissao(o)) return null;
   const checks = docChecks[o.id] || {}, ex = ckDe(o.id).extras || [];
   const linhas = docsPreview(o.documentos).map((d,i)=>({d,i})).filter(r=>!ckRemovido(o.id, r.d));
   const na = linhas.filter(r=>checks[r.i]==='na').length;
