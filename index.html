@@ -2066,6 +2066,14 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     </div>
     <div id="tri-resultado" style="margin-top:14px;"></div>
   </div>
+  <div id="analises-prontas-box" style="margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+      <div class="section-title" style="font-size:17px; margin:0;">🤖 Análises prontas <span id="analises-prontas-n" style="font-size:13px; color:var(--ink-dim); font-weight:400;"></span></div>
+      <button class="btn-ghost" onclick="carregarAnalisesProntas()">🔄 Atualizar</button>
+    </div>
+    <p class="section-sub" style="margin-bottom:10px;">Rascunhos feitos pela rotina automática. Abra, confira, aplique no formulário e publique. O Índice vem só como sugestão.</p>
+    <div id="analises-prontas-lista"></div>
+  </div>
   <div style="margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; cursor:pointer; user-select:none;" onclick="toggleSecaoAdmin('caixa-entrada-body','caixa-entrada-arrow')">
       <div class="section-title" style="font-size:17px; margin:0; display:flex; align-items:center; gap:8px;">
@@ -8988,12 +8996,71 @@ async function afAplicarAnaliseAuto(){
   const box = document.getElementById('af-analise-auto');
   if(box){ box.innerHTML = '<strong>✓ Análise aplicada.</strong> <span style="color:var(--ink-muted);">Confira os campos e publique quando estiver certo.</span>'; }
   _analiseAuto = null;
+  if(typeof carregarAnalisesProntas === 'function') carregarAnalisesProntas();
 }
 async function afDescartarAnaliseAuto(){
   if(!_analiseAuto) return;
   try{ await _sb.from('triagem_analises').update({ status:'descartada' }).eq('id', _analiseAuto.id); }catch(e){}
   const box = document.getElementById('af-analise-auto'); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
   _analiseAuto = null; toast('Rascunho descartado');
+  if(typeof carregarAnalisesProntas === 'function') carregarAnalisesProntas();
+}
+
+/* ---- Fila "Análises prontas" (aba Triagem do ADM) ---- */
+async function carregarAnalisesProntas(){
+  const lista = document.getElementById('analises-prontas-lista'), n = document.getElementById('analises-prontas-n');
+  if(!lista) return;
+  if(!_sb || !adminAuthed){ lista.innerHTML = '<div style="font-size:13px; color:var(--ink-dim);">Entre como administrador para ver as análises.</div>'; return; }
+  lista.innerHTML = '<div style="font-size:13px; color:var(--ink-dim);">Carregando…</div>';
+  const { data, error } = await _sb.from('triagem_analises').select('id, numero_controle, indice, resumo, alertas, criado_em').eq('status','rascunho').order('criado_em', { ascending:false }).limit(100);
+  if(error){ lista.innerHTML = '<div style="font-size:13px; color:var(--coral);">Não consegui carregar: ' + esc(error.message) + '</div>'; return; }
+  const itens = data || [];
+  if(n) n.textContent = itens.length ? '(' + itens.length + ')' : '';
+  if(!itens.length){ lista.innerHTML = '<div style="font-size:13px; color:var(--ink-dim);">Nenhuma análise esperando revisão. Elas aparecem aqui depois da rotina diária.</div>'; return; }
+  const compras = {};
+  try{
+    const r = await _sb.from('triagem_pacotes').select('numero_controle, compra').in('numero_controle', [...new Set(itens.map(a=>a.numero_controle))]);
+    (r.data || []).forEach(p=>{ compras[p.numero_controle] = p.compra || {}; });
+  }catch(e){ /* mostra só o número */ }
+  lista.innerHTML = itens.map(a=>{
+    const c = compras[a.numero_controle] || {};
+    const alertas = Array.isArray(a.alertas) ? a.alertas : [];
+    const quando = new Date(a.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const onde = [c.cidade, c.uf].filter(Boolean).join(' / ');
+    return '<div style="border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px; margin-bottom:10px;">'
+      + '<div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;"><strong style="font-size:14px;">' + esc(c.orgao || a.numero_controle) + (onde ? ' <span style="font-weight:400; color:var(--ink-muted);">· ' + esc(onde) + '</span>' : '') + '</strong>'
+      + (a.indice ? '<span class="tag" title="Sugestão do Índice (você decide)">Índice sugerido ' + esc(String(a.indice)) + '/5</span>' : '') + '</div>'
+      + '<div style="font-size:11.5px; color:var(--ink-dim); margin-top:2px;">' + esc(a.numero_controle) + ' · ' + esc(quando) + '</div>'
+      + (a.resumo ? '<div style="font-size:13px; color:var(--ink-muted); margin-top:6px;">' + esc(a.resumo) + '</div>' : '')
+      + (alertas.length ? '<div style="font-size:12px; color:var(--amber); margin-top:6px;">⚠ ' + esc(String(alertas[0])) + (alertas.length > 1 ? ' <span style="color:var(--ink-dim);">+' + (alertas.length - 1) + ' alerta(s)</span>' : '') + '</div>' : '')
+      + '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"><button class="btn-ghost" onclick="abrirAnaliseProntaRevisar(\'' + esc(a.numero_controle) + '\')">Abrir e revisar</button>'
+      + '<button class="btn-ghost" onclick="descartarAnaliseProntaLista(' + Number(a.id) + ')">Descartar</button></div></div>';
+  }).join('');
+}
+async function abrirAnaliseProntaRevisar(numero){
+  const m = String(numero).match(/(\d{14})-\d+-0*(\d+)\/(\d{4})/);
+  if(!m){ toast('Número de controle fora do padrão'); return; }
+  const [, cnpj, seq, ano] = m;
+  // 1) já está no catálogo?
+  const o = oportunidades.find(x=>{
+    const e = String(x.edital || '').match(/(\d{14})-\d+-0*(\d+)\/(\d{4})/);
+    if(e) return e[1] === cnpj && e[2] === seq && e[3] === ano;
+    return new RegExp('editais/' + cnpj + '/' + ano + '/0*' + seq + '(?!\\d)').test(String(x.urlPncp || ''));
+  });
+  if(o){ openAdminForm(o.id); return; }
+  // 2) está na caixa de entrada do PNCP?
+  try{
+    const { data } = await _sb.from('credenciamentos_pendentes').select('*').eq('numero_controle_pncp', numero).limit(1);
+    if(data && data.length){
+      if(!_dataCaixaEntrada.some(i=>i.id === data[0].id)) _dataCaixaEntrada.push(data[0]);
+      abrirRevisaoCompleta(data[0].id, 'pncp', data[0]); return;
+    }
+  }catch(e){ /* cai no aviso */ }
+  toast('Esse edital não está no catálogo nem na caixa de entrada.');
+}
+async function descartarAnaliseProntaLista(id){
+  try{ await _sb.from('triagem_analises').update({ status:'descartada' }).eq('id', id); toast('Rascunho descartado'); }catch(e){ toast('Não consegui descartar'); }
+  carregarAnalisesProntas();
 }
 function openAdminForm(id){
   _afModoRevisao(false);
@@ -12236,6 +12303,7 @@ function adminTab(nome){
   if(nome==='avisos') avisosAbrir();
   if(nome==='consultoria') consCarregar();
   if(nome==='pca') pcaCarregar();
+  if(nome==='triagem' && typeof carregarAnalisesProntas === 'function') carregarAnalisesProntas();
   document.querySelectorAll('#admin-tabs .admin-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab === nome));
   document.querySelectorAll('.admin-tabpanel').forEach(p=>p.classList.toggle('active', p.id === 'admin-tab-'+nome));
 }
@@ -14199,6 +14267,7 @@ function abrirRevisaoCompleta(id, tipo, item){
   document.getElementById('af-revisao-indice').innerHTML = `<strong>${esc(r.faixaTexto)}</strong><br>• ${esc(r.fin.texto)}<br><span style="color:var(--ink-dim);">• Aderência às áreas da Transformare (informativo, não entra no Índice): ${esc(r.ader.texto)}</span>`;
   set('af-revisao-motivo','');
   atualizarMiniResumo();
+  afVerificarAnaliseAuto();
 }
 document.addEventListener('input', e=>{ if(_revisaoAlvo && e.target.closest && e.target.closest('#admin-form-panel')) atualizarMiniResumo(); });
 document.addEventListener('change', e=>{ if(_revisaoAlvo && e.target.closest && e.target.closest('#admin-form-panel')) atualizarMiniResumo(); });
