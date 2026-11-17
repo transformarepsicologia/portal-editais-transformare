@@ -9010,9 +9010,30 @@ async function afVerificarAnaliseAuto(){
       + (_analiseAuto.resumo ? '<div style="margin-top:6px; color:var(--ink-muted);">' + esc(_analiseAuto.resumo) + '</div>' : '')
       + (alertas.length ? '<div style="margin-top:6px; color:var(--amber);">⚠ ' + alertas.map(a => esc(String(a))).join('<br>⚠ ') + '</div>' : '')
       + '<div style="margin-top:6px; font-size:12px; color:var(--ink-dim);">É um rascunho: confira os campos antes de publicar. Respeita a opção “Só preencher campos que estão vazios” abaixo.</div>'
-      + '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"><button type="button" class="btn-ghost" onclick="afAplicarAnaliseAuto()">⇩ Aplicar análise</button><button type="button" class="btn-ghost" onclick="afDescartarAnaliseAuto()">Descartar rascunho</button></div>';
+      + '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"><button type="button" class="btn-ghost" onclick="afEditarAnaliseAuto()">✏️ Editar análise</button><button type="button" class="btn-ghost" onclick="afAplicarAnaliseAuto()">⇩ Aplicar análise</button><button type="button" class="btn-ghost" onclick="afDescartarAnaliseAuto()">Descartar rascunho</button></div>';
     box.style.display = 'block';
   }catch(e){ /* sem rascunho ou sem acesso: o formulário segue normal */ }
+}
+/* Editar o texto do rascunho antes de aplicar: abre o texto numa caixa, salva no próprio rascunho e volta ao aviso. */
+function afEditarAnaliseAuto(){
+  if(!_analiseAuto) return;
+  const box = document.getElementById('af-analise-auto'); if(!box) return;
+  box.innerHTML = '<strong>✏️ Editar análise</strong> <span style="color:var(--ink-dim); font-size:12px;">— corrija o texto e salve; depois toque em “Aplicar análise”.</span>'
+    + '<textarea id="af-analise-auto-edit" style="width:100%; box-sizing:border-box; min-height:320px; margin-top:8px; padding:12px; font-size:13.5px; line-height:1.45; border-radius:12px;"></textarea>'
+    + '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"><button type="button" class="btn-primary" onclick="afSalvarEdicaoAnaliseAuto()">Salvar edição</button><button type="button" class="btn-ghost" onclick="afVerificarAnaliseAuto()">Cancelar</button></div>';
+  document.getElementById('af-analise-auto-edit').value = _analiseAuto.texto_analise || '';
+}
+async function afSalvarEdicaoAnaliseAuto(){
+  if(!_analiseAuto) return;
+  const ta = document.getElementById('af-analise-auto-edit'); if(!ta) return;
+  const texto = ta.value.trim();
+  if(!texto){ toast('O texto não pode ficar vazio'); return; }
+  try{
+    const { error } = await _sb.from('triagem_analises').update({ texto_analise: texto }).eq('id', _analiseAuto.id);
+    if(error) throw error;
+  }catch(e){ toast('Não consegui salvar a edição'); return; }
+  toast('Edição salva');
+  afVerificarAnaliseAuto();   // recarrega o rascunho já com o texto novo
 }
 async function afAplicarAnaliseAuto(){
   if(!_analiseAuto) return;
