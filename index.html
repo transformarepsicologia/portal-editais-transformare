@@ -13746,6 +13746,10 @@ async function renderCaixaEntrada(){
   status.textContent = `${nPendentes} aguardando revisão${nPrioritarios ? ` · ⚡ ${nPrioritarios} de alta prioridade` : ''}${nAdiados ? ` · ${nAdiados} adiado(s) para depois` : ''}${nAguardando ? ` · ✉ ${nAguardando} aguardando resposta do órgão` : ''}.`;
   lista.innerHTML = '';
   _dataCaixaEntrada = data;
+  try{
+    const { data: ap } = await _sb.from('triagem_analises').select('numero_controle').in('status', ['rascunho','aplicada']).limit(5000);
+    _caixaAnalisesProntas = new Set((ap||[]).map(r=>r.numero_controle));
+  }catch(_){ _caixaAnalisesProntas = new Set(); }
 
   if(data.length === 0){
     lista.innerHTML = '<div class="empty-state">Nenhum item pendente no momento.</div>';
@@ -13815,6 +13819,7 @@ async function renderCaixaEntrada(){
         ${badgeIndiceSugeridoHTML(item)}
         ${par ? `<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="Já existe no catálogo: ${esc(par.orgao||'')} — ${esc(par.edital||'')}">⚠ Parecido com edital já cadastrado (id ${par.id})</span>` : ''}
         ${aguardandoOrgao(item) ? `<span class="badge" style="background:rgba(47,217,196,.2); color:var(--teal); margin-left:8px; font-weight:600;" title="${esc(item.motivo_decisao||'')}">✉ Aguardando resposta do órgão${esc(infoAguardando(item))}</span>` : adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
+        ${badgeAnaliseSolicitadaHTML(item)}
         ${prazoJaEncerrado(item) && !aguardandoOrgao(item) ? '<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="A data de encerramento já passou. Credenciamentos costumam seguir abertos: vale perguntar ao órgão.">Prazo já encerrado</span>' : ''}
         ${prazoProximo(item) && !aguardandoOrgao(item) ? '<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="O prazo termina em poucos dias: vale perguntar ao órgão se haverá prorrogação.">Prazo em '+diasAtePrazoPend(item)+' dia(s)</span>' : ''}
         ${item.sinalizacao ? `<div style="margin-top:6px; padding:6px 10px; border-radius:8px; background:rgba(245,158,11,.14); color:#b45309; font-size:12.5px;">🚩 <strong>Para confirmar:</strong> ${esc(item.sinalizacao)}</div>` : ''}
@@ -13827,6 +13832,7 @@ async function renderCaixaEntrada(){
         ${item.link_pncp ? `<a href="${item.link_pncp}" target="_blank" rel="noopener" style="font-size:12px; color:var(--teal);">Ver no PNCP ↗</a>` : ''}
         <div class="inbox-actions" style="margin-top:10px;">
           <button class="inbox-approve" onclick="abrirAprovarModal(${item.id}, 'credenciamento')">Aprovar e adicionar ao catálogo</button>
+          ${botaoAnaliseProntaHTML(item)}
           ${!adiado ? `<button class="btn-ghost${fonteInstavel('pncp') ? ' destaque-adiar' : ''}" onclick="adiarCredenciamento(${item.id})">Avaliar mais tarde</button>` : ''}
           <button class="btn-ghost" style="${prazoJaEncerrado(item) || prazoProximo(item) || aguardandoOrgao(item) ? 'border-color:var(--teal); color:var(--teal);' : ''}" onclick="abrirPerguntarOrgao('credenciamento', ${item.id})">${aguardandoOrgao(item) ? '✉ Perguntar de novo' : '✉ Perguntar ao órgão'}</button>
           <button class="inbox-reject" onclick="abrirRejeitarModal(${item.id}, 'credenciamento')">Rejeitar</button>
@@ -14001,6 +14007,27 @@ async function enviarPerguntaOrgao(modo){
   } else {
     window.location.href = url;
   }
+}
+
+// ===== Caixa PNCP: "Fazer análise pronta" (só os editais escolhidos pelo ADM têm leitura completa e análise) =====
+let _caixaAnalisesProntas = new Set();
+function analiseProntaDe(item){ return !!item.numero_controle_pncp && _caixaAnalisesProntas.has(item.numero_controle_pncp); }
+function badgeAnaliseSolicitadaHTML(item){
+  if(analiseProntaDe(item)) return '<span class="badge" style="background:rgba(34,197,94,.18); color:#15803d; margin-left:8px; font-weight:600;" title="A análise está em Triagem > Análises prontas">✅ Análise pronta</span>';
+  if(item.analise_solicitada_em) return '<span class="badge" style="background:rgba(47,217,196,.2); color:var(--teal); margin-left:8px; font-weight:600;" title="Pedida em ' + esc(String(item.analise_solicitada_em).slice(0,16).replace('T',' ')) + '. A leitura do edital e dos anexos e a análise rodam em seguida.">🔎 Análise solicitada</span>';
+  return '';
+}
+function botaoAnaliseProntaHTML(item){
+  if(analiseProntaDe(item)) return '';
+  if(item.analise_solicitada_em) return `<button class="btn-ghost" title="Cancelar o pedido de análise" onclick="solicitarAnaliseCredenciamento(${item.id}, false)">Cancelar análise</button>`;
+  return `<button class="btn-ghost" style="border-color:var(--teal); color:var(--teal); font-weight:600;" title="Lê o edital e todos os anexos e prepara a análise pronta (ficha, Índice, checklist)" onclick="solicitarAnaliseCredenciamento(${item.id}, true)">🔎 Fazer análise pronta</button>`;
+}
+async function solicitarAnaliseCredenciamento(id, pedir){
+  if(!_sb) return;
+  const { error } = await _sb.from('credenciamentos_pendentes').update({ analise_solicitada_em: pedir ? new Date().toISOString() : null }).eq('id', id);
+  if(error){ alert('Erro ao ' + (pedir ? 'solicitar' : 'cancelar') + ' a análise: ' + error.message); return; }
+  toast(pedir ? 'Análise solicitada: o edital e os anexos serão lidos e a análise aparece em Análises prontas' : 'Pedido de análise cancelado');
+  renderCaixaEntrada();
 }
 
 async function adiarCredenciamento(id){
