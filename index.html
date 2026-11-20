@@ -9733,10 +9733,12 @@ async function saveAdminForm(){
     const val = id => (document.getElementById(id) ? document.getElementById(id).value.trim() : '');
     const dataOk = v => /^\d{2}\/\d{2}\/\d{4}$/.test(v);
     const faltam = [];
+    // Edital que não é do PNCP (sem link do PNCP e sem número de controle do PNCP, ex.: site do órgão, Sistema S): publicação e início das propostas não se aplicam.
+    const ehPncp = !!(val('af-url-pncp') || /\d{14}-\d+-\d+\/\d{4}/.test(val('af-edital')));
     if(!document.getElementById('af-prazo-indet').checked && (!val('af-prazo') || /^n[aã]o informado$/i.test(val('af-prazo')))) faltam.push('Prazo (data dd/mm/aaaa) ou marque "Prazo indeterminado"');
-    if(!dataOk(val('af-publicacao'))) faltam.push('Publicação/divulgação no PNCP (dd/mm/aaaa)');
+    if(ehPncp && !dataOk(val('af-publicacao'))) faltam.push('Publicação/divulgação no PNCP (dd/mm/aaaa)');
     if(indice != null){
-      if(!dataOk(val('af-abertura'))) faltam.push('Início das propostas');
+      if(ehPncp && !dataOk(val('af-abertura'))) faltam.push('Início das propostas');
       if(!publico.length) faltam.push('Forma de contratação');
       if(!document.getElementById('af-escolaridade').value) faltam.push('Escolaridade mínima');
       if(!val('af-valor-atendimento') || /^n[aã]o informado$/i.test(val('af-valor-atendimento'))) faltam.push('Valor de atendimento');
