@@ -5892,6 +5892,8 @@ function openDetalhe(id){
           `}
         </div>
 
+        <div id="pncp-dados-box"></div>
+
         <details class="panel" style="cursor:pointer; border:1px solid var(--amber); border-left:4px solid var(--amber); background:rgba(245,169,62,0.10);">
           <summary style="cursor:pointer; font-size:14px; font-weight:600; color:var(--ink); display:flex; align-items:center; gap:10px; list-style:none; line-height:1.4;">
             <span style="font-size:20px;">⚠️</span> <span>Este resumo não substitui a leitura do edital <span style="color:var(--amber); font-weight:500;">— toque para saber mais</span></span>
@@ -5985,9 +5987,74 @@ function openDetalhe(id){
     ${ehPro() ? '' : '<div class="detail-grid" style="margin-top:0;"><div>' + ctaProximoPasso + '</div></div>'}
   `;
   renderOutrosEditais(id, el);
+  if(o.origemSupabase) carregarDadosPncp(o);
   if(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) carregarPastaEdital(o.id);   // ADM: link da pasta do Drive deste edital
   nav('detalhe');
 }
+// ===== Dados do PNCP (página do edital): tudo o que aparece na página do PNCP, lido automaticamente =====
+function _pncpDH(v){
+  if(!v) return '';
+  const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  if(!m) return String(v);
+  return m[3] + '/' + m[2] + '/' + m[1] + (m[4] && !(m[4]==='00' && m[5]==='00') ? ' ' + m[4] + ':' + m[5] + ' (horário de Brasília)' : '');
+}
+function _pncpMoeda(v){ return (v === null || v === undefined) ? '' : Number(v).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
+function pncpDadosHTML(d, itens, arqs, o){
+  const linha = (k, v) => (v === undefined || v === null || v === '') ? '' : `<div style="display:flex; gap:8px; padding:5px 0; border-bottom:1px solid var(--border-soft); font-size:13px;"><span style="flex:0 0 42%; color:var(--ink-dim);">${esc(k)}</span><span style="flex:1; color:var(--ink); word-break:break-word;">${v}</span></div>`;
+  const t = x => esc(String(x ?? ''));
+  const l = [
+    linha('Órgão/Entidade', t([d.orgao_cnpj, d.orgao].filter(Boolean).join(' - '))),
+    linha('Unidade compradora', t(d.unidade_compradora)),
+    linha('Localidade da unidade', t(d.localidade)),
+    linha('Órgão/Entidade sub-rogado', t(d.orgao_subrogado || 'não informado')),
+    linha('Unidade compradora sub-rogada', t(d.unidade_subrogada || 'não informado')),
+    linha('Localidade da unidade sub-rogada', t(d.localidade_subrogada || 'não informada')),
+    linha('Modalidade da contratação', t(d.modalidade)),
+    linha('Amparo legal', t(d.amparo_legal)),
+    linha('Tipo', t(d.tipo_instrumento)),
+    linha('Modo de disputa', t(d.modo_disputa)),
+    linha('Registro de preço', t(d.registro_preco)),
+    linha('Fonte orçamentária', t(d.fonte_orcamentaria || 'Não se aplica')),
+    linha('Data de divulgação no PNCP', t(_pncpDH(d.data_divulgacao_pncp))),
+    linha('Situação', t(d.situacao)),
+    linha('Início do recebimento de propostas', t(_pncpDH(d.inicio_propostas))),
+    linha('Fim do recebimento de propostas', t(_pncpDH(d.fim_propostas))),
+    linha('Id da contratação no PNCP', t(d.id_contratacao_pncp)),
+    linha('Fonte (sistema de origem)', t(d.fonte)),
+    linha('Processo', t(d.processo)),
+    linha('Valor total estimado da compra', t(_pncpMoeda(d.valor_total_estimado))),
+    linha('Valor total homologado da compra', t(_pncpMoeda(d.valor_total_homologado))),
+    linha('Última atualização no PNCP', t(_pncpDH(d.ultima_atualizacao))),
+    linha('Informação complementar', t(d.informacao_complementar)),
+  ].join('');
+  const link = (u, rot) => u ? `<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--teal); font-size:13px; margin-right:14px;">${rot} ↗</a>` : '';
+  const tabItens = (itens && itens.length) ? `
+    <div style="margin-top:14px; font-weight:600; font-size:13.5px;">Itens (${itens.length})</div>
+    <div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12.5px; margin-top:6px;">
+      <thead><tr style="text-align:left; color:var(--ink-dim);"><th style="padding:5px 6px;">Nº</th><th style="padding:5px 6px;">Descrição</th><th style="padding:5px 6px;">Quantidade</th><th style="padding:5px 6px;">Valor unit. estimado</th><th style="padding:5px 6px;">Valor total estimado</th></tr></thead>
+      <tbody>${itens.map(i=>`<tr style="border-top:1px solid var(--border-soft); vertical-align:top;"><td style="padding:5px 6px;">${t(i.numero)}</td><td style="padding:5px 6px;">${t(i.descricao)}${i.info ? `<div style="color:var(--ink-dim); font-size:11.5px;">${t(i.info)}</div>` : ''}</td><td style="padding:5px 6px; white-space:nowrap;">${t(i.quantidade)}${i.unidade ? ' ' + t(i.unidade) : ''}</td><td style="padding:5px 6px; white-space:nowrap;">${t(_pncpMoeda(i.valor_unitario))}</td><td style="padding:5px 6px; white-space:nowrap;">${t(_pncpMoeda(i.valor_total))}</td></tr>`).join('')}</tbody>
+    </table></div>` : '';
+  const tabArq = (arqs && arqs.length) ? `
+    <div style="margin-top:14px; font-weight:600; font-size:13.5px;">Arquivos (${arqs.length})</div>
+    <div style="margin-top:6px;">${arqs.map(a=>`<div style="padding:4px 0; font-size:13px;"><a href="${esc(a.url)}" target="_blank" rel="noopener" style="color:var(--teal);">📄 ${t(a.titulo || 'arquivo')}</a>${a.tipo ? ` <span style="color:var(--ink-dim); font-size:12px;">· ${t(a.tipo)}</span>` : ''}${a.data ? ` <span style="color:var(--ink-dim); font-size:12px;">· ${t(_pncpDH(a.data))}</span>` : ''}</div>`).join('')}</div>` : '';
+  return `<details class="panel" open style="margin-top:14px;">
+    <summary style="cursor:pointer; font-size:15px; font-weight:700; list-style:none;">🏛 Dados do PNCP${d.titulo ? ` <span style="font-weight:500; color:var(--ink-muted); font-size:13px;">— ${t(d.titulo)}</span>` : ''}</summary>
+    <div style="margin-top:8px;">${l}</div>
+    ${d.objeto ? `<div style="margin-top:12px; font-weight:600; font-size:13.5px;">Objeto</div><div style="font-size:13px; color:var(--ink-muted); margin-top:4px; line-height:1.5;">${t(d.objeto)}</div>` : ''}
+    ${tabItens}${tabArq}
+    <div style="margin-top:12px;">${link(d.link_pncp || (o && o.urlPncp), 'Ver na página do PNCP')}${link(d.link_processo_eletronico, 'Acessar processo eletrônico')}</div>
+    <div style="margin-top:8px; font-size:11.5px; color:var(--ink-dim);">Informações lidas automaticamente do PNCP. Em caso de divergência, vale o edital oficial.</div>
+  </details>`;
+}
+async function carregarDadosPncp(o){
+  const box = document.getElementById('pncp-dados-box'); if(!box || !_sb) return;
+  try{
+    const { data } = await _sb.from('editais_pncp').select('dados, itens, arquivos').eq('edital_id', o.id - 900000).maybeSingle();
+    if(!data || !data.dados || currentDetailId !== o.id) return;
+    box.innerHTML = pncpDadosHTML(data.dados, data.itens || [], data.arquivos || [], o);
+  }catch(e){ /* sem os dados do PNCP a página continua normal */ }
+}
+
 // ===== Sobre o órgão (página do edital): histórico no Radar, dados do CNPJ e saúde fiscal do município =====
 function cnpjDoEdital(o){ const m = String(o && o.edital || '').match(/^(\d{14})-/); return m ? m[1] : null; }
 function fmtCnpj(c){ return c.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5'); }
@@ -13672,6 +13739,7 @@ function mapEditalSupabase(row){
     urlEdital: row.url_edital || row.url_pncp || 'https://pncp.gov.br/app/editais',
     urlPncp: row.url_pncp || 'https://pncp.gov.br/app/editais',
     numeroPncp: row.numero_pncp || '',
+    publicadoAuto: !!row.publicado_auto,
     urlInscricao: row.url_inscricao || row.url_pncp || 'https://pncp.gov.br/app/editais',
     movimentacoes: Array.isArray(row.movimentacoes) ? row.movimentacoes : [],
     linksDocs: (row.links_docs && typeof row.links_docs === 'object') ? row.links_docs : {},
@@ -13907,6 +13975,7 @@ async function renderCaixaEntrada(){
         ${par ? `<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="Já existe no catálogo: ${esc(par.orgao||'')} — ${esc(par.edital||'')}">⚠ Parecido com edital já cadastrado (id ${par.id})</span>` : ''}
         ${aguardandoOrgao(item) ? `<span class="badge" style="background:rgba(47,217,196,.2); color:var(--teal); margin-left:8px; font-weight:600;" title="${esc(item.motivo_decisao||'')}">✉ Aguardando resposta do órgão${esc(infoAguardando(item))}</span>` : adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
         ${badgeAnaliseSolicitadaHTML(item)}
+        ${item.edital_publicado_id ? `<span class="badge" style="background:rgba(34,197,94,.18); color:#15803d; margin-left:8px; font-weight:600;" title="Este edital já está no catálogo, sem nota. Revise quando puder.">✅ Já publicado no catálogo (sem nota)</span>` : ''}
         ${prazoJaEncerrado(item) && !aguardandoOrgao(item) ? '<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="A data de encerramento já passou. Credenciamentos costumam seguir abertos: vale perguntar ao órgão.">Prazo já encerrado</span>' : ''}
         ${prazoProximo(item) && !aguardandoOrgao(item) ? '<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="O prazo termina em poucos dias: vale perguntar ao órgão se haverá prorrogação.">Prazo em '+diasAtePrazoPend(item)+' dia(s)</span>' : ''}
         ${item.sinalizacao ? `<div style="margin-top:6px; padding:6px 10px; border-radius:8px; background:rgba(245,158,11,.14); color:#b45309; font-size:12.5px;">🚩 <strong>Para confirmar:</strong> ${esc(item.sinalizacao)}</div>` : ''}
@@ -13918,7 +13987,7 @@ async function renderCaixaEntrada(){
         ${item.amparo_legal ? `<p style="font-size:11.5px; color:var(--ink-dim); margin:0 0 8px;">Amparo legal (PNCP): ${esc(item.amparo_legal)}</p>` : ''}
         ${item.link_pncp ? `<a href="${item.link_pncp}" target="_blank" rel="noopener" style="font-size:12px; color:var(--teal);">Ver no PNCP ↗</a>` : ''}
         <div class="inbox-actions" style="margin-top:10px;">
-          <button class="inbox-approve" onclick="abrirAprovarModal(${item.id}, 'credenciamento')">Aprovar e adicionar ao catálogo</button>
+          ${item.edital_publicado_id ? `<button class="inbox-approve" onclick="revisarPublicadoCaixa(${item.edital_publicado_id})">Revisar no catálogo e dar a nota</button><button class="btn-ghost" onclick="marcarPublicadoRevisado(${item.id})">Marcar como revisado</button>` : `<button class="inbox-approve" onclick="abrirAprovarModal(${item.id}, 'credenciamento')">Aprovar e adicionar ao catálogo</button>`}
           ${botaoAnaliseProntaHTML(item)}
           ${!adiado ? `<button class="btn-ghost${fonteInstavel('pncp') ? ' destaque-adiar' : ''}" onclick="adiarCredenciamento(${item.id})">Avaliar mais tarde</button>` : ''}
           <button class="btn-ghost" style="${prazoJaEncerrado(item) || prazoProximo(item) || aguardandoOrgao(item) ? 'border-color:var(--teal); color:var(--teal);' : ''}" onclick="abrirPerguntarOrgao('credenciamento', ${item.id})">${aguardandoOrgao(item) ? '✉ Perguntar de novo' : '✉ Perguntar ao órgão'}</button>
@@ -13950,6 +14019,13 @@ async function aprovarCredenciamento(id, overrides){
 
 async function rejeitarCredenciamento(id, motivo, motivoTags){
   if(!_sb) return;
+  // Item já publicado automaticamente (ainda sem nota): rejeitar também tira o edital do catálogo (fica guardado na cópia de exclusões).
+  const _it = (_dataCaixaEntrada || []).find(i=>i.id === id);
+  if(_it && _it.edital_publicado_id){
+    if(!confirm('Este edital já está publicado no catálogo. Rejeitar também vai tirá-lo do catálogo. Continuar?')) return;
+    const { error: eDel } = await _sb.from('editais').delete().eq('id', _it.edital_publicado_id).eq('publicado_auto', true);
+    if(eDel){ alert('Não consegui tirar o edital do catálogo: ' + eDel.message); return; }
+  }
   const { error } = await _sb.rpc('rejeitar_credenciamento', { p_id: id, p_revisor: 'admin-portal', p_motivo: motivo || null, p_motivo_tags: motivoTags || [] });
   if(error){ alert('Erro ao rejeitar: ' + error.message); return; }
   toast('Credenciamento rejeitado');
@@ -14139,6 +14215,19 @@ async function solicitarAnaliseCredenciamento(id, pedir){
   const { error } = await _sb.from('credenciamentos_pendentes').update({ analise_solicitada_em: pedir ? new Date().toISOString() : null }).eq('id', id);
   if(error){ alert('Erro ao ' + (pedir ? 'solicitar' : 'cancelar') + ' a análise: ' + error.message); return; }
   toast(pedir ? 'Análise solicitada: o edital e os anexos serão lidos e a análise aparece em Análises prontas' : 'Pedido de análise cancelado');
+  renderCaixaEntrada();
+}
+
+function revisarPublicadoCaixa(editalId){
+  const o = oportunidades.find(x=>x.id === 900000 + Number(editalId));
+  if(!o){ toast('Edital ainda não carregado no catálogo. Atualize a página e tente de novo.'); return; }
+  openAdminForm(o.id);
+}
+async function marcarPublicadoRevisado(id){
+  if(!_sb) return;
+  const { error } = await _sb.from('credenciamentos_pendentes').update({ status:'aprovado', revisado_em:new Date().toISOString(), revisado_por:'admin-portal', motivo_decisao:'Revisado: já publicado no catálogo' }).eq('id', id);
+  if(error){ alert('Erro ao marcar como revisado: ' + error.message); return; }
+  toast('Marcado como revisado');
   renderCaixaEntrada();
 }
 
