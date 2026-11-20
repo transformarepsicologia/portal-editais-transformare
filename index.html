@@ -6000,7 +6000,9 @@ function _pncpDH(v){
 }
 function _pncpMoeda(v){ return (v === null || v === undefined) ? '' : Number(v).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
 function pncpDadosHTML(d, itens, arqs, o){
-  const linha = (k, v) => (v === undefined || v === null || v === '') ? '' : `<div style="display:flex; gap:8px; padding:5px 0; border-bottom:1px solid var(--border-soft); font-size:13px;"><span style="flex:0 0 42%; color:var(--ink-dim);">${esc(k)}</span><span style="flex:1; color:var(--ink); word-break:break-word;">${v}</span></div>`;
+  const linha = (k, v) => (v === undefined || v === null || v === '') ? '' : (String(v).length > 70
+    ? `<div style="padding:7px 0; border-bottom:1px solid var(--border-soft); font-size:13px;"><div style="color:var(--ink-dim); margin-bottom:3px;">${esc(k)}</div><div style="color:var(--ink); line-height:1.5; overflow-wrap:anywhere;">${v}</div></div>`
+    : `<div style="display:flex; gap:8px; padding:5px 0; border-bottom:1px solid var(--border-soft); font-size:13px;"><span style="flex:0 0 42%; color:var(--ink-dim);">${esc(k)}</span><span style="flex:1; min-width:0; color:var(--ink); overflow-wrap:anywhere;">${v}</span></div>`);
   const t = x => esc(String(x ?? ''));
   const l = [
     linha('Órgão/Entidade', t([d.orgao_cnpj, d.orgao].filter(Boolean).join(' - '))),
