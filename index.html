@@ -528,7 +528,7 @@ html[data-theme="light"] .op-meta{color:var(--teal-deep);}
 .score-hero{background:var(--bg-card); border:2px solid var(--teal); border-radius:14px; padding:22px 24px; margin-top:18px; display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
 .score-hero.media{border-color:var(--amber);}
 .score-hero.baixa{border-color:var(--coral);}
-.score-hero.vazio{border-color:var(--border-soft); border-style:dashed;}
+.score-hero.vazio{border-color:var(--border-soft); border-style:dashed; padding:14px 18px; margin-top:14px;}
 .score-mini-vazio{font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); font-style:italic;}
 .selo-transformare{display:inline-flex; align-items:center; gap:3px; color:var(--teal);}
 .score-hero-num{font-family:var(--font-display); font-size:40px; font-weight:700; color:var(--teal); line-height:1; flex-shrink:0;}
@@ -5856,17 +5856,6 @@ function openDetalhe(id){
             ${!o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? `<div class="qf-item"><div class="qf-icon">🗓</div><span class="qf-k">Publicado em</span><div class="qf-v">${esc(o.publicacao)}</div></div>` : ''}
           </div>
 
-          <div class="link-row">
-            ${linkEditalDireto(o)
-              ? `<a class="official-link" href="${linkEditalDireto(o)}" target="_blank" rel="noopener">Ver edital oficial ↗</a>`
-              : ''}
-            ${o.urlPncp
-              ? `<a class="btn-ghost" href="${o.urlPncp}" target="_blank" rel="noopener" style="display:inline-block;">Ver no PNCP ↗</a>`
-              : ''}
-            <button class="wa-btn" style="padding:11px 18px; font-size:13px;" onclick="shareWhatsApp(${o.id})">↗ Compartilhar no WhatsApp</button>
-          </div>
-          <div style="font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); margin-top:8px;">${o.origemSupabase ? 'Links apontam para a página real do edital no PNCP.' : 'Links demonstrativos — apontam para o portal público do PNCP, não para o edital real.'}</div>
-          <div id="link-instab-aviso" style="margin-top:10px;">${avisoInstabilidadeLinksHTML()}</div>
         </div>
 
         <div class="score-hero ${scoreClass}">
@@ -5885,14 +5874,28 @@ function openDetalhe(id){
           </div>
           ` : `
           <div class="score-hero-body" style="flex:1;">
-            <div class="label">${o.publicadoAuto ? '🆕 Edital recém-publicado — análise em andamento' : 'Índice Transformare — ainda não avaliado'}</div>
-            ${ehPro() ? `<div class="caption">${o.publicadoAuto ? 'Publicamos este edital assim que ele apareceu no PNCP, para você não perder tempo; a nossa equipe ainda vai analisá-lo e dar o Índice Transformare. As informações abaixo vêm direto do PNCP.' : 'Este edital ainda não recebeu uma nota da nossa equipe.'} Se ele te interessou, peça a avaliação da Transformare como assinante do Plano Pro.</div>
-            ${pedidoAvaliacaoFeito(o.id) ? `<div style="margin-top:10px; font-size:13px; color:var(--teal); font-weight:600;">✅ Avaliação solicitada. Avisaremos quando estiver pronta.</div>` : `<button class="btn-primary" style="margin-top:10px;" onclick="pedirAvaliacaoPro(${o.id})">⭐ Me interessei: pedir avaliação da Transformare</button>`}` : `<div class="caption">${o.publicadoAuto ? 'Publicamos este edital assim que ele apareceu no PNCP; a nossa equipe ainda vai analisá-lo e dar o Índice Transformare. As informações abaixo vêm direto do PNCP.' : 'Este edital ainda não recebeu uma nota da nossa equipe.'} Assinantes do Plano Pro podem pedir a avaliação da Transformare.</div>`}
+            <div class="label" style="font-size:14px;">Índice Transformare — ainda não avaliado</div>
+            ${ehPro() ? `<div class="caption">${o.publicadoAuto ? 'Análise da nossa equipe em andamento.' : 'Este edital ainda não recebeu uma nota da nossa equipe.'} Se te interessou, peça a avaliação (Plano Pro).</div>
+            ${pedidoAvaliacaoFeito(o.id) ? `<div style="margin-top:10px; font-size:13px; color:var(--teal); font-weight:600;">✅ Avaliação solicitada. Avisaremos quando estiver pronta.</div>` : `<button class="btn-ghost" style="margin-top:8px; font-size:13px;" onclick="pedirAvaliacaoPro(${o.id})">⭐ Me interessei: pedir avaliação</button>`}` : `<div class="caption">${o.publicadoAuto ? 'Análise da nossa equipe em andamento.' : 'Este edital ainda não recebeu uma nota da nossa equipe.'} Assinantes do Plano Pro podem pedir a avaliação.</div>`}
           </div>
           `}
         </div>
 
         <div id="pncp-dados-box"></div>
+
+        <div style="margin-top:14px;">
+          <div class="link-row">
+            ${linkEditalDireto(o)
+              ? `<a class="official-link" href="${linkEditalDireto(o)}" target="_blank" rel="noopener">Ver edital oficial ↗</a>`
+              : ''}
+            ${o.urlPncp
+              ? `<a class="btn-ghost" href="${o.urlPncp}" target="_blank" rel="noopener" style="display:inline-block;">Ver no PNCP ↗</a>`
+              : ''}
+            <button class="wa-btn" style="padding:11px 18px; font-size:13px;" onclick="shareWhatsApp(${o.id})">↗ Compartilhar no WhatsApp</button>
+          </div>
+          <div style="font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); margin-top:8px;">${o.origemSupabase ? 'Links apontam para a página real do edital no PNCP.' : 'Links demonstrativos — apontam para o portal público do PNCP, não para o edital real.'}</div>
+          <div id="link-instab-aviso" style="margin-top:10px;">${avisoInstabilidadeLinksHTML()}</div>
+        </div>
 
         <details class="panel" style="cursor:pointer; border:1px solid var(--amber); border-left:4px solid var(--amber); background:rgba(245,169,62,0.10);">
           <summary style="cursor:pointer; font-size:14px; font-weight:600; color:var(--ink); display:flex; align-items:center; gap:10px; list-style:none; line-height:1.4;">
@@ -6044,7 +6047,7 @@ function pncpDadosHTML(d, itens, arqs, o){
     <div style="margin-top:8px;">${l}</div>
     ${d.objeto ? `<div style="margin-top:12px; font-weight:600; font-size:13.5px;">Objeto</div><div style="font-size:13px; color:var(--ink-muted); margin-top:4px; line-height:1.5;">${t(d.objeto)}</div>` : ''}
     ${tabItens}${tabArq}
-    <div style="margin-top:12px;">${link(d.link_pncp || (o && o.urlPncp), 'Ver na página do PNCP')}${link(d.link_processo_eletronico, 'Acessar processo eletrônico')}</div>
+    <div style="margin-top:12px;">${link(d.link_processo_eletronico, 'Acessar processo eletrônico')}</div>
     <div style="margin-top:8px; font-size:11.5px; color:var(--ink-dim);">Informações lidas automaticamente do PNCP. Em caso de divergência, vale o edital oficial.</div>
   </details>`;
 }
