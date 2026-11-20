@@ -2071,7 +2071,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
       <div class="section-title" style="font-size:17px; margin:0;">🤖 Análises prontas <span id="analises-prontas-n" style="font-size:13px; color:var(--ink-dim); font-weight:400;"></span></div>
       <button class="btn-ghost" onclick="carregarAnalisesProntas()">🔄 Atualizar</button>
     </div>
-    <p class="section-sub" style="margin-bottom:10px;">Rascunhos feitos pela rotina automática. Abra, confira, aplique no formulário e publique. O Índice vem só como sugestão.</p>
+    <p class="section-sub" style="margin-bottom:10px;">Rascunhos das análises que você pediu (🔎 Fazer análise pronta). Abra, confira, aplique no formulário e publique. O Índice vem só como sugestão.</p>
     <div id="analises-prontas-lista"></div>
   </div>
   <div style="margin-top:36px; border-top:1px solid var(--border-soft); padding-top:24px;">
@@ -9060,30 +9060,70 @@ async function carregarAnalisesProntas(){
   if(!lista) return;
   if(!_sb || !adminAuthed){ lista.innerHTML = '<div style="font-size:13px; color:var(--ink-dim);">Entre como administrador para ver as análises.</div>'; return; }
   lista.innerHTML = '<div style="font-size:13px; color:var(--ink-dim);">Carregando…</div>';
-  const { data, error } = await _sb.from('triagem_analises').select('id, numero_controle, indice, resumo, alertas, criado_em').eq('status','rascunho').order('criado_em', { ascending:false }).limit(100);
+  const { data, error } = await _sb.from('triagem_analises').select('id, numero_controle, indice, resumo, alertas, criado_em, texto_analise').eq('status','rascunho').order('criado_em', { ascending:false }).limit(1000);
   if(error){ lista.innerHTML = '<div style="font-size:13px; color:var(--coral);">Não consegui carregar: ' + esc(error.message) + '</div>'; return; }
   const itens = data || [];
   if(n) n.textContent = itens.length ? '(' + itens.length + ')' : '';
-  if(!itens.length){ lista.innerHTML = '<div style="font-size:13px; color:var(--ink-dim);">Nenhuma análise esperando revisão. Elas aparecem aqui depois da rotina diária.</div>'; return; }
+  if(!itens.length){ lista.innerHTML = '<div style="font-size:13px; color:var(--ink-dim);">Nenhuma análise esperando revisão. Elas aparecem aqui quando você pede "Fazer análise pronta" na caixa do PNCP.</div>'; return; }
   const compras = {};
   try{
     const r = await _sb.from('triagem_pacotes').select('numero_controle, compra').in('numero_controle', [...new Set(itens.map(a=>a.numero_controle))]);
     (r.data || []).forEach(p=>{ compras[p.numero_controle] = p.compra || {}; });
   }catch(e){ /* mostra só o número */ }
-  lista.innerHTML = itens.map(a=>{
+  const campo = (t, nome) => { const m = String(t||'').match(new RegExp('^\\s*' + nome + '\\s*:\\s*(.+)$', 'im')); return m ? m[1].trim() : ''; };
+  _apItens = itens.map(a=>{
     const c = compras[a.numero_controle] || {};
+    const t = a.texto_analise || '';
+    const ufT = (campo(t,'UF').match(/\b[A-Z]{2}\b/) || [''])[0];
+    const profs = campo(t,'Profiss(?:ões|oes) contempladas').split(/[,;]| e (?=[A-ZÁÉÍÓÚ])/).map(x=>x.replace(/\.$/,'').trim()).filter(x=>x && !/^n[ãa]o informad/i.test(x)).map(profCanon);
+    const prazoL = campo(t,'Prazo');
+    return Object.assign({}, a, { _c:c, _uf: c.uf || ufT || '', _cidade: c.cidade || campo(t,'Cidade'), _orgao: c.orgao || campo(t,'Órgão') || campo(t,'Orgao'), _profs: [...new Set(profs)], _indet: /indeterminad/i.test(prazoL) || /indeterminad/i.test(a.resumo||'') });
+  });
+  renderAnalisesProntas();
+}
+let _apItens = [], _apUF = '', _apProf = '', _apIndice = '', _apPrazo = '', _apBusca = '';
+function apSetFiltro(k, v){ if(k==='uf') _apUF=v; else if(k==='prof') _apProf=v; else if(k==='indice') _apIndice=v; else if(k==='prazo') _apPrazo=v; else if(k==='busca') _apBusca=v; _pag['ap']=1; renderAnalisesProntas(); }
+function apLimparFiltros(){ _apUF=_apProf=_apIndice=_apPrazo=_apBusca=''; _pag['ap']=1; renderAnalisesProntas(); }
+function renderAnalisesProntas(){
+  const lista = document.getElementById('analises-prontas-lista'), n = document.getElementById('analises-prontas-n');
+  if(!lista) return;
+  const norm = t => String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const todos = _apItens || [];
+  const ufs = [...new Set(todos.map(a=>a._uf).filter(Boolean))].sort();
+  const profs = [...new Set(todos.flatMap(a=>a._profs))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const bN = norm(_apBusca).trim();
+  const itens = todos.filter(a =>
+    (!_apUF || a._uf === _apUF) && (!_apProf || a._profs.includes(_apProf)) &&
+    (!_apIndice || String(a.indice) === _apIndice) &&
+    (!_apPrazo || (_apPrazo === 'indeterminado' ? a._indet : !a._indet)) &&
+    (!bN || norm([a._orgao, a._cidade, a.numero_controle, a.resumo].join(' ')).includes(bN)));
+  if(n) n.textContent = todos.length ? '(' + (itens.length === todos.length ? todos.length : itens.length + ' de ' + todos.length) + ')' : '';
+  const opts = (arr, atual, vazio) => '<option value="">' + vazio + '</option>' + arr.map(v=>'<option value="' + esc(v) + '"' + (String(v)===String(atual) ? ' selected' : '') + '>' + esc(v) + '</option>').join('');
+  const filtrando = _apUF || _apProf || _apIndice || _apPrazo || _apBusca;
+  const barra = '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:0 0 12px;">'
+    + '<input type="search" placeholder="Buscar órgão, cidade, número…" value="' + esc(_apBusca) + '" style="flex:1 1 180px; min-width:150px; padding:6px 10px; border-radius:8px;" onchange="apSetFiltro(\'busca\', this.value)">'
+    + '<select onchange="apSetFiltro(\'uf\', this.value)" style="padding:6px 8px; border-radius:8px;">' + opts(ufs, _apUF, 'Todas as UFs') + '</select>'
+    + '<select onchange="apSetFiltro(\'prof\', this.value)" style="padding:6px 8px; border-radius:8px;">' + opts(profs, _apProf, 'Todas as profissões') + '</select>'
+    + '<select onchange="apSetFiltro(\'indice\', this.value)" style="padding:6px 8px; border-radius:8px;">' + opts(['5','4','3','2','1'], _apIndice, 'Todos os Índices').replace(/<option value="(\d)"/g, (m0,d)=>m0).replace(/>(\d)<\/option>/g, '>Índice $1</option>') + '</select>'
+    + '<select onchange="apSetFiltro(\'prazo\', this.value)" style="padding:6px 8px; border-radius:8px;"><option value="">Prazo: todos</option><option value="indeterminado"' + (_apPrazo==='indeterminado'?' selected':'') + '>Inscrição indeterminada</option><option value="determinado"' + (_apPrazo==='determinado'?' selected':'') + '>Com prazo definido</option></select>'
+    + (filtrando ? '<button class="btn-ghost" style="font-size:12.5px; padding:5px 10px;" onclick="apLimparFiltros()">Limpar filtros</button>' : '') + '</div>';
+  if(!itens.length){ lista.innerHTML = barra + '<div style="font-size:13px; color:var(--ink-dim);">Nenhuma análise neste filtro.</div>'; return; }
+  const pg = paginarLista('ap', itens, 20, renderAnalisesProntas);
+  lista.innerHTML = barra + pg.fatia.map(a=>{
     const alertas = Array.isArray(a.alertas) ? a.alertas : [];
     const quando = new Date(a.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-    const onde = [c.cidade, c.uf].filter(Boolean).join(' / ');
+    const onde = [a._cidade, a._uf].filter(Boolean).join(' / ');
     return '<div style="border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px; margin-bottom:10px;">'
-      + '<div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;"><strong style="font-size:14px;">' + esc(c.orgao || a.numero_controle) + (onde ? ' <span style="font-weight:400; color:var(--ink-muted);">· ' + esc(onde) + '</span>' : '') + '</strong>'
+      + '<div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;"><strong style="font-size:14px;">' + esc(a._orgao || a.numero_controle) + (onde ? ' <span style="font-weight:400; color:var(--ink-muted);">· ' + esc(onde) + '</span>' : '') + '</strong>'
       + (a.indice ? '<span class="tag" title="Sugestão do Índice (você decide)">Índice sugerido ' + esc(String(a.indice)) + '/5</span>' : '') + '</div>'
       + '<div style="font-size:11.5px; color:var(--ink-dim); margin-top:2px;">' + esc(a.numero_controle) + ' · ' + esc(quando) + '</div>'
+      + (a._profs.length ? '<div style="font-size:12px; color:var(--ink-muted); margin-top:4px;">' + esc(a._profs.join(', ')) + '</div>' : '')
       + (a.resumo ? '<div style="font-size:13px; color:var(--ink-muted); margin-top:6px;">' + esc(a.resumo) + '</div>' : '')
       + (alertas.length ? '<div style="font-size:12px; color:var(--amber); margin-top:6px;">⚠ ' + esc(String(alertas[0])) + (alertas.length > 1 ? ' <span style="color:var(--ink-dim);">+' + (alertas.length - 1) + ' alerta(s)</span>' : '') + '</div>' : '')
       + '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"><button class="btn-ghost" onclick="abrirAnaliseProntaRevisar(\'' + esc(a.numero_controle) + '\')">Abrir e revisar</button>'
       + '<button class="btn-ghost" onclick="descartarAnaliseProntaLista(' + Number(a.id) + ')">Descartar</button></div></div>';
   }).join('');
+  lista.appendChild(pg.barra);
 }
 async function abrirAnaliseProntaRevisar(numero){
   const m = String(numero).match(/(\d{14})-\d+-0*(\d+)\/(\d{4})/);
