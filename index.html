@@ -5885,9 +5885,9 @@ function openDetalhe(id){
           </div>
           ` : `
           <div class="score-hero-body" style="flex:1;">
-            <div class="label">Índice Transformare — ainda não avaliado</div>
-            ${ehPro() ? `<div class="caption">Este edital ainda não recebeu uma nota da nossa equipe. Como assinante do Plano Pro, você pode solicitar a avaliação do Índice Transformare para a nossa equipe.</div>
-            <button class="btn-ghost" style="margin-top:10px;" onclick="abrirSolicitarIndiceModal(${o.id})">Solicitar avaliação do Índice</button>` : `<div class="caption">Este edital ainda não recebeu uma nota da nossa equipe. Assinantes do Plano Pro podem solicitar o Índice Transformare para a nossa equipe.</div>`}
+            <div class="label">${o.publicadoAuto ? '🆕 Edital recém-publicado — análise em andamento' : 'Índice Transformare — ainda não avaliado'}</div>
+            ${ehPro() ? `<div class="caption">${o.publicadoAuto ? 'Publicamos este edital assim que ele apareceu no PNCP, para você não perder tempo; a nossa equipe ainda vai analisá-lo e dar o Índice Transformare. As informações abaixo vêm direto do PNCP.' : 'Este edital ainda não recebeu uma nota da nossa equipe.'} Se ele te interessou, peça a avaliação da Transformare como assinante do Plano Pro.</div>
+            ${pedidoAvaliacaoFeito(o.id) ? `<div style="margin-top:10px; font-size:13px; color:var(--teal); font-weight:600;">✅ Avaliação solicitada. Avisaremos quando estiver pronta.</div>` : `<button class="btn-primary" style="margin-top:10px;" onclick="pedirAvaliacaoPro(${o.id})">⭐ Me interessei: pedir avaliação da Transformare</button>`}` : `<div class="caption">${o.publicadoAuto ? 'Publicamos este edital assim que ele apareceu no PNCP; a nossa equipe ainda vai analisá-lo e dar o Índice Transformare. As informações abaixo vêm direto do PNCP.' : 'Este edital ainda não recebeu uma nota da nossa equipe.'} Assinantes do Plano Pro podem pedir a avaliação da Transformare.</div>`}
           </div>
           `}
         </div>
@@ -7216,6 +7216,30 @@ function abrirSolicitarIndiceModal(oppId){
   document.getElementById('solicitar-indice-msg').value = '';
   document.getElementById('solicitar-indice-modal').classList.add('open');
 }
+const _PEDIDOS_AVAL_CHAVE = 'radar_pedidos_avaliacao_v1';
+function pedidoAvaliacaoFeito(oppId){
+  try{ return (JSON.parse(localStorage.getItem(_PEDIDOS_AVAL_CHAVE) || '[]')).includes(oppId); }catch(e){ return false; }
+}
+function _marcarPedidoAvaliacao(oppId){
+  try{ const l = JSON.parse(localStorage.getItem(_PEDIDOS_AVAL_CHAVE) || '[]'); if(!l.includes(oppId)){ l.push(oppId); localStorage.setItem(_PEDIDOS_AVAL_CHAVE, JSON.stringify(l)); } }catch(e){}
+}
+// Assinante Pro: um toque pede a avaliação (usa nome e contato do perfil; se faltar, abre o formulário).
+async function pedirAvaliacaoPro(oppId){
+  if(!exigePro('Pedir a avaliação da Transformare')) return;
+  const o = oportunidades.find(x=>x.id===oppId);
+  const nome = (userProfile && userProfile.nome) || '';
+  const contato = (userProfile && (userProfile.whatsapp || userProfile.email)) || '';
+  if(!_sb || !nome || !contato){ abrirSolicitarIndiceModal(oppId); return; }
+  const { error } = await _sb.from('solicitacoes_avaliacao_indice').insert({
+    edital_id: oppId >= 900000 ? oppId - 900000 : null,
+    edital_nome: o ? o.edital : null, orgao: o ? o.orgao : null,
+    nome, contato, mensagem: 'Pedido de assinante Pro (botão "Me interessei")',
+  });
+  if(error){ toast('Não foi possível enviar agora. Tente novamente.'); return; }
+  _marcarPedidoAvaliacao(oppId);
+  toast('Pedido enviado! Avisaremos quando a avaliação estiver pronta.');
+  openDetalhe(oppId);
+}
 async function submitSolicitarIndice(){
   const nome = document.getElementById('solicitar-indice-nome').value.trim();
   const contato = document.getElementById('solicitar-indice-contato').value.trim();
@@ -7225,7 +7249,7 @@ async function submitSolicitarIndice(){
 
   if(_sb){
     const { error } = await _sb.from('solicitacoes_avaliacao_indice').insert({
-      edital_id: _solicitarIndiceOppId || null,
+      edital_id: (_solicitarIndiceOppId && _solicitarIndiceOppId >= 900000) ? _solicitarIndiceOppId - 900000 : (_solicitarIndiceOppId || null),
       edital_nome: o ? o.edital : null,
       orgao: o ? o.orgao : null,
       nome, contato, mensagem: mensagem || null,
@@ -7233,6 +7257,7 @@ async function submitSolicitarIndice(){
     if(error){ toast('Não foi possível enviar agora. Tente novamente.'); return; }
   }
   closeModal('solicitar-indice-modal');
+  if(_solicitarIndiceOppId) _marcarPedidoAvaliacao(_solicitarIndiceOppId);
   toast('Solicitação enviada! Avisaremos quando a avaliação estiver pronta.');
 }
 
@@ -13872,6 +13897,11 @@ async function renderCaixaEntrada(){
   status.textContent = `${nPendentes} aguardando revisão${nPrioritarios ? ` · ⚡ ${nPrioritarios} de alta prioridade` : ''}${nAdiados ? ` · ${nAdiados} adiado(s) para depois` : ''}${nAguardando ? ` · ✉ ${nAguardando} aguardando resposta do órgão` : ''}.`;
   lista.innerHTML = '';
   _dataCaixaEntrada = data;
+  _caixaPedidosPro = {};
+  try{
+    const { data: sol } = await _sb.from('solicitacoes_avaliacao_indice').select('edital_id').eq('status','pendente').limit(2000);
+    (sol||[]).forEach(r=>{ if(r.edital_id) _caixaPedidosPro[r.edital_id] = (_caixaPedidosPro[r.edital_id]||0) + 1; });
+  }catch(_){}
   try{
     const { data: ap } = await _sb.from('triagem_analises').select('numero_controle').in('status', ['rascunho','aplicada']).limit(5000);
     _caixaAnalisesProntas = new Set((ap||[]).map(r=>r.numero_controle));
@@ -13911,12 +13941,14 @@ async function renderCaixaEntrada(){
     ['pendentes','Para revisar', pendentesArr.length],
     ['aguardando','✉ Aguardando resposta do órgão', aguardandoArr.length],
     ['vencidos','⏰ Prazo vencido ou perto', nVencPerto],
-    ['adiados','Avaliar depois', adiadosArr.length]
+    ['adiados','Avaliar depois', adiadosArr.length],
+    ['pedidos','⭐ Pedidos de assinantes Pro', data.filter(i=>pedidosProDe(i)>0).length]
   ];
   if(!filtros.some(f=>f[0]===_cxFiltro)) _cxFiltro = 'todos';
   let dataFiltrada = _cxFiltro==='pendentes' ? porPrioridade(pendentesArr)
     : _cxFiltro==='aguardando' ? aguardandoArr
     : _cxFiltro==='adiados' ? porPrioridade(adiadosArr)
+    : _cxFiltro==='pedidos' ? data.filter(i=>pedidosProDe(i)>0)
     : _cxFiltro==='vencidos' ? porPrioridade(pendentesArr.filter(i=>prazoJaEncerrado(i)||prazoProximo(i)))
     : dataOrdenada;
   // Filtros extras (UF, profissão, análise, busca) para escolher quais editais mandar analisar
@@ -13975,6 +14007,7 @@ async function renderCaixaEntrada(){
         ${par ? `<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="Já existe no catálogo: ${esc(par.orgao||'')} — ${esc(par.edital||'')}">⚠ Parecido com edital já cadastrado (id ${par.id})</span>` : ''}
         ${aguardandoOrgao(item) ? `<span class="badge" style="background:rgba(47,217,196,.2); color:var(--teal); margin-left:8px; font-weight:600;" title="${esc(item.motivo_decisao||'')}">✉ Aguardando resposta do órgão${esc(infoAguardando(item))}</span>` : adiado ? '<span class="badge" style="background:rgba(148,163,184,.18); color:var(--ink-muted); margin-left:8px;">Avaliar depois</span>' : ''}
         ${badgeAnaliseSolicitadaHTML(item)}
+        ${pedidosProDe(item) ? `<span class="badge" style="background:rgba(245,158,11,.22); color:#b45309; margin-left:8px; font-weight:700;" title="Assinantes Pro pediram a avaliação da Transformare deste edital">⭐ ${pedidosProDe(item)} pedido(s) de assinante Pro</span>` : ''}
         ${item.edital_publicado_id ? `<span class="badge" style="background:rgba(34,197,94,.18); color:#15803d; margin-left:8px; font-weight:600;" title="Este edital já está no catálogo, sem nota. Revise quando puder.">✅ Já publicado no catálogo (sem nota)</span>` : ''}
         ${prazoJaEncerrado(item) && !aguardandoOrgao(item) ? '<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="A data de encerramento já passou. Credenciamentos costumam seguir abertos: vale perguntar ao órgão.">Prazo já encerrado</span>' : ''}
         ${prazoProximo(item) && !aguardandoOrgao(item) ? '<span class="badge" style="background:rgba(245,158,11,.18); color:#b45309; margin-left:8px;" title="O prazo termina em poucos dias: vale perguntar ao órgão se haverá prorrogação.">Prazo em '+diasAtePrazoPend(item)+' dia(s)</span>' : ''}
@@ -14199,6 +14232,8 @@ async function enviarPerguntaOrgao(modo){
 
 // ===== Caixa PNCP: "Fazer análise pronta" (só os editais escolhidos pelo ADM têm leitura completa e análise) =====
 let _caixaAnalisesProntas = new Set();
+let _caixaPedidosPro = {};
+const pedidosProDe = item => (item.edital_publicado_id && _caixaPedidosPro[item.edital_publicado_id]) || 0;
 function analiseProntaDe(item){ return !!item.numero_controle_pncp && _caixaAnalisesProntas.has(item.numero_controle_pncp); }
 function badgeAnaliseSolicitadaHTML(item){
   if(analiseProntaDe(item)) return '<span class="badge" style="background:rgba(34,197,94,.18); color:#15803d; margin-left:8px; font-weight:600;" title="A análise está em Triagem > Análises prontas">✅ Análise pronta</span>';
