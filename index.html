@@ -8996,11 +8996,13 @@ async function afVerificarAnaliseAuto(){
   const box = document.getElementById('af-analise-auto'); if(!box) return;
   box.style.display = 'none'; box.innerHTML = ''; _analiseAuto = null;
   if(!_sb || !adminAuthed) return;
-  const k = afChaveControle(); if(!k) return;
+  const k = afChaveControle();
+  const idEd = (typeof editingId === 'number' && editingId >= 900000) ? editingId - 900000 : null;
+  if(!k && !idEd) return;
   try{
-    const { data, error } = await _sb.from('triagem_analises')
-      .select('id, criado_em, indice, resumo, alertas, texto_analise')
-      .like('numero_controle', k.cnpj + '-%-' + k.seq + '/' + k.ano)
+    let q = _sb.from('triagem_analises').select('id, criado_em, indice, resumo, alertas, texto_analise');
+    q = k ? q.like('numero_controle', k.cnpj + '-%-' + k.seq + '/' + k.ano) : q.eq('numero_controle', 'edital-' + idEd);
+    const { data, error } = await q
       .eq('status', 'rascunho').order('criado_em', { ascending:false }).limit(1);
     if(error || !data || !data.length || !data[0].texto_analise) return;
     _analiseAuto = data[0];
@@ -9043,6 +9045,13 @@ async function afAplicarAnaliseAuto(){
   try{ await _sb.from('triagem_analises').update({ status:'aplicada', aplicado_em:new Date().toISOString() }).eq('id', _analiseAuto.id); }catch(e){}
   const box = document.getElementById('af-analise-auto');
   if(box){ box.innerHTML = '<strong>✓ Análise aplicada.</strong> <span style="color:var(--ink-muted);">Confira os campos e publique quando estiver certo.</span>'; }
+  _analiseAuto = null;
+  if(typeof carregarAnalisesProntas === 'function') carregarAnalisesProntas();
+}
+// Ao salvar o edital revisado, o rascunho dele sai da lista "Análises prontas" (vira "aplicada").
+async function afFecharRascunhoAoSalvar(){
+  if(!_analiseAuto || !_sb) return;
+  try{ await _sb.from('triagem_analises').update({ status:'aplicada', aplicado_em:new Date().toISOString() }).eq('id', _analiseAuto.id); }catch(e){}
   _analiseAuto = null;
   if(typeof carregarAnalisesProntas === 'function') carregarAnalisesProntas();
 }
@@ -9126,6 +9135,12 @@ function renderAnalisesProntas(){
   lista.appendChild(pg.barra);
 }
 async function abrirAnaliseProntaRevisar(numero){
+  const mEd = String(numero).match(/^edital-(\d+)$/);
+  if(mEd){
+    const ed = oportunidades.find(x=>x.id === 900000 + Number(mEd[1]));
+    if(ed){ openAdminForm(ed.id); return; }
+    toast('Esse edital não está no catálogo carregado. Atualize a página e tente de novo.'); return;
+  }
   const m = String(numero).match(/(\d{14})-\d+-0*(\d+)\/(\d{4})/);
   if(!m){ toast('Número de controle fora do padrão'); return; }
   const [, cnpj, seq, ano] = m;
@@ -9805,7 +9820,7 @@ async function saveAdminForm(){
   // Edição feita fora do Painel administrativo: mostra antes → depois e pede confirmação.
   if(editingId && adminFormOrigemFora && confirmarEdicaoAtiva() && !_confirmEdicaoOk){
     const diff = diffEdicao(_editAntes, data);
-    if(diff.length === 0){ toast('Nada foi alterado'); closeAdminForm(); return; }
+    if(diff.length === 0){ toast('Nada foi alterado'); await afFecharRascunhoAoSalvar(); closeAdminForm(); return; }
     abrirConfirmEdicao(diff);
     return;
   }
@@ -9875,6 +9890,7 @@ async function saveAdminForm(){
       if(publicacaoISO === undefined && data.publicacao && data.publicacao !== 'Não informado') aviso += ' Publicação não gravada no banco (use o formato dd/mm/aaaa).';
       toast(aviso);
       await afTextoSalvar(idReal);
+      await afFecharRascunhoAoSalvar();
     }
   } else {
     toast(editingId ? 'Oportunidade atualizada e salva neste navegador' : 'Oportunidade criada e salva neste navegador');
