@@ -13788,11 +13788,39 @@ async function renderCaixaEntrada(){
     ['adiados','Avaliar depois', adiadosArr.length]
   ];
   if(!filtros.some(f=>f[0]===_cxFiltro)) _cxFiltro = 'todos';
-  const dataFiltrada = _cxFiltro==='pendentes' ? porPrioridade(pendentesArr)
+  let dataFiltrada = _cxFiltro==='pendentes' ? porPrioridade(pendentesArr)
     : _cxFiltro==='aguardando' ? aguardandoArr
     : _cxFiltro==='adiados' ? porPrioridade(adiadosArr)
     : _cxFiltro==='vencidos' ? porPrioridade(pendentesArr.filter(i=>prazoJaEncerrado(i)||prazoProximo(i)))
     : dataOrdenada;
+  // Filtros extras (UF, profissão, análise, busca) para escolher quais editais mandar analisar
+  const _norm = t => String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const ufsCx = [...new Set(data.map(i=>i.uf).filter(Boolean))].sort();
+  const profsCx = [...new Set(data.flatMap(i=>(i.profissoes_detectadas||[]).map(profCanon)))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const estadoAnalise = i => analiseProntaDe(i) ? 'pronta' : (i.analise_solicitada_em ? 'solicitada' : 'sem');
+  const buscaN = _norm(_cxBusca).trim();
+  const baseFiltrada = dataFiltrada.filter(i =>
+    (!_cxUF || i.uf === _cxUF) &&
+    (!_cxProf || (i.profissoes_detectadas||[]).some(p=>profCanon(p)===_cxProf)) &&
+    (!_cxAnalise || estadoAnalise(i) === _cxAnalise) &&
+    (!buscaN || _norm([i.orgao,i.municipio,i.objeto,i.resumo,i.numero_controle_pncp].join(' ')).includes(buscaN)));
+  dataFiltrada = baseFiltrada;
+  const elegiveisAnalise = baseFiltrada.filter(i=>estadoAnalise(i)==='sem');
+  const barraFiltros = document.createElement('div');
+  barraFiltros.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:0 0 12px;';
+  const optsSel = (arr, atual, vazio) => `<option value="">${vazio}</option>` + arr.map(v=>`<option value="${esc(v)}"${v===atual?' selected':''}>${esc(v)}</option>`).join('');
+  barraFiltros.innerHTML = `
+    <input type="search" placeholder="Buscar órgão, cidade, objeto…" value="${esc(_cxBusca)}" style="flex:1 1 180px; min-width:150px; padding:6px 10px; border-radius:8px;" onchange="cxSetFiltro('busca', this.value)">
+    <select onchange="cxSetFiltro('uf', this.value)" style="padding:6px 8px; border-radius:8px;">${optsSel(ufsCx, _cxUF, 'Todas as UFs')}</select>
+    <select onchange="cxSetFiltro('prof', this.value)" style="padding:6px 8px; border-radius:8px;">${optsSel(profsCx, _cxProf, 'Todas as profissões')}</select>
+    <select onchange="cxSetFiltro('analise', this.value)" style="padding:6px 8px; border-radius:8px;">
+      <option value="">Análise: todas</option>
+      <option value="sem"${_cxAnalise==='sem'?' selected':''}>Sem análise</option>
+      <option value="solicitada"${_cxAnalise==='solicitada'?' selected':''}>Análise solicitada</option>
+      <option value="pronta"${_cxAnalise==='pronta'?' selected':''}>Análise pronta</option>
+    </select>
+    ${(_cxUF||_cxProf||_cxAnalise||_cxBusca) ? '<button class="btn-ghost" style="font-size:12.5px; padding:5px 10px;" onclick="cxLimparFiltros()">Limpar filtros</button>' : ''}
+    ${elegiveisAnalise.length ? `<button class="btn-ghost" style="font-size:12.5px; padding:5px 10px; border-color:var(--teal); color:var(--teal); font-weight:600;" title="Pede a leitura completa e a análise de todos os editais sem análise que estão neste filtro" onclick="cxSolicitarFiltrados()">🔎 Fazer análise dos ${elegiveisAnalise.length} do filtro</button>` : ''}`;
   const chips = document.createElement('div');
   chips.style.cssText = 'display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px;';
   chips.innerHTML = filtros.map(([k,t,n])=>{
@@ -13800,6 +13828,7 @@ async function renderCaixaEntrada(){
     return `<button class="btn-ghost" style="font-size:12.5px; padding:5px 10px;${ativo ? ' background:rgba(47,217,196,.18); border-color:var(--teal); color:var(--teal); font-weight:600;' : (teal && n ? ' border-color:var(--teal); color:var(--teal);' : '')}" onclick="cxFiltrar('${k}')">${t} (${n})</button>`;
   }).join('');
   lista.appendChild(chips);
+  lista.appendChild(barraFiltros);
   if(!dataFiltrada.length){
     const vazio = document.createElement('div'); vazio.className = 'empty-state'; vazio.textContent = 'Nenhum item neste filtro.'; lista.appendChild(vazio); return;
   }
@@ -13872,6 +13901,31 @@ async function rejeitarCredenciamento(id, motivo, motivoTags){
 // ===== Triagem: perguntar ao órgão por e-mail =====
 // O item continua com status "mais_tarde" (nada muda no banco); a marca fica no campo motivo_decisao.
 let _cxFiltro = 'todos';
+let _cxUF = '', _cxProf = '', _cxAnalise = '', _cxBusca = '';
+function cxSetFiltro(k, v){
+  if(k==='uf') _cxUF = v; else if(k==='prof') _cxProf = v; else if(k==='analise') _cxAnalise = v; else if(k==='busca') _cxBusca = v;
+  _pag['cx'] = 1; renderCaixaEntrada();
+}
+function cxLimparFiltros(){ _cxUF = ''; _cxProf = ''; _cxAnalise = ''; _cxBusca = ''; _pag['cx'] = 1; renderCaixaEntrada(); }
+async function cxSolicitarFiltrados(){
+  if(!_sb) return;
+  const norm = t => String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const buscaN = norm(_cxBusca).trim();
+  const ids = (_dataCaixaEntrada||[]).filter(i =>
+    !i.analise_solicitada_em && !analiseProntaDe(i) &&
+    (_cxFiltro==='todos' || (_cxFiltro==='pendentes' ? i.status==='pendente' : _cxFiltro==='adiados' ? (i.status==='mais_tarde' && !aguardandoOrgao(i)) : _cxFiltro==='aguardando' ? aguardandoOrgao(i) : (i.status==='pendente' && (prazoJaEncerrado(i)||prazoProximo(i))))) &&
+    (!_cxUF || i.uf === _cxUF) &&
+    (!_cxProf || (i.profissoes_detectadas||[]).some(p=>profCanon(p)===_cxProf)) &&
+    (!_cxAnalise || _cxAnalise==='sem') &&
+    (!buscaN || norm([i.orgao,i.municipio,i.objeto,i.resumo,i.numero_controle_pncp].join(' ')).includes(buscaN))
+  ).map(i=>i.id);
+  if(!ids.length){ toast('Nenhum edital sem análise neste filtro'); return; }
+  if(!confirm('Pedir a leitura completa e a análise de ' + ids.length + ' edital(is)? Isso consome tokens.')) return;
+  const { error } = await _sb.from('credenciamentos_pendentes').update({ analise_solicitada_em: new Date().toISOString() }).in('id', ids);
+  if(error){ alert('Erro ao solicitar as análises: ' + error.message); return; }
+  toast(ids.length + ' análise(s) solicitada(s)');
+  renderCaixaEntrada();
+}
 function cxFiltrar(f){ _cxFiltro = f; _pag['cx'] = 1; renderCaixaEntrada(); }
 // Texto do marcador: "perguntado em dd/mm/aaaa · há N dia(s)" a partir do motivo gravado.
 function infoAguardando(i){
