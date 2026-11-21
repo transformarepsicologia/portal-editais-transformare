@@ -4980,6 +4980,27 @@ function perfilCompletude(u){
 //  - Informação que o edital não traz (valor, especialidade, formato, forma de contratação) vale metade dos pontos do critério.
 //  - Quem atende "Presencial e online" recebe nota cheia em editais só presenciais ou só online.
 //  - Exigência que o perfil não atende (instrução, experiência, PF/PJ) limita a nota a 40%.
+// Checklist de documentos: some para quem não é aderente (outra profissão, ou edital só presencial fora das cidades de atendimento).
+const _docsForcados = new Set();
+function motivoChecklistOculto(o){
+  try{
+    if(typeof adminAuthed !== 'undefined' && adminAuthed) return '';
+    const u = userProfile; if(!u || _docsForcados.has(o.id)) return '';
+    if((u.profs||[]).length){
+      const meus = u.profs.map(profNorm);
+      if(!(o.profissoes||[]).some(p=>meus.includes(profNorm(p)))) return 'o edital não cita a sua profissão';
+    }
+    if(u.uf){
+      const mod = String(o.modalidade||'');
+      const soPresencial = mod.startsWith('Presencial') && mod !== 'Presencial e online';
+      const minhas = String(u.cidade||'').split(/[,;\/]/).map(normTxt).filter(Boolean);
+      const mesma = !!(o.cidade && minhas.includes(normTxt(o.cidade)));
+      if(soPresencial && o.cidade && !(o.uf === u.uf && (mesma || !minhas.length))) return `o edital é presencial em ${o.cidade}/${o.uf}, fora das cidades onde você atende`;
+    }
+  }catch(e){}
+  return '';
+}
+function mostrarChecklistForcado(id){ _docsForcados.add(id); openDetalhe(id); }
 function calcularAderencia(o, u){
   let pontos = 0, total = 0, naoAtende = false;
   const motivos = [], det = [], faltamPerfil = [];
@@ -5926,6 +5947,7 @@ function openDetalhe(id){
           <p style="font-size:14.5px; margin:0; line-height:1.6; color:var(--ink-muted); white-space:pre-line;">${o.requisitos || 'Não informado.'}</p>
         </div>
 
+        ${(()=>{ const _mo = motivoChecklistOculto(o); return _mo ? `<div class="panel" style="font-size:13.5px; color:var(--ink-muted);"><h4><span class="dot"></span>Documentação necessária</h4><p style="margin:0 0 8px; line-height:1.5;">Não mostramos o checklist de documentos porque ${_mo}.</p><button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px;" onclick="mostrarChecklistForcado(${o.id})">Ver mesmo assim</button></div>` : `
         <div class="panel">
           <h4><span class="dot"></span>Documentação necessária</h4>
           <div class="doc-resumo" id="hero-check-${o.id}"></div>
@@ -5950,6 +5972,7 @@ function openDetalhe(id){
         </div>
 
         <div id="meu-checklist-${o.id}">${ckMeuHTML(o.id)}</div>
+        `; })()}
 
         ${o.movimentacoes.length ? `<div class="panel">
           <h4><span class="dot"></span>Histórico de movimentações</h4>
@@ -6034,19 +6057,25 @@ function pncpDadosHTML(d, itens, arqs, o){
   ].join('');
   const link = (u, rot) => u ? `<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--teal); font-size:13px; margin-right:14px;">${rot} ↗</a>` : '';
   const tabItens = (itens && itens.length) ? `
-    <div style="margin-top:14px; font-weight:600; font-size:13.5px;">Itens (${itens.length})</div>
     <div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12.5px; margin-top:6px;">
       <thead><tr style="text-align:left; color:var(--ink-dim);"><th style="padding:5px 6px;">Nº</th><th style="padding:5px 6px;">Descrição</th><th style="padding:5px 6px;">Quantidade</th><th style="padding:5px 6px;">Valor unit. estimado</th><th style="padding:5px 6px;">Valor total estimado</th></tr></thead>
       <tbody>${itens.map(i=>`<tr style="border-top:1px solid var(--border-soft); vertical-align:top;"><td style="padding:5px 6px;">${t(i.numero)}</td><td style="padding:5px 6px;">${t(i.descricao)}${i.info ? `<div style="color:var(--ink-dim); font-size:11.5px;">${t(i.info)}</div>` : ''}</td><td style="padding:5px 6px; white-space:nowrap;">${t(i.quantidade)}${i.unidade ? ' ' + t(i.unidade) : ''}</td><td style="padding:5px 6px; white-space:nowrap;">${t(_pncpMoeda(i.valor_unitario))}</td><td style="padding:5px 6px; white-space:nowrap;">${t(_pncpMoeda(i.valor_total))}</td></tr>`).join('')}</tbody>
     </table></div>` : '';
   const tabArq = (arqs && arqs.length) ? `
-    <div style="margin-top:14px; font-weight:600; font-size:13.5px;">Arquivos (${arqs.length})</div>
-    <div style="margin-top:6px;">${arqs.map(a=>`<div style="padding:4px 0; font-size:13px;"><a href="${esc(a.url)}" target="_blank" rel="noopener" style="color:var(--teal);">📄 ${t(a.titulo || 'arquivo')}</a>${a.tipo ? ` <span style="color:var(--ink-dim); font-size:12px;">· ${t(a.tipo)}</span>` : ''}${a.data ? ` <span style="color:var(--ink-dim); font-size:12px;">· ${t(_pncpDH(a.data))}</span>` : ''}</div>`).join('')}</div>` : '';
-  return `<details class="panel" open style="margin-top:14px;">
+    <div>${arqs.map(a=>`<div style="padding:4px 0; font-size:13px;"><a href="${esc(a.url)}" target="_blank" rel="noopener" style="color:var(--teal);">📄 ${t(a.titulo || 'arquivo')}</a>${a.tipo ? ` <span style="color:var(--ink-dim); font-size:12px;">· ${t(a.tipo)}</span>` : ''}${a.data ? ` <span style="color:var(--ink-dim); font-size:12px;">· ${t(_pncpDH(a.data))}</span>` : ''}</div>`).join('')}</div>` : '';
+  const sec = (titulo, corpo) => corpo ? `<details class="pncp-sec" style="margin-top:8px; border-top:1px solid var(--border-soft); padding-top:8px;"><summary style="cursor:pointer; font-weight:600; font-size:13.5px;">${titulo}</summary><div style="margin-top:6px;">${corpo}</div></details>` : '';
+  const resumo = [d.situacao ? 'Situação: ' + t(d.situacao) : '', d.fim_propostas ? 'Propostas até ' + t(_pncpDH(d.fim_propostas)) : '', d.valor_total_estimado != null ? 'Valor estimado: ' + t(_pncpMoeda(d.valor_total_estimado)) : ''].filter(Boolean).join(' · ');
+  return `<details class="panel pncp-dados" open style="margin-top:14px;">
     <summary style="cursor:pointer; font-size:15px; font-weight:700; list-style:none;">🏛 Dados do PNCP${d.titulo ? ` <span style="font-weight:500; color:var(--ink-muted); font-size:13px;">— ${t(d.titulo)}</span>` : ''}</summary>
-    <div style="margin-top:8px;">${l}</div>
-    ${d.objeto ? `<div style="margin-top:12px; font-weight:600; font-size:13.5px;">Objeto</div><div style="font-size:13px; color:var(--ink-muted); margin-top:4px; line-height:1.5;">${t(d.objeto)}</div>` : ''}
-    ${tabItens}${tabArq}
+    ${resumo ? `<div style="margin-top:6px; font-size:12.5px; color:var(--ink-muted);">${resumo}</div>` : ''}
+    <div style="margin-top:8px; display:flex; gap:8px;">
+      <button type="button" class="btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="this.closest('.pncp-dados').querySelectorAll('.pncp-sec').forEach(x=>x.open=true)">Abrir tudo</button>
+      <button type="button" class="btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="this.closest('.pncp-dados').querySelectorAll('.pncp-sec').forEach(x=>x.open=false)">Fechar tudo</button>
+    </div>
+    ${sec('Informações da contratação', l)}
+    ${sec('Objeto', d.objeto ? `<div style="font-size:13px; color:var(--ink-muted); line-height:1.5;">${t(d.objeto)}</div>` : '')}
+    ${sec('Itens (' + ((itens && itens.length) || 0) + ')', tabItens)}
+    ${sec('Arquivos (' + ((arqs && arqs.length) || 0) + ')', tabArq)}
     <div style="margin-top:12px;">${link(d.link_processo_eletronico, 'Acessar processo eletrônico')}</div>
     <div style="margin-top:8px; font-size:11.5px; color:var(--ink-dim);">Informações lidas automaticamente do PNCP. Em caso de divergência, vale o edital oficial.</div>
   </details>`;
