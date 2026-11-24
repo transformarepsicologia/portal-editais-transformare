@@ -13965,8 +13965,10 @@ async function renderCaixaEntrada(){
   const parecidoCom = item => {
     const k = normK(item.numero_controle_pncp);
     const o = normT(item.orgao), ob = normT(item.objeto).slice(0,60);
-    return catalogo.find(e => (k && normK(e.edital) === k)) ||
-           catalogo.find(e => o && ob.length > 20 && normT(e.orgao) === o && normT(e.objeto).slice(0,60) === ob) || null;
+    // O edital que o próprio sistema publicou a partir deste item não conta como "parecido".
+    const proprio = e => item.edital_publicado_id && e.id === item.edital_publicado_id;
+    return catalogo.find(e => !proprio(e) && k && normK(e.edital) === k) ||
+           catalogo.find(e => !proprio(e) && o && ob.length > 20 && normT(e.orgao) === o && normT(e.objeto).slice(0,60) === ob) || null;
   };
 
   const nVencPerto = pendentesArr.filter(i=>prazoJaEncerrado(i)||prazoProximo(i)).length;
