@@ -5861,7 +5861,6 @@ function openDetalhe(id){
   currentDetailId = id;
   const o = oportunidades.find(x=>x.id===id);
   if(!o || !visivelAoCliente(o)){ toast('Este edital não está disponível no momento.'); nav('editais'); return; }
-  if(o.ehPregao) return openDetalhePregao(o);
   registrarEvento('abrir', o);
   marcarVistoSino(id);
   const isFav = favoritos.has(id);
@@ -5881,7 +5880,7 @@ function openDetalhe(id){
           <p style="font-size:13px; color:var(--ink-muted); margin:0 0 14px; line-height:1.5;">Se essa oportunidade faz sentido para você, siga para a inscrição — ou peça uma verificação rápida antes de enviar tudo.</p>
           <div class="btn-row" style="display:flex; gap:10px; flex-wrap:wrap; align-items:stretch;">
             ${o.urlInscricao
-              ? `<button class="official-link" style="text-align:center; flex:1 1 220px; border:none; cursor:pointer;" onclick="openCredenciarModal(${o.id})">Quero me credenciar ↗</button>`
+              ? `<button class="official-link" style="text-align:center; flex:1 1 220px; border:none; cursor:pointer;" onclick="openCredenciarModal(${o.id})">${o.ehPregao ? 'Quero participar do pregão' : 'Quero me credenciar'} ↗</button>`
               : `<span class="btn-primary" style="text-align:center; opacity:0.45; cursor:default; display:block; flex:1 1 220px;" title="Link de inscrição não informado">Quero me credenciar</span>`}
             <button class="btn-ghost" style="flex:1 1 220px;" onclick="openLeadModal(${o.id},'detalhe_edital','Quero verificar minha documentação')">Quero verificar minha documentação</button>
           </div>
@@ -5896,7 +5895,7 @@ function openDetalhe(id){
             <div>
               <div class="op-meta">${o.edital} · ${o.tipo}</div>
               <h3>${o.objeto}</h3>
-              <div class="detail-org">${esc(orgaoLocalTexto(o))} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${o.origemSupabase ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}${o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? ` · divulgado em ${esc(o.publicacao)}` : ''}</div>
+              <div class="detail-org">${esc(orgaoLocalTexto(o))} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${(o.origemSupabase || o.ehPregao) ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}${o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? ` · divulgado em ${esc(o.publicacao)}` : ''}</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
               ${adminAuthed ? `<button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap;" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button><button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">🗑 Excluir</button>` : ''}
@@ -5908,6 +5907,7 @@ function openDetalhe(id){
             ${inscricaoProximaHTML(o)}
             ${profTagsResumo(o.profissoes,5)}
           </div>
+          ${o.ehPregao ? pregaoAcompHTML(o) : ''}
 
           <div class="quick-facts">
             <div class="qf-item"><div class="qf-icon">👤</div><span class="qf-k">Quem pode participar</span><div class="qf-v">${profListaRecolhivel(o.profissoes,6)}</div></div>
@@ -6056,7 +6056,7 @@ function openDetalhe(id){
     ${ehPro() ? '' : '<div class="detail-grid" style="margin-top:0;"><div>' + ctaProximoPasso + '</div></div>'}
   `;
   renderOutrosEditais(id, el);
-  if(o.origemSupabase) carregarDadosPncp(o);
+  if(o.origemSupabase || o.ehPregao) carregarDadosPncp(o);
   if(o.origemSupabase && typeof adminAuthed !== 'undefined' && adminAuthed) carregarPastaEdital(o.id);   // ADM: link da pasta do Drive deste edital
   nav('detalhe');
 }
@@ -6123,7 +6123,9 @@ function pncpDadosHTML(d, itens, arqs, o){
 async function carregarDadosPncp(o){
   const box = document.getElementById('pncp-dados-box'); if(!box || !_sb) return;
   try{
-    const { data } = await _sb.from('editais_pncp').select('dados, itens, arquivos').eq('edital_id', o.id - 900000).maybeSingle();
+    const { data } = o.ehPregao
+      ? await _sb.from('pregoes_pncp').select('dados, itens, arquivos').eq('pregao_id', o.pregao.id).maybeSingle()
+      : await _sb.from('editais_pncp').select('dados, itens, arquivos').eq('edital_id', o.id - 900000).maybeSingle();
     if(!data || !data.dados || currentDetailId !== o.id) return;
     box.innerHTML = pncpDadosHTML(data.dados, data.itens || [], data.arquivos || [], o);
   }catch(e){ /* sem os dados do PNCP a página continua normal */ }
@@ -14348,13 +14350,13 @@ function mapPregaoSupabase(row){
     edital: row.numero_controle || 'Pregão (PNCP)', orgao: row.orgao || 'Órgão não identificado', uf: row.uf || '—', cidade: row.municipio || '',
     tipo: 'Pregão', modalidade: pres ? 'Pregão presencial' : 'Pregão eletrônico',
     profissoes: (userProfile && userProfile.profs && userProfile.profs.length) ? userProfile.profs : ['Não identificada'],
-    abrangencia: 'Municipal', aceitaContratacao: [], situacao: 'Aberto', objeto: row.objeto || '',
+    abrangencia: pgNivelOrgao(row.orgao) || 'Municipal', aceitaContratacao: ['Pessoa Jurídica (PJ)'], situacao: 'Aberto', objeto: row.objeto || '',
     prazo: row.prazo ? _pgDataBR(row.prazo) : 'Indeterminado', prazoIndeterminado: !row.prazo, prazoConfirmado: !!row.prazo,
     abertura: row.abertura ? _pgDataBR(row.abertura) : null, publicacao: _pgDataBR(row.criado_em),
     indice: null, indiceLabel: null,
     valorAtendimento: 'Não informado', valorMensal: 'Não informado', valorHora: 'Não informado', volume: 'Não informado',
     valorMaximo: row.valor_estimado ? Number(row.valor_estimado).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) + ' (valor total estimado, conforme PNCP)' : 'Não informado',
-    remuneracao: [], requisitos: 'Consulte o edital do pregão no PNCP.', pontosPositivos: '', pontosAtencao: '', documentos: documentosDoPregao(), documentosPadrao: false,
+    remuneracao: [], requisitos: 'Consulte o edital do pregão no PNCP (veja os arquivos em "Dados do PNCP").', pontosPositivos: '', pontosAtencao: '', documentos: documentosDoPregao(), documentosPadrao: true,
     urlOficial: row.link_sistema || row.link_pncp || 'https://pncp.gov.br/app/editais', urlEdital: row.link_pncp || '', urlPncp: row.link_pncp || 'https://pncp.gov.br/app/editais',
     urlInscricao: row.link_sistema || row.link_pncp || '', numeroPncp: row.numero_controle || '', movimentacoes: [], linksDocs: {}, perguntas: [],
   };
@@ -14384,72 +14386,26 @@ async function pregaoCatalogoMarcar(id, status){
   if(error){ toast('Não foi possível salvar.'); return; }
   o.pregao.status = status;
   if(status === 'interesse') await pgFavoritarInteresse(o.pregao.id);
-  if(status === 'descartado'){ toast('Pregão descartado.'); await anexarPregoes(); nav('editais'); return; }
-  toast(status === 'interesse' ? 'Marcado como interesse.' : 'Marcação desfeita.'); openDetalhePregao(o);
+  if(status === 'descartado'){ toast('Pregão descartado.'); await anexarPregoes(); nav('minha-conta'); return; }
+  toast(status === 'interesse' ? 'Marcado como interesse.' : 'Marcação desfeita.'); openDetalhe(o.id);
 }
-function openDetalhePregao(o){
-  const id = o.id, r = o.pregao || {};
-  marcarVistoSino && marcarVistoSino(id);
-  const isFav = favoritos.has(id), st = r.status || 'novo';
-  const el = document.getElementById('detalhe-content');
-  const linha = (k, v) => v ? `<div style="display:flex; gap:8px; padding:6px 0; border-bottom:1px solid var(--border-soft); font-size:13px;"><span style="flex:0 0 38%; color:var(--ink-dim);">${esc(k)}</span><span style="flex:1; min-width:0; overflow-wrap:anywhere;">${v}</span></div>` : '';
-  el.innerHTML = `
-    <div class="detail-grid"><div>
-      <div class="detail-head detalhe-pregao-faixa">
-        <div class="detail-head-top"><div>
-          <div class="op-meta"><span class="tag tag-pregao">🏷 Pregão</span> ${esc(o.edital)}</div>
-          <h3 style="overflow-wrap:anywhere;">${esc(o.objeto)}</h3>
-          <div class="detail-org">${esc(o.orgao)} · ${esc(o.cidade)}/${esc(o.uf)}</div>
-        </div>
-        <button class="fav-btn ${isFav?'active':''}" onclick="toggleFav(${id})" title="Favoritar">${isFav?'★':'☆'}</button></div>
-        <div style="margin-top:8px; font-size:13px;">${_pgPrazoTxt(r.prazo)}</div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
-          <span class="tag">${esc(o.modalidade)}</span>
-          ${r.exclusivo_me_epp ? '<span class="tag" style="background:rgba(16,185,129,.18); color:#047857;">Exclusivo ME/EPP</span>' : ''}
-          ${r.prioritario ? '<span class="tag" style="background:rgba(236,72,153,.16); color:#be185d;">📍 Perto de você</span>' : ''}
-          ${st !== 'novo' ? `<span class="tag" style="background:rgba(59,130,246,.16); color:#1d4ed8;">${esc(_PG_STATUS[st] || st)}</span>` : ''}
-        </div>
-      </div>
-      <div class="panel" style="margin-top:14px;"><h4><span class="dot"></span>Dados do pregão</h4>
-        ${linha('Órgão', esc(o.orgao))}${linha('Local', esc((o.cidade ? o.cidade + '/' : '') + o.uf))}${linha('Tipo de pregão', esc(o.modalidade))}
-        ${linha('Início das propostas', r.abertura ? esc(_pgDH(r.abertura)) : '')}${linha('Propostas até', r.prazo ? esc(_pgDH(r.prazo)) : '')}
-        ${linha('Valor total estimado', r.valor_estimado ? esc(brl(r.valor_estimado)) : '')}${linha('Situação no PNCP', esc(r.situacao || ''))}
-        ${(r.termos||[]).length ? linha('Combinou com', esc(r.termos.join(', '))) : ''}
-      </div>
-      <div class="panel" style="margin-top:14px;"><h4><span class="dot"></span>Seu acompanhamento</h4>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" class="btn-ghost" style="${st==='interesse'?'border-color:var(--teal); color:var(--teal); font-weight:700;':''}" onclick="pregaoCatalogoMarcar(${id},'interesse')">⭐ Tenho interesse</button>
-          <button type="button" class="btn-ghost" onclick="pregaoCatalogoMarcar(${id},'descartado')">Descartar</button>
-          ${st !== 'novo' ? `<button type="button" class="btn-ghost" onclick="pregaoCatalogoMarcar(${id},'novo')">Desfazer</button>` : ''}
-        </div>
-        ${r.nota ? `<div style="margin-top:8px; font-size:13px; padding:6px 8px; border-radius:8px; background:rgba(245,158,11,.12);">📝 ${esc(r.nota)}</div>` : ''}
-      </div>
-      ${(()=>{ if(!userProfile) return ''; const ad = calcularAderencia(o, userProfile); if(!ad || ad.pct === null) return ''; const adm = (typeof adminAuthed !== 'undefined') && adminAuthed;
-        return `<div class="panel" style="margin-top:14px;"><h4><span class="dot"></span>Aderência ao seu perfil</h4>
-          <div class="aderencia-faixa" style="margin:0 0 6px; padding-top:0; border-top:0;"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span></div>
-          <div style="font-size:13px; line-height:1.55; color:var(--ink-muted);">${entendaNotaHTML(ad)}</div></div>`; })()}
-      ${(()=>{ const checks = docChecks[o.id] || {}; const docsVisiveis = docsPreview(o.documentos); return `
-      <div class="panel" style="margin-top:14px;">
-        <h4><span class="dot"></span>Documentação para o pregão</h4>
-        <div class="doc-resumo" id="hero-check-${o.id}"></div>
-        <button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px; margin:0 0 10px;" onclick="abrirMinhasCertidoes(${o.id})" title="Ver, anexar ou trocar suas certidões salvas sem sair deste pregão">📄 Minhas certidões</button>
-        <div id="doc-progress-${o.id}">${docProgressHTML(o.id, docsVisiveis, checks)}</div>
-        ${ckBarraHTML(o.id, 'oficial')}
-        <ul class="doc-list ${ckOcultando(o.id, 'oficial') ? 'ocultar-ok' : ''}" id="doc-list-${o.id}">
-          ${ckOrdenar(o.id, docsVisiveis).map(i=>{ const d = docsVisiveis[i]; if(ckRemovido(o.id, d)) return ''; const ef = docEstadoEf(o, d, checks[i]); return `
-            <li class="${ef==='na'?'doc-na':(ef?'checked-text':'')}" id="doc-item-${o.id}-${i}">${docItemInner(o, d, i, ef)}</li>`; }).join('')}
-        </ul>
-        <div id="doc-extras-${o.id}">${ckExtrasHTML(o.id)}</div>
-        <p style="font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5;">Lista padrão de habilitação em pregão (Lei 14.133/2021). Cada edital pode pedir mais ou menos documentos: confira o edital no PNCP e ajuste com "não se aplica" ou "+ Incluir".</p>
-      </div>
-      <div id="meu-checklist-${o.id}">${ckMeuHTML(o.id)}</div>`; })()}
-      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
-        ${r.link_pncp ? `<a class="official-link" style="text-decoration:none;" href="${esc(r.link_pncp)}" target="_blank" rel="noopener">Ver o pregão no PNCP ↗</a>` : ''}
-        ${r.link_sistema ? `<a class="btn-ghost" style="text-decoration:none;" href="${esc(r.link_sistema)}" target="_blank" rel="noopener">Sistema do pregão ↗</a>` : ''}
-        <button class="btn-ghost" onclick="openLeadModal(${id},'detalhe_pregao','Quero ajuda com este pregão')">Quero ajuda com este pregão</button>
-      </div>
-    </div></div>`;
-  nav('detalhe');
+function pregaoAcompHTML(o){
+  const id = o.id, r = o.pregao || {}, st = r.status || 'novo';
+  return `<div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+      <span class="tag tag-pregao">Pregão</span>
+      ${r.exclusivo_me_epp ? '<span class="tag" style="background:rgba(16,185,129,.18); color:#047857;">Exclusivo ME/EPP</span>' : ''}
+      ${r.prioritario ? '<span class="tag" style="background:rgba(236,72,153,.16); color:#be185d;">📍 Perto de você</span>' : ''}
+      ${st !== 'novo' ? `<span class="tag" style="background:rgba(59,130,246,.16); color:#1d4ed8;">${esc(_PG_STATUS[st] || st)}</span>` : ''}
+      ${(r.termos||[]).length ? `<span style="font-size:12px; color:var(--ink-dim);">Combinou com: ${esc(r.termos.join(', '))}</span>` : ''}
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn-ghost" style="padding:6px 12px; font-size:12.5px; ${st==='interesse'?'border-color:var(--teal); color:var(--teal); font-weight:700;':''}" onclick="pregaoCatalogoMarcar(${id},'interesse')">Tenho interesse</button>
+      <button type="button" class="btn-ghost" style="padding:6px 12px; font-size:12.5px;" onclick="pregaoCatalogoMarcar(${id},'descartado')">Descartar</button>
+      ${st !== 'novo' ? `<button type="button" class="btn-ghost" style="padding:6px 12px; font-size:12.5px;" onclick="pregaoCatalogoMarcar(${id},'novo')">Desfazer</button>` : ''}
+    </div>
+    ${r.nota ? `<div style="font-size:13px; padding:6px 8px; border-radius:8px; background:rgba(245,158,11,.12);">📝 ${esc(r.nota)}</div>` : ''}
+  </div>`;
 }
 async function carregarEditaisSupabase(){
   let data = null, error = null;
