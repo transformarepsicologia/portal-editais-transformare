@@ -14266,6 +14266,14 @@ const PG_DOCS_PADRAO = [
 ];
 function documentosDoPregao(){ const l = [...PG_DOCS_PADRAO]; l._pregao = true; return l; }
 let _pgMonAd = null;   // preferências do monitor do usuário (tipos de pregão escolhidos)
+function pgNivelOrgao(nome){
+  const t = normTxt(nome || '');
+  if(/consorcio|intermunicipal|regiao metropolitana/.test(t)) return 'Regional';
+  if(/\bmunic|prefeitura|camara municipal|fundo municipal/.test(t)) return 'Municipal';
+  if(/\bfederal|\buniao\b|ministerio da|ministerio do|exercito|marinha|aeronautica|policia rodoviaria|\binss\b|\bcaixa economica|banco do brasil|universidade federal|instituto federal|\bfiocruz|\bebserh/.test(t)) return 'Nacional';
+  if(/\bestad|governo do|secretaria de estado|tribunal de justica|assembleia legislativa|defensoria|policia (civil|militar)|corpo de bombeiros|ministerio publico do estado|universidade estadual/.test(t)) return 'Estadual';
+  return '';
+}
 function calcularAderenciaPregao(o, u){
   const r = o.pregao || {};
   let pontos = 0, total = 0, naoAtende = false;
@@ -14274,16 +14282,16 @@ function calcularAderenciaPregao(o, u){
   const eletronico = !/presencial/i.test(o.modalidade || '');
   // 1. Objeto do pregão x termos de busca (35)
   const termos = r.termos || [];
-  if(termos.length){ motivos.push('objeto cita: ' + termos.slice(0, 2).join(', ')); add('Objeto do pregão', 35, 35, 'o objeto combina com os seus termos de busca', 'o objeto combina com a sua área', 'o objeto'); }
-  else add('Objeto do pregão', 15, 35, 'não encontramos seus termos no objeto; confira o edital', '', 'se o objeto é mesmo da sua área');
+  if(termos.length){ motivos.push('objeto cita: ' + termos.slice(0, 2).join(', ')); add('Objeto do pregão', 30, 30, 'o objeto combina com os seus termos de busca', 'o objeto combina com a sua área', 'o objeto'); }
+  else add('Objeto do pregão', 13, 30, 'não encontramos seus termos no objeto; confira o edital', '', 'se o objeto é mesmo da sua área');
   // 2. Localização (25)
   if(!u.uf) faltam.push('Estado');
-  else if(r.prioritario){ motivos.push('perto de você'); add('Localização', 25, 25, 'fica dentro do seu raio de busca', 'dentro do seu raio de busca', 'a localização'); }
+  else if(r.prioritario){ motivos.push('perto de você'); add('Localização', 20, 20, 'fica dentro do seu raio de busca', 'dentro do seu raio de busca', 'a localização'); }
   else if(o.uf === u.uf){
-    if(eletronico){ motivos.push('no seu estado'); add('Localização', 25, 25, 'é no seu estado e a disputa é eletrônica', 'no seu estado, disputa eletrônica', 'a localização'); }
-    else add('Localização', 10, 25, 'presencial no seu estado, mas fora do seu raio de busca', '', 'a distância até o local do pregão presencial');
-  } else if(eletronico) add('Localização', 12, 25, 'pregão eletrônico: você participa de qualquer lugar, mas confira onde o serviço é executado', '', 'onde o serviço será executado');
-  else { naoAtende = true; motivos.push('⚠ presencial em ' + (o.cidade ? o.cidade + '/' : '') + o.uf); add('Localização', 0, 25, 'pregão presencial em outro estado', '', 'a localização'); }
+    if(eletronico){ motivos.push('no seu estado'); add('Localização', 20, 20, 'é no seu estado e a disputa é eletrônica', 'no seu estado, disputa eletrônica', 'a localização'); }
+    else add('Localização', 8, 20, 'presencial no seu estado, mas fora do seu raio de busca', '', 'a distância até o local do pregão presencial');
+  } else if(eletronico) add('Localização', 10, 20, 'pregão eletrônico: você participa de qualquer lugar, mas confira onde o serviço é executado', '', 'onde o serviço será executado');
+  else { naoAtende = true; motivos.push('⚠ presencial em ' + (o.cidade ? o.cidade + '/' : '') + o.uf); add('Localização', 0, 20, 'pregão presencial em outro estado', '', 'a localização'); }
   // 3. Tipo de pregão escolhido pelo cliente (15)
   const codigo = eletronico ? 6 : 7;
   if(_pgMonAd && Array.isArray(_pgMonAd.modalidades) && !_pgMonAd.modalidades.includes(codigo)) add('Tipo de pregão', 0, 15, 'você não escolheu pregão ' + (eletronico ? 'eletrônico' : 'presencial') + ' na sua busca', '', 'o tipo de pregão');
@@ -14296,7 +14304,13 @@ function calcularAderenciaPregao(o, u){
     if(/mei|simples/i.test(regime)){ motivos.push('exclusivo ME/EPP'); add('Participação', 15, 15, 'exclusivo ME/EPP e você está no Simples/MEI', 'exclusivo ME/EPP e você está no Simples/MEI', 'a participação'); }
     else { if(!regime) faltam.push('Regime tributário'); add('Participação', 8, 15, 'exclusivo ME/EPP: confirme o porte da sua empresa', '', 'se a sua empresa é ME/EPP (exclusivo)'); }
   } else add('Participação', 15, 15, 'participação aberta a empresas de qualquer porte', 'participação aberta a qualquer porte', 'a participação');
-  // 5. Prazo para enviar a proposta (10)
+  // 5. Abrangência de interesse (botões do cadastro): nível do órgão que contrata, deduzido do nome (10)
+  if(!(u.abrs || []).length) faltam.push('Abrangência');
+  else { const nv = pgNivelOrgao(o.orgao);
+    if(!nv) add('Abrangência', 5, 10, 'não deu para identificar o nível do órgão (municipal, estadual ou federal)', '', 'o nível do órgão');
+    else if(u.abrs.includes(nv)) add('Abrangência', 10, 10, 'órgão ' + nv.toLowerCase() + ', abrangência que você escolheu', 'órgão ' + nv.toLowerCase(), 'a abrangência');
+    else add('Abrangência', 0, 10, 'órgão ' + nv.toLowerCase() + ', que não está entre as abrangências que você escolheu', '', 'a abrangência (órgão ' + nv.toLowerCase() + ')'); }
+  // 6. Prazo para enviar a proposta (10)
   if(!r.prazo) add('Prazo', 5, 10, 'o prazo não foi informado no PNCP', '', 'o prazo');
   else { const dias = (new Date(r.prazo).getTime() - Date.now()) / 86400000;
     if(dias >= 3) add('Prazo', 10, 10, 'há tempo para preparar a proposta', 'há tempo para preparar a proposta', 'o prazo');
