@@ -1606,6 +1606,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     </div>
   </div>
 
+  <div id="ed-pregao-chips" style="display:none; gap:8px; flex-wrap:wrap; margin:6px 0 10px;"></div>
   <div class="result-count" id="ed-count"></div>
   <div class="op-grid" id="ed-list"></div>
 </section>
@@ -5645,6 +5646,8 @@ function applyFilters(){
     if(!visivelAoCliente(o)) return false;
     if(prof && !o.profissoes.map(profNorm).includes(profNorm(prof))) return false;
     if(tipo && o.tipo !== tipo) return false;
+    if(_pgChipTipo === 'pregao' && !o.ehPregao) return false;
+    if(_pgChipTipo === 'cred' && o.ehPregao) return false;
     if(mod && o.modalidade !== mod) return false;
     if(abr && o.abrangencia !== abr) return false;
     if(pub && !(o.aceitaContratacao||[]).includes(pub)) return false;
@@ -5665,10 +5668,11 @@ function applyFilters(){
   });
 
   if(sort === 'prazo') filtradas = [...filtradas].sort(cmpPrazo);
+  else if(!sort && !_pgChipTipo) filtradas = [...filtradas.filter(o=>o.ehPregao), ...filtradas.filter(o=>!o.ehPregao)];   // pregões do usuário primeiro: são poucos e fecham logo
   else if(sort === 'indice') filtradas = [...filtradas].sort((a,b)=>b.indice-a.indice);
   else if(sort === 'recentes') filtradas = [...filtradas].sort((a,b)=>parseDate(b.publicacao)-parseDate(a.publicacao));
 
-  renderFilterChips();
+  renderFilterChips(); pregaoChipsRender();
   _listaNavegacao = filtradas.map(o=>o.id);   // usada pelo rodapé da página do edital
 
   document.getElementById('ed-count').textContent = `${filtradas.length} oportunidade(s) encontrada(s)`;
@@ -5679,7 +5683,7 @@ function applyFilters(){
     return;
   }
   // volta para a página 1 quando os filtros/busca mudam
-  const assinatura = JSON.stringify([busca, sort, filtroRadar, filtroSomenteComIndice, ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit'].map(i=>document.getElementById(i).value)]);
+  const assinatura = JSON.stringify([busca, sort, _pgChipTipo, filtroRadar, filtroSomenteComIndice, ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit'].map(i=>document.getElementById(i).value)]);
   if(assinatura !== _pagAssinaturaEd){ _pag.ed = 1; _pagAssinaturaEd = assinatura; }
   const pgEd = paginarLista('ed', filtradas, 12, applyFilters);
   pgEd.fatia.forEach(o=>list.appendChild(renderCard(o)));
@@ -14241,6 +14245,16 @@ async function lerCacheEstaticoEditais(){
 
 // ===================== PREGÕES NO CATÁLOGO (só para quem tem o pregão liberado) =====================
 const PG_ID_BASE = 1200000;
+let _pgChipTipo = '';   // '', 'pregao' ou 'cred': atalho acima da lista de Editais
+function pregaoChipsRender(){
+  const box = document.getElementById('ed-pregao-chips'); if(!box) return;
+  const n = oportunidades.filter(o=>o.ehPregao && visivelAoCliente(o)).length;
+  if(!n){ box.style.display = 'none'; if(_pgChipTipo){ _pgChipTipo = ''; } return; }
+  const chip = (v, t) => `<button type="button" class="btn-ghost" style="padding:6px 14px; font-size:13px; ${_pgChipTipo === v ? 'border-color:#8b5cf6; color:#7c3aed; font-weight:700; background:rgba(139,92,246,.10);' : ''}" onclick="pregaoChipTipo('${v}')">${t}</button>`;
+  box.style.display = 'flex';
+  box.innerHTML = chip('', 'Todos') + chip('pregao', '🏷 Pregões (' + n + ')') + chip('cred', 'Credenciamentos');
+}
+function pregaoChipTipo(v){ _pgChipTipo = v; applyFilters(); }
 function _pgDataBR(iso){ if(!iso) return ''; try{ return new Date(iso).toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}); }catch(e){ return ''; } }
 // ---- Checklist padrão de habilitação em pregão (Lei 14.133/2021, arts. 62 a 70) e aderência do pregão ----
 const PG_DOCS_PADRAO = [
