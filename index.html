@@ -4186,7 +4186,7 @@ function shareWhatsApp(id){
   const o = oportunidades.find(x=>x.id===id);
   // Vai SÓ o link do Radar: quem recebe entra no edital por ele (?e=número abre a página do edital;
   // editais de demonstração, sem número no banco, levam à página inicial).
-  const link = (o.id >= 900000) ? SITE_URL + '/?e=' + (o.id - 900000) : SITE_URL;
+  const link = (o.id >= 900000 && !o.ehPregao) ? SITE_URL + '/?e=' + (o.id - 900000) : SITE_URL;
   const partes = [
     `📡 *Radar Transformare — Portal de Editais*`,
     '',
@@ -5001,6 +5001,7 @@ function perfilCompletude(u){
 // Checklist de documentos: some para quem não é aderente (outra profissão, ou edital só presencial fora das cidades de atendimento).
 const _docsForcados = new Set();
 function motivoChecklistOculto(o){
+  if(o && o.ehPregao) return '';   // no pregão a lista de documentos é sempre mostrada
   try{
     if(typeof adminAuthed !== 'undefined' && adminAuthed) return '';
     const u = userProfile; if(!u || _docsForcados.has(o.id)) return '';
@@ -6126,7 +6127,9 @@ async function carregarDadosPncp(o){
     const { data } = o.ehPregao
       ? await _sb.from('pregoes_pncp').select('dados, itens, arquivos').eq('pregao_id', o.pregao.id).maybeSingle()
       : await _sb.from('editais_pncp').select('dados, itens, arquivos').eq('edital_id', o.id - 900000).maybeSingle();
-    if(!data || !data.dados || currentDetailId !== o.id) return;
+    if(currentDetailId !== o.id) return;
+    if((!data || !data.dados) && o.ehPregao){ box.innerHTML = '<div class="panel" style="margin-top:14px;"><h4><span class="dot"></span>Dados do PNCP</h4><p style="font-size:13px; color:var(--ink-muted); margin:0; line-height:1.5;">Estamos lendo as informações, os itens e os anexos deste pregão no PNCP. Volte em alguns minutos. Enquanto isso, use o botão "Ver no PNCP" abaixo.</p></div>'; return; }
+    if(!data || !data.dados) return;
     box.innerHTML = pncpDadosHTML(data.dados, data.itens || [], data.arquivos || [], o);
   }catch(e){ /* sem os dados do PNCP a página continua normal */ }
 }
@@ -14302,7 +14305,7 @@ function calcularAderenciaPregao(o, u){
   let pontos = 0, total = 0, naoAtende = false;
   const motivos = [], det = [], faltam = [];
   const add = (rotulo, pts, max, nota, pos, aj)=>{ pontos += pts; total += max; det.push({ rotulo, pts, max, nota, pos: pts >= max ? pos : '', aj: pts >= max ? '' : aj }); };
-  const eletronico = !/presencial/i.test(o.modalidade || '');
+  const eletronico = !/presencial/i.test(r.modalidade || o.modalidade || '');
   // 1. Objeto do pregão x termos de busca (35)
   const termos = r.termos || [];
   if(termos.length){ motivos.push('objeto cita: ' + termos.slice(0, 2).join(', ')); add('Objeto do pregão', 30, 30, 'o objeto combina com os seus termos de busca', 'o objeto combina com a sua área', 'o objeto'); }
@@ -14348,7 +14351,7 @@ function mapPregaoSupabase(row){
   return {
     id: PG_ID_BASE + row.id, ehPregao: true, pregao: row, origemSupabase: false,
     edital: row.numero_controle || 'Pregão (PNCP)', orgao: row.orgao || 'Órgão não identificado', uf: row.uf || '—', cidade: row.municipio || '',
-    tipo: 'Pregão', modalidade: pres ? 'Pregão presencial' : 'Pregão eletrônico',
+    tipo: 'Pregão', modalidade: pres ? 'Presencial' : 'Online',
     profissoes: (userProfile && userProfile.profs && userProfile.profs.length) ? userProfile.profs : ['Não identificada'],
     abrangencia: pgNivelOrgao(row.orgao) || 'Municipal', aceitaContratacao: ['Pessoa Jurídica (PJ)'], situacao: 'Aberto', objeto: row.objeto || '',
     prazo: row.prazo ? _pgDataBR(row.prazo) : 'Indeterminado', prazoIndeterminado: !row.prazo, prazoConfirmado: !!row.prazo,
@@ -14357,7 +14360,7 @@ function mapPregaoSupabase(row){
     valorAtendimento: 'Não informado', valorMensal: 'Não informado', valorHora: 'Não informado', volume: 'Não informado',
     valorMaximo: row.valor_estimado ? Number(row.valor_estimado).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) + ' (valor total estimado, conforme PNCP)' : 'Não informado',
     remuneracao: [], requisitos: 'Consulte o edital do pregão no PNCP (veja os arquivos em "Dados do PNCP").', pontosPositivos: '', pontosAtencao: '', documentos: documentosDoPregao(), documentosPadrao: true,
-    urlOficial: row.link_sistema || row.link_pncp || 'https://pncp.gov.br/app/editais', urlEdital: row.link_pncp || '', urlPncp: row.link_pncp || 'https://pncp.gov.br/app/editais',
+    urlOficial: row.link_sistema || row.link_pncp || 'https://pncp.gov.br/app/editais', urlEdital: row.link_sistema || '', urlPncp: row.link_pncp || 'https://pncp.gov.br/app/editais',
     urlInscricao: row.link_sistema || row.link_pncp || '', numeroPncp: row.numero_controle || '', movimentacoes: [], linksDocs: {}, perguntas: [],
   };
 }
