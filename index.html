@@ -1024,6 +1024,9 @@ footer.site-footer{border-top:1px solid var(--border-soft); padding:30px 28px; t
 
 /* ===== Caixa de entrada de credenciamentos (PNCP via Supabase) ===== */
 .filtro-oculto{display:none !important;}
+.op-card.pregao{border-left:4px solid #8b5cf6;}
+.tag.tag-pregao{background:rgba(139,92,246,.18); color:#7c3aed; font-weight:700;}
+.detalhe-pregao-faixa{border-left:4px solid #8b5cf6; padding-left:10px;}
 .inbox-card{background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:12px;}
 .inbox-card h5{margin:0 0 6px; font-family:var(--font-display);}
 .inbox-card-prioritario{border-color:var(--amber); box-shadow:0 0 0 1px rgba(245,169,62,0.35), 0 0 18px rgba(245,169,62,0.12);}
@@ -3697,6 +3700,7 @@ function afPrazoIndetMudou(semLimpar){
   inp.placeholder = ck.checked ? 'Sem data de encerramento' : 'dd/mm/aaaa';
 }
 function prazoCurtoDemais(o){
+  if(o.ehPregao) return false;   // pregão fecha em poucos dias: não esconder
   const d = parseDate(o.prazo);
   if(isNaN(d.getTime())) return false; // sem prazo informado: continua visível
   const h0 = new Date(); h0.setHours(0,0,0,0);
@@ -4008,7 +4012,7 @@ function scoreMini(score, label){
 /* ================= CARD ================= */
 function renderCard(o){
   const div = document.createElement('div');
-  div.className = 'op-card';
+  div.className = 'op-card' + (o.ehPregao ? ' pregao' : '');
   div.onclick = (e) => { if(e.target.closest('.fav-btn') || e.target.closest('.compare-btn') || e.target.closest('.wa-btn') || e.target.closest('.btn-editar-adm')) return; openDetalhe(o.id); };
   const isFav = favoritos.has(o.id);
   const isCmp = compareSet.has(o.id);
@@ -4019,13 +4023,13 @@ function renderCard(o){
         <div class="op-title">${o.objeto}</div>
         <div class="op-tags">
           ${profTagsResumo(o.profissoes,4)}
-          <span class="tag">${o.tipo}</span>
+          <span class="tag${o.ehPregao ? ' tag-pregao' : ''}">${o.ehPregao ? '🏷 ' : ''}${o.tipo}</span>
           <span class="tag">${o.modalidade}</span>
           ${(o.aceitaContratacao||[]).map(p=>`<span class="tag">${p}</span>`).join('')}
           ${o.abertura ? `<span class="tag">Início: ${esc(o.abertura)}</span>` : ''}
           <span class="tag">Prazo: ${o.prazo}</span>
         </div>
-        <div style="margin-top:10px;"><button class="wa-btn" onclick="shareWhatsApp(${o.id})">↗ WhatsApp</button>${adminAuthed ? `<button class="btn-editar-adm" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button><button class="btn-editar-adm" style="color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">🗑 Excluir</button>` : ''}</div>
+        <div style="margin-top:10px;"><button class="wa-btn" onclick="shareWhatsApp(${o.id})">↗ WhatsApp</button>${(adminAuthed && !o.ehPregao) ? `<button class="btn-editar-adm" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button><button class="btn-editar-adm" style="color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">🗑 Excluir</button>` : ''}</div>
       </div>
       <div class="op-right">
         <div style="display:flex; gap:4px;">
@@ -4441,7 +4445,7 @@ function registrarAtividade(qtdFavoritos){
 function registrarEvento(tipo, o){
   // Anônimo: guarda só qual edital foi aberto/favoritado, sem ligar a ninguém. Uma vez por edital e tipo em cada visita.
   try{
-    if(!_sb || adminAuthed || ehTeste() || !o) return;
+    if(!_sb || adminAuthed || ehTeste() || !o || o.ehPregao) return;
     const k = tipo + '|' + o.edital + '|' + o.orgao;
     if(_evtVistos.has(k)) return; _evtVistos.add(k);
     _sb.from('eventos_edital').insert({ edital: String(o.edital||'').slice(0,200), orgao: String(o.orgao||'').slice(0,200), tipo }).then(()=>{}, ()=>{});
@@ -5836,6 +5840,7 @@ function openDetalhe(id){
   currentDetailId = id;
   const o = oportunidades.find(x=>x.id===id);
   if(!o || !visivelAoCliente(o)){ toast('Este edital não está disponível no momento.'); nav('editais'); return; }
+  if(o.ehPregao) return openDetalhePregao(o);
   registrarEvento('abrir', o);
   marcarVistoSino(id);
   const isFav = favoritos.has(id);
@@ -7694,7 +7699,7 @@ async function loadUserData(){
 }
 
 async function carregarPerfilUsuario(authUser){
-  if(!authUser){ userProfile = null; renderQuickChips(); return; }
+  if(!authUser){ userProfile = null; renderQuickChips(); try{ removerPregoesDoCatalogo(); }catch(e){} return; }
   let perfil = null;
   if(_sb){
     const { data } = await _sb.from('usuarios_perfil').select('*').eq('id', authUser.id).maybeSingle();
@@ -7753,6 +7758,7 @@ async function carregarPerfilUsuario(authUser){
   Object.assign(userProfile, { cidade:'', abrs:[], remMin:null, remTipo:'atendimento', escolaridade:'', anosExp:null, atuacao:[], cnpj:'', empresa:null }, extra || {});
   userProfile.escolaridade = normEscolaridade(userProfile.escolaridade);
   renderQuickChips();
+  anexarPregoes();
 }
 
 // ---- Cadastro em 2 etapas (acesso → dados de contato) com CAPTCHA (Cloudflare Turnstile) ----
@@ -7913,6 +7919,7 @@ async function userLogout(){
   if(_sb) await _sb.auth.signOut();
   userProfile = null;
   renderQuickChips();
+  try{ removerPregoesDoCatalogo(); }catch(e){}
   adminAuthed = false;
   applyFilters(); renderIndicators();
   await storeRemove('sessao');
@@ -8041,6 +8048,7 @@ async function deleteAccount(){
   }
   userProfile = null;
   renderQuickChips();
+  try{ removerPregoesDoCatalogo(); }catch(e){}
   await storeRemove('sessao');
   await loadUserData();
   toast('Conta excluída');
@@ -8343,7 +8351,7 @@ async function adminDelete(id){
   }
   oportunidades = oportunidades.filter(o=>o.id!==id);
   favoritos.delete(id);
-  storeSet('oportunidades', oportunidades);
+  storeSet('oportunidades', oportunidades.filter(o=>!o.ehPregao));
   toast('Edital excluído' + (id >= 900000 ? ' do catálogo (uma cópia fica guardada no banco)' : ''));
   if(document.getElementById('admin-form-modal').classList.contains('open')) closeAdminForm();
   if(document.getElementById('view-detalhe').classList.contains('active')) nav('editais');
@@ -9987,7 +9995,7 @@ async function saveAdminForm(){
     oportunidades.push({ id:newId, ...data });
     idSalvo = newId;
   }
-  storeSet('oportunidades', oportunidades);
+  storeSet('oportunidades', oportunidades.filter(o=>!o.ehPregao));
 
   if(ehEditalReal && _sb){
     // Edital real (catálogo publicado via Supabase) — grava de verdade no banco,
@@ -13044,7 +13052,7 @@ async function _gravarProblema(id, descricao){
   }
   o.problemaDescricao = descricao || '';
   o.problemaEm = descricao ? formatarDataBR(agora.toISOString().slice(0,10)) : '';
-  if(id < 900000) storeSet('oportunidades', oportunidades);
+  if(id < 900000) storeSet('oportunidades', oportunidades.filter(o=>!o.ehPregao));
   return true;
 }
 async function confirmarProblema(){
@@ -13093,7 +13101,7 @@ async function confirmarPrazoEdital(id){
   const o = oportunidades.find(x=>x.id===id); if(!o) return;
   if(!confirm(`Confirmar que o prazo ${o.prazo} do edital ${o.edital} está correto?`)) return;
   o.prazoConfirmado = true;
-  storeSet('oportunidades', oportunidades);
+  storeSet('oportunidades', oportunidades.filter(o=>!o.ehPregao));
   if(_sb && id >= 900000){
     const { data, error } = await _sb.from('editais').update({ prazo_confirmado:true }).eq('id', id-900000).select('id');
     if(error || !data || !data.length){ toast('Confirmado só neste navegador — não gravou no banco' + (error ? ' ('+error.message+')' : '')); }
@@ -14137,6 +14145,102 @@ async function lerCacheEstaticoEditais(){
     return (c && Array.isArray(c.data) && c.data.length) ? c : null;
   }catch(e){ return null; }
 }
+
+// ===================== PREGÕES NO CATÁLOGO (só para quem tem o pregão liberado) =====================
+const PG_ID_BASE = 1200000;
+function _pgDataBR(iso){ if(!iso) return ''; try{ return new Date(iso).toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}); }catch(e){ return ''; } }
+function mapPregaoSupabase(row){
+  const pres = /presencial/i.test(row.modalidade || '');
+  return {
+    id: PG_ID_BASE + row.id, ehPregao: true, pregao: row, origemSupabase: false,
+    edital: row.numero_controle || 'Pregão (PNCP)', orgao: row.orgao || 'Órgão não identificado', uf: row.uf || '—', cidade: row.municipio || '',
+    tipo: 'Pregão', modalidade: pres ? 'Pregão presencial' : 'Pregão eletrônico',
+    profissoes: (userProfile && userProfile.profs && userProfile.profs.length) ? userProfile.profs : ['Não identificada'],
+    abrangencia: 'Municipal', aceitaContratacao: [], situacao: 'Aberto', objeto: row.objeto || '',
+    prazo: row.prazo ? _pgDataBR(row.prazo) : 'Indeterminado', prazoIndeterminado: !row.prazo, prazoConfirmado: !!row.prazo,
+    abertura: row.abertura ? _pgDataBR(row.abertura) : null, publicacao: _pgDataBR(row.criado_em),
+    indice: null, indiceLabel: null,
+    valorAtendimento: 'Não informado', valorMensal: 'Não informado', valorHora: 'Não informado', volume: 'Não informado',
+    valorMaximo: row.valor_estimado ? Number(row.valor_estimado).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) + ' (valor total estimado, conforme PNCP)' : 'Não informado',
+    remuneracao: [], requisitos: 'Consulte o edital do pregão no PNCP.', pontosPositivos: '', pontosAtencao: '', documentos: [], documentosPadrao: false,
+    urlOficial: row.link_sistema || row.link_pncp || 'https://pncp.gov.br/app/editais', urlEdital: row.link_pncp || '', urlPncp: row.link_pncp || 'https://pncp.gov.br/app/editais',
+    urlInscricao: row.link_sistema || row.link_pncp || '', numeroPncp: row.numero_controle || '', movimentacoes: [], linksDocs: {}, perguntas: [],
+  };
+}
+function removerPregoesDoCatalogo(){
+  if(!oportunidades.some(o=>o.ehPregao)) return;
+  oportunidades = oportunidades.filter(o=>!o.ehPregao);
+  const ft = document.getElementById('f-tipo'); if(ft){ const f = ft.closest('.filter-field'); if(f) f.classList.add('filtro-oculto'); if(ft.value === 'Pregão') ft.value = ''; }
+  try{ populateSelects(); applyFilters(); }catch(e){}
+}
+async function anexarPregoes(){
+  if(!_sb || !userProfile){ removerPregoesDoCatalogo(); return; }
+  try{
+    const { data, error } = await _sb.from('pregoes_monitorados').select('*').eq('usuario_id', userProfile.id).neq('status','descartado').order('prazo', {ascending:true}).limit(500);
+    if(error) return;
+    oportunidades = oportunidades.filter(o=>!o.ehPregao);
+    const novos = (data || []).filter(r => !r.prazo || new Date(r.prazo).getTime() >= Date.now()).map(mapPregaoSupabase);
+    oportunidades = [...oportunidades, ...novos];
+    const ft = document.getElementById('f-tipo'); if(ft){ const f = ft.closest('.filter-field'); if(f) f.classList.toggle('filtro-oculto', !novos.length); }
+    populateSelects(); applyFilters();
+  }catch(e){}
+}
+async function pregaoCatalogoMarcar(id, status){
+  const o = oportunidades.find(x=>x.id===id); if(!o || !o.pregao) return;
+  const { error } = await _sb.from('pregoes_monitorados').update({status}).eq('id', o.pregao.id);
+  if(error){ toast('Não foi possível salvar.'); return; }
+  o.pregao.status = status;
+  if(status === 'descartado'){ toast('Pregão descartado.'); await anexarPregoes(); nav('editais'); return; }
+  toast(status === 'interesse' ? 'Marcado como interesse.' : 'Marcação desfeita.'); openDetalhePregao(o);
+}
+function openDetalhePregao(o){
+  const id = o.id, r = o.pregao || {};
+  marcarVistoSino && marcarVistoSino(id);
+  const isFav = favoritos.has(id), st = r.status || 'novo';
+  const el = document.getElementById('detalhe-content');
+  const linha = (k, v) => v ? `<div style="display:flex; gap:8px; padding:6px 0; border-bottom:1px solid var(--border-soft); font-size:13px;"><span style="flex:0 0 38%; color:var(--ink-dim);">${esc(k)}</span><span style="flex:1; min-width:0; overflow-wrap:anywhere;">${v}</span></div>` : '';
+  el.innerHTML = `
+    <div class="detail-grid"><div>
+      <div class="detail-head detalhe-pregao-faixa">
+        <div class="detail-head-top"><div>
+          <div class="op-meta"><span class="tag tag-pregao">🏷 Pregão</span> ${esc(o.edital)}</div>
+          <h3 style="overflow-wrap:anywhere;">${esc(o.objeto)}</h3>
+          <div class="detail-org">${esc(o.orgao)} · ${esc(o.cidade)}/${esc(o.uf)}</div>
+        </div>
+        <button class="fav-btn ${isFav?'active':''}" onclick="toggleFav(${id})" title="Favoritar">${isFav?'★':'☆'}</button></div>
+        <div style="margin-top:8px; font-size:13px;">${_pgPrazoTxt(r.prazo)}</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+          <span class="tag">${esc(o.modalidade)}</span>
+          ${r.exclusivo_me_epp ? '<span class="tag" style="background:rgba(16,185,129,.18); color:#047857;">Exclusivo ME/EPP</span>' : ''}
+          ${r.prioritario ? '<span class="tag" style="background:rgba(236,72,153,.16); color:#be185d;">📍 Perto de você</span>' : ''}
+          ${st !== 'novo' ? `<span class="tag" style="background:rgba(59,130,246,.16); color:#1d4ed8;">${esc(_PG_STATUS[st] || st)}</span>` : ''}
+        </div>
+      </div>
+      <div class="panel" style="margin-top:14px;"><h4><span class="dot"></span>Dados do pregão</h4>
+        ${linha('Órgão', esc(o.orgao))}${linha('Local', esc((o.cidade ? o.cidade + '/' : '') + o.uf))}${linha('Tipo de pregão', esc(o.modalidade))}
+        ${linha('Início das propostas', r.abertura ? esc(_pgDH(r.abertura)) : '')}${linha('Propostas até', r.prazo ? esc(_pgDH(r.prazo)) : '')}
+        ${linha('Valor total estimado', r.valor_estimado ? esc(brl(r.valor_estimado)) : '')}${linha('Situação no PNCP', esc(r.situacao || ''))}
+        ${(r.termos||[]).length ? linha('Combinou com', esc(r.termos.join(', '))) : ''}
+      </div>
+      <div class="panel" style="margin-top:14px;"><h4><span class="dot"></span>Seu acompanhamento</h4>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn-ghost" style="${st==='interesse'?'border-color:var(--teal); color:var(--teal); font-weight:700;':''}" onclick="pregaoCatalogoMarcar(${id},'interesse')">⭐ Tenho interesse</button>
+          <button type="button" class="btn-ghost" onclick="pregaoCatalogoMarcar(${id},'descartado')">Descartar</button>
+          ${st !== 'novo' ? `<button type="button" class="btn-ghost" onclick="pregaoCatalogoMarcar(${id},'novo')">Desfazer</button>` : ''}
+        </div>
+        ${r.nota ? `<div style="margin-top:8px; font-size:13px; padding:6px 8px; border-radius:8px; background:rgba(245,158,11,.12);">📝 ${esc(r.nota)}</div>` : ''}
+      </div>
+      <div class="panel" style="margin-top:14px;"><h4><span class="dot"></span>Documentos do pregão</h4>
+        <p style="font-size:13px; color:var(--ink-muted); margin:0;">O checklist de documentos para pregão (habilitação, regularidade fiscal, atestados de capacidade técnica) chega na próxima atualização. Por enquanto, confira as exigências no edital do PNCP.</p>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+        ${r.link_pncp ? `<a class="official-link" style="text-decoration:none;" href="${esc(r.link_pncp)}" target="_blank" rel="noopener">Ver o pregão no PNCP ↗</a>` : ''}
+        ${r.link_sistema ? `<a class="btn-ghost" style="text-decoration:none;" href="${esc(r.link_sistema)}" target="_blank" rel="noopener">Sistema do pregão ↗</a>` : ''}
+        <button class="btn-ghost" onclick="openLeadModal(${id},'detalhe_pregao','Quero ajuda com este pregão')">Quero ajuda com este pregão</button>
+      </div>
+    </div></div>`;
+  nav('detalhe');
+}
 async function carregarEditaisSupabase(){
   let data = null, error = null;
   if(_sb){
@@ -14168,13 +14272,14 @@ async function carregarEditaisSupabase(){
   const chavesReais = new Set(reais.map(o=>chaveEd(o.edital)).filter(k=>/^\d{14}/.test(k)));
   const antes = oportunidades.length;
   oportunidades = oportunidades.filter(o => !chavesReais.has(chaveEd(o.edital)));
-  if(oportunidades.length !== antes){ try{ await storeSet('oportunidades', oportunidades); }catch(e){} }
+  if(oportunidades.length !== antes){ try{ await storeSet('oportunidades', oportunidades.filter(o=>!o.ehPregao)); }catch(e){} }
   oportunidades = [...reais, ...oportunidades];
   populateSelects();
   applyFilters();
   renderIndicators();
   renderMapaEditais();   // o mapa também precisa repintar quando os editais chegam depois de a tela já estar aberta
   if(adminAuthed){ carregarIdsComTexto(); sincronizarProfissoesDosEditais(); }
+  if(userProfile) anexarPregoes();
 }
 
 // Prioridade máxima: índice sugerido 5 (da análise rápida feita fora do site,
