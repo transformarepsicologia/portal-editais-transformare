@@ -5022,6 +5022,7 @@ function motivoChecklistOculto(o){
 }
 function mostrarChecklistForcado(id){ _docsForcados.add(id); openDetalhe(id); }
 function calcularAderencia(o, u){
+  if(o && o.ehPregao) return calcularAderenciaPregao(o, u);
   let pontos = 0, total = 0, naoAtende = false;
   const motivos = [], det = [], faltamPerfil = [];
   const pede = (campo)=>{ if(!faltamPerfil.includes(campo)) faltamPerfil.push(campo); };
@@ -6719,7 +6720,7 @@ function documentosGenericos(docs){
   return docs.every(d => /^\s*consulte\s+o\s+edital(\s+oficial)?\.?\s*$/i.test(String(d)));
 }
 function docsPreview(documentos){
-  if(ehEssencial()) return documentos || [];   // plano Transformare Pro: checklist completo
+  if(ehEssencial() || (documentos && documentos._pregao)) return documentos || [];   // plano Transformare Pro: checklist completo
   return (documentos || []).slice(0, DOC_PREVIEW_LIMIT);
 }
 /* ===== Perguntas de aderência (pontos de atenção do edital) — só assinantes ===== */
@@ -12005,7 +12006,7 @@ async function consSalvarContrato(){ return consSalvarCadastro(); }
 let consAderMin = 70, consAderTodos = false;
 function consAderencias(c){
   const up = consPerfilParaAderencia(c);
-  return oportunidades.filter(o=>visivelAoCliente(o) && situacaoExibida(o) !== 'Encerrado')
+  return oportunidades.filter(o=>!o.ehPregao && visivelAoCliente(o) && situacaoExibida(o) !== 'Encerrado')
     .map(o=>({ o, ad: calcularAderencia(o, up) })).filter(x=>x.ad.pct !== null && x.ad.pct > 0)
     .sort((a,b)=>b.ad.pct - a.ad.pct || (b.o.indice||0) - (a.o.indice||0));
 }
@@ -14149,6 +14150,70 @@ async function lerCacheEstaticoEditais(){
 // ===================== PREGÕES NO CATÁLOGO (só para quem tem o pregão liberado) =====================
 const PG_ID_BASE = 1200000;
 function _pgDataBR(iso){ if(!iso) return ''; try{ return new Date(iso).toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}); }catch(e){ return ''; } }
+// ---- Checklist padrão de habilitação em pregão (Lei 14.133/2021, arts. 62 a 70) e aderência do pregão ----
+const PG_DOCS_PADRAO = [
+  'Comprovante de inscrição no CNPJ',
+  'Contrato social ou requerimento de empresário (CCMEI, para MEI), com as alterações',
+  'Documento de identidade e CPF do representante legal',
+  'CND Federal (Receita/PGFN): débitos de tributos federais e dívida ativa da União',
+  'Certificado de Regularidade do FGTS (CRF)',
+  'CNDT: Certidão Negativa de Débitos Trabalhistas',
+  'Certidão negativa de tributos estaduais (se exigida)',
+  'Certidão negativa de tributos municipais',
+  'Certidão negativa de falência ou recuperação judicial (se exigida)',
+  'Registro ativo no conselho profissional (CRP, CRM, CRO ou outro)',
+  'Certidão negativa do conselho profissional',
+  'Atestado(s) de capacidade técnica: serviço parecido com o objeto do pregão',
+  'Balanço patrimonial do último exercício (se exigido)',
+  'Declaração de que não emprega menor de 18 anos em trabalho noturno, perigoso ou insalubre',
+  'Declaração de inexistência de fato impeditivo para licitar',
+  'Declaração de elaboração independente de proposta (se exigida)',
+  'Declaração de enquadramento como ME/EPP e certidão simplificada da Junta Comercial (se for usar o benefício)',
+  'Cadastro no sistema onde o pregão acontece (Compras.gov.br/SICAF, BLL, BNC ou o indicado no edital)',
+  'Proposta comercial com preço e validade, conforme o edital'
+];
+function documentosDoPregao(){ const l = [...PG_DOCS_PADRAO]; l._pregao = true; return l; }
+let _pgMonAd = null;   // preferências do monitor do usuário (tipos de pregão escolhidos)
+function calcularAderenciaPregao(o, u){
+  const r = o.pregao || {};
+  let pontos = 0, total = 0, naoAtende = false;
+  const motivos = [], det = [], faltam = [];
+  const add = (rotulo, pts, max, nota, pos, aj)=>{ pontos += pts; total += max; det.push({ rotulo, pts, max, nota, pos: pts >= max ? pos : '', aj: pts >= max ? '' : aj }); };
+  const eletronico = !/presencial/i.test(o.modalidade || '');
+  // 1. Objeto do pregão x termos de busca (35)
+  const termos = r.termos || [];
+  if(termos.length){ motivos.push('objeto cita: ' + termos.slice(0, 2).join(', ')); add('Objeto do pregão', 35, 35, 'o objeto combina com os seus termos de busca', 'o objeto combina com a sua área', 'o objeto'); }
+  else add('Objeto do pregão', 15, 35, 'não encontramos seus termos no objeto; confira o edital', '', 'se o objeto é mesmo da sua área');
+  // 2. Localização (25)
+  if(!u.uf) faltam.push('Estado');
+  else if(r.prioritario){ motivos.push('perto de você'); add('Localização', 25, 25, 'fica dentro do seu raio de busca', 'dentro do seu raio de busca', 'a localização'); }
+  else if(o.uf === u.uf){
+    if(eletronico){ motivos.push('no seu estado'); add('Localização', 25, 25, 'é no seu estado e a disputa é eletrônica', 'no seu estado, disputa eletrônica', 'a localização'); }
+    else add('Localização', 10, 25, 'presencial no seu estado, mas fora do seu raio de busca', '', 'a distância até o local do pregão presencial');
+  } else if(eletronico) add('Localização', 12, 25, 'pregão eletrônico: você participa de qualquer lugar, mas confira onde o serviço é executado', '', 'onde o serviço será executado');
+  else { naoAtende = true; motivos.push('⚠ presencial em ' + (o.cidade ? o.cidade + '/' : '') + o.uf); add('Localização', 0, 25, 'pregão presencial em outro estado', '', 'a localização'); }
+  // 3. Tipo de pregão escolhido pelo cliente (15)
+  const codigo = eletronico ? 6 : 7;
+  if(_pgMonAd && Array.isArray(_pgMonAd.modalidades) && !_pgMonAd.modalidades.includes(codigo)) add('Tipo de pregão', 0, 15, 'você não escolheu pregão ' + (eletronico ? 'eletrônico' : 'presencial') + ' na sua busca', '', 'o tipo de pregão');
+  else add('Tipo de pregão', 15, 15, 'é um tipo de pregão que você escolheu', 'tipo de pregão que você escolheu', 'o tipo de pregão');
+  // 4. Participação: pregão exige empresa (CNPJ) e, às vezes, é exclusivo para ME/EPP (15)
+  const regime = String(u.regime || '');
+  const semPJ = (u.atuacao || []).length && !(u.atuacao || []).includes('PJ') && !u.cnpj;
+  if(semPJ || /aut[oô]nomo/i.test(regime)){ naoAtende = true; motivos.push('⚠ exige CNPJ'); add('Participação', 0, 15, 'pregão exige empresa com CNPJ', '', 'a participação (CNPJ)'); }
+  else if(r.exclusivo_me_epp){
+    if(/mei|simples/i.test(regime)){ motivos.push('exclusivo ME/EPP'); add('Participação', 15, 15, 'exclusivo ME/EPP e você está no Simples/MEI', 'exclusivo ME/EPP e você está no Simples/MEI', 'a participação'); }
+    else { if(!regime) faltam.push('Regime tributário'); add('Participação', 8, 15, 'exclusivo ME/EPP: confirme o porte da sua empresa', '', 'se a sua empresa é ME/EPP (exclusivo)'); }
+  } else add('Participação', 15, 15, 'participação aberta a empresas de qualquer porte', 'participação aberta a qualquer porte', 'a participação');
+  // 5. Prazo para enviar a proposta (10)
+  if(!r.prazo) add('Prazo', 5, 10, 'o prazo não foi informado no PNCP', '', 'o prazo');
+  else { const dias = (new Date(r.prazo).getTime() - Date.now()) / 86400000;
+    if(dias >= 3) add('Prazo', 10, 10, 'há tempo para preparar a proposta', 'há tempo para preparar a proposta', 'o prazo');
+    else if(dias >= 1) add('Prazo', 6, 10, 'prazo curto: poucos dias para a proposta', '', 'o prazo curto');
+    else add('Prazo', 3, 10, 'a proposta fecha hoje', '', 'o prazo (fecha hoje)'); }
+  let pct = total ? Math.round(pontos / total * 100) : null;
+  if(naoAtende && pct !== null) pct = Math.min(pct, 40);
+  return { pct, motivos, det, pontos, total, faltam, limitado: naoAtende };
+}
 function mapPregaoSupabase(row){
   const pres = /presencial/i.test(row.modalidade || '');
   return {
@@ -14162,7 +14227,7 @@ function mapPregaoSupabase(row){
     indice: null, indiceLabel: null,
     valorAtendimento: 'Não informado', valorMensal: 'Não informado', valorHora: 'Não informado', volume: 'Não informado',
     valorMaximo: row.valor_estimado ? Number(row.valor_estimado).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) + ' (valor total estimado, conforme PNCP)' : 'Não informado',
-    remuneracao: [], requisitos: 'Consulte o edital do pregão no PNCP.', pontosPositivos: '', pontosAtencao: '', documentos: [], documentosPadrao: false,
+    remuneracao: [], requisitos: 'Consulte o edital do pregão no PNCP.', pontosPositivos: '', pontosAtencao: '', documentos: documentosDoPregao(), documentosPadrao: false,
     urlOficial: row.link_sistema || row.link_pncp || 'https://pncp.gov.br/app/editais', urlEdital: row.link_pncp || '', urlPncp: row.link_pncp || 'https://pncp.gov.br/app/editais',
     urlInscricao: row.link_sistema || row.link_pncp || '', numeroPncp: row.numero_controle || '', movimentacoes: [], linksDocs: {}, perguntas: [],
   };
@@ -14178,6 +14243,7 @@ async function anexarPregoes(){
   try{
     const { data, error } = await _sb.from('pregoes_monitorados').select('*').eq('usuario_id', userProfile.id).neq('status','descartado').order('prazo', {ascending:true}).limit(500);
     if(error) return;
+    try{ const { data: mon } = await _sb.from('monitor_pregoes').select('modalidades').eq('usuario_id', userProfile.id).limit(1); _pgMonAd = (mon && mon[0]) || null; }catch(e){ _pgMonAd = null; }
     oportunidades = oportunidades.filter(o=>!o.ehPregao);
     const novos = (data || []).filter(r => !r.prazo || new Date(r.prazo).getTime() >= Date.now()).map(mapPregaoSupabase);
     oportunidades = [...oportunidades, ...novos];
@@ -14230,9 +14296,25 @@ function openDetalhePregao(o){
         </div>
         ${r.nota ? `<div style="margin-top:8px; font-size:13px; padding:6px 8px; border-radius:8px; background:rgba(245,158,11,.12);">📝 ${esc(r.nota)}</div>` : ''}
       </div>
-      <div class="panel" style="margin-top:14px;"><h4><span class="dot"></span>Documentos do pregão</h4>
-        <p style="font-size:13px; color:var(--ink-muted); margin:0;">O checklist de documentos para pregão (habilitação, regularidade fiscal, atestados de capacidade técnica) chega na próxima atualização. Por enquanto, confira as exigências no edital do PNCP.</p>
+      ${(()=>{ if(!userProfile) return ''; const ad = calcularAderencia(o, userProfile); if(!ad || ad.pct === null) return ''; const adm = (typeof adminAuthed !== 'undefined') && adminAuthed;
+        return `<div class="panel" style="margin-top:14px;"><h4><span class="dot"></span>Aderência ao seu perfil</h4>
+          <div class="aderencia-faixa" style="margin:0 0 6px; padding-top:0; border-top:0;"><span class="aderencia-pct">${ad.pct}%</span><span>de aderência</span></div>
+          <div style="font-size:13px; line-height:1.55; color:var(--ink-muted);">${entendaNotaHTML(ad)}</div></div>`; })()}
+      ${(()=>{ const checks = docChecks[o.id] || {}; const docsVisiveis = docsPreview(o.documentos); return `
+      <div class="panel" style="margin-top:14px;">
+        <h4><span class="dot"></span>Documentação para o pregão</h4>
+        <div class="doc-resumo" id="hero-check-${o.id}"></div>
+        <button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px; margin:0 0 10px;" onclick="abrirMinhasCertidoes(${o.id})" title="Ver, anexar ou trocar suas certidões salvas sem sair deste pregão">📄 Minhas certidões</button>
+        <div id="doc-progress-${o.id}">${docProgressHTML(o.id, docsVisiveis, checks)}</div>
+        ${ckBarraHTML(o.id, 'oficial')}
+        <ul class="doc-list ${ckOcultando(o.id, 'oficial') ? 'ocultar-ok' : ''}" id="doc-list-${o.id}">
+          ${ckOrdenar(o.id, docsVisiveis).map(i=>{ const d = docsVisiveis[i]; if(ckRemovido(o.id, d)) return ''; const ef = docEstadoEf(o, d, checks[i]); return `
+            <li class="${ef==='na'?'doc-na':(ef?'checked-text':'')}" id="doc-item-${o.id}-${i}">${docItemInner(o, d, i, ef)}</li>`; }).join('')}
+        </ul>
+        <div id="doc-extras-${o.id}">${ckExtrasHTML(o.id)}</div>
+        <p style="font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5;">Lista padrão de habilitação em pregão (Lei 14.133/2021). Cada edital pode pedir mais ou menos documentos: confira o edital no PNCP e ajuste com "não se aplica" ou "+ Incluir".</p>
       </div>
+      <div id="meu-checklist-${o.id}">${ckMeuHTML(o.id)}</div>`; })()}
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
         ${r.link_pncp ? `<a class="official-link" style="text-decoration:none;" href="${esc(r.link_pncp)}" target="_blank" rel="noopener">Ver o pregão no PNCP ↗</a>` : ''}
         ${r.link_sistema ? `<a class="btn-ghost" style="text-decoration:none;" href="${esc(r.link_sistema)}" target="_blank" rel="noopener">Sistema do pregão ↗</a>` : ''}
@@ -15453,7 +15535,7 @@ function usrCadastroHTML(r){
   const visCli = o => (!o.problemaDescricao || soPendenciaDeAuditoria(o)) && !prazoCurtoDemais(o);
   let todos = [];
   if((u.profs||[]).length){
-    todos = oportunidades.filter(o=>situacaoExibida(o) !== 'Encerrado' && visCli(o))
+    todos = oportunidades.filter(o=>!o.ehPregao && situacaoExibida(o) !== 'Encerrado' && visCli(o))
       .map(o=>({ o, ad: calcularAderencia(o, u) })).filter(x=>x.ad.pct !== null && x.ad.pct > 0)
       .sort((a,b)=>b.ad.pct - a.ad.pct || (b.o.indice||0) - (a.o.indice||0));
   }
