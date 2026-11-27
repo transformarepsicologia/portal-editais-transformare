@@ -1606,7 +1606,6 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     </div>
   </div>
 
-  <div id="ed-pregao-chips" style="display:none; gap:8px; flex-wrap:wrap; margin:6px 0 10px;"></div>
   <div class="result-count" id="ed-count"></div>
   <div class="op-grid" id="ed-list"></div>
 </section>
@@ -1703,7 +1702,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 
 <!-- ===================== MEUS PREGÕES (monitor pessoal) ===================== -->
 <section class="view" id="view-pregoes">
-  <div class="page-head"><span class="eyebrow">Minha área</span><h2>Minha busca de pregão</h2><p>Aqui você define onde e o que buscamos. Os pregões encontrados aparecem junto com os credenciamentos, na lista de Editais, com a etiqueta roxa.</p></div>
+  <div class="page-head"><span class="eyebrow">Minha área</span><h2>Minha busca de pregão</h2><p>Aqui você define onde e o que buscamos. Os pregões que combinam com o seu perfil aparecem em Minha conta, junto com os editais aderentes, com a etiqueta roxa e o botão Pregões.</p></div>
   <button type="button" class="btn-ghost" onclick="nav('minha-conta')" style="margin-bottom:12px;">← Voltar à minha conta</button>
   <div id="pregoes-usuario"></div>
 </section>
@@ -5360,9 +5359,10 @@ function renderMinhaConta(){
           <div class="indicator-card"><div class="num">${ehPro() ? (melhorAderencia !== null ? melhorAderencia + '%' : '—') : ICONE_CADEADO}</div><div class="label">Maior aderência ao seu perfil${ehPro() ? '' : ' — Plano Pro'}</div></div>
         </div>
 
-        ${ehPro() ? `<div class="section-title" style="font-size:17px; margin-top:32px;">Editais com alta aderência (70% ou mais)</div>
+        ${(ehPro() || todasAderencias.some(x=>x.o.ehPregao)) ? `<div class="section-title" style="font-size:17px; margin-top:32px;">Editais com alta aderência (70% ou mais)</div>
         <p class="section-sub" style="margin-bottom:16px;">Mostra o quanto cada edital combina com o seu perfil. Abaixo de cada edital você vê os pontos positivos e o que verificar para chegar à nota máxima. <span id="conta-aderentes-mais"></span></p>
         <div id="conta-aderentes-aviso"></div>
+        <div id="conta-aderentes-chips" style="display:none; gap:8px; flex-wrap:wrap; margin:0 0 12px;"></div>
         <div class="op-grid" id="conta-aderentes"></div>` : ''}
 
         ${ehPro() ? '' : `<div class="pro-lock-box" style="margin-top:32px;"><div style="font-weight:600; margin-bottom:6px;">${ICONE_CADEADO} Editais mais aderentes ao seu perfil — Plano Pro</div><div style="font-size:13px; color:var(--ink-muted); line-height:1.55; margin-bottom:10px;">${todasAderencias.length ? `Encontramos ${todasAderencias.length} edital(is) ativo(s) com algum grau de aderência ao seu perfil` + (altaAderencia ? `, ${altaAderencia} com 70% ou mais` : '') + '.' : 'Complete seu perfil para a Transformare apontar onde você tem mais chance.'} Assine o Plano Pro para ver a lista ordenada, sem perder tempo procurando edital por edital.</div><button class="btn-ghost btn-pro-ghost" onclick="solicitarPlanoEssencial()">Conhecer o plano Pro</button></div>`}
@@ -5390,19 +5390,40 @@ function renderMinhaConta(){
   if(adAviso && perfilInfo.pct < 100){
     adAviso.innerHTML = `<div class="atencao-box" style="margin:0 0 14px;">⚠ <strong>Seu perfil está ${perfilInfo.pct}% preenchido.</strong> Perfil incompleto não reduz a nota, mas deixa a análise parcial. Faltam: ${esc(perfilInfo.faltam.join(', '))}. <a href="#" style="color:var(--teal); cursor:pointer; font-weight:600;" onclick="nav('perfil'); return false;">Completar meu perfil</a></div>`;
   }
-  if(adBox){
-    const altas = todasAderencias.filter(x=>x.ad.pct >= 70);
-    if(altas.length===0){
-      adBox.innerHTML = `<div class="empty-state">Nenhum edital com 70% ou mais de aderência no momento. Quanto mais completo o seu perfil, mais preciso fica o cálculo. <a href="#" style="color:var(--teal); cursor:pointer;" onclick="nav('perfil'); return false;">Completar perfil</a></div>`;
-    } else {
-      altas.slice(0,20).forEach(({o, ad})=>{
-        const card = renderCard(o);
-        inserirNotaNoCard(card, ad, o);
-        adBox.appendChild(card);
-      });
-      if(altas.length>20){ const m=document.getElementById('conta-aderentes-mais'); if(m) m.textContent = `Mostrando 20 de ${altas.length}.`; }
+  _contaAd = todasAderencias;
+  contaAderentesRender();
+}
+// Aderentes da Minha conta: credenciamento e pregão juntos, com botões para separar.
+let _contaAd = [], _contaAdTipo = '';
+function contaTipoAderentes(v){ _contaAdTipo = v; contaAderentesRender(); }
+function contaAderentesRender(){
+  const adBox = document.getElementById('conta-aderentes'); if(!adBox) return;
+  const pro = ehPro();
+  const altas = _contaAd.filter(x=>x.ad.pct >= 70 && (pro || x.o.ehPregao));
+  const nP = altas.filter(x=>x.o.ehPregao).length, nC = altas.length - nP;
+  const chips = document.getElementById('conta-aderentes-chips');
+  if(chips){
+    if(!nP){ chips.style.display = 'none'; if(_contaAdTipo === 'pregao') _contaAdTipo = ''; }
+    else {
+      const chip = (v, t) => `<button type="button" class="btn-ghost" style="padding:6px 14px; font-size:13px; ${_contaAdTipo === v ? 'border-color:#8b5cf6; color:#7c3aed; font-weight:700; background:rgba(139,92,246,.10);' : ''}" onclick="contaTipoAderentes('${v}')">${t}</button>`;
+      chips.style.display = 'flex';
+      chips.innerHTML = chip('', 'Todos (' + altas.length + ')') + (pro ? chip('cred', 'Credenciamentos (' + nC + ')') : '') + chip('pregao', '🏷 Pregões (' + nP + ')');
     }
   }
+  const lista = altas.filter(x=> _contaAdTipo === 'pregao' ? x.o.ehPregao : (_contaAdTipo === 'cred' ? !x.o.ehPregao : true))
+    .sort((a,b)=> (b.ad.pct - a.ad.pct) || ((b.o.ehPregao?1:0) - (a.o.ehPregao?1:0)));
+  adBox.innerHTML = '';
+  const mais = document.getElementById('conta-aderentes-mais'); if(mais) mais.textContent = '';
+  if(lista.length === 0){
+    adBox.innerHTML = `<div class="empty-state">Nenhum edital com 70% ou mais de aderência no momento. Quanto mais completo o seu perfil, mais preciso fica o cálculo. <a href="#" style="color:var(--teal); cursor:pointer;" onclick="nav('perfil'); return false;">Completar meu perfil</a></div>`;
+    return;
+  }
+  lista.slice(0,20).forEach(({o, ad})=>{
+    const card = renderCard(o);
+    inserirNotaNoCard(card, ad, o);
+    adBox.appendChild(card);
+  });
+  if(lista.length>20 && mais) mais.textContent = `Mostrando 20 de ${lista.length}.`;
 }
 
 /* ================= FILTROS EDITAIS ================= */
@@ -5646,8 +5667,7 @@ function applyFilters(){
     if(!visivelAoCliente(o)) return false;
     if(prof && !o.profissoes.map(profNorm).includes(profNorm(prof))) return false;
     if(tipo && o.tipo !== tipo) return false;
-    if(_pgChipTipo === 'pregao' && !o.ehPregao) return false;
-    if(_pgChipTipo === 'cred' && o.ehPregao) return false;
+    if(o.ehPregao) return false;   // pregões só aparecem em Minha conta, entre os aderentes
     if(mod && o.modalidade !== mod) return false;
     if(abr && o.abrangencia !== abr) return false;
     if(pub && !(o.aceitaContratacao||[]).includes(pub)) return false;
@@ -5668,11 +5688,10 @@ function applyFilters(){
   });
 
   if(sort === 'prazo') filtradas = [...filtradas].sort(cmpPrazo);
-  else if(!sort && !_pgChipTipo) filtradas = [...filtradas.filter(o=>o.ehPregao), ...filtradas.filter(o=>!o.ehPregao)];   // pregões do usuário primeiro: são poucos e fecham logo
   else if(sort === 'indice') filtradas = [...filtradas].sort((a,b)=>b.indice-a.indice);
   else if(sort === 'recentes') filtradas = [...filtradas].sort((a,b)=>parseDate(b.publicacao)-parseDate(a.publicacao));
 
-  renderFilterChips(); pregaoChipsRender();
+  renderFilterChips();
   _listaNavegacao = filtradas.map(o=>o.id);   // usada pelo rodapé da página do edital
 
   document.getElementById('ed-count').textContent = `${filtradas.length} oportunidade(s) encontrada(s)`;
@@ -5683,7 +5702,7 @@ function applyFilters(){
     return;
   }
   // volta para a página 1 quando os filtros/busca mudam
-  const assinatura = JSON.stringify([busca, sort, _pgChipTipo, filtroRadar, filtroSomenteComIndice, ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit'].map(i=>document.getElementById(i).value)]);
+  const assinatura = JSON.stringify([busca, sort, filtroRadar, filtroSomenteComIndice, ['f-prof','f-tipo','f-mod','f-abr','f-pub','f-uf','f-org','f-sit'].map(i=>document.getElementById(i).value)]);
   if(assinatura !== _pagAssinaturaEd){ _pag.ed = 1; _pagAssinaturaEd = assinatura; }
   const pgEd = paginarLista('ed', filtradas, 12, applyFilters);
   pgEd.fatia.forEach(o=>list.appendChild(renderCard(o)));
@@ -12612,7 +12631,7 @@ async function pregoesAtalho(){
     const { data } = await _sb.from('pregoes_monitorados').select('id, status, prazo').eq('usuario_id', userProfile.id);
     if(!data || !data.length){ const { data: m } = await _sb.from('monitor_pregoes').select('id').eq('usuario_id', userProfile.id).limit(1); if(!m || !m.length) return; }
     const ag = Date.now(); const novos = (data||[]).filter(x => x.status==='novo' && (!x.prazo || new Date(x.prazo).getTime() >= ag)).length;
-    el.outerHTML = `<button type="button" class="conta-atalho" onclick="nav('pregoes')"><span class="ca-ico" aria-hidden="true">🏷</span><span class="ca-txt"><strong>Minha busca de pregão</strong><small>${novos ? novos + ' novo(s) na lista de Editais · ' : ''}Onde e o que buscamos para você</small></span><span class="ca-seta" aria-hidden="true">›</span></button>`;
+    el.outerHTML = `<button type="button" class="conta-atalho" onclick="nav('pregoes')"><span class="ca-ico" aria-hidden="true">🏷</span><span class="ca-txt"><strong>Minha busca de pregão</strong><small>${novos ? novos + ' novo(s) · ' : ''}Onde e o que buscamos para você</small></span><span class="ca-seta" aria-hidden="true">›</span></button>`;
   }catch(e){}
 }
 async function perfilPregaoBloco(){
@@ -12727,9 +12746,9 @@ function pregoesUsuarioRender(){
   const box = document.getElementById('pregoes-usuario'); if(!box) return;
   const lista = _pgFiltrar(_pgDados).slice().sort((a,b) => (b.prioritario?1:0) - (a.prioritario?1:0));
   const nAb = _pgFiltrar(_pgDados).length;
-  box.innerHTML = `<button type="button" class="btn-primary" style="width:100%; margin-bottom:12px;" onclick="pregoesVerNaLista()">Ver meus ${nAb} pregão(ões) na lista de Editais</button>` + pregoesCidadesHTML().replace('<details class="panel"','<details open class="panel"') + '<details class="panel" style="margin-top:12px;"><summary style="cursor:pointer; font-weight:700;">Ver lista por status (novo, interesse, descartado)</summary><div style="margin-top:10px;">' + _pgChips(_pgDados, 'pregoesUsuarioFiltro') + (lista.length ? lista.map(x => _pgCard(x, false)).join('') : '<div class="empty-state">Nenhum pregão nesta lista por enquanto. A busca no PNCP roda todos os dias e novos pregões aparecem aqui.</div>') + '</div></details>';
+  box.innerHTML = `<button type="button" class="btn-primary" style="width:100%; margin-bottom:12px;" onclick="pregoesVerNaLista()">Ver meus pregões aderentes em Minha conta</button>` + pregoesCidadesHTML().replace('<details class="panel"','<details open class="panel"') + '<details class="panel" style="margin-top:12px;"><summary style="cursor:pointer; font-weight:700;">Ver lista por status (novo, interesse, descartado)</summary><div style="margin-top:10px;">' + _pgChips(_pgDados, 'pregoesUsuarioFiltro') + (lista.length ? lista.map(x => _pgCard(x, false)).join('') : '<div class="empty-state">Nenhum pregão nesta lista por enquanto. A busca no PNCP roda todos os dias e novos pregões aparecem aqui.</div>') + '</div></details>';
 }
-function pregoesVerNaLista(){ _pgChipTipo = 'pregao'; nav('editais'); applyFilters(); }
+function pregoesVerNaLista(){ _contaAdTipo = 'pregao'; nav('minha-conta'); setTimeout(()=>{ const el = document.getElementById('conta-aderentes-chips') || document.getElementById('conta-aderentes'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 250); }
 async function pgFavoritarInteresse(idPregao){
   const oid = 1200000 + idPregao;
   if(favoritos.has(oid)) return;
@@ -14254,16 +14273,6 @@ async function lerCacheEstaticoEditais(){
 
 // ===================== PREGÕES NO CATÁLOGO (só para quem tem o pregão liberado) =====================
 const PG_ID_BASE = 1200000;
-let _pgChipTipo = '';   // '', 'pregao' ou 'cred': atalho acima da lista de Editais
-function pregaoChipsRender(){
-  const box = document.getElementById('ed-pregao-chips'); if(!box) return;
-  const n = oportunidades.filter(o=>o.ehPregao && visivelAoCliente(o)).length;
-  if(!n){ box.style.display = 'none'; if(_pgChipTipo){ _pgChipTipo = ''; } return; }
-  const chip = (v, t) => `<button type="button" class="btn-ghost" style="padding:6px 14px; font-size:13px; ${_pgChipTipo === v ? 'border-color:#8b5cf6; color:#7c3aed; font-weight:700; background:rgba(139,92,246,.10);' : ''}" onclick="pregaoChipTipo('${v}')">${t}</button>`;
-  box.style.display = 'flex';
-  box.innerHTML = chip('', 'Todos') + chip('pregao', '🏷 Pregões (' + n + ')') + chip('cred', 'Credenciamentos');
-}
-function pregaoChipTipo(v){ _pgChipTipo = v; applyFilters(); }
 function _pgDataBR(iso){ if(!iso) return ''; try{ return new Date(iso).toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}); }catch(e){ return ''; } }
 // ---- Checklist padrão de habilitação em pregão (Lei 14.133/2021, arts. 62 a 70) e aderência do pregão ----
 const PG_DOCS_PADRAO = [
@@ -14377,7 +14386,6 @@ async function anexarPregoes(){
     oportunidades = oportunidades.filter(o=>!o.ehPregao);
     const novos = (data || []).filter(r => !r.prazo || new Date(r.prazo).getTime() >= Date.now()).map(mapPregaoSupabase);
     oportunidades = [...oportunidades, ...novos];
-    const ft = document.getElementById('f-tipo'); if(ft){ const f = ft.closest('.filter-field'); if(f) f.classList.toggle('filtro-oculto', !novos.length); }
     populateSelects(); applyFilters();
   }catch(e){}
 }
