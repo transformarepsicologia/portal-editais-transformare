@@ -1393,6 +1393,8 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 .ck-add input{flex:1; min-width:0; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-elevated,rgba(255,255,255,.04)); color:inherit; font:inherit; font-size:14px;}
 .ck-vazio{font-size:13px; color:var(--ink-dim); margin:6px 0;}
 .pl-btn{background:none; border:0; padding:0; color:var(--teal); font:inherit; font-size:12px; font-weight:600; cursor:pointer; text-decoration:underline;}
+.pg-adm-linha{ border-radius:6px; }
+.pg-adm-linha:hover, .pg-adm-linha:focus-visible{ background:var(--border-soft); outline:none; }
 </style>
 <!--
   Caixa de entrada de credenciamentos (PNCP/Supabase) — só funciona quando
@@ -6049,7 +6051,7 @@ function openDetalhe(id){
               <div class="detail-org">${esc(orgaoLocalTexto(o))} ${o.urlOficial ? `· <a href="${o.urlOficial}" target="_blank" rel="noopener" style="color:var(--teal); text-decoration:none;">${(o.origemSupabase || o.ehPregao) ? 'ver no PNCP' : 'site do órgão'} ↗</a>` : ''}${o.abertura && o.publicacao && o.publicacao !== 'Não informado' ? ` · divulgado em ${esc(o.publicacao)}` : ''}</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
-              ${adminAuthed ? `<button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap;" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button><button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">🗑 Excluir</button>` : ''}
+              ${(adminAuthed && !o.ehPregao) ? `<button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap;" onclick="editarDoDetalhe(${o.id})">✎ Editar (admin)</button><button class="btn-ghost" style="font-size:12.5px; padding:8px 14px; white-space:nowrap; color:var(--coral); border-color:var(--coral);" onclick="abrirConfirmExclusao(${o.id})">🗑 Excluir</button>` : ''}
               <button class="fav-btn ${isFav?'active':''}" style="font-size:24px;" onclick="toggleFav(${o.id})">${isFav?'★':'☆'}</button>
             </div>
           </div>
@@ -13017,6 +13019,16 @@ async function pregoesRevogar(id, ativar){
   if(error){ toast('Não foi possível atualizar.'); return; }
   toast(ativar ? 'Pregão reativado.' : 'Pregão pausado.'); await pregoesAdminCarregar();
 }
+// ADM: clicar numa linha de "aderentes" abre a página do edital ou do pregão
+function pgAdmAbrirEdital(id){ openDetalhe(id); }
+function pgAdmAbrirPregao(pid){
+  const row = _pgAdminPregoes.find(y => y.id === pid); if(!row) return;
+  const oid = PG_ID_BASE + pid;
+  const o = Object.assign(mapPregaoSupabase(row), { _admVisualizando: true, _admCliente: row._cliente || '' });
+  oportunidades = oportunidades.filter(x => x.id !== oid);
+  oportunidades.push(o);   // pregões nunca entram na lista do catálogo; aqui só servem para abrir a página
+  openDetalhe(oid);
+}
 function pregoesAderentesHTML(){
   if(!_pgAdminMonitores.length) return '<div class="empty-state">Nenhuma profissional com pregão liberado ainda.</div>';
   const abertos = oportunidades.filter(o => !o.ehPregao && situacaoExibida(o) !== 'Encerrado' && (!o.problemaDescricao || soPendenciaDeAuditoria(o)) && !prazoCurtoDemais(o));
@@ -13036,8 +13048,8 @@ function pregoesAderentesHTML(){
     const pAlt = preg.filter(z => z.ad.pct >= 70).length;
     const favPreg = favs.filter(id => id >= 1200000).length;
     const interesse = meus.filter(x => ['interesse','participando'].includes(x.status)).length;
-    const linhaC = x => `<div style="display:flex; gap:8px; font-size:12.5px; padding:3px 0;"><b style="flex:0 0 44px;">${x.ad.pct}%</b><span style="flex:1; min-width:0; overflow-wrap:anywhere;">${esc(x.o.orgao)} · ${esc(x.o.uf)}${x.o.cidade ? '/' + esc(x.o.cidade) : ''}</span></div>`;
-    const linhaP = z => `<div style="display:flex; gap:8px; font-size:12.5px; padding:3px 0;"><b style="flex:0 0 44px;">${z.ad.pct}%</b><span style="flex:1; min-width:0; overflow-wrap:anywhere;">${esc(z.x.orgao || '')} · ${esc(z.x.uf || '')}${z.x.municipio ? '/' + esc(z.x.municipio) : ''} <span style="color:var(--ink-dim);">· ${esc(_PG_STATUS[z.x.status] || z.x.status)}${(z.x.status === 'novo' && favs.includes(1200000 + z.x.id)) ? ' · ★' : ''}</span></span></div>`;
+    const linhaC = x => `<div role="button" tabindex="0" class="pg-adm-linha" title="Abrir o edital" onclick="pgAdmAbrirEdital(${x.o.id})" onkeydown="if(event.key==='Enter')pgAdmAbrirEdital(${x.o.id})" style="display:flex; gap:8px; font-size:12.5px; padding:3px 0; cursor:pointer;"><b style="flex:0 0 44px;">${x.ad.pct}%</b><span style="flex:1; min-width:0; overflow-wrap:anywhere;">${esc(x.o.orgao)} · ${esc(x.o.uf)}${x.o.cidade ? '/' + esc(x.o.cidade) : ''}</span></div>`;
+    const linhaP = z => `<div role="button" tabindex="0" class="pg-adm-linha" title="Abrir o pregão" onclick="pgAdmAbrirPregao(${z.x.id})" onkeydown="if(event.key==='Enter')pgAdmAbrirPregao(${z.x.id})" style="display:flex; gap:8px; font-size:12.5px; padding:3px 0; cursor:pointer;"><b style="flex:0 0 44px;">${z.ad.pct}%</b><span style="flex:1; min-width:0; overflow-wrap:anywhere;">${esc(z.x.orgao || '')} · ${esc(z.x.uf || '')}${z.x.municipio ? '/' + esc(z.x.municipio) : ''} <span style="color:var(--ink-dim);">· ${esc(_PG_STATUS[z.x.status] || z.x.status)}${(z.x.status === 'novo' && favs.includes(1200000 + z.x.id)) ? ' · ★' : ''}</span></span></div>`;
     return `<details class="panel" style="margin-bottom:10px;"><summary style="cursor:pointer; font-weight:700;">${esc(r.nome || r.email)} <span style="font-weight:500; color:var(--ink-muted); font-size:12.5px;">· ${m.ativo ? 'pregão ativo' : 'pregão pausado'} · credenciamento: ${cred.length} aderente(s) · pregão: ${pAlt} de ${preg.length} aderente(s)</span></summary>
       <div style="font-size:12px; color:var(--ink-dim); margin:6px 0;">${esc((u.profs||[]).join(', '))} · ${esc(u.cidade)}${u.uf ? '/' + esc(u.uf) : ''} · aderente = 70% ou mais</div>
       <div style="font-weight:700; font-size:13px; margin:8px 0 2px;">Credenciamento <span style="font-weight:400; color:var(--ink-muted);">· ${favCred} favorito(s)</span></div>
@@ -14612,11 +14624,11 @@ function pregaoAcompHTML(o){
       ${st !== 'novo' ? `<span class="tag" style="background:rgba(59,130,246,.16); color:#1d4ed8;">${esc(_PG_STATUS[st] || st)}</span>` : ''}
       ${(r.termos||[]).length ? `<span style="font-size:12px; color:var(--ink-dim);">Combinou com: ${esc(r.termos.join(', '))}</span>` : ''}
     </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    ${o._admVisualizando ? `<div style="font-size:12.5px; color:var(--ink-dim);">Visualização do ADM (pregão de ${esc(o._admCliente || 'cliente')}): os botões de marcação ficam só com a cliente.</div>` : `<div style="display:flex; gap:8px; flex-wrap:wrap;">
       <button type="button" class="btn-ghost" style="padding:6px 12px; font-size:12.5px; ${st==='interesse'?'border-color:var(--teal); color:var(--teal); font-weight:700;':''}" onclick="pregaoCatalogoMarcar(${id},'interesse')">Tenho interesse</button>
       <button type="button" class="btn-ghost" style="padding:6px 12px; font-size:12.5px;" onclick="pregaoCatalogoMarcar(${id},'descartado')">Descartar</button>
       ${st !== 'novo' ? `<button type="button" class="btn-ghost" style="padding:6px 12px; font-size:12.5px;" onclick="pregaoCatalogoMarcar(${id},'novo')">Desfazer</button>` : ''}
-    </div>
+    </div>`}
     ${r.nota ? `<div style="font-size:13px; padding:6px 8px; border-radius:8px; background:rgba(245,158,11,.12);">📝 ${esc(r.nota)}</div>` : ''}
   </div>`;
 }
