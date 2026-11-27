@@ -12617,7 +12617,7 @@ async function perfilPregaoBloco(){
   if(!_sb || !userProfile) return;
   try{
     const { data: mon } = await _sb.from('monitor_pregoes').select('cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp, modalidades, palavras_chave, ativo').eq('usuario_id', userProfile.id).limit(1);
-    const m = mon && mon[0]; if(!m) return;   // pregão ainda não liberado: o bloco não aparece
+    const m = mon && mon[0]; if(!m || m.ativo === false) return;   // pregão ainda não liberado: o bloco não aparece
     const tipos = (m.modalidades || []).map(c => c === 6 ? 'eletrônico' : c === 7 ? 'presencial' : '').filter(Boolean).join(' e ') || '—';
     el.innerHTML = `<div style="margin:18px 0 10px; padding-top:12px; border-top:1px solid var(--border-soft);"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">🏷 Pregão</div><div style="font-size:12px; color:var(--ink-dim); margin-top:2px;">Liberado para você pela Transformare. Estas respostas definem onde e como buscamos pregões.</div></div>
       <div style="font-size:13px; line-height:1.7;">
@@ -12740,24 +12740,91 @@ async function pregaoNota(id){
 }
 
 // ---- ADM ----
-let _pgAdminPregoes = [], _pgAdminMon = 'todos', _pgAdminPedidos = [];
+let _pgAdminPregoes = [], _pgAdminMon = 'todos', _pgAdminPedidos = [], _pgAdminFavs = {};
 async function pregoesAdminCarregar(){
   const box = document.getElementById('pregoes-admin'); if(!box || !_sb) return;
   box.innerHTML = '<div class="empty-state">Carregando…</div>';
-  const [m, p, u, ped] = await Promise.all([
+  const [m, p, u, ped, atv] = await Promise.all([
     _sb.from('monitor_pregoes').select('*').order('id'),
     _sb.from('pregoes_monitorados').select('*').order('prazo', {ascending:true}).limit(1000),
-    _sb.from('usuarios_perfil').select('id, nome, email, cidade, uf, profs').order('nome').limit(500),
+    _sb.from('usuarios_perfil').select('*').order('nome').limit(1000),
     _sb.from('pedidos_ajuste_pregoes').select('*').eq('atendido', false).order('criado_em', {ascending:false}).limit(50),
+    _sb.from('atividade_usuario').select('user_id,favoritos_ids'),
   ]);
   if(m.error || p.error){ box.innerHTML = '<div class="empty-state">Erro ao carregar os pregões.</div>'; return; }
   _pgAdminMonitores = m.data || []; _pgAdminUsuarios = u.data || []; _pgAdminPedidos = (ped && ped.data) || [];
+  _pgAdminFavs = {}; ((atv && atv.data) || []).forEach(a => { _pgAdminFavs[a.user_id] = (a.favoritos_ids || []).map(Number); });
   const nomeMon = {}; _pgAdminMonitores.forEach(x => nomeMon[x.id] = x.nome);
   _pgAdminPregoes = (p.data || []).map(x => Object.assign(x, {_cliente: nomeMon[x.monitor_id]}));
   pregoesAdminRender();
 }
 function pregoesAdminFiltro(f){ _pgFiltro = f; pregoesAdminRender(); }
 function pregoesAdminMonSel(v){ _pgAdminMon = v; pregoesAdminRender(); }
+// ---- Painel ADM enxuto: liberar o pregão e ver o que é aderente a cada profissional ----
+function _pgTermosDe(u){ const t = []; (u.profs||[]).forEach(pf => (_PG_TERMOS[pf]||[]).forEach(x => { if(!t.includes(x)) t.push(x); })); return t; }
+function _pgPerfilAderencia(r){ return Object.assign(perfilDeLinha(r), { regime: r.regime || '', cnpj: r.cnpj ? 'sim' : '' }); }
+function pregoesLiberarBusca(){
+  const q = normTxt((document.getElementById('pg-lib-q') || {}).value || '');
+  const box = document.getElementById('pg-lib-res'); if(!box) return;
+  if(q.length < 2){ box.innerHTML = ''; return; }
+  const jaLib = new Set(_pgAdminMonitores.map(m => m.usuario_id));
+  const achados = _pgAdminUsuarios.filter(u => normTxt([u.nome, u.email].join(' ')).includes(q)).slice(0, 8);
+  box.innerHTML = achados.length ? achados.map(u => `<div style="display:flex; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid var(--border-soft); font-size:13px;">
+      <div style="flex:1; min-width:0;"><b>${esc(u.nome || '(sem nome)')}</b><div style="font-size:11.5px; color:var(--ink-dim); overflow-wrap:anywhere;">${esc(u.email || '')} · ${esc((u.profs||[]).join(', ') || 'sem profissão')} · ${esc(u.cidade || '')}${u.uf ? '/' + esc(u.uf) : ''}</div></div>
+      ${jaLib.has(u.id) ? '<span class="badge">já liberado</span>' : `<button type="button" class="btn-primary" style="width:auto; padding:6px 12px;" onclick="pregoesLiberar('${esc(u.id)}')">Liberar pregão</button>`}</div>`).join('') : '<div style="font-size:12.5px; color:var(--ink-muted);">Ninguém encontrado.</div>';
+}
+async function pregoesLiberar(uid){
+  const u = _pgAdminUsuarios.find(x => x.id === uid); if(!u) return;
+  if(_pgAdminMonitores.some(m => m.usuario_id === uid)){ toast('O pregão já está liberado para esta profissional.'); return; }
+  const termos = _pgTermosDe(u);
+  if(!termos.length){ toast('Ela não tem profissão com termos prontos. Crie o monitor em "Avançado".'); return; }
+  if(!confirm('Liberar o pregão para ' + (u.nome || u.email) + '?\n\nA busca será montada pelo cadastro dela (cidade-base, raio de 30 km e termos da profissão). Você pode ajustar depois em "Avançado".')) return;
+  const excl = ['veterinar','reagente']; if((u.profs||[]).includes('Psicologia') && !(u.profs||[]).includes('Odontologia')) excl.push('odontolog','medicamento','laboratorio');
+  const cidade = String(u.cidade || '').split(/[,;\/]/)[0].trim() || null;
+  const { error } = await _sb.from('monitor_pregoes').insert({ nome: u.nome || u.email, usuario_id: uid, palavras_chave: termos, palavras_excluir: excl, ufs: [], cidade_base: cidade, uf_base: u.uf ? String(u.uf).toUpperCase() : null, raio_km: 30, ativo: true });
+  if(error){ toast('Não foi possível liberar agora.'); return; }
+  toast('Pregão liberado. A primeira busca roda nos próximos 10 minutos.');
+  await pregoesAdminCarregar();
+}
+async function pregoesRevogar(id, ativar){
+  if(!ativar && !confirm('Pausar o pregão desta profissional? Ela deixa de ver os pregões até você reativar.')) return;
+  const { error } = await _sb.from('monitor_pregoes').update({ ativo: !!ativar }).eq('id', id);
+  if(error){ toast('Não foi possível atualizar.'); return; }
+  toast(ativar ? 'Pregão reativado.' : 'Pregão pausado.'); await pregoesAdminCarregar();
+}
+function pregoesAderentesHTML(){
+  if(!_pgAdminMonitores.length) return '<div class="empty-state">Nenhuma profissional com pregão liberado ainda.</div>';
+  const abertos = oportunidades.filter(o => !o.ehPregao && situacaoExibida(o) !== 'Encerrado' && (!o.problemaDescricao || soPendenciaDeAuditoria(o)) && !prazoCurtoDemais(o));
+  const salvo = _pgMonAd;
+  const html = _pgAdminMonitores.map(m => {
+    const r = _pgAdminUsuarios.find(x => x.id === m.usuario_id);
+    if(!r) return `<div class="panel" style="margin-bottom:10px;"><b>${esc(m.nome)}</b> <span style="color:var(--ink-dim); font-size:12.5px;">sem conta vinculada (ajuste em "Avançado")</span></div>`;
+    const u = _pgPerfilAderencia(r);
+    // credenciamento
+    const cred = (u.profs||[]).length ? abertos.map(o => ({ o, ad: calcularAderencia(o, u) })).filter(x => x.ad.pct !== null && x.ad.pct >= 70).sort((a,b) => b.ad.pct - a.ad.pct) : [];
+    const favs = (_pgAdminFavs[r.id] || []);
+    const favCred = favs.filter(id => id < 1200000 && oportunidades.some(o => o.id === id)).length;
+    // pregão
+    _pgMonAd = m;
+    const meus = _pgAdminPregoes.filter(x => x.monitor_id === m.id && x.status !== 'descartado' && (!x.prazo || new Date(x.prazo).getTime() >= Date.now()));
+    const preg = meus.map(x => ({ x, ad: calcularAderencia(mapPregaoSupabase(x), u) })).sort((a,b) => b.ad.pct - a.ad.pct);
+    const pAlt = preg.filter(z => z.ad.pct >= 70).length;
+    const favPreg = favs.filter(id => id >= 1200000).length;
+    const interesse = meus.filter(x => ['interesse','participando'].includes(x.status)).length;
+    const linhaC = x => `<div style="display:flex; gap:8px; font-size:12.5px; padding:3px 0;"><b style="flex:0 0 44px;">${x.ad.pct}%</b><span style="flex:1; min-width:0; overflow-wrap:anywhere;">${esc(x.o.orgao)} · ${esc(x.o.uf)}${x.o.cidade ? '/' + esc(x.o.cidade) : ''}</span></div>`;
+    const linhaP = z => `<div style="display:flex; gap:8px; font-size:12.5px; padding:3px 0;"><b style="flex:0 0 44px;">${z.ad.pct}%</b><span style="flex:1; min-width:0; overflow-wrap:anywhere;">${esc(z.x.orgao || '')} · ${esc(z.x.uf || '')}${z.x.municipio ? '/' + esc(z.x.municipio) : ''} <span style="color:var(--ink-dim);">· ${esc(_PG_STATUS[z.x.status] || z.x.status)}${(z.x.status === 'novo' && favs.includes(1200000 + z.x.id)) ? ' · ★' : ''}</span></span></div>`;
+    return `<details class="panel" style="margin-bottom:10px;"><summary style="cursor:pointer; font-weight:700;">${esc(r.nome || r.email)} <span style="font-weight:500; color:var(--ink-muted); font-size:12.5px;">· ${m.ativo ? 'pregão ativo' : 'pregão pausado'} · credenciamento: ${cred.length} aderente(s) · pregão: ${pAlt} de ${preg.length} aderente(s)</span></summary>
+      <div style="font-size:12px; color:var(--ink-dim); margin:6px 0;">${esc((u.profs||[]).join(', '))} · ${esc(u.cidade)}${u.uf ? '/' + esc(u.uf) : ''} · aderente = 70% ou mais</div>
+      <div style="font-weight:700; font-size:13px; margin:8px 0 2px;">Credenciamento <span style="font-weight:400; color:var(--ink-muted);">· ${favCred} favorito(s)</span></div>
+      ${cred.length ? cred.slice(0, 6).map(linhaC).join('') : '<div style="font-size:12.5px; color:var(--ink-muted);">Nenhum edital aderente agora.</div>'}
+      <div style="font-weight:700; font-size:13px; margin:10px 0 2px;">Pregão <span style="font-weight:400; color:var(--ink-muted);">· ${favPreg} favorito(s) · ${interesse} com interesse marcado</span></div>
+      ${preg.length ? preg.slice(0, 6).map(linhaP).join('') : '<div style="font-size:12.5px; color:var(--ink-muted);">A busca ainda não encontrou pregões abertos para ela.</div>'}
+      <div style="display:flex; gap:8px; margin-top:10px;">${m.ativo ? `<button type="button" class="btn-ghost" onclick="pregoesRevogar(${m.id}, false)">Pausar pregão</button>` : `<button type="button" class="btn-primary" style="width:auto;" onclick="pregoesRevogar(${m.id}, true)">Reativar pregão</button>`}</div>
+    </details>`;
+  }).join('');
+  _pgMonAd = salvo;
+  return html;
+}
 function pregoesAdminRender(){
   const box = document.getElementById('pregoes-admin'); if(!box) return;
   const csv = a => (a||[]).join(', ');
@@ -12791,11 +12858,16 @@ function pregoesAdminRender(){
   const lista = _pgFiltrar(base);
   const nomeDe = id => { const m = _pgAdminMonitores.find(x => x.id === id); return m ? m.nome : 'monitor'; };
   const pedHTML = _pgAdminPedidos.length ? `<div class="panel" style="margin-bottom:12px; border-color:#f59e0b;"><div style="font-weight:700; margin-bottom:6px;">✏ Pedidos de ajuste das clientes (${_pgAdminPedidos.length})</div>${_pgAdminPedidos.map(x => `<div style="padding:6px 0; border-top:1px solid var(--border-soft); font-size:13px;"><div style="color:var(--ink-dim); font-size:12px;">${esc(nomeDe(x.monitor_id))} · ${esc(_pgDH(x.criado_em))}</div><div style="overflow-wrap:anywhere;">${esc(x.texto)}</div><button type="button" class="btn-ghost" style="padding:4px 10px; font-size:12px; margin-top:4px;" onclick="pregoesPedidoOk(${x.id})">Marcar como atendido</button></div>`).join('')}</div>` : '';
-  box.innerHTML = pedHTML + monHTML + `<div style="margin:6px 0 10px;"><button type="button" class="btn-ghost" onclick="pregoesMonitorNovo()">+ Novo monitor</button></div>
+  box.innerHTML = pedHTML + `<div class="panel" style="margin-bottom:12px;"><div style="font-weight:700; margin-bottom:6px;">Liberar pregão para uma profissional</div><input type="text" id="pg-lib-q" placeholder="Buscar pelo nome ou e-mail" oninput="pregoesLiberarBusca()"><div id="pg-lib-res"></div></div>
+    <div class="section-title" style="font-size:15px; margin-top:10px;">Aderentes por profissional</div>
+    <p class="section-sub">Para cada profissional com pregão liberado: quantos editais de credenciamento e pregões batem com o cadastro dela, e o que ela favoritou ou marcou. Serve para saber o que está funcionando.</p>
+    ${pregoesAderentesHTML()}
+    <details class="panel" style="margin-top:14px;"><summary style="cursor:pointer; font-weight:700;">Avançado: monitores e todos os pregões encontrados</summary>
+    ${monHTML}<div style="margin:6px 0 10px;"><button type="button" class="btn-ghost" onclick="pregoesMonitorNovo()">+ Novo monitor</button></div>
     <div class="section-title" style="font-size:15px; margin-top:14px;">Pregões encontrados</div>
     <p class="section-sub">A busca roda sozinha a cada 10 minutos. Estados pequenos terminam rápido e a rodada segue para o próximo; os grandes (SP, MG…) continuam de onde pararam. O Brasil todo fecha o ciclo em cerca de meio dia.</p>
     ${selMon}${_pgChips(base, 'pregoesAdminFiltro')}
-    ${lista.length ? lista.map(x => _pgCard(x, true)).join('') : '<div class="empty-state">Nada nesta lista ainda.</div>'}`;
+    ${lista.length ? lista.map(x => _pgCard(x, true)).join('') : '<div class="empty-state">Nada nesta lista ainda.</div>'}</details>`;
 }
 async function pregoesMonitorSalvar(id){
   const v = k => (document.getElementById(k+'-'+id) || {}).value || '';
@@ -14263,7 +14335,8 @@ async function anexarPregoes(){
   try{
     const { data, error } = await _sb.from('pregoes_monitorados').select('*').eq('usuario_id', userProfile.id).neq('status','descartado').order('prazo', {ascending:true}).limit(500);
     if(error) return;
-    try{ const { data: mon } = await _sb.from('monitor_pregoes').select('modalidades').eq('usuario_id', userProfile.id).limit(1); _pgMonAd = (mon && mon[0]) || null; }catch(e){ _pgMonAd = null; }
+    try{ const { data: mon } = await _sb.from('monitor_pregoes').select('modalidades, ativo').eq('usuario_id', userProfile.id).limit(1); _pgMonAd = (mon && mon[0]) || null; }catch(e){ _pgMonAd = null; }
+    if(!_pgMonAd || _pgMonAd.ativo === false){ removerPregoesDoCatalogo(); return; }
     oportunidades = oportunidades.filter(o=>!o.ehPregao);
     const novos = (data || []).filter(r => !r.prazo || new Date(r.prazo).getTime() >= Date.now()).map(mapPregaoSupabase);
     oportunidades = [...oportunidades, ...novos];
