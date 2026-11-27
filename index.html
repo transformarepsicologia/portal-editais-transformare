@@ -5403,9 +5403,9 @@ function contaAderentesRender(){
   if(chips){
     if(!nP){ chips.style.display = 'none'; if(_contaAdTipo === 'pregao') _contaAdTipo = ''; }
     else {
-      const chip = (v, t) => `<button type="button" class="btn-ghost" style="padding:6px 14px; font-size:13px; ${_contaAdTipo === v ? 'border-color:#8b5cf6; color:#7c3aed; font-weight:700; background:rgba(139,92,246,.10);' : ''}" onclick="contaTipoAderentes('${v}')">${t}</button>`;
+      const chip = (v, t) => `<button type="button" class="btn-ghost" style="padding:6px 14px; font-size:13px; ${_contaAdTipo === v ? 'border-color:var(--teal); color:var(--teal); font-weight:700;' : ''}" onclick="contaTipoAderentes('${v}')">${t}</button>`;
       chips.style.display = 'flex';
-      chips.innerHTML = chip('', 'Todos (' + altas.length + ')') + (pro ? chip('cred', 'Credenciamentos (' + nC + ')') : '') + chip('pregao', '🏷 Pregões (' + nP + ')');
+      chips.innerHTML = chip('', 'Todos (' + altas.length + ')') + (pro ? chip('cred', 'Credenciamentos (' + nC + ')') : '') + chip('pregao', 'Pregões (' + nP + ')');
     }
   }
   const lista = altas.filter(x=> _contaAdTipo === 'pregao' ? x.o.ehPregao : (_contaAdTipo === 'cred' ? !x.o.ehPregao : true))
