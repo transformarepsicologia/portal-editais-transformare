@@ -6131,6 +6131,10 @@ async function carregarDadosPncp(o){
     if((!data || !data.dados) && o.ehPregao){ box.innerHTML = '<div class="panel" style="margin-top:14px;"><h4><span class="dot"></span>Dados do PNCP</h4><p style="font-size:13px; color:var(--ink-muted); margin:0; line-height:1.5;">Estamos lendo as informações, os itens e os anexos deste pregão no PNCP. Volte em alguns minutos. Enquanto isso, use o botão "Ver no PNCP" abaixo.</p></div>'; return; }
     if(!data || !data.dados) return;
     box.innerHTML = pncpDadosHTML(data.dados, data.itens || [], data.arquivos || [], o);
+    if(o.ehPregao){
+      const m = pgModalidadeServico([data.dados.objeto, data.dados.informacao_complementar, ...(data.itens || []).map(i => (i.descricao || '') + ' ' + (i.info || ''))].join(' '));
+      if(m !== 'Não informado' && m !== o.modalidade){ o.modalidade = m; if(currentDetailId === o.id) openDetalhe(o.id); }
+    }
   }catch(e){ /* sem os dados do PNCP a página continua normal */ }
 }
 
@@ -14346,12 +14350,19 @@ function calcularAderenciaPregao(o, u){
   if(naoAtende && pct !== null) pct = Math.min(pct, 40);
   return { pct, motivos, det, pontos, total, faltam, limitado: naoAtende };
 }
+// "Modalidade" = como o serviço é prestado (presencial, online ou os dois), deduzida do texto do pregão.
+// O tipo de disputa (eletrônico ou presencial) é outra coisa e aparece à parte.
+function pgModalidadeServico(txt){
+  const t = normTxt(txt || '').replace(/preg(ao|oes)\s+(eletronic\w*|presencia\w*)/g, ' ');
+  const on = /\b(online|on-line|telemedicina|teleatendimento|teleconsulta|telepsicologia|teleorientacao|atendimento remoto|remotamente|a distancia|videochamada|videoconferencia|ead)\b/.test(t);
+  const pres = /\b(presencial|presenciais|in loco|nas dependencias|no consultorio|nas unidades)\b/.test(t);
+  return on && pres ? 'Presencial e online' : on ? 'Online' : pres ? 'Presencial' : 'Não informado';
+}
 function mapPregaoSupabase(row){
-  const pres = /presencial/i.test(row.modalidade || '');
   return {
     id: PG_ID_BASE + row.id, ehPregao: true, pregao: row, origemSupabase: false,
     edital: row.numero_controle || 'Pregão (PNCP)', orgao: row.orgao || 'Órgão não identificado', uf: row.uf || '—', cidade: row.municipio || '',
-    tipo: 'Pregão', modalidade: pres ? 'Presencial' : 'Online',
+    tipo: 'Pregão', modalidade: pgModalidadeServico(row.objeto),
     profissoes: (userProfile && userProfile.profs && userProfile.profs.length) ? userProfile.profs : ['Não identificada'],
     abrangencia: pgNivelOrgao(row.orgao) || 'Municipal', aceitaContratacao: ['Pessoa Jurídica (PJ)'], situacao: 'Aberto', objeto: row.objeto || '',
     prazo: row.prazo ? _pgDataBR(row.prazo) : 'Indeterminado', prazoIndeterminado: !row.prazo, prazoConfirmado: !!row.prazo,
@@ -14397,6 +14408,7 @@ function pregaoAcompHTML(o){
   return `<div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
     <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
       <span class="tag tag-pregao">Pregão</span>
+      <span class="tag">Disputa ${/presencial/i.test(r.modalidade || '') ? 'presencial' : 'eletrônica'}</span>
       ${r.exclusivo_me_epp ? '<span class="tag" style="background:rgba(16,185,129,.18); color:#047857;">Exclusivo ME/EPP</span>' : ''}
       ${r.prioritario ? '<span class="tag" style="background:rgba(236,72,153,.16); color:#be185d;">📍 Perto de você</span>' : ''}
       ${st !== 'novo' ? `<span class="tag" style="background:rgba(59,130,246,.16); color:#1d4ed8;">${esc(_PG_STATUS[st] || st)}</span>` : ''}
