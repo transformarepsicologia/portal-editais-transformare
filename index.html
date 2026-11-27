@@ -4570,6 +4570,16 @@ function chipsSimples(boxId, lista, selecionadas){
     box.appendChild(c);
   });
 }
+// Só as especialidades marcadas ficam visíveis; as demais ficam numa lista recolhida (botão "Ver sugestões").
+function espOcultar(pre, ocultar){
+  const box = document.getElementById(pre+'-esp'); if(!box) return;
+  [...box.children].forEach(c => { c.style.display = (ocultar && !c.classList.contains('selected')) ? 'none' : ''; });
+  box.dataset.oculto = ocultar ? '1' : '';
+  let aviso = document.getElementById(pre+'-esp-aviso');
+  if(!aviso){ aviso = document.createElement('div'); aviso.id = pre+'-esp-aviso'; aviso.style.cssText = 'font-size:12.5px; margin-top:6px;'; box.insertAdjacentElement('afterend', aviso); }
+  const nSel = box.querySelectorAll('.chip-opt.selected').length;
+  aviso.innerHTML = (nSel ? '' : '<span style="color:var(--ink-dim);">Nenhuma marcada. </span>') + `<a href="#" onclick="espOcultar('${pre}', ${ocultar ? 'false' : 'true'}); return false;" style="color:var(--teal);">${ocultar ? '＋ Ver sugestões' : '− Ocultar sugestões'}</a>`;
+}
 function espChipAdd(pre, t){
   const box = document.getElementById(pre+'-esp'); if(!box) return;
   if([...box.children].some(c => c.textContent.toLowerCase() === t.toLowerCase())) return;
@@ -4579,13 +4589,15 @@ function espAdd(pre){
   const el = document.getElementById(pre+'-esp-novo'); if(!el) return;
   el.value.split(',').map(x => x.trim().slice(0,40)).filter(x => x.length >= 3).forEach(t => {
     const ex = [...document.getElementById(pre+'-esp').children].find(c => c.textContent.toLowerCase() === t.toLowerCase());
-    if(ex) ex.classList.add('selected'); else espChipAdd(pre, t);
+    if(ex){ ex.classList.add('selected'); ex.style.display = ''; } else espChipAdd(pre, t);
   });
   el.value = '';
+  espOcultar(pre, (document.getElementById(pre+'-esp')||{dataset:{}}).dataset.oculto === '1');
 }
 function chipsBuscaPerfil(pre, u){
   chipsSimples(pre+'-esp', ESPECIALIDADES, u && u.especialidades);
   ((u && u.especialidades) || []).filter(x => !ESPECIALIDADES.includes(x)).forEach(x => espChipAdd(pre, x));
+  espOcultar(pre, true);
   chipsSimples(pre+'-formato', FORMATOS_ATEND, u && u.formatos);
   document.getElementById(pre+'-meta').value = (u && u.metaMensal) || '';
   document.getElementById(pre+'-regime').value = (u && u.regime) || '';
