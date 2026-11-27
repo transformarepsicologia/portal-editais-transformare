@@ -12609,7 +12609,7 @@ async function pregoesUsuarioCarregar(){
   if(error){ box.innerHTML = '<div class="empty-state">Não foi possível carregar agora. Tente novamente em instantes.</div>'; return; }
   _pgDados = data || [];
   try{
-    const { data: mon } = await _sb.from('monitor_pregoes').select('id, cidade_base, uf_base, raio_km, municipios_extra').eq('usuario_id', userProfile.id).limit(1);
+    const { data: mon } = await _sb.from('monitor_pregoes').select('id, cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp').eq('usuario_id', userProfile.id).limit(1);
     _pgMon = (mon && mon[0]) || null; _pgExtraNomes = {};
     const ids = (_pgMon && _pgMon.municipios_extra) || [];
     if(ids.length){ const { data: ms } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').in('codigo_ibge', ids); (ms||[]).forEach(m => _pgExtraNomes[m.codigo_ibge] = m.nome + '/' + m.uf); }
@@ -12619,22 +12619,54 @@ async function pregoesUsuarioCarregar(){
 let _pgMon = null, _pgExtraNomes = {}, _pgBuscaRes = [];
 function pregoesCidadesHTML(){
   if(!_pgMon) return '';
-  const base = _pgMon.cidade_base ? `<div style="font-size:13px; color:var(--ink-muted);">Cidade-base: <b style="color:var(--ink);">${esc(_pgMon.cidade_base)}/${esc(_pgMon.uf_base||'')}</b>, com prioridade num raio de ${esc(_pgMon.raio_km||30)} km.</div>` : '';
+  const base = _pgMon.cidade_base ? `${esc(_pgMon.cidade_base)}/${esc(_pgMon.uf_base||'')}` : 'não definida';
   const chips = (_pgMon.municipios_extra||[]).map(id => `<span class="badge" style="background:rgba(236,72,153,.14); color:#be185d; margin:2px 4px 2px 0;">${esc(_pgExtraNomes[id] || id)} <a href="#" onclick="pregoesCidadeTirar(${id}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`).join('');
-  return `<details class="panel" style="margin-bottom:12px;"><summary style="cursor:pointer; font-weight:700;">📍 Cidades prioritárias</summary>
-    <div style="margin-top:8px;">${base}
-      <div style="font-size:12.5px; color:var(--ink-dim); margin:6px 0;">Os pregões dessas cidades são buscados com prioridade e aparecem primeiro. Adicione outras cidades onde você atende.</div>
+  return `<details class="panel" style="margin-bottom:12px;"><summary style="cursor:pointer; font-weight:700;">⚙ Minha busca</summary>
+    <div style="margin-top:8px; font-size:13px;">
+      <div style="margin-bottom:8px;">Cidade-base: <b>${base}</b>, com prioridade num raio de <b>${esc(_pgMon.raio_km||30)} km</b>.</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+        <label style="font-size:12.5px;">Estados (vazio = Brasil todo)<input type="text" id="pg-pref-ufs" value="${esc((_pgMon.ufs||[]).join(', '))}" placeholder="RS, SC"></label>
+        <label style="font-size:12.5px;">Raio prioritário (km)<input type="number" id="pg-pref-raio" value="${esc(_pgMon.raio_km||30)}" min="5" max="100"></label>
+      </div>
+      <label style="font-size:12.5px; display:flex; gap:6px; align-items:center; margin-bottom:8px;"><input type="checkbox" id="pg-pref-meepp"${_pgMon.so_me_epp?' checked':''}> Mostrar só pregões exclusivos para ME/EPP</label>
+      <button type="button" class="btn-primary" onclick="pregoesPrefSalvar()">Salvar</button>
+      <div style="font-weight:600; margin:14px 0 4px;">📍 Cidades prioritárias extras</div>
+      <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:6px;">Os pregões dessas cidades são buscados com prioridade e aparecem primeiro. A cidade-base também pode ser trocada pela busca abaixo.</div>
       <div style="margin-bottom:6px;">${chips || '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhuma cidade extra marcada.</span>'}</div>
       <div style="display:flex; gap:6px;"><input type="text" id="pg-cidade-q" placeholder="Digite o nome da cidade" style="flex:1;" onkeydown="if(event.key==='Enter'){pregoesCidadeBuscar(); return false;}"><button type="button" class="btn-ghost" onclick="pregoesCidadeBuscar()">Buscar</button></div>
       <div id="pg-cidade-res" style="margin-top:6px;"></div>
+      <div style="font-weight:600; margin:14px 0 4px;">✏ Pedir ajuste na busca</div>
+      <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:6px;">Os termos que a busca procura são mantidos pela Transformare. Conte o que está vindo demais, o que está faltando ou um assunto novo, e a equipe ajusta.</div>
+      <textarea id="pg-ajuste-txt" rows="3" placeholder="Ex.: quero também pregões de treinamento de lideranças; está vindo muita coisa de assistência social."></textarea>
+      <div style="margin-top:6px;"><button type="button" class="btn-ghost" onclick="pregoesAjustePedir()">Enviar pedido</button></div>
     </div></details>`;
+}
+async function pregoesPrefSalvar(){
+  const ufs = ((document.getElementById('pg-pref-ufs')||{}).value || '').split(/[,\s]+/).map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]{2}$/.test(x));
+  const raio = parseInt((document.getElementById('pg-pref-raio')||{}).value, 10) || 30;
+  const me = !!(document.getElementById('pg-pref-meepp')||{}).checked;
+  const { error } = await _sb.rpc('definir_preferencias_pregoes', {p_ufs: ufs, p_raio: raio, p_so_me_epp: me});
+  if(error){ toast('Não foi possível salvar.'); return; }
+  toast('Busca atualizada. A mudança vale a partir da próxima rodada.'); pregoesUsuarioCarregar();
+}
+async function pregoesAjustePedir(){
+  const t = ((document.getElementById('pg-ajuste-txt')||{}).value || '').trim();
+  if(t.length < 3){ toast('Escreva o que você quer ajustar.'); return; }
+  const { error } = await _sb.rpc('pedir_ajuste_pregoes', {p_texto: t});
+  if(error){ toast('Não foi possível enviar agora.'); return; }
+  document.getElementById('pg-ajuste-txt').value = ''; toast('Pedido enviado para a equipe da Transformare.');
+}
+async function pregoesCidadeBase(id){
+  const { error } = await _sb.rpc('definir_cidade_base_pregoes', {p_ibge: id});
+  if(error){ toast('Não foi possível trocar a cidade-base.'); return; }
+  toast('Cidade-base atualizada.'); pregoesUsuarioCarregar();
 }
 async function pregoesCidadeBuscar(){
   const t = (document.getElementById('pg-cidade-q')||{}).value || ''; const box = document.getElementById('pg-cidade-res'); if(!box) return;
   const nn = t.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); if(nn.length < 3){ box.innerHTML = '<span style="font-size:12.5px;">Digite pelo menos 3 letras.</span>'; return; }
   const { data } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').ilike('nome_norm', nn + '%').order('nome').limit(12);
   _pgBuscaRes = data || [];
-  box.innerHTML = _pgBuscaRes.length ? _pgBuscaRes.map(m => `<button type="button" class="btn-ghost" style="padding:4px 10px; font-size:12.5px; margin:2px 4px 2px 0;" onclick="pregoesCidadeAdd(${m.codigo_ibge})">+ ${esc(m.nome)}/${esc(m.uf)}</button>`).join('') : '<span style="font-size:12.5px;">Nenhuma cidade encontrada.</span>';
+  box.innerHTML = _pgBuscaRes.length ? _pgBuscaRes.map(m => `<div style="display:flex; gap:6px; align-items:center; margin:3px 0; font-size:13px;"><span style="flex:1;">${esc(m.nome)}/${esc(m.uf)}</span><button type="button" class="btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="pregoesCidadeAdd(${m.codigo_ibge})">+ Prioritária</button><button type="button" class="btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="pregoesCidadeBase(${m.codigo_ibge})">Cidade-base</button></div>`).join('') : '<span style="font-size:12.5px;">Nenhuma cidade encontrada.</span>';
 }
 async function _pregoesCidadesSalvar(ids){
   const { error } = await _sb.rpc('definir_cidades_prioritarias', {p_ids: ids});
@@ -12665,17 +12697,18 @@ async function pregaoNota(id){
 }
 
 // ---- ADM ----
-let _pgAdminPregoes = [], _pgAdminMon = 'todos';
+let _pgAdminPregoes = [], _pgAdminMon = 'todos', _pgAdminPedidos = [];
 async function pregoesAdminCarregar(){
   const box = document.getElementById('pregoes-admin'); if(!box || !_sb) return;
   box.innerHTML = '<div class="empty-state">Carregando…</div>';
-  const [m, p, u] = await Promise.all([
+  const [m, p, u, ped] = await Promise.all([
     _sb.from('monitor_pregoes').select('*').order('id'),
     _sb.from('pregoes_monitorados').select('*').order('prazo', {ascending:true}).limit(1000),
-    _sb.from('usuarios_perfil').select('id, nome, email').order('nome').limit(500),
+    _sb.from('usuarios_perfil').select('id, nome, email, cidade, uf, profs').order('nome').limit(500),
+    _sb.from('pedidos_ajuste_pregoes').select('*').eq('atendido', false).order('criado_em', {ascending:false}).limit(50),
   ]);
   if(m.error || p.error){ box.innerHTML = '<div class="empty-state">Erro ao carregar os pregões.</div>'; return; }
-  _pgAdminMonitores = m.data || []; _pgAdminUsuarios = u.data || [];
+  _pgAdminMonitores = m.data || []; _pgAdminUsuarios = u.data || []; _pgAdminPedidos = (ped && ped.data) || [];
   const nomeMon = {}; _pgAdminMonitores.forEach(x => nomeMon[x.id] = x.nome);
   _pgAdminPregoes = (p.data || []).map(x => Object.assign(x, {_cliente: nomeMon[x.monitor_id]}));
   pregoesAdminRender();
@@ -12707,13 +12740,15 @@ function pregoesAdminRender(){
           <label><input type="checkbox" id="pgm-meepp-${m.id}"${m.so_me_epp?' checked':''}> Só exclusivos ME/EPP</label>
           <label><input type="checkbox" id="pgm-ativo-${m.id}"${m.ativo?' checked':''}> Monitor ativo</label>
         </div>
-        <div><button type="button" class="btn-primary" onclick="pregoesMonitorSalvar(${m.id})">Salvar monitor</button></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;"><button type="button" class="btn-primary" onclick="pregoesMonitorSalvar(${m.id})">Salvar monitor</button><button type="button" class="btn-ghost" onclick="pregoesPreencherCadastro(${m.id})" title="Preenche cidade-base, UF e palavras-chave sugeridas a partir do cadastro da conta escolhida (só preenche o formulário; confira e salve)">↺ Preencher pelo cadastro da conta</button></div>
       </div></details>`;
   }).join('');
   const selMon = `<select onchange="pregoesAdminMonSel(this.value)" style="width:auto; margin-bottom:10px;"><option value="todos">Todos os monitores</option>${_pgAdminMonitores.map(m => `<option value="${m.id}"${String(m.id)===String(_pgAdminMon)?' selected':''}>${esc(m.nome)}</option>`).join('')}</select>`;
   const base = _pgAdminMon === 'todos' ? _pgAdminPregoes : _pgAdminPregoes.filter(x => String(x.monitor_id) === String(_pgAdminMon));
   const lista = _pgFiltrar(base);
-  box.innerHTML = monHTML + `<div style="margin:6px 0 10px;"><button type="button" class="btn-ghost" onclick="pregoesMonitorNovo()">+ Novo monitor</button></div>
+  const nomeDe = id => { const m = _pgAdminMonitores.find(x => x.id === id); return m ? m.nome : 'monitor'; };
+  const pedHTML = _pgAdminPedidos.length ? `<div class="panel" style="margin-bottom:12px; border-color:#f59e0b;"><div style="font-weight:700; margin-bottom:6px;">✏ Pedidos de ajuste das clientes (${_pgAdminPedidos.length})</div>${_pgAdminPedidos.map(x => `<div style="padding:6px 0; border-top:1px solid var(--border-soft); font-size:13px;"><div style="color:var(--ink-dim); font-size:12px;">${esc(nomeDe(x.monitor_id))} · ${esc(_pgDH(x.criado_em))}</div><div style="overflow-wrap:anywhere;">${esc(x.texto)}</div><button type="button" class="btn-ghost" style="padding:4px 10px; font-size:12px; margin-top:4px;" onclick="pregoesPedidoOk(${x.id})">Marcar como atendido</button></div>`).join('')}</div>` : '';
+  box.innerHTML = pedHTML + monHTML + `<div style="margin:6px 0 10px;"><button type="button" class="btn-ghost" onclick="pregoesMonitorNovo()">+ Novo monitor</button></div>
     <div class="section-title" style="font-size:15px; margin-top:14px;">Pregões encontrados</div>
     <p class="section-sub">A busca roda sozinha a cada 10 minutos. Estados pequenos terminam rápido e a rodada segue para o próximo; os grandes (SP, MG…) continuam de onde pararam. O Brasil todo fecha o ciclo em cerca de meio dia.</p>
     ${selMon}${_pgChips(base, 'pregoesAdminFiltro')}
@@ -12734,11 +12769,45 @@ async function pregoesMonitorSalvar(id){
   await _sb.from('pregoes_monitorados').update({usuario_id: upd.usuario_id}).eq('monitor_id', id);
   toast('Monitor salvo.'); pregoesAdminCarregar();
 }
+
+const _PG_TERMOS = {
+  'Psicologia': ['psicolog','riscos psicossociais','risco psicossocial','nr-1','saude mental','avaliacao psicologica','testes psicologicos','clima organizacional','qualidade de vida no trabalho','assedio','plantao psicologico'],
+  'Psiquiatria': ['psiquiatr','saude mental'],
+  'Fisioterapia': ['fisioterap','reabilitacao'],
+  'Nutrição': ['nutricion','nutricao','consultoria nutricional'],
+  'Fonoaudiologia': ['fonoaudiolog'],
+  'Enfermagem': ['enfermagem','enfermeir'],
+  'Terapia Ocupacional': ['terapia ocupacional','terapeuta ocupacional'],
+  'Odontologia': ['odontolog','dentista'],
+  'Medicina': ['servicos medicos','medico','consulta medica'],
+  'Farmácia': ['farmaceutic','farmacia'],
+  'Biomedicina': ['biomedic'],
+  'Assistência Social': ['assistencia social','assistente social'],
+};
+function pregoesPreencherCadastro(id){
+  const uid = (document.getElementById('pgm-user-'+id)||{}).value;
+  const u = _pgAdminUsuarios.find(x => x.id === uid);
+  if(!u){ toast('Escolha primeiro a conta da cliente no seletor acima.'); return; }
+  const set = (k, v) => { const el = document.getElementById(k+'-'+id); if(el) el.value = v; };
+  if(u.cidade) set('pgm-cidade', u.cidade);
+  if(u.uf) set('pgm-ufbase', String(u.uf).toUpperCase());
+  const termos = []; (u.profs||[]).forEach(pf => (_PG_TERMOS[pf]||[]).forEach(t => { if(!termos.includes(t)) termos.push(t); }));
+  if(termos.length) set('pgm-chaves', termos.join(', '));
+  const excl = ['veterinar','reagente']; if((u.profs||[]).includes('Psicologia') && !(u.profs||[]).includes('Odontologia')) excl.push('odontolog','medicamento','laboratorio');
+  set('pgm-excl', excl.join(', '));
+  toast('Formulário preenchido pelo cadastro. Confira e clique em Salvar monitor.');
+}
+async function pregoesPedidoOk(id){
+  const { error } = await _sb.from('pedidos_ajuste_pregoes').update({atendido:true}).eq('id', id);
+  if(error){ toast('Não foi possível atualizar.'); return; }
+  _pgAdminPedidos = _pgAdminPedidos.filter(x => x.id !== id); pregoesAdminRender();
+}
 async function pregoesMonitorNovo(){
   const nome = prompt('Nome do novo monitor (ex.: nome da cliente):'); if(!nome) return;
-  const { error } = await _sb.from('monitor_pregoes').insert({nome: nome.trim(), palavras_chave: []});
+  const { data, error } = await _sb.from('monitor_pregoes').insert({nome: nome.trim(), palavras_chave: []}).select('id').single();
   if(error){ toast('Não foi possível criar.'); return; }
-  pregoesAdminCarregar();
+  toast('Monitor criado. Escolha a conta e use "Preencher pelo cadastro da conta".');
+  await pregoesAdminCarregar();
 }
 function adminTab(nome){
   adminTabAtual = nome;
