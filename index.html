@@ -3894,7 +3894,6 @@ function nav(view){
   if(view === 'cadastro') iniciarCaptchaCadastro();
   if(view === 'editais') applyFilters();
   if(['favoritos','alertas'].includes(view)) aplicarGateCadastro(view);
-  if(view === 'minha-conta') setTimeout(pregoesAtalho, 150);
   if(view === 'pregoes') pregoesUsuarioCarregar();
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
@@ -5301,7 +5300,6 @@ function renderMinhaConta(){
         <span class="ca-seta" aria-hidden="true">›</span>
       </button>
       ${certCardHTML()}
-      <span id="pregoes-atalho"></span>
     </div>
     <div class="account-grid">
       <div>
@@ -12624,15 +12622,6 @@ function _pgChips(lista, fn){
   const cont = {abertos: lista.filter(x => aberto(x) && !['descartado','encerrado'].includes(x.status)).length, interesse: lista.filter(x => ['interesse','participando'].includes(x.status)).length, descartados: lista.filter(x => x.status==='descartado').length, encerrados: lista.filter(x => !aberto(x)).length, todos: lista.length};
   const rot = {abertos:'Abertos', interesse:'Com interesse', descartados:'Descartados', encerrados:'Encerrados', todos:'Todos'};
   return `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">${Object.keys(rot).map(k => `<button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px;${_pgFiltro===k?' border-color:var(--teal); color:var(--teal); font-weight:700;':''}" onclick="${fn}('${k}')">${rot[k]} (${cont[k]})</button>`).join('')}</div>`;
-}
-async function pregoesAtalho(){
-  const el = document.getElementById('pregoes-atalho'); if(!el || !_sb || !userProfile) return;
-  try{
-    const { data } = await _sb.from('pregoes_monitorados').select('id, status, prazo').eq('usuario_id', userProfile.id);
-    if(!data || !data.length){ const { data: m } = await _sb.from('monitor_pregoes').select('id').eq('usuario_id', userProfile.id).limit(1); if(!m || !m.length) return; }
-    const ag = Date.now(); const novos = (data||[]).filter(x => x.status==='novo' && (!x.prazo || new Date(x.prazo).getTime() >= ag)).length;
-    el.outerHTML = `<button type="button" class="conta-atalho" onclick="nav('pregoes')"><span class="ca-ico" aria-hidden="true">🏷</span><span class="ca-txt"><strong>Minha busca de pregão</strong><small>${novos ? novos + ' novo(s) · ' : ''}Onde e o que buscamos para você</small></span><span class="ca-seta" aria-hidden="true">›</span></button>`;
-  }catch(e){}
 }
 async function perfilPregaoBloco(){
   const el = document.getElementById('perfil-pregao-bloco'); if(!el) return;
