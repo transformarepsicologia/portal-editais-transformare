@@ -5479,10 +5479,48 @@ function renderMinhaConta(){
 // Aderentes da Minha conta: credenciamento e pregão juntos, com botões para separar.
 let _contaAd = [], _contaAdTipo = '';
 function contaTipoAderentes(v){ _contaAdTipo = v; contaAderentesRender(); }
+/* Editais que o usuário tirou da própria lista de aderentes: 'x' = dispensado, 'l' = ver mais tarde. Só vale para a lista da Minha conta. */
+let _adEst = {}, _adEstUser = null;
+async function adEstCarregar(){
+  const uid = userProfile && userProfile.id; if(!uid) return;
+  _adEstUser = uid; _adEst = {};
+  try{
+    if(_sb){ const { data } = await _sb.from('aderentes_dispensados').select('edital_key, estado').eq('user_id', uid); (data || []).forEach(r => _adEst[r.edital_key] = r.estado); }
+    else _adEst = (await storeGet(ukey('aderentesEstado'))) || {};
+  }catch(e){}
+}
+async function adMarcar(id, estado){
+  const k = String(id), uid = userProfile && userProfile.id; if(!uid) return;
+  if(estado) _adEst[k] = estado; else delete _adEst[k];
+  if(_sb){
+    if(estado) await _sb.from('aderentes_dispensados').upsert({ user_id: uid, edital_key: k, estado });
+    else await _sb.from('aderentes_dispensados').delete().eq('user_id', uid).eq('edital_key', k);
+  } else await storeSet(ukey('aderentesEstado'), _adEst);
+  toast(estado === 'x' ? 'Edital retirado da sua lista de aderentes.' : estado === 'l' ? 'Guardado em "Ver mais tarde".' : 'Edital de volta à lista.');
+  contaAderentesRender();
+}
+function adBarraHTML(id){
+  return `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;" onclick="event.stopPropagation()"><button type="button" class="btn-ghost" onclick="adMarcar(${id}, 'l')">Ver mais tarde</button><button type="button" class="btn-ghost" style="border-color:var(--coral); color:var(--coral);" onclick="adMarcar(${id}, 'x')">Excluir da lista</button></div>`;
+}
+function adOcultosRender(box, ocultos){
+  let el = document.getElementById('conta-aderentes-ocultos');
+  if(!el){ el = document.createElement('div'); el.id = 'conta-aderentes-ocultos'; box.insertAdjacentElement('afterend', el); }
+  const grupo = (est, titulo) => {
+    const l = ocultos.filter(x => _adEst[String(x.o.id)] === est); if(!l.length) return '';
+    return `<details style="margin-top:12px;"><summary style="cursor:pointer; font-weight:700; font-size:13.5px;">${titulo} (${l.length})</summary><div style="margin-top:6px;">` + l.map(({o}) =>
+      `<div style="display:flex; gap:8px; align-items:center; padding:8px 0; border-top:1px solid var(--border-soft); font-size:13px;"><div style="flex:1; min-width:0; overflow-wrap:anywhere;"><b>${esc(o.orgao || '')}</b><div style="color:var(--ink-dim); font-size:12px;">${esc(String(o.objeto || o.edital || '').slice(0,110))}</div></div>` +
+      (est === 'l' ? `<button type="button" class="btn-ghost" style="flex:0 0 auto;" onclick="adMarcar(${o.id}, 'x')">Excluir</button>` : '') +
+      `<button type="button" class="btn-ghost" style="flex:0 0 auto;" onclick="adMarcar(${o.id}, '')">Voltar à lista</button></div>`).join('') + '</div></details>';
+  };
+  el.innerHTML = grupo('l', '🕒 Ver mais tarde') + grupo('x', '🗑 Excluídos da lista');
+}
 function contaAderentesRender(){
   const adBox = document.getElementById('conta-aderentes'); if(!adBox) return;
+  if(_adEstUser !== (userProfile && userProfile.id)){ adEstCarregar().then(contaAderentesRender); return; }
   const pro = ehPro();
-  const altas = _contaAd.filter(x=>x.ad.pct >= 70 && (pro || x.o.ehPregao));
+  const altasTodas = _contaAd.filter(x=>x.ad.pct >= 70 && (pro || x.o.ehPregao));
+  const altas = altasTodas.filter(x => !_adEst[String(x.o.id)]);
+  adOcultosRender(adBox, altasTodas.filter(x => _adEst[String(x.o.id)]));
   const nP = altas.filter(x=>x.o.ehPregao).length, nC = altas.length - nP;
   const chips = document.getElementById('conta-aderentes-chips');
   if(chips){
@@ -5504,6 +5542,7 @@ function contaAderentesRender(){
   lista.slice(0,20).forEach(({o, ad})=>{
     const card = renderCard(o);
     inserirNotaNoCard(card, ad, o);
+    card.insertAdjacentHTML('beforeend', adBarraHTML(o.id));
     adBox.appendChild(card);
   });
   if(lista.length>20 && mais) mais.textContent = `Mostrando 20 de ${lista.length}.`;
