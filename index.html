@@ -1953,6 +1953,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   <button class="back-link" id="perfil-voltar" onclick="voltarDoPerfil()">← Voltar à minha conta</button>
   <div class="page-head" style="padding-top:0;"><span class="eyebrow">Minha conta</span><h2>Editar perfil</h2></div>
   <div class="form-card" style="max-width:560px;">
+    <div style="margin:18px 0 10px; padding-top:12px; border-top:1px solid var(--border-soft);"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Perguntas gerais</div><div style="font-size:12px; color:var(--ink-dim); margin-top:2px;">Servem para todos os editais: credenciamento e pregão.</div></div>
     <div class="form-row"><label>E-mail (não pode ser alterado)</label><input type="email" id="perfil-email" disabled></div>
     <div class="two-col">
       <div class="form-row"><label>Nome</label><input type="text" id="perfil-nome"></div>
@@ -1964,29 +1965,27 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     </div>
     <div class="form-row"><label>Profissão</label><div class="chip-select" id="perfil-prof"></div>
       <input type="text" id="perfil-prof-outra" maxlength="80" placeholder="Não encontrou a sua? Escreva aqui sua profissão" style="margin-top:8px;"></div>
-    <div class="form-row"><label>Modalidade de interesse</label><div class="chip-select" id="perfil-mod"></div></div>
-    <div class="two-col">
-      <div class="form-row"><label>Cidade(s) de atendimento</label><input type="text" id="perfil-cidade" placeholder="Ex: Porto Alegre, Canoas, Alvorada (cidades até 20 km)"></div>
-      <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="perfil-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="perfil-rem-tipo" style="flex:1; min-width:0;"><option value="atendimento">por atendimento</option><option value="hora">por hora</option><option value="mensal">por mês</option></select></div></div>
-    </div>
-    <div class="form-row"><label>Abrangência de interesse</label><div class="chip-select" id="perfil-abr"></div></div>
+    <div class="form-row"><label>Cidade(s) de atendimento</label><input type="text" id="perfil-cidade" placeholder="Ex: Porto Alegre, Canoas, Alvorada (cidades até 20 km)"></div>
     <div class="two-col">
       <div class="form-row"><label>Nível de instrução</label><select id="perfil-escolaridade"><option value="">Selecione</option><option value="Graduação">Graduação</option><option value="Especialização">Especialização</option><option value="Residência">Residência</option><option value="Mestrado">Mestrado</option><option value="Doutorado">Doutorado</option></select></div>
       <div class="form-row"><label>Tempo de atuação na profissão (anos)</label><input type="number" id="perfil-anos-exp" min="0" max="60" step="1" placeholder="Ex: 5"></div>
     </div>
-    <div class="form-row"><label>Especialidades / áreas de interesse</label><div class="chip-select" id="perfil-esp"></div></div>
-    <div class="form-row"><label>Formato de atendimento</label><div class="chip-select" id="perfil-formato"></div></div>
-    <div class="two-col">
-      <div class="form-row"><label>Meta de ganho mensal (análise financeira)</label><input type="number" id="perfil-meta" min="0" step="100" placeholder="R$ por mês"></div>
-      <div class="form-row"><label>Como recebe / regime</label><select id="perfil-regime"><option value="">Selecione</option><option>Autônomo (RPA)</option><option>MEI</option><option>Simples Nacional</option><option>Lucro presumido</option><option>Ainda não defini</option></select></div>
-    </div>
+    <div class="form-row"><label>Como recebe / regime</label><select id="perfil-regime"><option value="">Selecione</option><option>Autônomo (RPA)</option><option>MEI</option><option>Simples Nacional</option><option>Lucro presumido</option><option>Ainda não defini</option></select></div>
     <div class="form-row"><label>Como você atua</label><div class="chip-select" id="perfil-atuacao"></div></div>
     <div id="perfil-pj-box" style="display:none;">
       <div class="form-row"><label>CNPJ</label><div style="display:flex; gap:6px;"><input type="text" id="perfil-cnpj" placeholder="00.000.000/0000-00" inputmode="numeric" maxlength="18" style="flex:1; min-width:0;" oninput="cnpjDigitado('perfil')"><button type="button" class="btn-ghost" onclick="buscarCnpjPerfil('perfil')">Buscar dados</button></div></div>
       <div id="perfil-empresa" class="empresa-box"></div>
       <div id="perfil-respostas"></div>
     </div>
-    <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="saveProfile()">Salvar perfil</button></div>
+    <div style="margin:18px 0 10px; padding-top:12px; border-top:1px solid var(--border-soft);"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Credenciamento</div><div style="font-size:12px; color:var(--ink-dim); margin-top:2px;">Perguntas para os editais de credenciamento.</div></div>
+    <div class="form-row"><label>Modalidade de interesse</label><div class="chip-select" id="perfil-mod"></div></div>
+    <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="perfil-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="perfil-rem-tipo" style="flex:1; min-width:0;"><option value="atendimento">por atendimento</option><option value="hora">por hora</option><option value="mensal">por mês</option></select></div></div>
+    <div class="form-row"><label>Abrangência de interesse</label><div class="chip-select" id="perfil-abr"></div></div>
+    <div class="form-row"><label>Especialidades / áreas de interesse</label><div class="chip-select" id="perfil-esp"></div></div>
+    <div class="form-row"><label>Formato de atendimento</label><div class="chip-select" id="perfil-formato"></div></div>
+    <div class="form-row"><label>Meta de ganho mensal (análise financeira)</label><input type="number" id="perfil-meta" min="0" step="100" placeholder="R$ por mês"></div>
+    <div id="perfil-pregao-bloco"></div>
+<div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="saveProfile()">Salvar perfil</button></div>
   </div>
   <div class="form-card" style="max-width:560px; margin-top:18px;">
     <h4 style="font-family:var(--font-display); margin:0 0 14px;">Alterar senha</h4>
@@ -7954,6 +7953,7 @@ function perfilRespostasHTML(){
 function renderPerfil(){
   const u = userProfile; if(!u) return;
   { const pr = document.getElementById('perfil-respostas'); if(pr) pr.innerHTML = perfilRespostasHTML(); }
+  perfilPregaoBloco();
   document.getElementById('perfil-email').value = u.email;
   document.getElementById('perfil-nome').value = u.nome || '';
   document.getElementById('perfil-whats').value = u.whatsapp || '';
@@ -12609,6 +12609,26 @@ async function pregoesAtalho(){
     if(!data || !data.length){ const { data: m } = await _sb.from('monitor_pregoes').select('id').eq('usuario_id', userProfile.id).limit(1); if(!m || !m.length) return; }
     const ag = Date.now(); const novos = (data||[]).filter(x => x.status==='novo' && (!x.prazo || new Date(x.prazo).getTime() >= ag)).length;
     el.outerHTML = `<button type="button" class="conta-atalho" onclick="nav('pregoes')"><span class="ca-ico" aria-hidden="true">🏷</span><span class="ca-txt"><strong>Meus Pregões</strong><small>${novos ? novos + ' aberto(s) para você ver' : 'Pregões abertos monitorados para você'}</small></span><span class="ca-seta" aria-hidden="true">›</span></button>`;
+  }catch(e){}
+}
+async function perfilPregaoBloco(){
+  const el = document.getElementById('perfil-pregao-bloco'); if(!el) return;
+  el.innerHTML = '';
+  if(!_sb || !userProfile) return;
+  try{
+    const { data: mon } = await _sb.from('monitor_pregoes').select('cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp, modalidades, palavras_chave, ativo').eq('usuario_id', userProfile.id).limit(1);
+    const m = mon && mon[0]; if(!m) return;   // pregão ainda não liberado: o bloco não aparece
+    const tipos = (m.modalidades || []).map(c => c === 6 ? 'eletrônico' : c === 7 ? 'presencial' : '').filter(Boolean).join(' e ') || '—';
+    el.innerHTML = `<div style="margin:18px 0 10px; padding-top:12px; border-top:1px solid var(--border-soft);"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">🏷 Pregão</div><div style="font-size:12px; color:var(--ink-dim); margin-top:2px;">Liberado para você pela Transformare. Estas respostas definem onde e como buscamos pregões.</div></div>
+      <div style="font-size:13px; line-height:1.7;">
+        <div><span style="color:var(--ink-dim);">Cidade-base:</span> <b>${m.cidade_base ? esc(m.cidade_base) + '/' + esc(m.uf_base || '') : 'não definida'}</b>, raio de <b>${esc(m.raio_km || 30)} km</b></div>
+        <div><span style="color:var(--ink-dim);">Tipo de pregão:</span> <b>${esc(tipos)}</b></div>
+        <div><span style="color:var(--ink-dim);">Exclusivos ME/EPP:</span> <b>${m.so_me_epp ? 'só os exclusivos' : 'todos os pregões'}</b></div>
+        <div><span style="color:var(--ink-dim);">Estados:</span> <b>${(m.ufs || []).length ? esc(m.ufs.join(', ')) : 'todos'}</b></div>
+        <div><span style="color:var(--ink-dim);">Termos buscados:</span> <b>${esc((m.palavras_chave || []).join(', ') || '—')}</b></div>
+      </div>
+      <button type="button" class="btn-ghost" style="margin-top:10px;" onclick="nav('pregoes')">Ajustar minha busca de pregão</button>
+      <p style="font-size:11.5px; color:var(--ink-dim); margin:8px 0 0;">Seu regime (ME/EPP/MEI) e se você tem CNPJ, nas perguntas gerais acima, também entram na nota de aderência dos pregões.</p>`;
   }catch(e){}
 }
 async function pregoesUsuarioCarregar(){
