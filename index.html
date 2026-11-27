@@ -5981,6 +5981,33 @@ function renderOutrosEditais(id, el){
   wrap.innerHTML = `<button class="btn-ghost" onclick="window.scrollTo({top:0, behavior:'smooth'})">↑ Voltar ao topo</button>`;
   el.appendChild(wrap);
 }
+const REM_VISIVEIS = 4;
+function remuneracaoPainelHTML(o){
+  const lista = (o.remuneracao || []).filter(Boolean);
+  const nInf = v => !v || /^n[ãa]o informad/i.test(String(v).trim());
+  const temFin = !nInf(o.valorAtendimento) || !nInf(o.volume);
+  if(!lista.length && !temFin) return '';   // sem informação de remuneração: o painel não aparece
+  const item = (r, extra) => `<li class="rem-item" style="${extra ? 'display:none; ' : ''}background:var(--bg-elevated); border:1px solid var(--border-soft); border-radius:10px; padding:9px 12px; margin-bottom:6px; font-size:13px; color:var(--ink);">💰 ${r}</li>`;
+  const muitos = lista.length > REM_VISIVEIS;
+  return `<div class="panel rem-panel" id="rem-panel" style="margin-top:14px;">
+    <h4><span class="dot"></span>Remuneração${muitos ? ` <span style="font-weight:500; color:var(--ink-dim); font-size:12.5px;">(${lista.length} valores)</span>` : ''}</h4>
+    ${lista.length ? `<ul style="list-style:none; padding:0; margin:0 0 ${muitos ? '6px' : '14px'};">${lista.map((r,k) => item(r, muitos && k >= REM_VISIVEIS)).join('')}</ul>` : ''}
+    ${muitos ? `<button type="button" class="btn-ghost" id="rem-toggle" style="margin:0 0 14px;" onclick="remuneracaoAlternar()">Ver todos os ${lista.length} valores</button>` : ''}
+    ${temFin ? `<div class="fin-grid">
+      ${!nInf(o.valorAtendimento) ? `<div class="fin-item"><div class="k">Por atendimento</div><div class="v">${o.valorAtendimento}</div></div>` : ''}
+      ${!nInf(o.volume) ? `<div class="fin-item"><div class="k">Volume estimado</div><div class="v">${o.volume}</div></div>` : ''}
+    </div>` : ''}
+    <p style="font-size:11px; color:var(--ink-dim); margin-top:10px;">Valores estimados a partir do edital — não representam garantia de demanda ou volume de atendimentos.</p>
+  </div>`;
+}
+function remuneracaoAlternar(){
+  const box = document.getElementById('rem-panel'); if(!box) return;
+  const btn = document.getElementById('rem-toggle'); const itens = [...box.querySelectorAll('.rem-item')];
+  const aberto = btn.dataset.aberto === '1';
+  itens.forEach((li,k) => { if(k >= REM_VISIVEIS) li.style.display = aberto ? 'none' : ''; });
+  btn.dataset.aberto = aberto ? '' : '1';
+  btn.textContent = aberto ? 'Ver todos os ' + itens.length + ' valores' : 'Recolher';
+}
 function openDetalhe(id){
   currentDetailId = id;
   const o = oportunidades.find(x=>x.id===id);
@@ -6045,6 +6072,8 @@ function openDetalhe(id){
           </div>
 
         </div>
+
+        ${remuneracaoPainelHTML(o)}
 
         <div class="score-hero ${scoreClass}">
           ${(temIndice && !ehPro()) ? `
@@ -6148,19 +6177,6 @@ function openDetalhe(id){
       </div>
 
       <div>
-        <div class="panel" style="margin-top:0;">
-          <h4><span class="dot"></span>Remuneração</h4>
-          ${(o.remuneracao && o.remuneracao.length) ? `
-          <ul style="list-style:none; padding:0; margin:0 0 14px;">
-            ${o.remuneracao.map(r=>`<li style="background:var(--bg-elevated); border:1px solid var(--border-soft); border-radius:10px; padding:9px 12px; margin-bottom:6px; font-size:13px; color:var(--ink);">💰 ${r}</li>`).join('')}
-          </ul>` : ''}
-          <div class="fin-grid">
-            <div class="fin-item"><div class="k">Por atendimento</div><div class="v">${o.valorAtendimento}</div></div>
-            <div class="fin-item"><div class="k">Volume estimado</div><div class="v">${o.volume}</div></div>
-          </div>
-          <p style="font-size:11px; color:var(--ink-dim); margin-top:10px;">Valores estimados a partir do edital — não representam garantia de demanda ou volume de atendimentos.</p>
-        </div>
-
         ${analiseFinanceiraHTML(o)}
 
         <div class="steps-panel">
