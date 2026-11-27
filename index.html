@@ -12674,7 +12674,7 @@ function pregoesAdminRender(){
   const lista = _pgFiltrar(base);
   box.innerHTML = monHTML + `<div style="margin:6px 0 10px;"><button type="button" class="btn-ghost" onclick="pregoesMonitorNovo()">+ Novo monitor</button></div>
     <div class="section-title" style="font-size:15px; margin-top:14px;">Pregões encontrados</div>
-    <p class="section-sub">A busca roda sozinha a cada 30 minutos, uma UF por vez; o Brasil todo fecha o ciclo em cerca de um dia.</p>
+    <p class="section-sub">A busca roda sozinha a cada 10 minutos. Estados pequenos terminam rápido e a rodada segue para o próximo; os grandes (SP, MG…) continuam de onde pararam. O Brasil todo fecha o ciclo em cerca de meio dia.</p>
     ${selMon}${_pgChips(base, 'pregoesAdminFiltro')}
     ${lista.length ? lista.map(x => _pgCard(x, true)).join('') : '<div class="empty-state">Nada nesta lista ainda.</div>'}`;
 }
