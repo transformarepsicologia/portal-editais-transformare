@@ -1703,7 +1703,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 
 <!-- ===================== MEUS PREGÕES (monitor pessoal) ===================== -->
 <section class="view" id="view-pregoes">
-  <div class="page-head"><span class="eyebrow">Minha área</span><h2>Meus pregões</h2><p>Pregões abertos no PNCP que combinam com o que você atende. A Transformare acompanha com você.</p></div>
+  <div class="page-head"><span class="eyebrow">Minha área</span><h2>Minha busca de pregão</h2><p>Aqui você define onde e o que buscamos. Os pregões encontrados aparecem junto com os credenciamentos, na lista de Editais, com a etiqueta roxa.</p></div>
   <button type="button" class="btn-ghost" onclick="nav('minha-conta')" style="margin-bottom:12px;">← Voltar à minha conta</button>
   <div id="pregoes-usuario"></div>
 </section>
@@ -12612,7 +12612,7 @@ async function pregoesAtalho(){
     const { data } = await _sb.from('pregoes_monitorados').select('id, status, prazo').eq('usuario_id', userProfile.id);
     if(!data || !data.length){ const { data: m } = await _sb.from('monitor_pregoes').select('id').eq('usuario_id', userProfile.id).limit(1); if(!m || !m.length) return; }
     const ag = Date.now(); const novos = (data||[]).filter(x => x.status==='novo' && (!x.prazo || new Date(x.prazo).getTime() >= ag)).length;
-    el.outerHTML = `<button type="button" class="conta-atalho" onclick="nav('pregoes')"><span class="ca-ico" aria-hidden="true">🏷</span><span class="ca-txt"><strong>Meus Pregões</strong><small>${novos ? novos + ' aberto(s) para você ver' : 'Pregões abertos monitorados para você'}</small></span><span class="ca-seta" aria-hidden="true">›</span></button>`;
+    el.outerHTML = `<button type="button" class="conta-atalho" onclick="nav('pregoes')"><span class="ca-ico" aria-hidden="true">🏷</span><span class="ca-txt"><strong>Minha busca de pregão</strong><small>${novos ? novos + ' novo(s) na lista de Editais · ' : ''}Onde e o que buscamos para você</small></span><span class="ca-seta" aria-hidden="true">›</span></button>`;
   }catch(e){}
 }
 async function perfilPregaoBloco(){
@@ -12726,13 +12726,22 @@ function pregoesUsuarioFiltro(f){ _pgFiltro = f; pregoesUsuarioRender(); }
 function pregoesUsuarioRender(){
   const box = document.getElementById('pregoes-usuario'); if(!box) return;
   const lista = _pgFiltrar(_pgDados).slice().sort((a,b) => (b.prioritario?1:0) - (a.prioritario?1:0));
-  box.innerHTML = pregoesCidadesHTML() + _pgChips(_pgDados, 'pregoesUsuarioFiltro') + (lista.length ? lista.map(x => _pgCard(x, false)).join('') : '<div class="empty-state">Nenhum pregão nesta lista por enquanto. A busca no PNCP roda todos os dias e novos pregões aparecem aqui.</div>');
+  const nAb = _pgFiltrar(_pgDados).length;
+  box.innerHTML = `<button type="button" class="btn-primary" style="width:100%; margin-bottom:12px;" onclick="pregoesVerNaLista()">Ver meus ${nAb} pregão(ões) na lista de Editais</button>` + pregoesCidadesHTML().replace('<details class="panel"','<details open class="panel"') + '<details class="panel" style="margin-top:12px;"><summary style="cursor:pointer; font-weight:700;">Ver lista por status (novo, interesse, descartado)</summary><div style="margin-top:10px;">' + _pgChips(_pgDados, 'pregoesUsuarioFiltro') + (lista.length ? lista.map(x => _pgCard(x, false)).join('') : '<div class="empty-state">Nenhum pregão nesta lista por enquanto. A busca no PNCP roda todos os dias e novos pregões aparecem aqui.</div>') + '</div></details>';
+}
+function pregoesVerNaLista(){ _pgChipTipo = 'pregao'; nav('editais'); applyFilters(); }
+async function pgFavoritarInteresse(idPregao){
+  const oid = 1200000 + idPregao;
+  if(favoritos.has(oid)) return;
+  favoritos.add(oid);
+  try{ await storeSet(ukey('favoritos'), [...favoritos]); registrarAtividade(favoritos.size); }catch(e){}
 }
 async function pregaoMarcar(id, status, admin){
   if(!_sb) return;
   const { error } = await _sb.from('pregoes_monitorados').update({status}).eq('id', id);
   if(error){ toast('Não foi possível salvar.'); return; }
   const alvo = (admin ? _pgAdminPregoes : _pgDados).find(x => x.id === id); if(alvo) alvo.status = status;
+  if(!admin && status === 'interesse') await pgFavoritarInteresse(id);
   if(admin) pregoesAdminRender(); else pregoesUsuarioRender();
 }
 async function pregaoNota(id){
@@ -14377,6 +14386,7 @@ async function pregaoCatalogoMarcar(id, status){
   const { error } = await _sb.from('pregoes_monitorados').update({status}).eq('id', o.pregao.id);
   if(error){ toast('Não foi possível salvar.'); return; }
   o.pregao.status = status;
+  if(status === 'interesse') await pgFavoritarInteresse(o.pregao.id);
   if(status === 'descartado'){ toast('Pregão descartado.'); await anexarPregoes(); nav('editais'); return; }
   toast(status === 'interesse' ? 'Marcado como interesse.' : 'Marcação desfeita.'); openDetalhePregao(o);
 }
