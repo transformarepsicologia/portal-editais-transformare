@@ -12609,7 +12609,7 @@ async function pregoesUsuarioCarregar(){
   if(error){ box.innerHTML = '<div class="empty-state">Não foi possível carregar agora. Tente novamente em instantes.</div>'; return; }
   _pgDados = data || [];
   try{
-    const { data: mon } = await _sb.from('monitor_pregoes').select('id, cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp').eq('usuario_id', userProfile.id).limit(1);
+    const { data: mon } = await _sb.from('monitor_pregoes').select('id, cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp, modalidades, palavras_chave, palavras_excluir').eq('usuario_id', userProfile.id).limit(1);
     _pgMon = (mon && mon[0]) || null; _pgExtraNomes = {};
     const ids = (_pgMon && _pgMon.municipios_extra) || [];
     if(ids.length){ const { data: ms } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').in('codigo_ibge', ids); (ms||[]).forEach(m => _pgExtraNomes[m.codigo_ibge] = m.nome + '/' + m.uf); }
@@ -12628,6 +12628,9 @@ function pregoesCidadesHTML(){
         <label style="font-size:12.5px;">Estados (vazio = Brasil todo)<input type="text" id="pg-pref-ufs" value="${esc((_pgMon.ufs||[]).join(', '))}" placeholder="RS, SC"></label>
         <label style="font-size:12.5px;">Raio prioritário (km)<input type="number" id="pg-pref-raio" value="${esc(_pgMon.raio_km||30)}" min="5" max="100"></label>
       </div>
+      <div style="font-size:12.5px; margin-bottom:8px;"><div style="margin-bottom:3px;">Tipo de pregão</div>
+        <label style="display:inline-flex; gap:6px; align-items:center; margin-right:14px;"><input type="checkbox" id="pg-pref-m6"${(_pgMon.modalidades||[6,7]).includes(6)?' checked':''}> Eletrônico (online)</label>
+        <label style="display:inline-flex; gap:6px; align-items:center;"><input type="checkbox" id="pg-pref-m7"${(_pgMon.modalidades||[6,7]).includes(7)?' checked':''}> Presencial</label></div>
       <label style="font-size:12.5px; display:flex; gap:6px; align-items:center; margin-bottom:8px;"><input type="checkbox" id="pg-pref-meepp"${_pgMon.so_me_epp?' checked':''}> Mostrar só pregões exclusivos para ME/EPP</label>
       <button type="button" class="btn-primary" onclick="pregoesPrefSalvar()">Salvar</button>
       <div style="font-weight:600; margin:14px 0 4px;">📍 Cidades prioritárias extras</div>
@@ -12635,6 +12638,10 @@ function pregoesCidadesHTML(){
       <div style="margin-bottom:6px;">${chips || '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhuma cidade extra marcada.</span>'}</div>
       <div style="display:flex; gap:6px;"><input type="text" id="pg-cidade-q" placeholder="Digite o nome da cidade" style="flex:1;" onkeydown="if(event.key==='Enter'){pregoesCidadeBuscar(); return false;}"><button type="button" class="btn-ghost" onclick="pregoesCidadeBuscar()">Buscar</button></div>
       <div id="pg-cidade-res" style="margin-top:6px;"></div>
+      <div style="font-weight:600; margin:14px 0 4px;">🔎 O que a busca procura</div>
+      <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:6px;">Pregões abertos no PNCP cujo texto contenha algum destes termos. Toque em um termo para pedir a retirada dele.</div>
+      <div style="margin-bottom:6px;">${(_pgMon.palavras_chave||[]).length ? (_pgMon.palavras_chave||[]).map(t => `<a href="#" onclick="pregoesTermoPedir('Retirar o termo: ${esc(t).replace(/'/g,'')}'); return false;" class="badge" style="background:rgba(59,130,246,.14); color:#1d4ed8; margin:2px 4px 2px 0; text-decoration:none;">${esc(t)}</a>`).join('') : '<span style="font-size:12.5px; color:var(--ink-dim);">Ainda não configurado pela equipe.</span>'}</div>
+      ${(_pgMon.palavras_excluir||[]).length ? `<div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:6px;">Ignorados quando aparecem: ${esc((_pgMon.palavras_excluir||[]).join(', '))}.</div>` : ''}
       <div style="font-weight:600; margin:14px 0 4px;">✏ Pedir ajuste na busca</div>
       <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:6px;">Os termos que a busca procura são mantidos pela Transformare. Conte o que está vindo demais, o que está faltando ou um assunto novo, e a equipe ajusta.</div>
       <textarea id="pg-ajuste-txt" rows="3" placeholder="Ex.: quero também pregões de treinamento de lideranças; está vindo muita coisa de assistência social."></textarea>
@@ -12645,9 +12652,16 @@ async function pregoesPrefSalvar(){
   const ufs = ((document.getElementById('pg-pref-ufs')||{}).value || '').split(/[,\s]+/).map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]{2}$/.test(x));
   const raio = parseInt((document.getElementById('pg-pref-raio')||{}).value, 10) || 30;
   const me = !!(document.getElementById('pg-pref-meepp')||{}).checked;
+  const mods = []; if((document.getElementById('pg-pref-m6')||{}).checked) mods.push(6); if((document.getElementById('pg-pref-m7')||{}).checked) mods.push(7);
+  if(!mods.length){ toast('Escolha pelo menos um tipo de pregão.'); return; }
   const { error } = await _sb.rpc('definir_preferencias_pregoes', {p_ufs: ufs, p_raio: raio, p_so_me_epp: me});
-  if(error){ toast('Não foi possível salvar.'); return; }
+  const { error: e2 } = await _sb.rpc('definir_modalidades_pregoes', {p_mods: mods});
+  if(error || e2){ toast('Não foi possível salvar.'); return; }
   toast('Busca atualizada. A mudança vale a partir da próxima rodada.'); pregoesUsuarioCarregar();
+}
+function pregoesTermoPedir(txt){
+  const el = document.getElementById('pg-ajuste-txt'); if(!el) return;
+  el.value = txt; el.focus(); el.scrollIntoView({behavior:'smooth', block:'center'});
 }
 async function pregoesAjustePedir(){
   const t = ((document.getElementById('pg-ajuste-txt')||{}).value || '').trim();
