@@ -1987,7 +1987,11 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     </div>
     <div class="form-row"><label>Profissão</label><div class="chip-select" id="perfil-prof"></div>
       <input type="text" id="perfil-prof-outra" maxlength="80" placeholder="Não encontrou a sua? Escreva aqui sua profissão" style="margin-top:8px;"></div>
-    <div class="form-row"><label>Cidade(s) de atendimento</label><input type="text" id="perfil-cidade" placeholder="Ex: Porto Alegre, Canoas, Alvorada (cidades até 20 km)"></div>
+    <div class="form-row"><label>Cidade-base e cidades de referência <span style="font-weight:400; color:var(--ink-dim);">(valem para credenciamento e pregão)</span></label>
+      <input type="hidden" id="perfil-cidade">
+      <div id="perfil-loc-box"></div>
+      <div style="display:flex; gap:6px; margin-top:8px;"><input type="text" id="perfil-loc-q" placeholder="Digite o nome da cidade" style="flex:1; min-width:0;" onkeydown="if(event.key==='Enter'){locBuscar(); return false;}"><button type="button" class="btn-ghost" onclick="locBuscar()">Buscar</button></div>
+      <div id="perfil-loc-res" style="margin-top:6px;"></div></div>
     <div class="two-col">
       <div class="form-row"><label>Nível de instrução</label><select id="perfil-escolaridade"><option value="">Selecione</option><option value="Graduação">Graduação</option><option value="Especialização">Especialização</option><option value="Residência">Residência</option><option value="Mestrado">Mestrado</option><option value="Doutorado">Doutorado</option></select></div>
       <div class="form-row"><label>Tempo de atuação na profissão (anos)</label><input type="number" id="perfil-anos-exp" min="0" max="60" step="1" placeholder="Ex: 5"></div>
@@ -8080,6 +8084,7 @@ function renderPerfil(){
     modBox.appendChild(ch);
   });
   document.getElementById('perfil-cidade').value = u.cidade || '';
+  Promise.resolve(perfilPregaoBloco()).then(locInit);
   document.getElementById('perfil-rem-min').value = u.remMin || '';
   document.getElementById('perfil-rem-tipo').value = u.remTipo || 'atendimento';
   document.getElementById('perfil-escolaridade').value = u.escolaridade || '';
@@ -8115,6 +8120,7 @@ async function saveProfile(){
   if(profOutra){ await enviarSugestaoProfissao(profOutra, u); document.getElementById('perfil-prof-outra').value = ''; }
   await storeSet(ukey('perfilExtra'), extra);
   updateNavCta();
+  if(!(await locSalvarMonitor())) return;
   if(document.getElementById('pg-pref-ufs')){ const ok = await pregoesPrefSalvar(true); if(ok === false) return; }
   toast('Perfil salvo');
   fecharCadastroAqui();
@@ -12747,13 +12753,8 @@ function pregoesCidadesHTML(){
   const termos = _pgTermos.map((t,k) => `<span class="chip-opt selected" style="display:inline-block; margin:2px 4px 2px 0;">${esc(t)} <a href="#" onclick="pregoesTermoTirar(${k}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`).join('');
   return `<div style="font-size:13px;">
       <div class="cad-sub" style="margin-top:0;">Onde buscar</div>
-      <div class="form-row"><label>Cidade-base</label><div style="font-size:13px;"><b>${base}</b> <span style="color:var(--ink-dim);">(troque pela busca de cidades abaixo)</span></div></div>
+      <div style="font-size:12px; color:var(--ink-dim); margin-bottom:10px;">A cidade-base e as cidades de referência ficam em <b>Seus dados</b> e valem também para o credenciamento.</div>
       <div class="form-row"><label>Estados <span style="font-weight:400; color:var(--ink-dim);">(vazio = Brasil todo)</span></label><input type="text" id="pg-pref-ufs" value="${esc((_pgMon.ufs||[]).join(', '))}" placeholder="RS, SC"></div>
-      <div class="form-row"><label>Raio prioritário (km)</label><input type="number" id="pg-pref-raio" value="${esc(_pgMon.raio_km||30)}" min="5" max="100"></div>
-      <div class="form-row"><label>Cidades prioritárias extras</label>
-        <div style="margin-bottom:6px;">${chips || '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhuma cidade extra marcada.</span>'}</div>
-        <div style="display:flex; gap:6px;"><input type="text" id="pg-cidade-q" placeholder="Digite o nome da cidade" style="flex:1;" onkeydown="if(event.key==='Enter'){pregoesCidadeBuscar(); return false;}"><button type="button" class="btn-ghost" onclick="pregoesCidadeBuscar()">Buscar</button></div>
-        <div id="pg-cidade-res" style="margin-top:6px;"></div></div>
       <div class="cad-sub">Tipo de pregão</div>
       <div class="form-row"><label>Forma do pregão</label><div class="chip-select">
         <div class="chip-opt${mods.includes(6)?' selected':''}" id="pg-pref-m6" onclick="this.classList.toggle('selected')">Eletrônico (online)</div>
@@ -12776,7 +12777,7 @@ function pregoesTermoAdd(){
 function pregoesTermoTirar(k){ _pgTermos.splice(k,1); _pregoesTermosRender(); }
 async function pregoesPrefSalvar(silencioso){
   const ufs = ((document.getElementById('pg-pref-ufs')||{}).value || '').split(/[,\s]+/).map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]{2}$/.test(x));
-  const raio = parseInt((document.getElementById('pg-pref-raio')||{}).value, 10) || 30;
+  const raio = parseInt((document.getElementById('pg-pref-raio')||{}).value, 10) || (_pgMon && _pgMon.raio_km) || 30;
   const sel = id => { const e = document.getElementById(id); return !!(e && e.classList.contains('selected')); };
   const me = sel('pg-pref-meepp');
   const mods = []; if(sel('pg-pref-m6')) mods.push(6); if(sel('pg-pref-m7')) mods.push(7);
@@ -12788,6 +12789,53 @@ async function pregoesPrefSalvar(silencioso){
   if(error || e2 || e3){ toast('Não foi possível salvar a busca de pregão.'); return false; }
   if(!silencioso) toast('Busca atualizada. A mudança vale a partir da próxima rodada.');
   _pgTermos = null; pregoesUsuarioCarregar(); return true;
+}
+let _loc = { base:null, extras:[], res:[] };
+function locSync(){
+  const el = document.getElementById('perfil-cidade'); if(el) el.value = [_loc.base, ..._loc.extras].filter(Boolean).map(c => c.nome).join(', ');
+  const box = document.getElementById('perfil-loc-box'); if(!box) return;
+  const chip = (c, base, k) => `<span class="chip-opt selected" style="display:inline-block; margin:2px 4px 2px 0;">${base ? '📍 ' : ''}${esc(c.nome)}${c.uf ? '/' + esc(c.uf) : ''} <a href="#" onclick="locTirar(${base ? -1 : k}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`;
+  box.innerHTML = (_loc.base ? '<div style="font-size:11.5px; color:var(--ink-dim); margin-bottom:2px;">Cidade-base</div>' + chip(_loc.base, true) : '<div style="font-size:12.5px; color:var(--ink-dim);">Cidade-base ainda não definida. Busque abaixo.</div>')
+    + '<div style="font-size:11.5px; color:var(--ink-dim); margin:8px 0 2px;">Cidades de referência</div>'
+    + (_loc.extras.length ? _loc.extras.map((c,k) => chip(c, false, k)).join('') : '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhuma cidade de referência.</span>');
+}
+async function locInit(){
+  const u = userProfile; if(!u) return;
+  _loc = { base:null, extras:[], res:[] };
+  if(_pgMon && _pgMon.cidade_base){
+    _loc.base = { nome:_pgMon.cidade_base, uf:_pgMon.uf_base || '', ibge:null };
+    (_pgMon.municipios_extra || []).forEach(id => { const n = _pgExtraNomes[id] || ''; const m = n.split('/'); _loc.extras.push({ nome:m[0] || String(id), uf:m[1] || '', ibge:id }); });
+    try{ const { data } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').eq('nome', _pgMon.cidade_base).eq('uf', _pgMon.uf_base || '').limit(1); if(data && data[0]) _loc.base.ibge = data[0].codigo_ibge; }catch(e){}
+  } else {
+    const nomes = String(u.cidade || '').split(/[,;\/]/).map(x => x.trim()).filter(Boolean);
+    nomes.forEach((n,k) => { const c = { nome:n, uf:'', ibge:null }; if(k === 0) _loc.base = c; else _loc.extras.push(c); });
+    if(_sb) for(const c of [_loc.base, ..._loc.extras].filter(Boolean)){
+      try{ const nn = c.nome.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); let q = _sb.from('municipios_br').select('codigo_ibge, nome, uf').eq('nome_norm', nn); const { data } = await q.limit(5);
+        const h = (data || []).find(x => x.uf === u.uf) || (data || [])[0]; if(h){ c.ibge = h.codigo_ibge; c.uf = h.uf; c.nome = h.nome; } }catch(e){}
+    }
+  }
+  locSync();
+}
+async function locBuscar(){
+  const t = (document.getElementById('perfil-loc-q')||{}).value || ''; const box = document.getElementById('perfil-loc-res'); if(!box) return;
+  const nn = t.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); if(nn.length < 3){ box.innerHTML = '<span style="font-size:12.5px;">Digite pelo menos 3 letras.</span>'; return; }
+  const { data } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').ilike('nome_norm', nn + '%').order('nome').limit(12);
+  _loc.res = data || [];
+  box.innerHTML = _loc.res.length ? _loc.res.map((m,k) => `<div style="display:flex; gap:6px; align-items:center; margin:3px 0; font-size:13px;"><span style="flex:1;">${esc(m.nome)}/${esc(m.uf)}</span><button type="button" class="btn-ghost" onclick="locEscolher(${k}, true)">Definir como base</button><button type="button" class="btn-ghost" onclick="locEscolher(${k}, false)">+ Referência</button></div>`).join('') : '<span style="font-size:12.5px;">Nenhuma cidade encontrada.</span>';
+}
+function locEscolher(k, base){
+  const m = _loc.res[k]; if(!m) return; const c = { nome:m.nome, uf:m.uf, ibge:m.codigo_ibge };
+  if(base){ if(_loc.base && !_loc.extras.some(x => x.ibge === _loc.base.ibge)) {} _loc.base = c; _loc.extras = _loc.extras.filter(x => x.ibge !== c.ibge); }
+  else if(!(_loc.base && _loc.base.ibge === c.ibge) && !_loc.extras.some(x => x.ibge === c.ibge)) _loc.extras.push(c);
+  document.getElementById('perfil-loc-res').innerHTML = ''; document.getElementById('perfil-loc-q').value = ''; locSync();
+}
+function locTirar(k){ if(k < 0) _loc.base = null; else _loc.extras.splice(k,1); locSync(); }
+async function locSalvarMonitor(){
+  if(!_sb || !_pgMon || _pgMon.ativo === false) return true;
+  if(_loc.base && _loc.base.ibge){ const { error } = await _sb.rpc('definir_cidade_base_pregoes', {p_ibge: _loc.base.ibge}); if(error){ toast('Não foi possível salvar a cidade-base.'); return false; } }
+  const ids = _loc.extras.map(c => c.ibge).filter(Boolean);
+  const { error } = await _sb.rpc('definir_cidades_prioritarias', {p_ids: ids}); if(error){ toast('Não foi possível salvar as cidades de referência.'); return false; }
+  return true;
 }
 function pregoesTermoPedir(txt){
   const el = document.getElementById('pg-ajuste-txt'); if(!el) return;
