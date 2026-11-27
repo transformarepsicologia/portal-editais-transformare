@@ -12559,6 +12559,7 @@ function _pgCard(x, admin){
   return `<div class="panel" style="margin-bottom:10px;">
     <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:4px;">
       <span class="badge">${esc(x.modalidade || 'Pregão')}</span>
+      ${x.prioritario ? '<span class="badge" style="background:rgba(236,72,153,.16); color:#be185d;" title="Fica na cidade-base ou numa das cidades prioritárias">📍 Perto de você</span>' : ''}
       ${x.exclusivo_me_epp ? '<span class="badge" style="background:rgba(16,185,129,.18); color:#047857;">Exclusivo ME/EPP</span>' : ''}
       ${st!=='novo' ? `<span class="badge" style="background:rgba(59,130,246,.16); color:#1d4ed8;">${esc(_PG_STATUS[st]||st)}</span>` : ''}
       ${admin && x._cliente ? `<span class="badge" style="background:rgba(139,92,246,.16); color:#6d28d9;">${esc(x._cliente)}</span>` : ''}
@@ -12606,13 +12607,47 @@ async function pregoesUsuarioCarregar(){
   box.innerHTML = '<div class="empty-state">Carregando…</div>';
   const { data, error } = await _sb.from('pregoes_monitorados').select('*').eq('usuario_id', userProfile.id).order('prazo', {ascending:true});
   if(error){ box.innerHTML = '<div class="empty-state">Não foi possível carregar agora. Tente novamente em instantes.</div>'; return; }
-  _pgDados = data || []; pregoesUsuarioRender();
+  _pgDados = data || [];
+  try{
+    const { data: mon } = await _sb.from('monitor_pregoes').select('id, cidade_base, uf_base, raio_km, municipios_extra').eq('usuario_id', userProfile.id).limit(1);
+    _pgMon = (mon && mon[0]) || null; _pgExtraNomes = {};
+    const ids = (_pgMon && _pgMon.municipios_extra) || [];
+    if(ids.length){ const { data: ms } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').in('codigo_ibge', ids); (ms||[]).forEach(m => _pgExtraNomes[m.codigo_ibge] = m.nome + '/' + m.uf); }
+  }catch(e){ _pgMon = null; }
+  pregoesUsuarioRender();
 }
+let _pgMon = null, _pgExtraNomes = {}, _pgBuscaRes = [];
+function pregoesCidadesHTML(){
+  if(!_pgMon) return '';
+  const base = _pgMon.cidade_base ? `<div style="font-size:13px; color:var(--ink-muted);">Cidade-base: <b style="color:var(--ink);">${esc(_pgMon.cidade_base)}/${esc(_pgMon.uf_base||'')}</b>, com prioridade num raio de ${esc(_pgMon.raio_km||30)} km.</div>` : '';
+  const chips = (_pgMon.municipios_extra||[]).map(id => `<span class="badge" style="background:rgba(236,72,153,.14); color:#be185d; margin:2px 4px 2px 0;">${esc(_pgExtraNomes[id] || id)} <a href="#" onclick="pregoesCidadeTirar(${id}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`).join('');
+  return `<details class="panel" style="margin-bottom:12px;"><summary style="cursor:pointer; font-weight:700;">📍 Cidades prioritárias</summary>
+    <div style="margin-top:8px;">${base}
+      <div style="font-size:12.5px; color:var(--ink-dim); margin:6px 0;">Os pregões dessas cidades são buscados com prioridade e aparecem primeiro. Adicione outras cidades onde você atende.</div>
+      <div style="margin-bottom:6px;">${chips || '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhuma cidade extra marcada.</span>'}</div>
+      <div style="display:flex; gap:6px;"><input type="text" id="pg-cidade-q" placeholder="Digite o nome da cidade" style="flex:1;" onkeydown="if(event.key==='Enter'){pregoesCidadeBuscar(); return false;}"><button type="button" class="btn-ghost" onclick="pregoesCidadeBuscar()">Buscar</button></div>
+      <div id="pg-cidade-res" style="margin-top:6px;"></div>
+    </div></details>`;
+}
+async function pregoesCidadeBuscar(){
+  const t = (document.getElementById('pg-cidade-q')||{}).value || ''; const box = document.getElementById('pg-cidade-res'); if(!box) return;
+  const nn = t.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); if(nn.length < 3){ box.innerHTML = '<span style="font-size:12.5px;">Digite pelo menos 3 letras.</span>'; return; }
+  const { data } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').ilike('nome_norm', nn + '%').order('nome').limit(12);
+  _pgBuscaRes = data || [];
+  box.innerHTML = _pgBuscaRes.length ? _pgBuscaRes.map(m => `<button type="button" class="btn-ghost" style="padding:4px 10px; font-size:12.5px; margin:2px 4px 2px 0;" onclick="pregoesCidadeAdd(${m.codigo_ibge})">+ ${esc(m.nome)}/${esc(m.uf)}</button>`).join('') : '<span style="font-size:12.5px;">Nenhuma cidade encontrada.</span>';
+}
+async function _pregoesCidadesSalvar(ids){
+  const { error } = await _sb.rpc('definir_cidades_prioritarias', {p_ids: ids});
+  if(error){ toast('Não foi possível salvar as cidades.'); return; }
+  toast('Cidades atualizadas. Os pregões delas entram na próxima busca.'); pregoesUsuarioCarregar();
+}
+function pregoesCidadeAdd(id){ const ids = Array.from(new Set([...(_pgMon.municipios_extra||[]), id])); _pregoesCidadesSalvar(ids); }
+function pregoesCidadeTirar(id){ _pregoesCidadesSalvar((_pgMon.municipios_extra||[]).filter(x => x !== id)); }
 function pregoesUsuarioFiltro(f){ _pgFiltro = f; pregoesUsuarioRender(); }
 function pregoesUsuarioRender(){
   const box = document.getElementById('pregoes-usuario'); if(!box) return;
-  const lista = _pgFiltrar(_pgDados);
-  box.innerHTML = _pgChips(_pgDados, 'pregoesUsuarioFiltro') + (lista.length ? lista.map(x => _pgCard(x, false)).join('') : '<div class="empty-state">Nenhum pregão nesta lista por enquanto. A busca no PNCP roda todos os dias e novos pregões aparecem aqui.</div>');
+  const lista = _pgFiltrar(_pgDados).slice().sort((a,b) => (b.prioritario?1:0) - (a.prioritario?1:0));
+  box.innerHTML = pregoesCidadesHTML() + _pgChips(_pgDados, 'pregoesUsuarioFiltro') + (lista.length ? lista.map(x => _pgCard(x, false)).join('') : '<div class="empty-state">Nenhum pregão nesta lista por enquanto. A busca no PNCP roda todos os dias e novos pregões aparecem aqui.</div>');
 }
 async function pregaoMarcar(id, status, admin){
   if(!_sb) return;
@@ -12662,6 +12697,12 @@ function pregoesAdminRender(){
         <label style="font-size:12.5px;">Palavras-chave (separadas por vírgula; "psicolog" pega psicólogo, psicologia…)<textarea id="pgm-chaves-${m.id}" rows="3">${esc(csv(m.palavras_chave))}</textarea></label>
         <label style="font-size:12.5px;">Excluir se aparecer<input type="text" id="pgm-excl-${m.id}" value="${esc(csv(m.palavras_excluir))}"></label>
         <label style="font-size:12.5px;">UFs (vazio = Brasil todo; ex.: RS, SC)<input type="text" id="pgm-ufs-${m.id}" value="${esc(csv(m.ufs))}"></label>
+        <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px;">
+          <label style="font-size:12.5px;">Cidade-base (busca prioritária)<input type="text" id="pgm-cidade-${m.id}" value="${esc(m.cidade_base||'')}" placeholder="Porto Alegre"></label>
+          <label style="font-size:12.5px;">UF<input type="text" id="pgm-ufbase-${m.id}" value="${esc(m.uf_base||'')}" maxlength="2" placeholder="RS"></label>
+          <label style="font-size:12.5px;">Raio (km)<input type="number" id="pgm-raio-${m.id}" value="${esc(m.raio_km||30)}" min="5" max="200"></label>
+        </div>
+        <div style="font-size:12px; color:var(--ink-dim);">Cidades extras marcadas pela cliente: ${(m.municipios_extra||[]).length || 'nenhuma'}.</div>
         <div style="display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px;">
           <label><input type="checkbox" id="pgm-meepp-${m.id}"${m.so_me_epp?' checked':''}> Só exclusivos ME/EPP</label>
           <label><input type="checkbox" id="pgm-ativo-${m.id}"${m.ativo?' checked':''}> Monitor ativo</label>
@@ -12685,6 +12726,7 @@ async function pregoesMonitorSalvar(id){
     nome: v('pgm-nome').trim() || 'Monitor', usuario_id: v('pgm-user') || null,
     palavras_chave: lista(v('pgm-chaves')), palavras_excluir: lista(v('pgm-excl')),
     ufs: lista(v('pgm-ufs')).map(x => x.toUpperCase()).filter(x => /^[A-Z]{2}$/.test(x)),
+    cidade_base: v('pgm-cidade').trim() || null, uf_base: (v('pgm-ufbase').trim().toUpperCase() || null), raio_km: Math.max(5, Math.min(200, parseInt(v('pgm-raio'),10) || 30)),
     so_me_epp: !!document.getElementById('pgm-meepp-'+id).checked, ativo: !!document.getElementById('pgm-ativo-'+id).checked,
   };
   const { error } = await _sb.from('monitor_pregoes').update(upd).eq('id', id);
