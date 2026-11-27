@@ -3888,7 +3888,7 @@ function nav(view){
   if(view === 'admin' && !adminAuthed) view = 'admin-login';
   if((view === 'perfil' || view === 'pregoes' || view === 'certidoes') && !userProfile) view = 'login';
   if((view === 'login' || view === 'cadastro') && userProfile) view = 'minha-conta';
-  if(view === 'perfil'){ abrirCadastroAqui(); return; }   // edita sem sair da página
+  if(view === 'perfil' || view === 'pregoes'){ abrirCadastroAqui(); return; }   // edita sem sair da página
   if(view === 'comparar' && !ehPro()){ toast('Comparar editais é um recurso do Plano Pro.'); view = 'planos'; }
 
   // Os filtros de Editais permanecem como a pessoa deixou ao navegar entre telas —
@@ -8090,6 +8090,7 @@ async function saveProfile(){
   if(profOutra){ await enviarSugestaoProfissao(profOutra, u); document.getElementById('perfil-prof-outra').value = ''; }
   await storeSet(ukey('perfilExtra'), extra);
   updateNavCta();
+  if(document.getElementById('pg-pref-ufs')){ const ok = await pregoesPrefSalvar(true); if(ok === false) return; }
   toast('Perfil salvo');
   fecharCadastroAqui();
   if(document.getElementById('view-minha-conta').classList.contains('active')) renderMinhaConta();
@@ -12682,20 +12683,19 @@ async function perfilPregaoBloco(){
   el.innerHTML = '';
   if(!_sb || !userProfile) return;
   try{
-    const { data: mon } = await _sb.from('monitor_pregoes').select('cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp, modalidades, palavras_chave, ativo').eq('usuario_id', userProfile.id).limit(1);
-    const m = mon && mon[0]; if(!m || m.ativo === false) return;   // pregão ainda não liberado: o bloco não aparece
-    const tipos = (m.modalidades || []).map(c => c === 6 ? 'eletrônico' : c === 7 ? 'presencial' : '').filter(Boolean).join(' e ') || '—';
-    el.innerHTML = `<div style="margin:18px 0 10px; padding-top:12px; border-top:1px solid var(--border-soft);"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">🏷 Pregão</div><div style="font-size:12px; color:var(--ink-dim); margin-top:2px;">Liberado para você pela Transformare. Estas respostas definem onde e como buscamos pregões.</div></div>
-      <div style="font-size:13px; line-height:1.7;">
-        <div><span style="color:var(--ink-dim);">Cidade-base:</span> <b>${m.cidade_base ? esc(m.cidade_base) + '/' + esc(m.uf_base || '') : 'não definida'}</b>, raio de <b>${esc(m.raio_km || 30)} km</b></div>
-        <div><span style="color:var(--ink-dim);">Tipo de pregão:</span> <b>${esc(tipos)}</b></div>
-        <div><span style="color:var(--ink-dim);">Exclusivos ME/EPP:</span> <b>${m.so_me_epp ? 'só os exclusivos' : 'todos os pregões'}</b></div>
-        <div><span style="color:var(--ink-dim);">Estados:</span> <b>${(m.ufs || []).length ? esc(m.ufs.join(', ')) : 'todos'}</b></div>
-        <div><span style="color:var(--ink-dim);">Termos buscados:</span> <b>${esc((m.palavras_chave || []).join(', ') || '—')}</b></div>
-      </div>
-      <button type="button" class="btn-ghost" style="margin-top:10px;" onclick="fecharCadastroAqui(); nav('pregoes')">Ajustar minha busca de pregão</button>
-      <p style="font-size:11.5px; color:var(--ink-dim); margin:8px 0 0;">Seu regime (ME/EPP/MEI) e se você tem CNPJ, nas perguntas gerais acima, também entram na nota de aderência dos pregões.</p>`;
-  }catch(e){}
+    const { data: mon } = await _sb.from('monitor_pregoes').select('id, cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp, modalidades, palavras_chave, palavras_excluir, ativo').eq('usuario_id', userProfile.id).limit(1);
+    _pgMon = (mon && mon[0]) || null; _pgExtraNomes = {};
+    const ids = (_pgMon && _pgMon.municipios_extra) || [];
+    if(ids.length){ const { data: ms } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').in('codigo_ibge', ids); (ms||[]).forEach(m => _pgExtraNomes[m.codigo_ibge] = m.nome + '/' + m.uf); }
+  }catch(e){ _pgMon = null; }
+  perfilPregaoRender();
+}
+function perfilPregaoRender(){
+  const el = document.getElementById('perfil-pregao-bloco'); if(!el) return;
+  if(!_pgMon || _pgMon.ativo === false){ el.innerHTML = ''; return; }   // pregão ainda não liberado: o bloco não aparece
+  el.innerHTML = `<div style="margin:18px 0 10px; padding-top:12px; border-top:1px solid var(--border-soft);"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Pregão</div><div style="font-size:12px; color:var(--ink-dim); margin-top:2px;">Liberado para você pela Transformare. Estas respostas definem onde e como buscamos pregões e são salvas junto com o perfil.</div></div>
+    ${pregoesCidadesHTML(true)}
+    <p style="font-size:11.5px; color:var(--ink-dim); margin:8px 0 0;">Seu regime (ME/EPP/MEI), se você tem CNPJ e as abrangências marcadas acima também entram na nota de aderência dos pregões.</p>`;
 }
 async function pregoesUsuarioCarregar(){
   const box = document.getElementById('pregoes-usuario'); if(!box || !_sb || !userProfile) return;
@@ -12704,16 +12704,20 @@ async function pregoesUsuarioCarregar(){
   if(error){ box.innerHTML = '<div class="empty-state">Não foi possível carregar agora. Tente novamente em instantes.</div>'; return; }
   _pgDados = data || [];
   try{
-    const { data: mon } = await _sb.from('monitor_pregoes').select('id, cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp, modalidades, palavras_chave, palavras_excluir').eq('usuario_id', userProfile.id).limit(1);
+    const { data: mon } = await _sb.from('monitor_pregoes').select('id, cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp, modalidades, palavras_chave, palavras_excluir, ativo').eq('usuario_id', userProfile.id).limit(1);
     _pgMon = (mon && mon[0]) || null; _pgExtraNomes = {};
     const ids = (_pgMon && _pgMon.municipios_extra) || [];
     if(ids.length){ const { data: ms } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').in('codigo_ibge', ids); (ms||[]).forEach(m => _pgExtraNomes[m.codigo_ibge] = m.nome + '/' + m.uf); }
   }catch(e){ _pgMon = null; }
-  pregoesUsuarioRender();
+  pregoesUsuarioRender(); perfilPregaoRender();
 }
 let _pgMon = null, _pgExtraNomes = {}, _pgBuscaRes = [];
-function pregoesCidadesHTML(){
+function pregoesCidadesHTML(flat){
   if(!_pgMon) return '';
+  const html = _pregoesCidadesHTMLBase();
+  return flat ? html.replace(/^<details class="panel"[^>]*><summary[^>]*>[^<]*<\/summary>/, '<div>').replace(/<\/details>$/, '</div>').replace(/<button type="button" class="btn-primary" onclick="pregoesPrefSalvar\(\)">Salvar<\/button>/, '') : html;
+}
+function _pregoesCidadesHTMLBase(){
   const base = _pgMon.cidade_base ? `${esc(_pgMon.cidade_base)}/${esc(_pgMon.uf_base||'')}` : 'não definida';
   const chips = (_pgMon.municipios_extra||[]).map(id => `<span class="badge" style="background:rgba(236,72,153,.14); color:#be185d; margin:2px 4px 2px 0;">${esc(_pgExtraNomes[id] || id)} <a href="#" onclick="pregoesCidadeTirar(${id}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`).join('');
   return `<details class="panel" style="margin-bottom:12px;"><summary style="cursor:pointer; font-weight:700;">⚙ Minha busca</summary>
@@ -12743,16 +12747,17 @@ function pregoesCidadesHTML(){
       <div style="margin-top:6px;"><button type="button" class="btn-ghost" onclick="pregoesAjustePedir()">Enviar pedido</button></div>
     </div></details>`;
 }
-async function pregoesPrefSalvar(){
+async function pregoesPrefSalvar(silencioso){
   const ufs = ((document.getElementById('pg-pref-ufs')||{}).value || '').split(/[,\s]+/).map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]{2}$/.test(x));
   const raio = parseInt((document.getElementById('pg-pref-raio')||{}).value, 10) || 30;
   const me = !!(document.getElementById('pg-pref-meepp')||{}).checked;
   const mods = []; if((document.getElementById('pg-pref-m6')||{}).checked) mods.push(6); if((document.getElementById('pg-pref-m7')||{}).checked) mods.push(7);
-  if(!mods.length){ toast('Escolha pelo menos um tipo de pregão.'); return; }
+  if(!mods.length){ toast('Escolha pelo menos um tipo de pregão.'); return false; }
   const { error } = await _sb.rpc('definir_preferencias_pregoes', {p_ufs: ufs, p_raio: raio, p_so_me_epp: me});
   const { error: e2 } = await _sb.rpc('definir_modalidades_pregoes', {p_mods: mods});
-  if(error || e2){ toast('Não foi possível salvar.'); return; }
-  toast('Busca atualizada. A mudança vale a partir da próxima rodada.'); pregoesUsuarioCarregar();
+  if(error || e2){ toast('Não foi possível salvar a busca de pregão.'); return false; }
+  if(!silencioso) toast('Busca atualizada. A mudança vale a partir da próxima rodada.');
+  pregoesUsuarioCarregar(); return true;
 }
 function pregoesTermoPedir(txt){
   const el = document.getElementById('pg-ajuste-txt'); if(!el) return;
@@ -12789,7 +12794,7 @@ function pregoesUsuarioRender(){
   const box = document.getElementById('pregoes-usuario'); if(!box) return;
   const lista = _pgFiltrar(_pgDados).slice().sort((a,b) => (b.prioritario?1:0) - (a.prioritario?1:0));
   const nAb = _pgFiltrar(_pgDados).length;
-  box.innerHTML = `<button type="button" class="btn-primary" style="width:100%; margin-bottom:12px;" onclick="pregoesVerNaLista()">Ver meus pregões aderentes em Minha conta</button>` + pregoesCidadesHTML().replace('<details class="panel"','<details open class="panel"') + '<details class="panel" style="margin-top:12px;"><summary style="cursor:pointer; font-weight:700;">Ver lista por status (novo, interesse, descartado)</summary><div style="margin-top:10px;">' + _pgChips(_pgDados, 'pregoesUsuarioFiltro') + (lista.length ? lista.map(x => _pgCard(x, false)).join('') : '<div class="empty-state">Nenhum pregão nesta lista por enquanto. A busca no PNCP roda todos os dias e novos pregões aparecem aqui.</div>') + '</div></details>';
+  box.innerHTML = `<button type="button" class="btn-primary" style="width:100%; margin-bottom:12px;" onclick="pregoesVerNaLista()">Ver meus pregões aderentes em Minha conta</button>` + '' + '<details class="panel" style="margin-top:12px;"><summary style="cursor:pointer; font-weight:700;">Ver lista por status (novo, interesse, descartado)</summary><div style="margin-top:10px;">' + _pgChips(_pgDados, 'pregoesUsuarioFiltro') + (lista.length ? lista.map(x => _pgCard(x, false)).join('') : '<div class="empty-state">Nenhum pregão nesta lista por enquanto. A busca no PNCP roda todos os dias e novos pregões aparecem aqui.</div>') + '</div></details>';
 }
 function pregoesVerNaLista(){ _contaAdTipo = 'pregao'; nav('minha-conta'); setTimeout(()=>{ const el = document.getElementById('conta-aderentes-chips') || document.getElementById('conta-aderentes'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 250); }
 async function pgFavoritarInteresse(idPregao){
