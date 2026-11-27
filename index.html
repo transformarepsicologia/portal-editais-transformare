@@ -12684,7 +12684,7 @@ async function perfilPregaoBloco(){
   if(!_sb || !userProfile) return;
   try{
     const { data: mon } = await _sb.from('monitor_pregoes').select('id, cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp, modalidades, palavras_chave, palavras_excluir, ativo').eq('usuario_id', userProfile.id).limit(1);
-    _pgMon = (mon && mon[0]) || null; _pgExtraNomes = {};
+    _pgMon = (mon && mon[0]) || null; _pgExtraNomes = {}; _pgTermos = null;
     const ids = (_pgMon && _pgMon.municipios_extra) || [];
     if(ids.length){ const { data: ms } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').in('codigo_ibge', ids); (ms||[]).forEach(m => _pgExtraNomes[m.codigo_ibge] = m.nome + '/' + m.uf); }
   }catch(e){ _pgMon = null; }
@@ -12694,7 +12694,7 @@ function perfilPregaoRender(){
   const el = document.getElementById('perfil-pregao-bloco'); if(!el) return;
   if(!_pgMon || _pgMon.ativo === false){ el.innerHTML = ''; return; }   // pregão ainda não liberado: o bloco não aparece
   el.innerHTML = `<div style="margin:18px 0 10px; padding-top:12px; border-top:1px solid var(--border-soft);"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Pregão</div><div style="font-size:12px; color:var(--ink-dim); margin-top:2px;">Liberado para você pela Transformare. Estas respostas definem onde e como buscamos pregões e são salvas junto com o perfil.</div></div>
-    ${pregoesCidadesHTML(true)}
+    ${pregoesCidadesHTML()}
     <p style="font-size:11.5px; color:var(--ink-dim); margin:8px 0 0;">Seu regime (ME/EPP/MEI), se você tem CNPJ e as abrangências marcadas acima também entram na nota de aderência dos pregões.</p>`;
 }
 async function pregoesUsuarioCarregar(){
@@ -12705,59 +12705,61 @@ async function pregoesUsuarioCarregar(){
   _pgDados = data || [];
   try{
     const { data: mon } = await _sb.from('monitor_pregoes').select('id, cidade_base, uf_base, raio_km, municipios_extra, ufs, so_me_epp, modalidades, palavras_chave, palavras_excluir, ativo').eq('usuario_id', userProfile.id).limit(1);
-    _pgMon = (mon && mon[0]) || null; _pgExtraNomes = {};
+    _pgMon = (mon && mon[0]) || null; _pgExtraNomes = {}; _pgTermos = null;
     const ids = (_pgMon && _pgMon.municipios_extra) || [];
     if(ids.length){ const { data: ms } = await _sb.from('municipios_br').select('codigo_ibge, nome, uf').in('codigo_ibge', ids); (ms||[]).forEach(m => _pgExtraNomes[m.codigo_ibge] = m.nome + '/' + m.uf); }
   }catch(e){ _pgMon = null; }
   pregoesUsuarioRender(); perfilPregaoRender();
 }
 let _pgMon = null, _pgExtraNomes = {}, _pgBuscaRes = [];
-function pregoesCidadesHTML(flat){
+let _pgTermos = null;
+function pregoesCidadesHTML(){
   if(!_pgMon) return '';
-  const html = _pregoesCidadesHTMLBase();
-  return flat ? html.replace(/^<details class="panel"[^>]*><summary[^>]*>[^<]*<\/summary>/, '<div>').replace(/<\/details>$/, '</div>').replace(/<button type="button" class="btn-primary" onclick="pregoesPrefSalvar\(\)">Salvar<\/button>/, '') : html;
-}
-function _pregoesCidadesHTMLBase(){
+  if(_pgTermos === null) _pgTermos = (_pgMon.palavras_chave||[]).slice();
   const base = _pgMon.cidade_base ? `${esc(_pgMon.cidade_base)}/${esc(_pgMon.uf_base||'')}` : 'não definida';
-  const chips = (_pgMon.municipios_extra||[]).map(id => `<span class="badge" style="background:rgba(236,72,153,.14); color:#be185d; margin:2px 4px 2px 0;">${esc(_pgExtraNomes[id] || id)} <a href="#" onclick="pregoesCidadeTirar(${id}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`).join('');
-  return `<details class="panel" style="margin-bottom:12px;"><summary style="cursor:pointer; font-weight:700;">⚙ Minha busca</summary>
-    <div style="margin-top:8px; font-size:13px;">
-      <div style="margin-bottom:8px;">Cidade-base: <b>${base}</b>, com prioridade num raio de <b>${esc(_pgMon.raio_km||30)} km</b>.</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
-        <label style="font-size:12.5px;">Estados (vazio = Brasil todo)<input type="text" id="pg-pref-ufs" value="${esc((_pgMon.ufs||[]).join(', '))}" placeholder="RS, SC"></label>
-        <label style="font-size:12.5px;">Raio prioritário (km)<input type="number" id="pg-pref-raio" value="${esc(_pgMon.raio_km||30)}" min="5" max="100"></label>
-      </div>
-      <div style="font-size:12.5px; margin-bottom:8px;"><div style="margin-bottom:3px;">Tipo de pregão</div>
-        <label style="display:inline-flex; gap:6px; align-items:center; margin-right:14px;"><input type="checkbox" id="pg-pref-m6"${(_pgMon.modalidades||[6,7]).includes(6)?' checked':''}> Eletrônico (online)</label>
-        <label style="display:inline-flex; gap:6px; align-items:center;"><input type="checkbox" id="pg-pref-m7"${(_pgMon.modalidades||[6,7]).includes(7)?' checked':''}> Presencial</label></div>
-      <label style="font-size:12.5px; display:flex; gap:6px; align-items:center; margin-bottom:8px;"><input type="checkbox" id="pg-pref-meepp"${_pgMon.so_me_epp?' checked':''}> Mostrar só pregões exclusivos para ME/EPP</label>
-      <button type="button" class="btn-primary" onclick="pregoesPrefSalvar()">Salvar</button>
-      <div style="font-weight:600; margin:14px 0 4px;">📍 Cidades prioritárias extras</div>
-      <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:6px;">Os pregões dessas cidades são buscados com prioridade e aparecem primeiro. A cidade-base também pode ser trocada pela busca abaixo.</div>
-      <div style="margin-bottom:6px;">${chips || '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhuma cidade extra marcada.</span>'}</div>
-      <div style="display:flex; gap:6px;"><input type="text" id="pg-cidade-q" placeholder="Digite o nome da cidade" style="flex:1;" onkeydown="if(event.key==='Enter'){pregoesCidadeBuscar(); return false;}"><button type="button" class="btn-ghost" onclick="pregoesCidadeBuscar()">Buscar</button></div>
-      <div id="pg-cidade-res" style="margin-top:6px;"></div>
-      <div style="font-weight:600; margin:14px 0 4px;">🔎 O que a busca procura</div>
-      <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:6px;">Pregões abertos no PNCP cujo texto contenha algum destes termos. Toque em um termo para pedir a retirada dele.</div>
-      <div style="margin-bottom:6px;">${(_pgMon.palavras_chave||[]).length ? (_pgMon.palavras_chave||[]).map(t => `<a href="#" onclick="pregoesTermoPedir('Retirar o termo: ${esc(t).replace(/'/g,'')}'); return false;" class="badge" style="background:rgba(59,130,246,.14); color:#1d4ed8; margin:2px 4px 2px 0; text-decoration:none;">${esc(t)}</a>`).join('') : '<span style="font-size:12.5px; color:var(--ink-dim);">Ainda não configurado pela equipe.</span>'}</div>
-      ${(_pgMon.palavras_excluir||[]).length ? `<div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:6px;">Ignorados quando aparecem: ${esc((_pgMon.palavras_excluir||[]).join(', '))}.</div>` : ''}
-      <div style="font-weight:600; margin:14px 0 4px;">✏ Pedir ajuste na busca</div>
-      <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:6px;">Os termos que a busca procura são mantidos pela Transformare. Conte o que está vindo demais, o que está faltando ou um assunto novo, e a equipe ajusta.</div>
-      <textarea id="pg-ajuste-txt" rows="3" placeholder="Ex.: quero também pregões de treinamento de lideranças; está vindo muita coisa de assistência social."></textarea>
-      <div style="margin-top:6px;"><button type="button" class="btn-ghost" onclick="pregoesAjustePedir()">Enviar pedido</button></div>
-    </div></details>`;
+  const mods = _pgMon.modalidades || [6,7];
+  const chips = (_pgMon.municipios_extra||[]).map(id => `<span class="chip-opt selected" style="display:inline-block; margin:2px 4px 2px 0;">${esc(_pgExtraNomes[id] || id)} <a href="#" onclick="pregoesCidadeTirar(${id}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`).join('');
+  const termos = _pgTermos.map((t,k) => `<span class="chip-opt selected" style="display:inline-block; margin:2px 4px 2px 0;">${esc(t)} <a href="#" onclick="pregoesTermoTirar(${k}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`).join('');
+  return `<div style="font-size:13px;">
+      <div class="form-row"><label>Cidade-base</label><div style="font-size:13px;"><b>${base}</b> <span style="color:var(--ink-dim);">(troque pela busca de cidades abaixo)</span></div></div>
+      <div class="form-row"><label>Estados <span style="font-weight:400; color:var(--ink-dim);">(vazio = Brasil todo)</span></label><input type="text" id="pg-pref-ufs" value="${esc((_pgMon.ufs||[]).join(', '))}" placeholder="RS, SC"></div>
+      <div class="form-row"><label>Raio prioritário (km)</label><input type="number" id="pg-pref-raio" value="${esc(_pgMon.raio_km||30)}" min="5" max="100"></div>
+      <div class="form-row"><label>Tipo de pregão</label><div class="chip-select">
+        <div class="chip-opt${mods.includes(6)?' selected':''}" id="pg-pref-m6" onclick="this.classList.toggle('selected')">Eletrônico (online)</div>
+        <div class="chip-opt${mods.includes(7)?' selected':''}" id="pg-pref-m7" onclick="this.classList.toggle('selected')">Presencial</div></div></div>
+      <div class="form-row"><label>Exclusividade</label><div class="chip-select">
+        <div class="chip-opt${_pgMon.so_me_epp?' selected':''}" id="pg-pref-meepp" onclick="this.classList.toggle('selected')">Só pregões exclusivos ME/EPP</div></div></div>
+      <div class="form-row"><label>Cidades prioritárias extras</label>
+        <div style="margin-bottom:6px;">${chips || '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhuma cidade extra marcada.</span>'}</div>
+        <div style="display:flex; gap:6px;"><input type="text" id="pg-cidade-q" placeholder="Digite o nome da cidade" style="flex:1;" onkeydown="if(event.key==='Enter'){pregoesCidadeBuscar(); return false;}"><button type="button" class="btn-ghost" onclick="pregoesCidadeBuscar()">Buscar</button></div>
+        <div id="pg-cidade-res" style="margin-top:6px;"></div></div>
+      <div class="form-row"><label>Palavras-chave / especialidades <span style="font-weight:400; color:var(--ink-dim);">(a busca procura pregões com estes termos)</span></label>
+        <div id="pg-termos-box" style="margin-bottom:6px;">${termos || '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhum termo.</span>'}</div>
+        <div style="display:flex; gap:6px;"><input type="text" id="pg-termo-novo" placeholder="Ex.: psicólogo, saúde mental" style="flex:1;" onkeydown="if(event.key==='Enter'){pregoesTermoAdd(); return false;}"><button type="button" class="btn-ghost" onclick="pregoesTermoAdd()">Adicionar</button></div>
+        <div style="font-size:11.5px; color:var(--ink-dim); margin-top:4px;">Vale a partir da próxima rodada de busca, depois de salvar o perfil.</div></div>
+    </div>`;
 }
+function _pregoesTermosRender(){ const b = document.getElementById('pg-termos-box'); if(!b) return; b.innerHTML = _pgTermos.map((t,k) => `<span class="chip-opt selected" style="display:inline-block; margin:2px 4px 2px 0;">${esc(t)} <a href="#" onclick="pregoesTermoTirar(${k}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`).join('') || '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhum termo.</span>'; }
+function pregoesTermoAdd(){
+  const el = document.getElementById('pg-termo-novo'); if(!el) return;
+  el.value.split(',').map(x => x.trim().toLowerCase().slice(0,40)).filter(x => x.length >= 3).forEach(t => { if(!_pgTermos.includes(t) && _pgTermos.length < 30) _pgTermos.push(t); });
+  el.value = ''; _pregoesTermosRender();
+}
+function pregoesTermoTirar(k){ _pgTermos.splice(k,1); _pregoesTermosRender(); }
 async function pregoesPrefSalvar(silencioso){
   const ufs = ((document.getElementById('pg-pref-ufs')||{}).value || '').split(/[,\s]+/).map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]{2}$/.test(x));
   const raio = parseInt((document.getElementById('pg-pref-raio')||{}).value, 10) || 30;
-  const me = !!(document.getElementById('pg-pref-meepp')||{}).checked;
-  const mods = []; if((document.getElementById('pg-pref-m6')||{}).checked) mods.push(6); if((document.getElementById('pg-pref-m7')||{}).checked) mods.push(7);
+  const sel = id => { const e = document.getElementById(id); return !!(e && e.classList.contains('selected')); };
+  const me = sel('pg-pref-meepp');
+  const mods = []; if(sel('pg-pref-m6')) mods.push(6); if(sel('pg-pref-m7')) mods.push(7);
   if(!mods.length){ toast('Escolha pelo menos um tipo de pregão.'); return false; }
   const { error } = await _sb.rpc('definir_preferencias_pregoes', {p_ufs: ufs, p_raio: raio, p_so_me_epp: me});
   const { error: e2 } = await _sb.rpc('definir_modalidades_pregoes', {p_mods: mods});
-  if(error || e2){ toast('Não foi possível salvar a busca de pregão.'); return false; }
+  let e3 = null;
+  if(_pgTermos && _pgTermos.length){ const r3 = await _sb.rpc('definir_termos_pregoes', {p_termos: _pgTermos}); e3 = r3.error; }
+  if(error || e2 || e3){ toast('Não foi possível salvar a busca de pregão.'); return false; }
   if(!silencioso) toast('Busca atualizada. A mudança vale a partir da próxima rodada.');
-  pregoesUsuarioCarregar(); return true;
+  _pgTermos = null; pregoesUsuarioCarregar(); return true;
 }
 function pregoesTermoPedir(txt){
   const el = document.getElementById('pg-ajuste-txt'); if(!el) return;
