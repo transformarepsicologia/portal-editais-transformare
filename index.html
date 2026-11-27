@@ -1697,6 +1697,13 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   </div>
 </section>
 
+<!-- ===================== MEUS PREGÕES (monitor pessoal) ===================== -->
+<section class="view" id="view-pregoes">
+  <div class="page-head"><span class="eyebrow">Minha área</span><h2>Meus pregões</h2><p>Pregões abertos no PNCP que combinam com o que você atende. A Transformare acompanha com você.</p></div>
+  <button type="button" class="btn-ghost" onclick="nav('minha-conta')" style="margin-bottom:12px;">← Voltar à minha conta</button>
+  <div id="pregoes-usuario"></div>
+</section>
+
 <!-- ===================== POLÍTICA DE PRIVACIDADE E SEGURANÇA ===================== -->
 <section class="view" id="view-privacidade">
   <div class="page-head"><span class="eyebrow">LGPD</span><h2>Política de Privacidade e Segurança</h2><p>Versão 1.0 — vigente desde 4 de outubro de 2026.</p></div>
@@ -2032,6 +2039,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
     <button class="admin-tab" data-tab="prospeccao" onclick="adminTab('prospeccao')">Prospecção</button>
     <button class="admin-tab" data-tab="avisos" onclick="adminTab('avisos')">Avisos WhatsApp<span class="admin-tab-badge" id="tabbadge-avisos" style="display:none;"></span></button>
     <button class="admin-tab" data-tab="pca" onclick="adminTab('pca')">PCA (planejados)</button>
+    <button class="admin-tab" data-tab="pregoes" onclick="adminTab('pregoes')">Pregões (clientes)</button>
     <button class="admin-tab" data-tab="consultoria" onclick="adminTab('consultoria')">Consultoria</button>
     <button class="admin-tab" data-tab="aae" onclick="adminTab('aae')">Aderência (AAE)</button>
     <button class="admin-tab" data-tab="deh" onclick="adminTab('deh')">DEH 2.0</button>
@@ -2392,6 +2400,12 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
       <div style="overflow-x:auto;"><table class="admin-table"><thead><tr><th>Profissional</th><th>Profissão / local</th><th>Último contato</th><th>Contatos</th><th>Status</th></tr></thead><tbody id="pr-contatados-tbody"><tr><td colspan="5" style="color:var(--ink-dim);">Carregando...</td></tr></tbody></table></div>
     </details>
     <p class="section-sub" style="margin-top:10px;">Boas práticas: poucos envios por dia, uma única mensagem por contato, identifique-se e respeite o pedido de "SAIR" (marque como <em>Não contatar</em>). A lista guarda a origem de cada contato (LGPD).</p>
+  </div>
+
+  <div class="admin-tabpanel" id="admin-tab-pregoes">
+    <div class="section-title" style="font-size:17px; margin-top:4px;">Pregões monitorados para clientes</div>
+    <p class="section-sub">Cada monitor busca, todos os dias, pregões <strong>abertos</strong> no PNCP que contenham as palavras-chave, sem IA e fora do catálogo público. A cliente vê só os dela em "Minha conta → Meus pregões"; você acompanha tudo aqui.</p>
+    <div id="pregoes-admin"></div>
   </div>
 
   <div class="admin-tabpanel" id="admin-tab-pca">
@@ -3853,7 +3867,7 @@ function nav(view){
   if(typeof atualizarPromos==='function') atualizarPromos();
   if(typeof radarGira==='function') radarGira();
   if(view === 'admin' && !adminAuthed) view = 'admin-login';
-  if(view === 'perfil' && !userProfile) view = 'login';
+  if((view === 'perfil' || view === 'pregoes') && !userProfile) view = 'login';
   if((view === 'login' || view === 'cadastro') && userProfile) view = 'minha-conta';
   if(view === 'comparar' && !ehPro()){ toast('Comparar editais é um recurso do Plano Pro.'); view = 'planos'; }
 
@@ -3869,7 +3883,7 @@ function nav(view){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   try{ if(window._radarTelaAtual !== undefined && window._radarTelaAtual !== view && view !== 'admin' && view !== 'admin-login') radarEvento('page_view',{ page_path:'/#'+view, page_title:document.title }); window._radarTelaAtual = view; }catch(e){}
-  document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.id === 'nav-minha-conta' ? ['minha-conta','login','cadastro','perfil','favoritos','alertas'].includes(view) : b.dataset.view === view));
+  document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.id === 'nav-minha-conta' ? ['minha-conta','login','cadastro','perfil','favoritos','alertas','pregoes'].includes(view) : b.dataset.view === view));
   document.getElementById('mainNav').classList.remove('open');
   (function(){ const nv=document.getElementById('mainNav'), ativo=nv.querySelector('button.active'); if(ativo && nv.scrollWidth>nv.clientWidth){ nv.scrollTo({left: ativo.offsetLeft - (nv.clientWidth-ativo.offsetWidth)/2, behavior:'smooth'}); } })();
   window.scrollTo({top:0, behavior:'smooth'});
@@ -3877,6 +3891,8 @@ function nav(view){
   if(view === 'cadastro') iniciarCaptchaCadastro();
   if(view === 'editais') applyFilters();
   if(['favoritos','alertas'].includes(view)) aplicarGateCadastro(view);
+  if(view === 'minha-conta') setTimeout(pregoesAtalho, 150);
+  if(view === 'pregoes') pregoesUsuarioCarregar();
   if(view === 'favoritos') renderFavoritos();
   if(view === 'alertas') renderAlertas();
   if(view === 'admin'){ renderAdmin(); avisarSugestoesProfissao(); avisarFeedbacks(); carregarLeadsAdmin(); carregarMotivosPadrao(); carregarStatusFontes().then(()=>{ renderCaixaEntrada(); renderDiarioOficial(); }); adminTab(adminTabAtual||'hoje'); carregarContagensHoje(); renderUsuariosAdmin(); renderFeedbacksAdmin(); renderSugestoesProfissaoAdmin(); renderSolicitacoesIndiceAdmin(); }
@@ -5281,6 +5297,7 @@ function renderMinhaConta(){
         <span class="ca-seta" aria-hidden="true">›</span>
       </button>
       ${certCardHTML()}
+      <span id="pregoes-atalho"></span>
     </div>
     <div class="account-grid">
       <div>
@@ -12524,6 +12541,163 @@ async function pcaVisto(id){
   if(error){ toast('Não foi possível salvar.'); return; }
   it.visto = novo; pcaRender();
 }
+
+// ===================== PREGÕES MONITORADOS (clientes) =====================
+const _PG_STATUS = {novo:'Novo', interesse:'Tenho interesse', participando:'Participando', descartado:'Descartado', encerrado:'Encerrado'};
+function _pgDH(iso){ if(!iso) return '—'; try{ return new Date(iso).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}); }catch(e){ return String(iso); } }
+function _pgPrazoTxt(iso){
+  if(!iso) return '<span style="color:var(--ink-dim);">prazo não informado</span>';
+  const ms = new Date(iso).getTime() - Date.now();
+  if(ms < 0) return '<span style="color:var(--danger,#b91c1c); font-weight:600;">prazo encerrado</span>';
+  const d = Math.floor(ms/86400000), h = Math.floor((ms%86400000)/3600000);
+  const cor = d < 1 ? '#b45309' : 'var(--ink)';
+  return `<span style="color:${cor}; font-weight:600;">${d >= 1 ? 'faltam '+d+' dia(s)' : 'faltam '+h+' h'}</span> · propostas até ${_pgDH(iso)}`;
+}
+function _pgCard(x, admin){
+  const st = x.status || 'novo';
+  const btn = (novo, rot) => `<button type="button" class="btn-ghost" style="padding:5px 10px; font-size:12px;${st===novo?' border-color:var(--teal); color:var(--teal); font-weight:700;':''}" onclick="pregaoMarcar(${x.id},'${novo}',${admin?'true':'false'})">${rot}</button>`;
+  return `<div class="panel" style="margin-bottom:10px;">
+    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:4px;">
+      <span class="badge">${esc(x.modalidade || 'Pregão')}</span>
+      ${x.exclusivo_me_epp ? '<span class="badge" style="background:rgba(16,185,129,.18); color:#047857;">Exclusivo ME/EPP</span>' : ''}
+      ${st!=='novo' ? `<span class="badge" style="background:rgba(59,130,246,.16); color:#1d4ed8;">${esc(_PG_STATUS[st]||st)}</span>` : ''}
+      ${admin && x._cliente ? `<span class="badge" style="background:rgba(139,92,246,.16); color:#6d28d9;">${esc(x._cliente)}</span>` : ''}
+    </div>
+    <div style="font-weight:700; line-height:1.4; overflow-wrap:anywhere;">${esc(x.objeto || 'Sem descrição')}</div>
+    <div style="font-size:13px; color:var(--ink-muted); margin-top:4px;">${esc(x.orgao || '')} · ${esc(x.municipio || '')}/${esc(x.uf || '')}</div>
+    <div style="font-size:13px; margin-top:4px;">${_pgPrazoTxt(x.prazo)}${x.valor_estimado ? ' · valor estimado ' + brl(x.valor_estimado) : ''}</div>
+    ${(x.termos||[]).length ? `<div style="font-size:11.5px; color:var(--ink-dim); margin-top:3px;">Combinou com: ${esc((x.termos||[]).join(', '))}</div>` : ''}
+    ${x.nota ? `<div style="font-size:12.5px; margin-top:6px; padding:6px 8px; border-radius:8px; background:rgba(245,158,11,.12);">📝 ${esc(x.nota)}</div>` : ''}
+    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+      ${x.link_pncp ? `<a class="btn-ghost" style="padding:5px 10px; font-size:12px; text-decoration:none;" href="${esc(x.link_pncp)}" target="_blank" rel="noopener">Ver no PNCP ↗</a>` : ''}
+      ${x.link_sistema ? `<a class="btn-ghost" style="padding:5px 10px; font-size:12px; text-decoration:none;" href="${esc(x.link_sistema)}" target="_blank" rel="noopener">Sistema do pregão ↗</a>` : ''}
+      ${btn('interesse','⭐ Tenho interesse')}${admin ? btn('participando','Participando') : ''}${btn('descartado','Descartar')}${st!=='novo' ? btn('novo','Desfazer') : ''}
+      ${admin ? `<button type="button" class="btn-ghost" style="padding:5px 10px; font-size:12px;" onclick="pregaoNota(${x.id})">📝 Nota</button>` : ''}
+    </div>
+  </div>`;
+}
+let _pgDados = [], _pgFiltro = 'abertos', _pgAdminMonitores = [], _pgAdminUsuarios = [];
+function _pgFiltrar(lista){
+  const ag = Date.now();
+  const aberto = x => !x.prazo || new Date(x.prazo).getTime() >= ag;
+  if(_pgFiltro === 'abertos') return lista.filter(x => aberto(x) && !['descartado','encerrado'].includes(x.status));
+  if(_pgFiltro === 'interesse') return lista.filter(x => ['interesse','participando'].includes(x.status));
+  if(_pgFiltro === 'descartados') return lista.filter(x => x.status === 'descartado');
+  if(_pgFiltro === 'encerrados') return lista.filter(x => !aberto(x));
+  return lista;
+}
+function _pgChips(lista, fn){
+  const ag = Date.now(), aberto = x => !x.prazo || new Date(x.prazo).getTime() >= ag;
+  const cont = {abertos: lista.filter(x => aberto(x) && !['descartado','encerrado'].includes(x.status)).length, interesse: lista.filter(x => ['interesse','participando'].includes(x.status)).length, descartados: lista.filter(x => x.status==='descartado').length, encerrados: lista.filter(x => !aberto(x)).length, todos: lista.length};
+  const rot = {abertos:'Abertos', interesse:'Com interesse', descartados:'Descartados', encerrados:'Encerrados', todos:'Todos'};
+  return `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">${Object.keys(rot).map(k => `<button type="button" class="btn-ghost" style="padding:5px 12px; font-size:12.5px;${_pgFiltro===k?' border-color:var(--teal); color:var(--teal); font-weight:700;':''}" onclick="${fn}('${k}')">${rot[k]} (${cont[k]})</button>`).join('')}</div>`;
+}
+async function pregoesAtalho(){
+  const el = document.getElementById('pregoes-atalho'); if(!el || !_sb || !userProfile) return;
+  try{
+    const { data } = await _sb.from('pregoes_monitorados').select('id, status, prazo').eq('usuario_id', userProfile.id);
+    if(!data || !data.length){ const { data: m } = await _sb.from('monitor_pregoes').select('id').eq('usuario_id', userProfile.id).limit(1); if(!m || !m.length) return; }
+    const ag = Date.now(); const novos = (data||[]).filter(x => x.status==='novo' && (!x.prazo || new Date(x.prazo).getTime() >= ag)).length;
+    el.outerHTML = `<button type="button" class="conta-atalho" onclick="nav('pregoes')"><span class="ca-ico" aria-hidden="true">🏷</span><span class="ca-txt"><strong>Meus Pregões</strong><small>${novos ? novos + ' aberto(s) para você ver' : 'Pregões abertos monitorados para você'}</small></span><span class="ca-seta" aria-hidden="true">›</span></button>`;
+  }catch(e){}
+}
+async function pregoesUsuarioCarregar(){
+  const box = document.getElementById('pregoes-usuario'); if(!box || !_sb || !userProfile) return;
+  box.innerHTML = '<div class="empty-state">Carregando…</div>';
+  const { data, error } = await _sb.from('pregoes_monitorados').select('*').eq('usuario_id', userProfile.id).order('prazo', {ascending:true});
+  if(error){ box.innerHTML = '<div class="empty-state">Não foi possível carregar agora. Tente novamente em instantes.</div>'; return; }
+  _pgDados = data || []; pregoesUsuarioRender();
+}
+function pregoesUsuarioFiltro(f){ _pgFiltro = f; pregoesUsuarioRender(); }
+function pregoesUsuarioRender(){
+  const box = document.getElementById('pregoes-usuario'); if(!box) return;
+  const lista = _pgFiltrar(_pgDados);
+  box.innerHTML = _pgChips(_pgDados, 'pregoesUsuarioFiltro') + (lista.length ? lista.map(x => _pgCard(x, false)).join('') : '<div class="empty-state">Nenhum pregão nesta lista por enquanto. A busca no PNCP roda todos os dias e novos pregões aparecem aqui.</div>');
+}
+async function pregaoMarcar(id, status, admin){
+  if(!_sb) return;
+  const { error } = await _sb.from('pregoes_monitorados').update({status}).eq('id', id);
+  if(error){ toast('Não foi possível salvar.'); return; }
+  const alvo = (admin ? _pgAdminPregoes : _pgDados).find(x => x.id === id); if(alvo) alvo.status = status;
+  if(admin) pregoesAdminRender(); else pregoesUsuarioRender();
+}
+async function pregaoNota(id){
+  const x = _pgAdminPregoes.find(y => y.id === id); if(!x) return;
+  const t = prompt('Nota interna sobre este pregão (a cliente também vê):', x.nota || ''); if(t === null) return;
+  const { error } = await _sb.from('pregoes_monitorados').update({nota: t.trim() || null}).eq('id', id);
+  if(error){ toast('Não foi possível salvar a nota.'); return; }
+  x.nota = t.trim() || null; pregoesAdminRender();
+}
+
+// ---- ADM ----
+let _pgAdminPregoes = [], _pgAdminMon = 'todos';
+async function pregoesAdminCarregar(){
+  const box = document.getElementById('pregoes-admin'); if(!box || !_sb) return;
+  box.innerHTML = '<div class="empty-state">Carregando…</div>';
+  const [m, p, u] = await Promise.all([
+    _sb.from('monitor_pregoes').select('*').order('id'),
+    _sb.from('pregoes_monitorados').select('*').order('prazo', {ascending:true}).limit(1000),
+    _sb.from('usuarios_perfil').select('id, nome, email').order('nome').limit(500),
+  ]);
+  if(m.error || p.error){ box.innerHTML = '<div class="empty-state">Erro ao carregar os pregões.</div>'; return; }
+  _pgAdminMonitores = m.data || []; _pgAdminUsuarios = u.data || [];
+  const nomeMon = {}; _pgAdminMonitores.forEach(x => nomeMon[x.id] = x.nome);
+  _pgAdminPregoes = (p.data || []).map(x => Object.assign(x, {_cliente: nomeMon[x.monitor_id]}));
+  pregoesAdminRender();
+}
+function pregoesAdminFiltro(f){ _pgFiltro = f; pregoesAdminRender(); }
+function pregoesAdminMonSel(v){ _pgAdminMon = v; pregoesAdminRender(); }
+function pregoesAdminRender(){
+  const box = document.getElementById('pregoes-admin'); if(!box) return;
+  const csv = a => (a||[]).join(', ');
+  const monHTML = _pgAdminMonitores.map(m => {
+    const total = _pgAdminPregoes.filter(x => x.monitor_id === m.id).length;
+    const interes = _pgAdminPregoes.filter(x => x.monitor_id === m.id && ['interesse','participando'].includes(x.status)).length;
+    const opts = '<option value="">— sem conta vinculada —</option>' + _pgAdminUsuarios.map(u => `<option value="${esc(u.id)}"${u.id===m.usuario_id?' selected':''}>${esc(u.nome || u.email)} (${esc(u.email||'')})</option>`).join('');
+    return `<details class="panel" style="margin-bottom:10px;"${_pgAdminMonitores.length===1?' open':''}>
+      <summary style="cursor:pointer; font-weight:700;">${esc(m.nome)} <span style="font-weight:500; color:var(--ink-muted); font-size:12.5px;">· ${total} pregão(ões) · ${interes} com interesse · ${m.ativo?'ativo':'pausado'}</span></summary>
+      <div style="display:grid; gap:8px; margin-top:10px;">
+        <label style="font-size:12.5px;">Nome do monitor<input type="text" id="pgm-nome-${m.id}" value="${esc(m.nome)}"></label>
+        <label style="font-size:12.5px;">Conta da cliente (ela passa a ver "Meus Pregões")<select id="pgm-user-${m.id}">${opts}</select></label>
+        <label style="font-size:12.5px;">Palavras-chave (separadas por vírgula; "psicolog" pega psicólogo, psicologia…)<textarea id="pgm-chaves-${m.id}" rows="3">${esc(csv(m.palavras_chave))}</textarea></label>
+        <label style="font-size:12.5px;">Excluir se aparecer<input type="text" id="pgm-excl-${m.id}" value="${esc(csv(m.palavras_excluir))}"></label>
+        <label style="font-size:12.5px;">UFs (vazio = Brasil todo; ex.: RS, SC)<input type="text" id="pgm-ufs-${m.id}" value="${esc(csv(m.ufs))}"></label>
+        <div style="display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px;">
+          <label><input type="checkbox" id="pgm-meepp-${m.id}"${m.so_me_epp?' checked':''}> Só exclusivos ME/EPP</label>
+          <label><input type="checkbox" id="pgm-ativo-${m.id}"${m.ativo?' checked':''}> Monitor ativo</label>
+        </div>
+        <div><button type="button" class="btn-primary" onclick="pregoesMonitorSalvar(${m.id})">Salvar monitor</button></div>
+      </div></details>`;
+  }).join('');
+  const selMon = `<select onchange="pregoesAdminMonSel(this.value)" style="width:auto; margin-bottom:10px;"><option value="todos">Todos os monitores</option>${_pgAdminMonitores.map(m => `<option value="${m.id}"${String(m.id)===String(_pgAdminMon)?' selected':''}>${esc(m.nome)}</option>`).join('')}</select>`;
+  const base = _pgAdminMon === 'todos' ? _pgAdminPregoes : _pgAdminPregoes.filter(x => String(x.monitor_id) === String(_pgAdminMon));
+  const lista = _pgFiltrar(base);
+  box.innerHTML = monHTML + `<div style="margin:6px 0 10px;"><button type="button" class="btn-ghost" onclick="pregoesMonitorNovo()">+ Novo monitor</button></div>
+    <div class="section-title" style="font-size:15px; margin-top:14px;">Pregões encontrados</div>
+    <p class="section-sub">A busca roda sozinha a cada 30 minutos, uma UF por vez; o Brasil todo fecha o ciclo em cerca de um dia.</p>
+    ${selMon}${_pgChips(base, 'pregoesAdminFiltro')}
+    ${lista.length ? lista.map(x => _pgCard(x, true)).join('') : '<div class="empty-state">Nada nesta lista ainda.</div>'}`;
+}
+async function pregoesMonitorSalvar(id){
+  const v = k => (document.getElementById(k+'-'+id) || {}).value || '';
+  const lista = t => t.split(/[,\n]/).map(x => x.trim()).filter(Boolean);
+  const upd = {
+    nome: v('pgm-nome').trim() || 'Monitor', usuario_id: v('pgm-user') || null,
+    palavras_chave: lista(v('pgm-chaves')), palavras_excluir: lista(v('pgm-excl')),
+    ufs: lista(v('pgm-ufs')).map(x => x.toUpperCase()).filter(x => /^[A-Z]{2}$/.test(x)),
+    so_me_epp: !!document.getElementById('pgm-meepp-'+id).checked, ativo: !!document.getElementById('pgm-ativo-'+id).checked,
+  };
+  const { error } = await _sb.from('monitor_pregoes').update(upd).eq('id', id);
+  if(error){ toast('Não foi possível salvar o monitor.'); return; }
+  await _sb.from('pregoes_monitorados').update({usuario_id: upd.usuario_id}).eq('monitor_id', id);
+  toast('Monitor salvo.'); pregoesAdminCarregar();
+}
+async function pregoesMonitorNovo(){
+  const nome = prompt('Nome do novo monitor (ex.: nome da cliente):'); if(!nome) return;
+  const { error } = await _sb.from('monitor_pregoes').insert({nome: nome.trim(), palavras_chave: []});
+  if(error){ toast('Não foi possível criar.'); return; }
+  pregoesAdminCarregar();
+}
 function adminTab(nome){
   adminTabAtual = nome;
   if(nome==='aae') aaeCarregar();
@@ -12532,6 +12706,7 @@ function adminTab(nome){
   if(nome==='avisos') avisosAbrir();
   if(nome==='consultoria') consCarregar();
   if(nome==='pca') pcaCarregar();
+  if(nome==='pregoes') pregoesAdminCarregar();
   if(nome==='triagem' && typeof carregarAnalisesProntas === 'function') carregarAnalisesProntas();
   document.querySelectorAll('#admin-tabs .admin-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab === nome));
   document.querySelectorAll('.admin-tabpanel').forEach(p=>p.classList.toggle('active', p.id === 'admin-tab-'+nome));
