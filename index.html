@@ -602,6 +602,10 @@ html[data-theme="light"] .op-meta{color:var(--teal-deep);}
 /* ===== Forms (login/cadastro/lead) ===== */
 .form-card{background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:30px; max-width:480px;}
 .form-row{margin-bottom:14px;}
+.cad-sec{margin:26px -2px 14px; padding:12px 14px; border-left:4px solid var(--teal); background:var(--bg-elevated); border-radius:8px;}
+.cad-sec b{display:block; font-family:var(--font-display); font-size:16px;}
+.cad-sec span{display:block; font-size:12px; color:var(--ink-dim); margin-top:2px; line-height:1.4;}
+.cad-sub{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--teal); margin:18px 0 10px; padding-bottom:5px; border-bottom:1px solid var(--border-soft);}
 .form-row label{font-size:12px; color:var(--ink-muted); display:block; margin-bottom:6px; font-weight:600;}
 .form-actions{margin-top:20px; display:flex; gap:10px;}
 .two-col{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
@@ -1920,7 +1924,8 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
       <div class="form-row"><label>Nível de instrução</label><select id="cad-escolaridade"><option value="">Selecione</option><option value="Graduação">Graduação</option><option value="Especialização">Especialização</option><option value="Residência">Residência</option><option value="Mestrado">Mestrado</option><option value="Doutorado">Doutorado</option></select></div>
       <div class="form-row"><label>Tempo de atuação na profissão (anos)</label><input type="number" id="cad-anos-exp" min="0" max="60" step="1" placeholder="Ex: 5"></div>
     </div>
-    <div class="form-row"><label>Especialidades / áreas de interesse</label><div class="chip-select" id="cad-esp"></div></div>
+    <div class="form-row"><label>Especialidades / áreas de interesse</label><div class="chip-select" id="cad-esp"></div>
+      <div style="display:flex; gap:6px; margin-top:8px;"><input type="text" id="cad-esp-novo" placeholder="Outra especialidade ou palavra-chave" maxlength="40" style="flex:1; min-width:0;" onkeydown="if(event.key==='Enter'){espAdd('cad'); return false;}"><button type="button" class="btn-ghost" onclick="espAdd('cad')">Adicionar</button></div></div>
     <div class="form-row"><label>Formato de atendimento</label><div class="chip-select" id="cad-formato"></div></div>
     <div class="two-col">
       <div class="form-row"><label>Meta de ganho mensal (análise financeira)</label><input type="number" id="cad-meta" min="0" step="100" placeholder="R$ por mês"></div>
@@ -1969,7 +1974,8 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   <button class="back-link" id="perfil-voltar" onclick="voltarDoPerfil()">← Voltar à minha conta</button>
   <div class="page-head" style="padding-top:0;"><span class="eyebrow">Minha conta</span><h2>Editar perfil</h2></div>
   <div class="form-card" style="max-width:560px;">
-    <div style="margin:18px 0 10px; padding-top:12px; border-top:1px solid var(--border-soft);"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Perguntas gerais</div><div style="font-size:12px; color:var(--ink-dim); margin-top:2px;">Servem para todos os editais: credenciamento e pregão.</div></div>
+    <div class="cad-sec" style="margin-top:0;"><b>1 · Seus dados</b><span>Servem para todos os editais: credenciamento e pregão.</span></div>
+    <div class="cad-sub">Contato</div>
     <div class="form-row"><label>E-mail (não pode ser alterado)</label><input type="email" id="perfil-email" disabled></div>
     <div class="two-col">
       <div class="form-row"><label>Nome</label><input type="text" id="perfil-nome"></div>
@@ -1993,12 +1999,15 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
       <div id="perfil-empresa" class="empresa-box"></div>
       <div id="perfil-respostas"></div>
     </div>
-    <div style="margin:18px 0 10px; padding-top:12px; border-top:1px solid var(--border-soft);"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Credenciamento</div><div style="font-size:12px; color:var(--ink-dim); margin-top:2px;">Perguntas para os editais de credenciamento.</div></div>
+    <div class="cad-sec"><b>2 · Credenciamento</b><span>Perguntas para os editais de credenciamento.</span></div>
+    <div class="cad-sub">O que eu procuro</div>
     <div class="form-row"><label>Modalidade de interesse</label><div class="chip-select" id="perfil-mod"></div></div>
-    <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="perfil-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="perfil-rem-tipo" style="flex:1; min-width:0;"><option value="atendimento">por atendimento</option><option value="hora">por hora</option><option value="mensal">por mês</option></select></div></div>
     <div class="form-row"><label>Abrangência de interesse</label><div class="chip-select" id="perfil-abr"></div></div>
-    <div class="form-row"><label>Especialidades / áreas de interesse</label><div class="chip-select" id="perfil-esp"></div></div>
+    <div class="form-row"><label>Especialidades / áreas de interesse</label><div class="chip-select" id="perfil-esp"></div>
+      <div style="display:flex; gap:6px; margin-top:8px;"><input type="text" id="perfil-esp-novo" placeholder="Outra especialidade ou palavra-chave" maxlength="40" style="flex:1; min-width:0;" onkeydown="if(event.key==='Enter'){espAdd('perfil'); return false;}"><button type="button" class="btn-ghost" onclick="espAdd('perfil')">Adicionar</button></div></div>
     <div class="form-row"><label>Formato de atendimento</label><div class="chip-select" id="perfil-formato"></div></div>
+    <div class="cad-sub">Quanto quero ganhar</div>
+    <div class="form-row"><label>Remuneração mínima esperada</label><div style="display:flex; gap:6px;"><input type="number" id="perfil-rem-min" min="0" step="10" placeholder="R$" style="flex:1; min-width:0;"><select id="perfil-rem-tipo" style="flex:1; min-width:0;"><option value="atendimento">por atendimento</option><option value="hora">por hora</option><option value="mensal">por mês</option></select></div></div>
     <div class="form-row"><label>Meta de ganho mensal (análise financeira)</label><input type="number" id="perfil-meta" min="0" step="100" placeholder="R$ por mês"></div>
     <div id="perfil-pregao-bloco"></div>
 <div class="form-actions"><button class="btn-primary" style="flex:1;" onclick="saveProfile()">Salvar perfil</button></div>
@@ -4557,8 +4566,22 @@ function chipsSimples(boxId, lista, selecionadas){
     box.appendChild(c);
   });
 }
+function espChipAdd(pre, t){
+  const box = document.getElementById(pre+'-esp'); if(!box) return;
+  if([...box.children].some(c => c.textContent.toLowerCase() === t.toLowerCase())) return;
+  const c = document.createElement('div'); c.className = 'chip-opt selected'; c.textContent = t; c.onclick = ()=>c.classList.toggle('selected'); box.appendChild(c);
+}
+function espAdd(pre){
+  const el = document.getElementById(pre+'-esp-novo'); if(!el) return;
+  el.value.split(',').map(x => x.trim().slice(0,40)).filter(x => x.length >= 3).forEach(t => {
+    const ex = [...document.getElementById(pre+'-esp').children].find(c => c.textContent.toLowerCase() === t.toLowerCase());
+    if(ex) ex.classList.add('selected'); else espChipAdd(pre, t);
+  });
+  el.value = '';
+}
 function chipsBuscaPerfil(pre, u){
   chipsSimples(pre+'-esp', ESPECIALIDADES, u && u.especialidades);
+  ((u && u.especialidades) || []).filter(x => !ESPECIALIDADES.includes(x)).forEach(x => espChipAdd(pre, x));
   chipsSimples(pre+'-formato', FORMATOS_ATEND, u && u.formatos);
   document.getElementById(pre+'-meta').value = (u && u.metaMensal) || '';
   document.getElementById(pre+'-regime').value = (u && u.regime) || '';
@@ -5149,7 +5172,9 @@ function calcularAderencia(o, u){
   }
   if((u.especialidades||[]).length){
     const lista = [...u.especialidades]; lista.__esp = true;
-    const r = casar(lista);
+    let r = casar(lista);
+    const livres = lista.filter(x => !ESPECIALIDADES.includes(x)).filter(x => { const q = normTxt(x).trim(); return q.length >= 3 && txt.includes(q); });
+    if(livres.length) r = (r || []).concat(livres);
     if(r === null) add('Especialidades', 10, 10, 'o edital não restringe a área de atuação');
     else if(r.length){ motivos.push('área: ' + r.join('/').toLowerCase()); add('Especialidades', 10, 10, 'a área do edital está entre as suas'); }
     else add('Especialidades', 0, 10, 'a área do edital não está entre as suas');
@@ -12693,7 +12718,7 @@ async function perfilPregaoBloco(){
 function perfilPregaoRender(){
   const el = document.getElementById('perfil-pregao-bloco'); if(!el) return;
   if(!_pgMon || _pgMon.ativo === false){ el.innerHTML = ''; return; }   // pregão ainda não liberado: o bloco não aparece
-  el.innerHTML = `<div style="margin:18px 0 10px; padding-top:12px; border-top:1px solid var(--border-soft);"><div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Pregão</div><div style="font-size:12px; color:var(--ink-dim); margin-top:2px;">Liberado para você pela Transformare. Estas respostas definem onde e como buscamos pregões e são salvas junto com o perfil.</div></div>
+  el.innerHTML = `<div class="cad-sec"><b>3 · Pregão</b><span>Liberado para você pela Transformare. Estas respostas definem onde e como buscamos pregões e são salvas junto com o perfil.</span></div>
     ${pregoesCidadesHTML()}
     <p style="font-size:11.5px; color:var(--ink-dim); margin:8px 0 0;">Seu regime (ME/EPP/MEI), se você tem CNPJ e as abrangências marcadas acima também entram na nota de aderência dos pregões.</p>`;
 }
@@ -12721,18 +12746,21 @@ function pregoesCidadesHTML(){
   const chips = (_pgMon.municipios_extra||[]).map(id => `<span class="chip-opt selected" style="display:inline-block; margin:2px 4px 2px 0;">${esc(_pgExtraNomes[id] || id)} <a href="#" onclick="pregoesCidadeTirar(${id}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`).join('');
   const termos = _pgTermos.map((t,k) => `<span class="chip-opt selected" style="display:inline-block; margin:2px 4px 2px 0;">${esc(t)} <a href="#" onclick="pregoesTermoTirar(${k}); return false;" style="color:inherit; margin-left:4px;" aria-label="Remover">✕</a></span>`).join('');
   return `<div style="font-size:13px;">
+      <div class="cad-sub" style="margin-top:0;">Onde buscar</div>
       <div class="form-row"><label>Cidade-base</label><div style="font-size:13px;"><b>${base}</b> <span style="color:var(--ink-dim);">(troque pela busca de cidades abaixo)</span></div></div>
       <div class="form-row"><label>Estados <span style="font-weight:400; color:var(--ink-dim);">(vazio = Brasil todo)</span></label><input type="text" id="pg-pref-ufs" value="${esc((_pgMon.ufs||[]).join(', '))}" placeholder="RS, SC"></div>
       <div class="form-row"><label>Raio prioritário (km)</label><input type="number" id="pg-pref-raio" value="${esc(_pgMon.raio_km||30)}" min="5" max="100"></div>
-      <div class="form-row"><label>Tipo de pregão</label><div class="chip-select">
-        <div class="chip-opt${mods.includes(6)?' selected':''}" id="pg-pref-m6" onclick="this.classList.toggle('selected')">Eletrônico (online)</div>
-        <div class="chip-opt${mods.includes(7)?' selected':''}" id="pg-pref-m7" onclick="this.classList.toggle('selected')">Presencial</div></div></div>
-      <div class="form-row"><label>Exclusividade</label><div class="chip-select">
-        <div class="chip-opt${_pgMon.so_me_epp?' selected':''}" id="pg-pref-meepp" onclick="this.classList.toggle('selected')">Só pregões exclusivos ME/EPP</div></div></div>
       <div class="form-row"><label>Cidades prioritárias extras</label>
         <div style="margin-bottom:6px;">${chips || '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhuma cidade extra marcada.</span>'}</div>
         <div style="display:flex; gap:6px;"><input type="text" id="pg-cidade-q" placeholder="Digite o nome da cidade" style="flex:1;" onkeydown="if(event.key==='Enter'){pregoesCidadeBuscar(); return false;}"><button type="button" class="btn-ghost" onclick="pregoesCidadeBuscar()">Buscar</button></div>
         <div id="pg-cidade-res" style="margin-top:6px;"></div></div>
+      <div class="cad-sub">Tipo de pregão</div>
+      <div class="form-row"><label>Forma do pregão</label><div class="chip-select">
+        <div class="chip-opt${mods.includes(6)?' selected':''}" id="pg-pref-m6" onclick="this.classList.toggle('selected')">Eletrônico (online)</div>
+        <div class="chip-opt${mods.includes(7)?' selected':''}" id="pg-pref-m7" onclick="this.classList.toggle('selected')">Presencial</div></div></div>
+      <div class="form-row"><label>Exclusividade</label><div class="chip-select">
+        <div class="chip-opt${_pgMon.so_me_epp?' selected':''}" id="pg-pref-meepp" onclick="this.classList.toggle('selected')">Só pregões exclusivos ME/EPP</div></div></div>
+      <div class="cad-sub">O que eu procuro</div>
       <div class="form-row"><label>Palavras-chave / especialidades <span style="font-weight:400; color:var(--ink-dim);">(a busca procura pregões com estes termos)</span></label>
         <div id="pg-termos-box" style="margin-bottom:6px;">${termos || '<span style="font-size:12.5px; color:var(--ink-dim);">Nenhum termo.</span>'}</div>
         <div style="display:flex; gap:6px;"><input type="text" id="pg-termo-novo" placeholder="Ex.: psicólogo, saúde mental" style="flex:1;" onkeydown="if(event.key==='Enter'){pregoesTermoAdd(); return false;}"><button type="button" class="btn-ghost" onclick="pregoesTermoAdd()">Adicionar</button></div>
