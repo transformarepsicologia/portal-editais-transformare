@@ -1947,6 +1947,13 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
   </div>
 </section>
 
+<!-- ===================== MINHAS CERTIDÕES ===================== -->
+<section class="view" id="view-certidoes">
+  <button class="back-link" id="certidoes-voltar" onclick="voltarDoPerfil()">← Voltar à minha conta</button>
+  <div class="page-head" style="padding-top:0;"><span class="eyebrow">Minha conta</span><h2>Minhas Certidões</h2><p>Emita, anexe e acompanhe o vencimento das certidões. Valem para os editais de credenciamento e de pregão.</p></div>
+  <div class="form-card" style="max-width:560px;"><div id="certidoes-conteudo"></div></div>
+</section>
+
 <!-- ===================== PERFIL (editar) ===================== -->
 <button type="button" id="perfil-voltar-flut" class="btn-primary" style="display:none; position:fixed; left:12px; bottom:84px; width:auto; right:auto; padding:10px 16px; z-index:79; box-shadow:0 6px 18px rgba(0,0,0,.4); max-width:calc(100vw - 24px);" onclick="voltarDoPerfil()">← Voltar ao edital</button>
 <section class="view" id="view-perfil">
@@ -3822,11 +3829,11 @@ let perfilOrigem = null;
 function irAoCadastro(oid, chave){
   if(!userProfile){ nav('login'); return; }
   perfilOrigem = { oid, y: window.scrollY };
-  nav('perfil');
+  nav('certidoes');
   setTimeout(()=>{
     let alvo = null;
     if(chave){ const el = document.getElementById('cert-arq-' + chave); alvo = el && el.closest('.cert-card'); }
-    if(!alvo) alvo = document.querySelector('#view-perfil .cert-card');
+    if(!alvo) alvo = document.querySelector('#view-certidoes .cert-card');
     if(alvo){ alvo.scrollIntoView({behavior:'smooth', block:'center'}); if(chave){ alvo.style.transition='box-shadow .3s'; alvo.style.boxShadow='0 0 0 2px var(--teal)'; setTimeout(()=>{ alvo.style.boxShadow=''; }, 2500); } }
   }, 250);
 }
@@ -3854,10 +3861,10 @@ function voltarDoPerfil(){
   } else nav('minha-conta');
 }
 function atualizarVoltarPerfil(){
-  const b = document.getElementById('perfil-voltar'); if(!b) return;
   const o = perfilOrigem && oportunidades.find(x=>x.id === perfilOrigem.oid);
-  b.textContent = o ? '← Voltar ao edital: ' + (o.orgao || o.edital || '') : '← Voltar à minha conta';
-  const f = document.getElementById('perfil-voltar-flut'); if(f) f.style.display = (o && document.getElementById('view-perfil').classList.contains('active')) ? '' : 'none';
+  const txt = o ? '← Voltar ao edital: ' + (o.orgao || o.edital || '') : '← Voltar à minha conta';
+  ['perfil-voltar','certidoes-voltar'].forEach(id=>{ const b = document.getElementById(id); if(b) b.textContent = txt; });
+  const f = document.getElementById('perfil-voltar-flut'); if(f) f.style.display = (o && (document.getElementById('view-perfil').classList.contains('active') || document.getElementById('view-certidoes').classList.contains('active'))) ? '' : 'none';
 }
 let detalheOrigem = {view:'editais', y:null};
 function voltarDetalhe(){
@@ -3870,7 +3877,7 @@ function nav(view){
   if(typeof atualizarPromos==='function') atualizarPromos();
   if(typeof radarGira==='function') radarGira();
   if(view === 'admin' && !adminAuthed) view = 'admin-login';
-  if((view === 'perfil' || view === 'pregoes') && !userProfile) view = 'login';
+  if((view === 'perfil' || view === 'pregoes' || view === 'certidoes') && !userProfile) view = 'login';
   if((view === 'login' || view === 'cadastro') && userProfile) view = 'minha-conta';
   if(view === 'comparar' && !ehPro()){ toast('Comparar editais é um recurso do Plano Pro.'); view = 'planos'; }
 
@@ -3886,7 +3893,7 @@ function nav(view){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   try{ if(window._radarTelaAtual !== undefined && window._radarTelaAtual !== view && view !== 'admin' && view !== 'admin-login') radarEvento('page_view',{ page_path:'/#'+view, page_title:document.title }); window._radarTelaAtual = view; }catch(e){}
-  document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.id === 'nav-minha-conta' ? ['minha-conta','login','cadastro','perfil','favoritos','alertas','pregoes'].includes(view) : b.dataset.view === view));
+  document.querySelectorAll('#mainNav button[data-view]').forEach(b => b.classList.toggle('active', b.id === 'nav-minha-conta' ? ['minha-conta','login','cadastro','perfil','certidoes','favoritos','alertas','pregoes'].includes(view) : b.dataset.view === view));
   document.getElementById('mainNav').classList.remove('open');
   (function(){ const nv=document.getElementById('mainNav'), ativo=nv.querySelector('button.active'); if(ativo && nv.scrollWidth>nv.clientWidth){ nv.scrollTo({left: ativo.offsetLeft - (nv.clientWidth-ativo.offsetWidth)/2, behavior:'smooth'}); } })();
   window.scrollTo({top:0, behavior:'smooth'});
@@ -3901,7 +3908,8 @@ function nav(view){
   if(view === 'minha-conta'){ renderMinhaConta(); atualizarStatusPedidoPlano(); carregarMinhaAssinatura(); carregarAvisoProEncerrado(); }
   if(view === 'sobre') renderMapaEditais();
   if(view === 'perfil'){ renderPerfil(); atualizarVoltarPerfil(); }
-  if(view !== 'perfil'){ perfilOrigem = null; const f = document.getElementById('perfil-voltar-flut'); if(f) f.style.display = 'none'; }
+  if(view === 'certidoes'){ renderCertidoes(); atualizarVoltarPerfil(); }
+  if(view !== 'perfil' && view !== 'certidoes'){ perfilOrigem = null; const f = document.getElementById('perfil-voltar-flut'); if(f) f.style.display = 'none'; }
   if(view === 'admin-login'){ const i=document.getElementById('admin-email-input'); if(i) setTimeout(()=>i.focus(),50); }
   currentView = view;
 }
@@ -4651,7 +4659,6 @@ function empresaExtrasHTML(e, pre){
   const cap = x.capital !== null && x.capital !== undefined ? 'R$ ' + x.capital.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '';
   const av = empresaAvisos(e, pre);
   const cnpj = soDigitos(e.cnpj);
-  const certs = ['cnd_pj','fgts','cndt','cnpj'].map(k=>PORTAIS_DOCS.find(p=>p.chave===k) || PORTAIS_DOCS_PADRAO.find(p=>p.chave===k)).filter(Boolean);
   return `<div class="emp-card" style="margin-top:10px;">
     <div style="font-weight:700; margin-bottom:4px;">Mais dados do CNPJ</div>
     ${lin('Natureza jurídica', x.natureza)}${lin('Endereço', [x.endereco, x.cep ? 'CEP ' + String(x.cep).replace(/^(\d{5})(\d{3})$/,'$1-$2') : ''].filter(Boolean).join(' · '))}${lin('Capital social', cap)}${lin('Situação desde', x.situacaoData && formatarDataBR(x.situacaoData))}
@@ -4661,8 +4668,13 @@ function empresaExtrasHTML(e, pre){
   <div class="emp-card" style="margin-top:10px;">
     <div style="font-weight:700; margin-bottom:4px;">${av.length ? 'Pontos de atenção' : 'Tudo certo por aqui'}</div>
     ${av.length ? '<ul style="margin:0; padding-left:18px;">' + av.map(t=>'<li class="emp-alerta">' + t + '</li>').join('') + '</ul>' : '<div>Situação ATIVA e atividade de saúde compatível com o perfil informado.</div>'}
-  </div>
-  <div class="emp-card" style="margin-top:10px;">
+  </div>`;
+}
+// Certidões (Minhas Certidões): verificar o CNPJ e emitir/anexar certidões. Fica fora do cadastro.
+function empresaCertidoesHTML(e, pre){
+  const cnpj = soDigitos(e.cnpj);
+  const certs = ['cnd_pj','fgts','cndt','cnpj'].map(k=>PORTAIS_DOCS.find(p=>p.chave===k) || PORTAIS_DOCS_PADRAO.find(p=>p.chave===k)).filter(Boolean);
+  return `<div class="emp-card" style="margin-top:10px;">
     <div style="font-weight:700; margin-bottom:4px;">Verificar o CNPJ</div>
     <div style="font-size:13px;">Consulta, em fontes públicas, as sanções (CEIS e CNEP). SICAF e CNES ficam em “Emissão / outras consultas”, logo abaixo.</div>
     ${ehPro()
@@ -5252,9 +5264,18 @@ function certCardHTML(){
     <span class="ca-seta" aria-hidden="true">›</span>
   </button>`;
 }
-function abrirCertidoes(){
-  nav('perfil');
-  setTimeout(()=>{ const el = document.querySelector('#perfil-empresa .cert-card') || document.getElementById('perfil-empresa'); if(el) el.scrollIntoView({ behavior:'smooth', block:'start' }); }, 400);
+function abrirCertidoes(){ nav('certidoes'); }
+function renderCertidoes(){
+  const box = document.getElementById('certidoes-conteudo'); if(!box) return;
+  if(!userProfile){ box.innerHTML = '<div class="empty-state">Entre na sua conta para ver suas certidões.</div>'; return; }
+  const e = userProfile.empresa || empresaForm.perfil || null;
+  empresaForm.perfil = e;
+  const portais = portaisDocsPanelHTML().replace('class="panel"','style="margin:0 0 14px;"');
+  if(!e){
+    box.innerHTML = portais + '<div class="emp-card"><div style="font-weight:700; margin-bottom:4px;">Informe o CNPJ para organizar suas certidões</div><div style="font-size:13px; line-height:1.5;">As certidões são emitidas com o CNPJ da empresa. Cadastre o CNPJ em Meu Cadastro e volte aqui.</div><button type="button" class="btn-primary" style="margin-top:10px;" onclick="nav(\'perfil\')">Ir para Meu Cadastro</button></div>';
+    return;
+  }
+  box.innerHTML = portais + '<div id="perfil-certidoes">' + empresaCertidoesHTML(e, 'perfil') + '</div>';
 }
 function renderMinhaConta(){
   const el = document.getElementById('minha-conta-content');
@@ -5335,8 +5356,7 @@ function renderMinhaConta(){
           <h4><span class="dot"></span>Seu plano <span class="plan-badge">${PLANOS[u.plano]||'Gratuito'}</span></h4>
           ${u.plano === 'essencial' ? `
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui tudo do plano Gratuito, mais o <strong>checklist completo</strong> de documentos de cada edital e os links dos principais portais para emitir certidões.</p>
-          <div id="minha-assinatura" style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"></div>
-          <div style="margin-top:8px;">${portaisDocsPanelHTML().replace('class="panel"','style="margin:0;"')}</div>` : `
+          <div id="minha-assinatura" style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"></div>` : `
           <div id="aviso-pro-encerrado"></div>
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 8px;">Inclui busca, favoritos, alertas dentro do portal e os principais documentos de cada edital.</p>
           <p style="font-size:12.5px; color:var(--ink-muted); line-height:1.6; margin:0 0 10px;"><strong>Plano Transformare Pro:</strong> checklist completo de todos os documentos exigidos e links dos portais de emissão (CND da Receita, FGTS, CNDT e outros).</p>
