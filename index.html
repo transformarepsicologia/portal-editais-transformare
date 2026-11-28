@@ -28,6 +28,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://cjtcfpiohhnvtqfktbsv.supabase.co" crossorigin>
+<style>#abrindo-edital{display:none;} html.link-edital #abrindo-edital{display:flex; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:14px; background:var(--bg); color:var(--ink-muted); font:600 15px/1.4 system-ui,sans-serif;} #abrindo-edital i{width:26px; height:26px; border:3px solid rgba(127,127,127,.35); border-top-color:var(--teal,#2dd4bf); border-radius:50%; animation:abrindoGira .8s linear infinite;} @keyframes abrindoGira{to{transform:rotate(360deg);}}</style>
+<script>/* Link direto /?e=número (WhatsApp): a busca do edital começa AGORA, em paralelo ao carregamento da página */
+try{ var _qe = new URLSearchParams(location.search).get('e'); if(_qe && /^\d+$/.test(_qe)){ document.documentElement.classList.add('link-edital'); setTimeout(function(){ document.documentElement.classList.remove('link-edital'); }, 10000);
+  window.__eRapido = fetch('https://cjtcfpiohhnvtqfktbsv.supabase.co/rest/v1/editais?select=*&id=eq.' + _qe, { headers:{ apikey:'sb_publishable_nOfG7Stoy-0lO8CSeW-_EQ_QLvDoeGN' } }).then(function(r){ return r.ok ? r.json() : null; }).then(function(a){ return a && a[0] ? a[0] : null; }).catch(function(){ return null; }); } }catch(e){}</script>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
@@ -1465,6 +1470,7 @@ body:has(#view-admin.active) .wa-flutuante, body:has(#view-admin-login.active) .
 </script>
 </head>
 <body>
+<div id="abrindo-edital"><i></i><span>Abrindo o edital…</span></div>
 
 <header class="topbar">
   <div class="topbar-inner">
@@ -6014,7 +6020,7 @@ function openDetalhe(id){
   currentDetailId = id;
   const o = oportunidades.find(x=>x.id===id);
   if(!o || !visivelAoCliente(o)){ toast('Este edital não está disponível no momento.'); nav('editais'); return; }
-  registrarEvento('abrir', o);
+  if(!window._reabrindo) registrarEvento('abrir', o);
   marcarVistoSino(id);
   const isFav = favoritos.has(id);
   const el = document.getElementById('detalhe-content');
@@ -7949,6 +7955,7 @@ async function carregarPerfilUsuario(authUser){
   userProfile.escolaridade = normEscolaridade(userProfile.escolaridade);
   renderQuickChips();
   anexarPregoes();
+  reabrirDetalheRapido();
 }
 
 // ---- Cadastro em 2 etapas (acesso → dados de contato) com CAPTCHA (Cloudflare Turnstile) ----
@@ -13554,6 +13561,8 @@ async function init(){
   }
   ordenarProfissoes();
 
+  await abrirEditalRapido();   // link /?e=número: abre o edital antes das renderizações pesadas do resto da página
+
   populateSelects();
   populateAdminFormSelects();
   renderIndicators();
@@ -13578,7 +13587,7 @@ async function init(){
     _sb.auth.getSession().then(({ data })=>{ if(!(data && data.session)){ toast('Entre na sua conta para assinar o plano.'); nav('login'); } });
   }
   if(location.hash === '#admin') nav('admin'); // atalho: radartransformare.com.br/#admin abre o login do administrador
-  abrirEditalRapido();   // link /?e=número: busca só esse edital e abre direto, sem esperar a lista inteira
+  reabrirDetalheRapido();
   carregarEditaisSupabase().then(abrirLinkDeNotificacao);
   carregarStatusFontes();
   pushCarregar();
@@ -14051,14 +14060,24 @@ async function abrirEditalRapido(){
     const box = document.getElementById('detalhe-content');
     if(box) box.innerHTML = '<p class="section-sub" style="padding:60px 0; text-align:center;">Abrindo o edital…</p>';
     nav('detalhe');
-    const { data } = await _sb.from('editais').select('*').eq('id', Number(e)).maybeSingle();
-    if(!data){ nav('home'); return; }
+    let data = window.__eRapido ? await window.__eRapido : null;   // busca já iniciada no topo da página
+    if(!data){ const r = await _sb.from('editais').select('*').eq('id', Number(e)).maybeSingle(); data = r.data; }
+    if(!data){ document.documentElement.classList.remove('link-edital'); nav('home'); return; }
     padConstruirVocab([data.edital, data.objeto, data.requisitos, data.pontos_positivos, data.pontos_atencao]);
     const o = mapEditalSupabase(data);
     if(!oportunidades.some(x=>x.id===o.id)) oportunidades.unshift(o);
     window._linkRapido = o.id;
     openDetalhe(o.id);
-  }catch(err){ try{ nav('home'); }catch(_){} }
+    document.documentElement.classList.remove('link-edital');
+  }catch(err){ document.documentElement.classList.remove('link-edital'); try{ nav('home'); }catch(_){} }
+}
+function reabrirDetalheRapido(){
+  // O edital abre antes de saber quem é o usuário; quando o perfil chega, redesenha a página para mostrar aderência e valores dele.
+  try{
+    const id = window._linkRapido; if(!id) return;
+    const v = document.getElementById('view-detalhe');
+    if(v && v.classList.contains('active') && currentDetailId === id){ window._reabrindo = true; openDetalhe(id); window._reabrindo = false; }
+  }catch(e){ window._reabrindo = false; }
 }
 function abrirLinkDeNotificacao(){
   try{
