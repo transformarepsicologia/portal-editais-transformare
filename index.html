@@ -6868,9 +6868,11 @@ function valorPorProfissao(o, u){
   profs.forEach(pr => { const c = profCanon(pr); [pr, c, ...(PROF_SINON_REVERSO.get(c) || [])].forEach(n => { const q = normTxt(n).trim(); if(q.length >= 4){ termos.add(q); if(q.length >= 7) termos.add(q.slice(0, 6)); } }); });
   const casa = itens.filter(x => { const t = normTxt(x.t); return [...termos].some(q => t.includes(q)); });
   if(!casa.length) return { v:geral, rotulo:'', especifico:false, varios:true };
-  const menor = casa.reduce((a, b) => b.v < a.v ? b : a);
-  const rotulo = menor.t.replace(/^\s*R\$\s*[\d.,]+\s*/i, '').replace(/^[-–:·\s]+/, '').trim().slice(0, 70);
-  return { v:menor.v, rotulo, especifico:true, varios:true, nCasa:casa.length };
+  const rot = x => x.t.replace(/^\s*R\$\s*[\d.,]+\s*/i, '').replace(/^[-–:·\s]+/, '').trim().slice(0, 70);
+  if(casa.length === 1) return { v:casa[0].v, rotulo:rot(casa[0]), especifico:true, varios:true, nCasa:1 };
+  // mais de um valor para a profissão: usa a média e deixa observação com a faixa
+  const vals = casa.map(x => x.v), media = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 100) / 100;
+  return { v:media, rotulo:'', especifico:true, varios:true, nCasa:casa.length, media:true, min:Math.min(...vals), max:Math.max(...vals) };
 }
 function analiseFinanceiraHTML(o){
   const u = userProfile; if(!u || !u.metaMensal) return '';
@@ -6880,8 +6882,8 @@ function analiseFinanceiraHTML(o){
   let corpo;
   if(v){
     const n = Math.ceil(u.metaMensal / v);
-    const base = vp.especifico ? `valor da sua profissão no edital (${esc(formatarMoedaBR(v))}${vp.rotulo ? ' · ' + esc(vp.rotulo) : ''}${vp.nCasa > 1 ? ', o menor entre ' + vp.nCasa + ' valores' : ''})` : `${esc(formatarMoedaBR(v))} por atendimento`;
-    corpo = `Para chegar à sua meta de <strong>${meta}/mês</strong>, com ${vp.especifico ? base : base}, seriam cerca de <strong>${n} atendimentos por mês</strong> (~${Math.ceil(n/4.3)} por semana).` + (vp.varios && !vp.especifico ? ` <span style="color:var(--ink-dim);">Este edital tem vários valores e nenhum cita a sua profissão; usamos o menor valor do edital.</span>` : '');
+    const base = vp.media ? `a média dos valores da sua profissão no edital (${esc(formatarMoedaBR(v))})` : vp.especifico ? `o valor da sua profissão no edital (${esc(formatarMoedaBR(v))}${vp.rotulo ? ' · ' + esc(vp.rotulo) : ''})` : `${esc(formatarMoedaBR(v))} por atendimento`;
+    corpo = `Para chegar à sua meta de <strong>${meta}/mês</strong>, com ${base}, seriam cerca de <strong>${n} atendimentos por mês</strong> (~${Math.ceil(n/4.3)} por semana).` + (vp.media ? ` <span style="color:var(--ink-dim);">Observação: o edital tem ${vp.nCasa} valores para a sua profissão, de ${esc(formatarMoedaBR(vp.min))} a ${esc(formatarMoedaBR(vp.max))}; usamos a média. O resultado real depende de qual serviço você mais atender.</span>` : '') + (vp.varios && !vp.especifico ? ` <span style="color:var(--ink-dim);">Este edital tem vários valores e nenhum cita a sua profissão; usamos o menor valor do edital.</span>` : '');
   } else corpo = `Este edital não informa valor por atendimento; não foi possível estimar quantos atendimentos levam à sua meta de ${meta}/mês.`;
   return `<div class="panel"><h4><span class="dot"></span>Análise financeira</h4>
     <p style="font-size:13px; line-height:1.6; margin:0; color:var(--ink-muted);">${corpo}</p>
