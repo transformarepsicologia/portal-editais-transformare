@@ -6857,14 +6857,31 @@ function portaisDocsPanelHTML(){
     <ul style="list-style:none; padding:0; margin:0;">${PORTAIS_DOCS.map(l=>`<li style="margin-bottom:6px;"><a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color:var(--teal); font-size:13px;">↗ ${esc(l.nome)}</a></li>`).join('')}</ul>
     <p style="font-size:11px; color:var(--ink-dim); margin:10px 0 0;">Certidões estadual e municipal variam por localidade: procure o portal da Secretaria da Fazenda do seu estado e da prefeitura. Confira sempre o que o edital exige.</p></div>`;
 }
+// Edital com vários valores (um por profissão ou serviço): usa o valor da profissão do cadastro do usuário.
+// Sem item que cite a profissão, mantém o valor geral do edital (o menor, como antes) e avisa.
+function valorPorProfissao(o, u){
+  const geral = parseMoneyValue(o.valorAtendimento);
+  const itens = (o.remuneracao || []).map(t => ({ t:String(t || ''), v:parseMoneyValue(t) })).filter(x => x.v);
+  const profs = (u && u.profs) || [];
+  if(itens.length < 2 || !profs.length) return { v:geral, rotulo:'', especifico:false, varios:itens.length > 1 };
+  const termos = new Set();
+  profs.forEach(pr => { const c = profCanon(pr); [pr, c, ...(PROF_SINON_REVERSO.get(c) || [])].forEach(n => { const q = normTxt(n).trim(); if(q.length >= 4){ termos.add(q); if(q.length >= 7) termos.add(q.slice(0, 6)); } }); });
+  const casa = itens.filter(x => { const t = normTxt(x.t); return [...termos].some(q => t.includes(q)); });
+  if(!casa.length) return { v:geral, rotulo:'', especifico:false, varios:true };
+  const menor = casa.reduce((a, b) => b.v < a.v ? b : a);
+  const rotulo = menor.t.replace(/^\s*R\$\s*[\d.,]+\s*/i, '').replace(/^[-–:·\s]+/, '').trim().slice(0, 70);
+  return { v:menor.v, rotulo, especifico:true, varios:true, nCasa:casa.length };
+}
 function analiseFinanceiraHTML(o){
   const u = userProfile; if(!u || !u.metaMensal) return '';
-  const v = parseMoneyValue(o.valorAtendimento);
+  const vp = valorPorProfissao(o, u);
+  const v = vp.v;
   const meta = formatarMoedaBR(u.metaMensal);
   let corpo;
   if(v){
     const n = Math.ceil(u.metaMensal / v);
-    corpo = `Para chegar à sua meta de <strong>${meta}/mês</strong>, com ${esc(formatarMoedaBR(v))} por atendimento, seriam cerca de <strong>${n} atendimentos por mês</strong> (~${Math.ceil(n/4.3)} por semana).`;
+    const base = vp.especifico ? `valor da sua profissão no edital (${esc(formatarMoedaBR(v))}${vp.rotulo ? ' · ' + esc(vp.rotulo) : ''}${vp.nCasa > 1 ? ', o menor entre ' + vp.nCasa + ' valores' : ''})` : `${esc(formatarMoedaBR(v))} por atendimento`;
+    corpo = `Para chegar à sua meta de <strong>${meta}/mês</strong>, com ${vp.especifico ? base : base}, seriam cerca de <strong>${n} atendimentos por mês</strong> (~${Math.ceil(n/4.3)} por semana).` + (vp.varios && !vp.especifico ? ` <span style="color:var(--ink-dim);">Este edital tem vários valores e nenhum cita a sua profissão; usamos o menor valor do edital.</span>` : '');
   } else corpo = `Este edital não informa valor por atendimento; não foi possível estimar quantos atendimentos levam à sua meta de ${meta}/mês.`;
   return `<div class="panel"><h4><span class="dot"></span>Análise financeira</h4>
     <p style="font-size:13px; line-height:1.6; margin:0; color:var(--ink-muted);">${corpo}</p>
